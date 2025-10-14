@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**LLM Ensemble** is a CLI-first research system for evaluating LLM-as-judge ensembles on information retrieval tasks. The project follows a 4-stage pipeline architecture with shared libraries.
+**LLM Ensemble** is a CLI-first research system for evaluating LLM-as-judge ensembles on information retrieval tasks. The project follows a 4-stage pipeline architecture with shared libraries. I'm trying to develop an LLM relevance judging system using Python and Ollama / Hugginface Inference Endpoints, for my bachelor thesis. 
+It should be able to read in an easily exchangeable dataset. It should also be able to switch between models. 
+Specifically, I am trying to build an LLM-Ensemble which produces relevance judgements for the LLM Judge Challenge dataset by Rahmani et. al. 
+I am trying to use as many diverse small models as possible and aggregate their judgement with some function which decides on the final judgement.
+Keep in mind that the system will later need to be fully dockerized. Keep in mind 12-factor app design.
 
 ### Four Core CLIs
 
@@ -38,15 +42,6 @@ The codebase separates **domain logic** from **infrastructure**:
 python -m venv .venv
 source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 pip install -e .
-
-# Run the pipeline
-make ingest      # writes samples.parquet + samples.head.jsonl
-make infer       # writes judgements/<model>.parquet
-make aggregate   # writes ensemble.parquet
-make evaluate    # writes metrics.json + report.html
-
-# Peek at latest run
-make peek        # requires duckdb CLI
 ```
 
 ### Running Individual CLIs
@@ -59,7 +54,7 @@ ingest --dataset llm-judge --data-dir ./data --out ./out/samples.ndjson --limit 
 python -m llm_ensemble.ingest.cli.ingest_cli --help
 ```
 
-**Note:** The Makefile currently references old paths (`apps/` instead of `src/`). Update paths when running Make targets or invoke CLI scripts directly.
+**Note:** It is planned to add a makefile later for convenience. 
 
 ### Testing
 

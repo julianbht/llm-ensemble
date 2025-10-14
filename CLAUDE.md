@@ -42,6 +42,9 @@ The codebase separates **domain logic** from **infrastructure**:
 python -m venv .venv
 source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 pip install -e .
+
+# Install development dependencies (pytest, coverage tools)
+pip install -e ".[dev]"
 ```
 
 ### Running Individual CLIs
@@ -58,19 +61,35 @@ python -m llm_ensemble.ingest.cli.ingest_cli --help
 
 ### Testing
 
-```bash
-# Install test dependencies first
-pip install pytest
+The project uses pytest for testing. Tests are organized by CLI module (e.g., `src/llm_ensemble/ingest/tests/`).
 
+```bash
 # Run all tests
 pytest
 
-# Run specific test file
+# Run tests for a specific CLI module
+pytest src/llm_ensemble/ingest/tests/
+
+# Run a specific test file
 pytest src/llm_ensemble/ingest/tests/test_llm_judge_ingest.py
+
+# Run a specific test class or function
+pytest src/llm_ensemble/ingest/tests/test_ingest_cli.py::TestIngestCLI::test_basic_ingest_to_stdout
 
 # Run with verbose output
 pytest -v
+
+# Show print statements (useful for debugging)
+pytest -v -s
+
+# Run with coverage reporting (requires pytest-cov)
+pip install pytest-cov
+pytest --cov=llm_ensemble
 ```
+
+**Test Structure:**
+- **Domain/Adapter tests** — Test pure logic and I/O adapters in isolation (e.g., `test_llm_judge_ingest.py`)
+- **CLI integration tests** — Test end-to-end CLI behavior (e.g., `test_ingest_cli.py`)
 
 **Note:** pytest is configured in `pyproject.toml` with `-q` (quiet mode) by default.
 

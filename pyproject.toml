@@ -6,7 +6,12 @@ build-backend = "setuptools.build_meta"
 name = "llm-ensemble"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = ["typer>=0.12", "pydantic>=2.7"]
+dependencies = [
+    "typer>=0.12",
+    "pydantic>=2.7",
+    "requests>=2.31",
+    "pyyaml>=6.0",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -16,6 +21,7 @@ dev = [
 
 [project.scripts]
 ingest = "llm_ensemble.ingest_cli:app"
+infer = "llm_ensemble.infer_cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]          # only ships code from src/

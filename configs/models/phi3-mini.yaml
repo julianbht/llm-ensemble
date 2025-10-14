@@ -6,3 +6,8 @@ default_params:
   max_tokens: 256
 capabilities:
   multilingual: true
+
+# HuggingFace configuration
+# Use hf_model_name for public Inference API, or hf_endpoint_url for dedicated endpoints
+hf_model_name: microsoft/Phi-3-mini-4k-instruct
+# hf_endpoint_url: https://your-endpoint.aws.endpoints.huggingface.cloud

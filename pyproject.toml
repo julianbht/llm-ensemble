@@ -15,7 +15,7 @@ dev = [
 ]
 
 [project.scripts]
-ingest = "llm_ensemble.ingest.cli.ingest_cli:app"
+ingest = "llm_ensemble.ingest_cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]          # only ships code from src/

@@ -54,7 +54,7 @@ pip install -e ".[dev]"
 ingest --dataset llm-judge --data-dir ./data --out ./out/samples.ndjson --limit 100
 
 # Alternative: run via python module
-python -m llm_ensemble.ingest.cli.ingest_cli --help
+python -m llm_ensemble.ingest_cli --help
 ```
 
 **Note:** It is planned to add a makefile later for convenience. 
@@ -150,14 +150,17 @@ params:
 
 ```
 src/llm_ensemble/
-├── ingest/          # CLI 1: Dataset normalization
+├── ingest_cli.py    # CLI 1: Dataset normalization entrypoint
+├── infer_cli.py     # CLI 2: Model inference entrypoint
+├── aggregate_cli.py # CLI 3: Ensemble aggregation entrypoint
+├── evaluate_cli.py  # CLI 4: Metrics & reports entrypoint
+├── ingest/          # Ingest logic
 │   ├── domain/      # Pure logic: models, validation
 │   ├── adapters/    # I/O: TSV/JSONL/HF loaders
-│   ├── cli/         # Typer entrypoint
 │   └── tests/       # Unit tests
-├── infer/           # CLI 2: Model inference
-├── aggregate/       # CLI 3: Ensemble aggregation
-├── evaluate/        # CLI 4: Metrics & reports
+├── infer/           # Infer logic
+├── aggregate/       # Aggregate logic
+├── evaluate/        # Evaluate logic
 └── libs/            # Shared utilities
     ├── io/          # Parquet readers/writers
     ├── logging/     # JSON logger

@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typer.testing import CliRunner
 
-from llm_ensemble.ingest.cli.ingest_cli import app
+from llm_ensemble.ingest_cli import app
 
 
 runner = CliRunner()

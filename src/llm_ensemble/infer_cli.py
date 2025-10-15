@@ -9,7 +9,9 @@ import typer
 from llm_ensemble.ingest.domain.models import JudgingExample
 from llm_ensemble.infer.adapters.config_loader import load_model_config
 from llm_ensemble.infer.adapters.inference_router import iter_judgements
+from llm_ensemble.libs.logging import configure_logging
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
+from llm_ensemble.libs.runtime.git_utils import get_git_info
 
 app = typer.Typer(add_completion=False, help="LLM Ensemble – inference CLI")
 
@@ -83,6 +85,16 @@ def infer(
     run_dir = get_run_dir(run_id, cli_name="infer")
     run_dir.mkdir(parents=True, exist_ok=True)
     output_file = run_dir / "judgements.ndjson"
+    log_file = run_dir / "logs.jsonl"
+
+    # Configure structured logging
+    git_info = get_git_info()
+    logger = configure_logging(
+        cli_name="infer",
+        run_id=run_id,
+        log_file=log_file,
+        git_sha=git_info.get("git_sha"),
+    )
 
     typer.echo(f"Run ID: {run_id}", err=True)
     typer.echo(f"Output: {output_file}", err=True)
@@ -95,6 +107,15 @@ def infer(
     if limit is not None:
         examples = examples[:limit]
         typer.echo(f"Limited to {len(examples)} examples", err=True)
+
+    logger.info(
+        "inference_started",
+        model=model_config.model_id,
+        provider=model_config.provider,
+        num_samples=len(examples),
+        input_file=str(input_file),
+        prompt_template=prompt,
+    )
 
     # Run inference
     count = 0
@@ -117,12 +138,34 @@ def infer(
                 # Track errors
                 if judgement.label is None:
                     error_count += 1
+                    logger.debug(
+                        "inference_failed",
+                        query_id=judgement.query_id,
+                        doc_id=judgement.doc_id,
+                        warnings=judgement.warnings,
+                    )
+                else:
+                    logger.debug(
+                        "inference_success",
+                        query_id=judgement.query_id,
+                        doc_id=judgement.doc_id,
+                        label=judgement.label,
+                        latency_ms=judgement.latency_ms,
+                    )
 
                 # Progress logging
                 if count % 10 == 0:
                     typer.echo(f"Processed {count}/{len(examples)} examples...", err=True)
 
+        logger.info(
+            "inference_completed",
+            judgement_count=count,
+            error_count=error_count,
+            avg_latency_ms=total_latency_ms / count if count > 0 else 0,
+        )
+
     except Exception as e:
+        logger.error("inference_failed", error=str(e), error_type=type(e).__name__)
         typer.echo(f"Error during inference: {e}", err=True)
         raise typer.Exit(1)
 
@@ -145,6 +188,7 @@ def infer(
             "error_count": error_count,
             "avg_latency_ms": total_latency_ms / count if count > 0 else 0,
             "output_file": str(output_file),
+            "log_file": str(log_file),
         },
     )
 

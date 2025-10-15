@@ -6,7 +6,9 @@ import typer
 
 from llm_ensemble.ingest.adapters.llm_judge import iter_examples
 from llm_ensemble.ingest.domain.models import JudgingExample
+from llm_ensemble.libs.logging import configure_logging
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
+from llm_ensemble.libs.runtime.git_utils import get_git_info
 
 app = typer.Typer(add_completion=False, help="LLM Ensemble – data ingest CLI")
 
@@ -49,20 +51,45 @@ def ingest(
     run_dir = get_run_dir(run_id, cli_name="ingest")
     run_dir.mkdir(parents=True, exist_ok=True)
     output_file = run_dir / "samples.ndjson"
+    log_file = run_dir / "logs.jsonl"
+
+    # Configure structured logging
+    git_info = get_git_info()
+    logger = configure_logging(
+        cli_name="ingest",
+        run_id=run_id,
+        log_file=log_file,
+        git_sha=git_info.get("git_sha"),
+    )
 
     typer.echo(f"Run ID: {run_id}", err=True)
     typer.echo(f"Output: {output_file}", err=True)
 
+    logger.info(
+        "ingest_started",
+        dataset=dataset,
+        data_dir=str(data_dir),
+        limit=limit,
+        output_file=str(output_file),
+    )
+
     # Process examples
     count = 0
-    with output_file.open("w", encoding="utf-8", newline="\n") as sink:
-        for ex in iter_examples(data_dir):
-            sink.write(_json_dumps(ex) + "\n")
-            count += 1
-            if limit is not None and count >= limit:
-                break
+    try:
+        with output_file.open("w", encoding="utf-8", newline="\n") as sink:
+            for ex in iter_examples(data_dir):
+                sink.write(_json_dumps(ex) + "\n")
+                count += 1
+                if limit is not None and count >= limit:
+                    break
 
-    typer.echo(f"Wrote {count} examples", err=True)
+        typer.echo(f"Wrote {count} examples", err=True)
+        logger.info("ingest_completed", sample_count=count)
+
+    except Exception as e:
+        logger.error("ingest_failed", error=str(e), error_type=type(e).__name__)
+        typer.echo(f"Error during ingest: {e}", err=True)
+        raise
 
     # Write manifest
     write_manifest(
@@ -76,6 +103,7 @@ def ingest(
         metadata={
             "sample_count": count,
             "output_file": str(output_file),
+            "log_file": str(log_file),
         },
     )
 

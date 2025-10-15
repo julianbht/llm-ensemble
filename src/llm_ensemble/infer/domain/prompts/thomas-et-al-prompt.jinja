@@ -1,0 +1,55 @@
+{# 
+This template generates a structured evaluation prompt modeled after the 
+Thomas et al. search quality rater instructions. It optionally includes:
+- a role description (if `role` is True),
+- a query context with optional `description` and `narrative`,
+- web page content to evaluate (`page_text`),
+- optional detailed evaluation aspects (`aspects`),
+and ends with an instruction to output scores in JSON form.
+#}
+
+{% if role %}
+You are a search quality rater evaluating the relevance
+of web pages.
+{% endif %}
+Given a query and a web page, you must
+provide a score on an integer scale of 0 to 2 with the
+following meanings:
+2 = highly relevant, very helpful for this query
+1 = relevant, may be partly helpful but might contain
+other irrelevant content
+0 = not relevant, should never be shown for this query
+Assume that you are writing a report on the subject of the
+topic. If you would use any of the information contained
+in the web page in such a report, mark it 1. If the web page
+is primarily about the topic, or contains vital information
+about the topic, mark it 2. Otherwise, mark it 0.
+
+Query
+A person has typed [{{ query }}] into a search engine.
+{% if description or narrative %}
+They were looking for:{% if description %} {{ description }}{% endif %}{% if narrative %} {{ narrative }}{% endif %}
+{% endif %}
+
+Result
+Consider the following web page.
+—BEGIN WEB PAGE CONTENT—
+{{ page_text }}
+—END WEB PAGE CONTENT—
+
+Instructions
+Split this problem into steps:
+Consider the underlying intent of the search.
+{% if aspects %}
+Measure how well the content matches a likely intent of
+the query (M).
+Measure how trustworthy the web page is (T).
+Consider the aspects above and the relative importance
+of each, and decide on a final score (O).
+
+Produce a JSON array of scores without providing any
+reasoning. Example: {"M": 2, "T": 1, "O": 1}
+{% else %}
+Decide on a final relevance score for the page (O) without providing
+any reasoning. Example: {"O": 2}
+{% endif %}

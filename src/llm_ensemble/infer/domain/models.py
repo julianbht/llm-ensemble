@@ -33,7 +33,6 @@ class ModelJudgement(BaseModel):
     # Observability
     latency_ms: float = Field(..., description="Inference time in milliseconds")
     retries: int = Field(0, description="Number of retries attempted")
-    cost_estimate: Optional[float] = Field(None, description="Estimated cost in USD")
 
     # Warnings/metadata
     warnings: list[str] = Field(default_factory=list, description="Parser warnings, fallbacks, etc.")

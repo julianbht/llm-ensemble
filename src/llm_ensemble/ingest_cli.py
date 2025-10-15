@@ -18,7 +18,7 @@ def _json_dumps(obj: JudgingExample) -> str:
 @app.command("ingest")
 def ingest(
     dataset: str = typer.Option(
-        ..., "--dataset", "-d", help="Dataset adapter to use (e.g., llm-judge)"
+        ..., "--adapter", "-a", help="Dataset adapter that reads in raw data and produces JudgingExample records"
     ),
     data_dir: Path = typer.Option(
         ..., "--data-dir", "-i", exists=True, file_okay=False, readable=True,
@@ -34,7 +34,7 @@ def ingest(
     Writes output to artifacts/runs/<run_id>/samples.ndjson with manifest.
 
     Example:
-        ingest --dataset llm-judge --data-dir ./data --limit 100
+        ingest --adapter llm-judge --data-dir ./data --limit 100
     """
 
     dataset = dataset.lower().strip()

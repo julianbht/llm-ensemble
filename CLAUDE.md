@@ -17,7 +17,7 @@ Keep in mind that the system will later need to be fully dockerized. Keep in min
 3. **aggregate** — Combine judgements using ensemble strategies (e.g., weighted majority vote)
 4. **evaluate** — Compute metrics and generate HTML reports with reproducibility footers
 
-All artifacts are written to `artifacts/runs/<run_id>/` with a manifest, parquet files, and HTML reports.
+All artifacts are written to `artifacts/runs/<cli_name>/<run_id>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
 
 ## Architecture: Clean Architecture / Ports & Adapters
 
@@ -50,11 +50,17 @@ pip install -e ".[dev]"
 ### Running Individual CLIs
 
 ```bash
-# Ingest
-ingest --dataset llm-judge --data-dir ./data --out ./out/samples.ndjson --limit 100
+# Ingest - Normalize raw datasets into JudgingExamples
+ingest --adapter llm-judge --data-dir ./data --limit 100
+# Output: artifacts/runs/ingest/<run_id>/samples.ndjson
+
+# Infer - Run LLM judge inference
+infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_id>/samples.ndjson
+# Output: artifacts/runs/infer/<run_id>/judgements.ndjson
 
 # Alternative: run via python module
 python -m llm_ensemble.ingest_cli --help
+python -m llm_ensemble.infer_cli --help
 ```
 
 **Note:** It is planned to add a makefile later for convenience. 
@@ -103,11 +109,12 @@ pytest --cov=llm_ensemble
 
 ### Canonical Model Judgement
 - `model_id`, `provider`, `version`: Model identity
-- `label`: Predicted relevance (`{relevant, partially, irrelevant}` — configurable)
-- `score`: Normalized [0,1] confidence
-- `confidence`: Self-reported or derived uncertainty
+- `label`: Predicted relevance (0, 1, 2, or null if parsing failed)
+- `score`: Relevance score [0-2 scale]
+- `confidence`: Model self-reported confidence (optional)
 - `rationale`, `raw_text`: Explainability
 - `latency_ms`, `retries`, `cost_estimate`: Observability
+- `warnings`: Parser warnings, fallbacks
 
 ### Ensemble Output
 - `final_label`, `final_confidence`: Aggregated decision
@@ -176,14 +183,13 @@ All reports and artifacts must include:
 - **Dataset checksum** — Data integrity
 - **Model registry snapshot path** — Model versions used
 
-Reports live at `runs/{run_id}/report.html` for thesis appendices.
+Reports live at `artifacts/runs/evaluate/{run_id}/report.html` for thesis appendices.
 
 ## Important Notes
 
-
-
-- **12-factor friendly:** CLIs read from files, write to stdout by default, and are configurable via flags/env
-- **Environment:** Use `LOG_LEVEL` env var for verbosity
-- **No hidden state:** Everything is persisted to disk with manifests
-- The `Makefile` paths currently reference `apps/` (old structure) — use direct Python module invocation until updated
+- **12-factor friendly:** CLIs read from files, write to `artifacts/runs/`, configurable via flags/env
+- **Environment variables:** For secrets (API keys) and infrastructure (endpoints)
+- **CLI flags:** All task parameters (model, input, adapter) are explicit via required flags
+- **No hidden state:** Everything persisted to disk with manifests tracking git SHA and full metadata
+- **Run management:** All outputs organized by CLI under `artifacts/runs/{ingest,infer,aggregate,evaluate}/`
 - Shared libs in `src/llm_ensemble/libs/` avoid duplication across the four CLIs

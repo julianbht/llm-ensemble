@@ -1,0 +1,11 @@
+model_id: gpt-oss-20b
+provider: openrouter
+context_window: 8192
+default_params:
+  temperature: 0.0
+  max_tokens: 256
+capabilities:
+  multilingual: true
+
+# OpenRouter configuration
+openrouter_model_id: openai/gpt-oss-20b:free

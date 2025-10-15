@@ -74,7 +74,7 @@ def infer(
         run_id = create_run_id(model_config.model_id)
 
     # Set up run directory and output file
-    run_dir = get_run_dir(run_id)
+    run_dir = get_run_dir(run_id, cli_name="infer")
     run_dir.mkdir(parents=True, exist_ok=True)
     output_file = run_dir / "judgements.ndjson"
 

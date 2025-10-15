@@ -46,7 +46,7 @@ def ingest(
         run_id = create_run_id(dataset)
 
     # Set up run directory and output file
-    run_dir = get_run_dir(run_id)
+    run_dir = get_run_dir(run_id, cli_name="ingest")
     run_dir.mkdir(parents=True, exist_ok=True)
     output_file = run_dir / "samples.ndjson"
 

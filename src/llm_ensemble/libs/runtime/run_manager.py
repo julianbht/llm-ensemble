@@ -33,25 +33,26 @@ def create_run_id(name_hint: str) -> str:
     return f"{timestamp}_{safe_hint}"
 
 
-def get_run_dir(run_id: str, base_dir: Optional[Path] = None) -> Path:
+def get_run_dir(run_id: str, cli_name: str, base_dir: Optional[Path] = None) -> Path:
     """Get the directory path for a run.
 
     Args:
         run_id: Run identifier
+        cli_name: CLI name (e.g., "ingest", "infer", "aggregate", "evaluate")
         base_dir: Base artifacts directory (defaults to ./artifacts)
 
     Returns:
-        Path to run directory (artifacts/runs/<run_id>/)
+        Path to run directory (artifacts/runs/<cli_name>/<run_id>/)
 
     Example:
-        >>> get_run_dir("20250115_143022_gpt-oss-20b")
-        PosixPath('artifacts/runs/20250115_143022_gpt-oss-20b')
+        >>> get_run_dir("20250115_143022_gpt-oss-20b", "infer")
+        PosixPath('artifacts/runs/infer/20250115_143022_gpt-oss-20b')
     """
     if base_dir is None:
         # Default to artifacts/ in project root (4 levels up from this file)
         base_dir = Path(__file__).parents[4] / "artifacts"
 
-    return base_dir / "runs" / run_id
+    return base_dir / "runs" / cli_name / run_id
 
 
 def write_manifest(
@@ -100,11 +101,12 @@ def write_manifest(
     return manifest_path
 
 
-def load_manifest(run_id: str, base_dir: Optional[Path] = None) -> dict[str, Any]:
+def load_manifest(run_id: str, cli_name: str, base_dir: Optional[Path] = None) -> dict[str, Any]:
     """Load a manifest.json file for a run.
 
     Args:
         run_id: Run identifier
+        cli_name: CLI name (e.g., "ingest", "infer")
         base_dir: Base artifacts directory (defaults to ./artifacts)
 
     Returns:
@@ -114,11 +116,11 @@ def load_manifest(run_id: str, base_dir: Optional[Path] = None) -> dict[str, Any
         FileNotFoundError: If manifest doesn't exist
 
     Example:
-        >>> manifest = load_manifest("20250115_143022_gpt-oss-20b")
+        >>> manifest = load_manifest("20250115_143022_gpt-oss-20b", "infer")
         >>> manifest["cli_name"]
         'infer'
     """
-    run_dir = get_run_dir(run_id, base_dir)
+    run_dir = get_run_dir(run_id, cli_name, base_dir)
     manifest_path = run_dir / "manifest.json"
 
     if not manifest_path.exists():
@@ -128,18 +130,21 @@ def load_manifest(run_id: str, base_dir: Optional[Path] = None) -> dict[str, Any
         return json.load(f)
 
 
-def list_runs(base_dir: Optional[Path] = None) -> list[str]:
+def list_runs(cli_name: Optional[str] = None, base_dir: Optional[Path] = None) -> list[str]:
     """List all run IDs in the artifacts directory.
 
     Args:
+        cli_name: Optional CLI name to filter by (e.g., "ingest", "infer")
         base_dir: Base artifacts directory (defaults to ./artifacts)
 
     Returns:
         List of run IDs (sorted by timestamp, newest first)
 
     Example:
-        >>> list_runs()
-        ['20250115_143055_gpt-oss-20b', '20250115_143022_llm-judge']
+        >>> list_runs("infer")
+        ['20250115_143055_gpt-oss-20b', '20250115_143022_gpt-oss-20b']
+        >>> list_runs()  # All runs from all CLIs
+        ['20250115_143055_gpt-oss-20b', '20250115_143022_llm-judge', ...]
     """
     if base_dir is None:
         base_dir = Path(__file__).parents[4] / "artifacts"
@@ -148,8 +153,18 @@ def list_runs(base_dir: Optional[Path] = None) -> list[str]:
     if not runs_dir.exists():
         return []
 
-    # Get all subdirectories
-    run_ids = [d.name for d in runs_dir.iterdir() if d.is_dir()]
+    run_ids = []
+
+    if cli_name:
+        # List runs for specific CLI
+        cli_dir = runs_dir / cli_name
+        if cli_dir.exists():
+            run_ids = [d.name for d in cli_dir.iterdir() if d.is_dir()]
+    else:
+        # List all runs from all CLIs
+        for cli_dir in runs_dir.iterdir():
+            if cli_dir.is_dir():
+                run_ids.extend([d.name for d in cli_dir.iterdir() if d.is_dir()])
 
     # Sort by timestamp (newest first)
     return sorted(run_ids, reverse=True)

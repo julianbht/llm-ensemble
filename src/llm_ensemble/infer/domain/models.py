@@ -20,8 +20,14 @@ class ModelJudgement(BaseModel):
     docid: str = Field(..., description="Document ID from input")
 
     # Core judgement output
-    label: Literal["relevant", "partially", "irrelevant"] = Field(
-        ..., description="Predicted relevance label"
+    label: Literal[0, 1, 2] = Field(
+        ..., 
+        description=(
+            "Relevance label: "
+            "2 = highly relevant, very helpful for this query;"
+            "1 = relevant, may be partly helpful; "
+            "0 = not relevant, should never be shown for this query."
+        )
     )
     score: float = Field(..., ge=0.0, le=1.0, description="Normalized confidence [0,1]")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Model self-reported or derived uncertainty")
@@ -33,6 +39,7 @@ class ModelJudgement(BaseModel):
     # Observability
     latency_ms: float = Field(..., description="Inference time in milliseconds")
     retries: int = Field(0, description="Number of retries attempted")
+    cost_estimate: Optional[float] = Field(None, description="Estimated cost in USD")
 
     # Warnings/metadata
     warnings: list[str] = Field(default_factory=list, description="Parser warnings, fallbacks, etc.")

@@ -1,0 +1,86 @@
+"""Inference router that dispatches to the appropriate provider adapter.
+
+Routes inference requests based on model config provider field.
+"""
+
+from __future__ import annotations
+from typing import Iterator, Any
+
+from llm_ensemble.ingest.domain.models import JudgingExample
+from llm_ensemble.infer.domain.models import ModelConfig, ModelJudgement
+from llm_ensemble.infer.adapters.openrouter import send_inference_request
+
+
+def iter_judgements(
+    examples: Iterator[JudgingExample],
+    model_config: ModelConfig,
+) -> Iterator[ModelJudgement]:
+    """Run inference over examples using the appropriate provider adapter.
+
+    Args:
+        examples: Iterator of JudgingExample objects
+        model_config: Model configuration with provider and settings
+
+    Yields:
+        ModelJudgement objects for each example
+
+    Raises:
+        ValueError: If provider is not supported
+
+    Example:
+        >>> from llm_ensemble.infer.adapters.config_loader import load_model_config
+        >>> config = load_model_config("gpt-oss-20b")
+        >>> examples = [example1, example2]
+        >>> for judgement in iter_judgements(iter(examples), config):
+        ...     print(judgement.label)
+    """
+    if model_config.provider == "openrouter":
+        yield from _iter_openrouter_judgements(examples, model_config)
+    elif model_config.provider == "hf":
+        raise NotImplementedError("HuggingFace adapter not yet implemented")
+    elif model_config.provider == "ollama":
+        raise NotImplementedError("Ollama adapter not yet implemented")
+    else:
+        raise ValueError(f"Unsupported provider: {model_config.provider}")
+
+
+def _iter_openrouter_judgements(
+    examples: Iterator[JudgingExample],
+    model_config: ModelConfig,
+) -> Iterator[ModelJudgement]:
+    """Run inference using OpenRouter adapter.
+
+    Args:
+        examples: Iterator of JudgingExample objects
+        model_config: Model configuration
+
+    Yields:
+        ModelJudgement objects
+
+    Raises:
+        ValueError: If openrouter_model_id is not configured
+    """
+    if not model_config.openrouter_model_id:
+        raise ValueError(
+            f"Model {model_config.model_id} is configured for OpenRouter "
+            f"but missing openrouter_model_id field"
+        )
+
+    # Extract default params
+    temperature = model_config.default_params.get("temperature", 0.0)
+    max_tokens = model_config.default_params.get("max_tokens", 256)
+
+    for example in examples:
+        # Convert JudgingExample to dict for the adapter
+        example_dict = example.model_dump()
+
+        # Send inference request
+        judgement_dict = send_inference_request(
+            example=example_dict,
+            model_id=model_config.openrouter_model_id,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+        # Convert dict to ModelJudgement object
+        yield ModelJudgement(**judgement_dict)

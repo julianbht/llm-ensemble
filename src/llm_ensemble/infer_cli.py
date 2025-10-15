@@ -7,8 +7,8 @@ import json
 import typer
 
 from llm_ensemble.ingest.domain.models import JudgingExample
-from llm_ensemble.infer.adapters.config_loader import load_model_config, get_endpoint_url
-from llm_ensemble.infer.adapters.huggingface import iter_judgements
+from llm_ensemble.infer.adapters.config_loader import load_model_config
+from llm_ensemble.infer.adapters.inference_router import iter_judgements
 
 app = typer.Typer(add_completion=False, help="LLM Ensemble – inference CLI")
 
@@ -46,9 +46,6 @@ def infer(
     config_dir: Optional[Path] = typer.Option(
         None, "--config-dir", help="Path to model configs directory"
     ),
-    system_prompt: Optional[str] = typer.Option(
-        None, "--system-prompt", help="Override default system prompt"
-    ),
 ):
     """Run LLM inference on judging examples and output structured judgements.
 
@@ -59,11 +56,11 @@ def infer(
     Configuration via flags and environment variables (HF_TOKEN, etc.).
 
     Example:
-        infer --model phi3-mini --input samples.ndjson --out judgements.ndjson --limit 10
+        infer --model gpt-oss-20b --input samples.ndjson --out judgements.ndjson --limit 10
 
     Environment variables:
+        OPENROUTER_API_KEY: OpenRouter API key (required for OpenRouter models)
         HF_TOKEN: HuggingFace API token (required for HF models)
-        HF_ENDPOINT_<MODEL>_URL: Override endpoint URL for specific model
     """
     # Load model config
     try:
@@ -73,14 +70,6 @@ def infer(
         raise typer.Exit(1)
 
     typer.echo(f"Loaded model config: {model_config.model_id} ({model_config.provider})", err=True)
-
-    # Get endpoint URL
-    try:
-        endpoint_url = get_endpoint_url(model_config)
-        typer.echo(f"Endpoint: {endpoint_url}", err=True)
-    except ValueError as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
 
     # Read examples
     typer.echo(f"Reading examples from {input_file}...", err=True)
@@ -105,8 +94,6 @@ def infer(
         for judgement in iter_judgements(
             iter(examples),
             model_config,
-            endpoint_url,
-            system_prompt,
         ):
             sink.write(_json_dumps(judgement) + "\n")
             count += 1

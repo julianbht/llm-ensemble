@@ -1,0 +1,16 @@
+name: thomas-et-al-prompt
+template_file: thomas-et-al-prompt.jinja
+description: |
+  Thomas et al. search quality rater prompt with structured JSON output.
+  Supports optional role description, query context, and multi-aspect evaluation.
+
+# Variables passed to the Jinja2 template
+variables:
+  role: true           # Include "You are a search quality rater" role description
+  aspects: false       # Use simple O-only format instead of M/T/O aspects
+  description: null    # Optional query description
+  narrative: null      # Optional query narrative
+
+# Output parsing configuration
+expected_output_format: json
+response_parser: parse_thomas_response

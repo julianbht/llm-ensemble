@@ -1,0 +1,15 @@
+name: relevance_v1
+template_file: relevance_v1.jinja
+description: |
+  Simple relevance judging prompt that expects structured JSON output
+  with label, confidence, and rationale fields.
+
+# Variables passed to the Jinja2 template
+# Note: This template uses different variable names than thomas-et-al
+variables:
+  query: null       # Will be filled from JudgingExample.query_text
+  candidate: null   # Will be filled from JudgingExample.doc
+
+# Output parsing configuration
+expected_output_format: json
+response_parser: null  # Would need a custom parser for this format

@@ -13,7 +13,7 @@ from openai import OpenAI
 
 from llm_ensemble.infer.domain.prompt_builder import build_instruction_from_judging_example
 from llm_ensemble.infer.domain.response_parser import parse_thomas_response
-from llm_ensemble.infer.adapters.prompt_loader import load_prompt_template
+from llm_ensemble.infer.adapters.prompt_loader import load_prompt_template, load_prompt_config
 
 
 def send_inference_request(
@@ -65,13 +65,15 @@ def send_inference_request(
             "or pass api_key parameter."
         )
 
-    # Load template and build instruction
-    template = load_prompt_template(prompt_template_name, prompts_dir)
+    # Load prompt config and template
+    prompt_config = load_prompt_config(prompt_template_name, prompts_dir)
+    template = load_prompt_template(prompt_config.template_file, prompts_dir)
+
+    # Build instruction using variables from config
     instruction = build_instruction_from_judging_example(
         template=template,
         example=example,
-        role=True,
-        aspects=False,  # Start with simple O-only format
+        **prompt_config.variables  # Unpack variables from config
     )
 
     # Initialize OpenAI client configured for OpenRouter

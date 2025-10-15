@@ -20,17 +20,18 @@ class ModelJudgement(BaseModel):
     docid: str = Field(..., description="Document ID from input")
 
     # Core judgement output
-    label: Literal[0, 1, 2] = Field(
-        ..., 
+    label: Optional[Literal[0, 1, 2]] = Field(
+        None,
         description=(
             "Relevance label: "
-            "2 = highly relevant, very helpful for this query;"
+            "2 = highly relevant, very helpful for this query; "
             "1 = relevant, may be partly helpful; "
-            "0 = not relevant, should never be shown for this query."
+            "0 = not relevant, should never be shown for this query. "
+            "None = parsing failed or model did not produce valid output."
         )
     )
-    score: float = Field(..., ge=0.0, le=1.0, description="Normalized confidence [0,1]")
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Model self-reported or derived uncertainty")
+    score: Optional[float] = Field(None, ge=0.0, le=2.0, description="Relevance score [0-2]")
+    confidence: Optional[float] = Field(None, ge=0.0, le=1.0, description="Model self-reported or derived uncertainty")
 
     # Explainability
     rationale: Optional[str] = Field(None, description="Model's explanation for its judgement")

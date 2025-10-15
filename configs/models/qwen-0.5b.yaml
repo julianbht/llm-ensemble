@@ -1,0 +1,11 @@
+model_id: qwen-0.5b
+provider: openrouter
+context_window: 8192
+default_params:
+  temperature: 0.0
+  max_tokens: 256
+capabilities:
+  multilingual: true
+
+# OpenRouter configuration
+openrouter_model_id: qwen/qwen-0.5b-chat

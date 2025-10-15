@@ -4,7 +4,8 @@ Routes inference requests based on model config provider field.
 """
 
 from __future__ import annotations
-from typing import Iterator, Any
+from pathlib import Path
+from typing import Iterator, Optional
 
 from llm_ensemble.ingest.domain.models import JudgingExample
 from llm_ensemble.infer.domain.models import ModelConfig, ModelJudgement
@@ -14,12 +15,16 @@ from llm_ensemble.infer.adapters.openrouter import send_inference_request
 def iter_judgements(
     examples: Iterator[JudgingExample],
     model_config: ModelConfig,
+    prompts_dir: Optional[Path] = None,
+    prompt_template_name: str = "thomas-et-al-prompt",
 ) -> Iterator[ModelJudgement]:
     """Run inference over examples using the appropriate provider adapter.
 
     Args:
         examples: Iterator of JudgingExample objects
         model_config: Model configuration with provider and settings
+        prompts_dir: Directory containing prompt templates (defaults to configs/prompts)
+        prompt_template_name: Name of the prompt template to use (defaults to "thomas-et-al-prompt")
 
     Yields:
         ModelJudgement objects for each example
@@ -35,7 +40,7 @@ def iter_judgements(
         ...     print(judgement.label)
     """
     if model_config.provider == "openrouter":
-        yield from _iter_openrouter_judgements(examples, model_config)
+        yield from _iter_openrouter_judgements(examples, model_config, prompts_dir, prompt_template_name)
     elif model_config.provider == "hf":
         raise NotImplementedError("HuggingFace adapter not yet implemented")
     elif model_config.provider == "ollama":
@@ -47,12 +52,16 @@ def iter_judgements(
 def _iter_openrouter_judgements(
     examples: Iterator[JudgingExample],
     model_config: ModelConfig,
+    prompts_dir: Optional[Path] = None,
+    prompt_template_name: str = "thomas-et-al-prompt",
 ) -> Iterator[ModelJudgement]:
     """Run inference using OpenRouter adapter.
 
     Args:
         examples: Iterator of JudgingExample objects
         model_config: Model configuration
+        prompts_dir: Directory containing prompt templates (defaults to configs/prompts)
+        prompt_template_name: Name of the prompt template to use (defaults to "thomas-et-al-prompt")
 
     Yields:
         ModelJudgement objects
@@ -80,6 +89,8 @@ def _iter_openrouter_judgements(
             model_id=model_config.openrouter_model_id,
             temperature=temperature,
             max_tokens=max_tokens,
+            prompt_template_name=prompt_template_name,
+            prompts_dir=prompts_dir,
         )
 
         # Convert dict to ModelJudgement object

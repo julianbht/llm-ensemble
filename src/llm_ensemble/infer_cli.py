@@ -47,6 +47,12 @@ def infer(
     config_dir: Optional[Path] = typer.Option(
         None, "--config-dir", help="Path to model configs directory"
     ),
+    prompts_dir: Optional[Path] = typer.Option(
+        None, "--prompts-dir", help="Path to prompt templates directory (defaults to configs/prompts)"
+    ),
+    prompt: str = typer.Option(
+        "thomas-et-al-prompt", "--prompt", "-p", help="Prompt template name (without .jinja extension)"
+    ),
 ):
     """Run LLM inference on judging examples and output structured judgements.
 
@@ -96,11 +102,13 @@ def infer(
     total_latency_ms = 0.0
 
     try:
-        typer.echo(f"Starting inference...", err=True)
+        typer.echo(f"Starting inference with prompt: {prompt}", err=True)
         with output_file.open("w", encoding="utf-8", newline="\n") as sink:
             for judgement in iter_judgements(
                 iter(examples),
                 model_config,
+                prompts_dir=prompts_dir,
+                prompt_template_name=prompt,
             ):
                 sink.write(_json_dumps(judgement) + "\n")
                 count += 1
@@ -128,9 +136,11 @@ def infer(
             "model": model,
             "input_file": str(input_file),
             "limit": limit,
+            "prompt": prompt,
         },
         metadata={
             "model_config": model_config.model_dump(),
+            "prompt_template": prompt,
             "judgement_count": count,
             "error_count": error_count,
             "avg_latency_ms": total_latency_ms / count if count > 0 else 0,

@@ -8,15 +8,14 @@ from llm_ensemble.infer.domain.prompt_builder import (
     build_instruction,
     build_instruction_from_judging_example,
 )
+from llm_ensemble.infer.adapters.prompt_loader import load_prompt_template
 
 
 # Fixture: Load the thomas-et-al template once for all tests
 @pytest.fixture
 def thomas_template():
-    """Load the thomas-et-al-prompt.jinja template."""
-    template_path = Path(__file__).parents[1] / "domain" / "prompts" / "thomas-et-al-prompt.jinja"
-    with open(template_path) as f:
-        return Template(f.read())
+    """Load the thomas-et-al-prompt.jinja template from centralized configs."""
+    return load_prompt_template("thomas-et-al-prompt")
 
 
 def test_basic_instruction_without_role(thomas_template):

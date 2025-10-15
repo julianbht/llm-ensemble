@@ -10,34 +10,10 @@ import time
 from pathlib import Path
 from typing import Optional, Any
 from openai import OpenAI
-from jinja2 import Template
 
 from llm_ensemble.infer.domain.prompt_builder import build_instruction_from_judging_example
 from llm_ensemble.infer.domain.response_parser import parse_thomas_response
-
-
-def load_thomas_template() -> Template:
-    """Load the thomas-et-al prompt template from disk.
-
-    Returns:
-        Jinja2 Template object ready for rendering
-
-    Raises:
-        FileNotFoundError: If template file doesn't exist
-    """
-    # Navigate from this file to the template location
-    template_path = (
-        Path(__file__).parents[1]
-        / "domain"
-        / "prompts"
-        / "thomas-et-al-prompt.jinja"
-    )
-
-    if not template_path.exists():
-        raise FileNotFoundError(f"Template not found: {template_path}")
-
-    with open(template_path, "r", encoding="utf-8") as f:
-        return Template(f.read())
+from llm_ensemble.infer.adapters.prompt_loader import load_prompt_template
 
 
 def send_inference_request(
@@ -47,6 +23,8 @@ def send_inference_request(
     temperature: float = 0.0,
     max_tokens: int = 256,
     timeout: int = 30,
+    prompt_template_name: str = "thomas-et-al-prompt",
+    prompts_dir: Optional[Path] = None,
 ) -> dict[str, Any]:
     """Send an inference request to OpenRouter and return a ModelJudgement dict.
 
@@ -57,6 +35,8 @@ def send_inference_request(
         temperature: Sampling temperature (default: 0.0 for deterministic)
         max_tokens: Maximum tokens to generate
         timeout: Request timeout in seconds
+        prompt_template_name: Name of the prompt template to use (defaults to "thomas-et-al-prompt")
+        prompts_dir: Directory containing prompt templates (defaults to configs/prompts)
 
     Returns:
         Dict matching ModelJudgement schema with all required fields
@@ -86,7 +66,7 @@ def send_inference_request(
         )
 
     # Load template and build instruction
-    template = load_thomas_template()
+    template = load_prompt_template(prompt_template_name, prompts_dir)
     instruction = build_instruction_from_judging_example(
         template=template,
         example=example,

@@ -11,17 +11,14 @@ from llm_ensemble.infer.domain.prompt_builder import (
 from llm_ensemble.infer.adapters.prompt_loader import load_prompt_template
 
 
-# Fixture: Load the thomas-et-al template once for all tests
-@pytest.fixture
-def thomas_template():
-    """Load the thomas-et-al-prompt.jinja template from centralized configs."""
-    return load_prompt_template("thomas-et-al-prompt")
+# Note: thomas_prompt_template fixture is defined in conftest.py (session-scoped)
 
 
-def test_basic_instruction_without_role(thomas_template):
+@pytest.mark.unit
+def test_basic_instruction_without_role(thomas_prompt_template):
     """Test building instruction without role description."""
     result = build_instruction(
-        template=thomas_template,
+        template=thomas_prompt_template,
         query="python tutorial",
         page_text="This page teaches Python basics.",
         role=False,
@@ -34,10 +31,11 @@ def test_basic_instruction_without_role(thomas_template):
     assert '{"O":' in result  # Should have simple output format
 
 
-def test_instruction_with_description_and_narrative(thomas_template):
+@pytest.mark.unit
+def test_instruction_with_description_and_narrative(thomas_prompt_template):
     """Test including optional description and narrative."""
     result = build_instruction(
-        template=thomas_template,
+        template=thomas_prompt_template,
         query="machine learning",
         page_text="ML is a subset of AI.",
         description="tutorials for beginners",
@@ -50,10 +48,11 @@ def test_instruction_with_description_and_narrative(thomas_template):
     assert "They were looking for:" in result
 
 
-def test_instruction_with_aspects(thomas_template):
+@pytest.mark.unit
+def test_instruction_with_aspects(thomas_prompt_template):
     """Test multi-aspect evaluation format (M/T/O)."""
     result = build_instruction(
-        template=thomas_template,
+        template=thomas_prompt_template,
         query="best restaurants",
         page_text="Here are the top 10 restaurants...",
         aspects=True,
@@ -66,7 +65,8 @@ def test_instruction_with_aspects(thomas_template):
     assert '"O"' in result  # Should have M/T/O format
 
 
-def test_build_from_judging_example(thomas_template):
+@pytest.mark.unit
+def test_build_from_judging_example(thomas_prompt_template):
     """Test convenience wrapper for JudgingExample dict."""
     example = {
         "query_text": "python vs java",
@@ -76,7 +76,7 @@ def test_build_from_judging_example(thomas_template):
     }
 
     result = build_instruction_from_judging_example(
-        template=thomas_template,
+        template=thomas_prompt_template,
         example=example,
         role=True,
         description="comparison article",
@@ -88,10 +88,11 @@ def test_build_from_judging_example(thomas_template):
     assert "You are a search quality rater" in result
 
 
-def test_minimal_instruction(thomas_template):
+@pytest.mark.unit
+def test_minimal_instruction(thomas_prompt_template):
     """Test minimal instruction with only required fields."""
     result = build_instruction(
-        template=thomas_template,
+        template=thomas_prompt_template,
         query="test",
         page_text="content",
     )

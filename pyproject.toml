@@ -33,3 +33,14 @@ exclude = ["**/tests*"]  # optional
 
 [tool.pytest.ini_options]
 addopts = "-q"
+markers = [
+    "unit: Unit tests (fast, isolated, no I/O)",
+    "integration: Integration tests (may use files, adapters)",
+    "slow: Slow tests (API calls, long running)",
+    "requires_api: Tests requiring API credentials",
+]
+# Test discovery
+testpaths = ["src"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

@@ -7,6 +7,7 @@ and handles edge cases properly.
 import json
 from pathlib import Path
 from typer.testing import CliRunner
+import pytest
 
 from llm_ensemble.ingest_cli import app
 from llm_ensemble.libs.schemas.validator import validate_ndjson_file
@@ -16,52 +17,32 @@ from llm_ensemble.libs.runtime.run_manager import get_run_dir
 runner = CliRunner()
 
 
-def _write(tmp: Path, name: str, content: str) -> Path:
-    """Helper to write test fixture files."""
-    p = tmp / name
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(content, encoding="utf-8")
-    return p
-
-
-def _setup_basic_dataset(tmp_path: Path) -> Path:
-    """Create a minimal valid dataset in tmp_path."""
-    tmp_path.mkdir(parents=True, exist_ok=True)
-    _write(tmp_path, "llm4eval_query_2024.txt", "q1\tWhat is AI?\n")
-    _write(
-        tmp_path,
-        "llm4eval_document_2024.jsonl",
-        json.dumps({"docid": "d1", "doc": "AI is..."}) + "\n",
-    )
-    _write(tmp_path, "llm4eval_test_qrel_2024.txt", "q1 1 d1\n")
-    return tmp_path
-
-
+@pytest.mark.integration
 class TestIngestCLI:
     """Test the ingest CLI command."""
 
-    def test_limit_flag(self, tmp_path: Path):
+    def test_limit_flag(self, tmp_path: Path, write_file, tmp_artifacts):
         """Test that --limit restricts the number of examples processed."""
         # Setup dataset with 3 examples
-        _write(
+        write_file(
             tmp_path,
             "llm4eval_query_2024.txt",
             "q1\tQuery 1\nq2\tQuery 2\nq3\tQuery 3\n",
         )
-        _write(
+        write_file(
             tmp_path,
             "llm4eval_document_2024.jsonl",
             json.dumps({"docid": "d1", "doc": "Doc 1"}) + "\n"
             + json.dumps({"docid": "d2", "doc": "Doc 2"}) + "\n"
             + json.dumps({"docid": "d3", "doc": "Doc 3"}) + "\n",
         )
-        _write(
+        write_file(
             tmp_path,
             "llm4eval_test_qrel_2024.txt",
             "q1 1 d1\nq2 0 d2\nq3 1 d3\n",
         )
 
-        test_run_id = f"test_limit_{id(tmp_path)}"
+        test_run_id = "test_limit"
         result = runner.invoke(
             app,
             [
@@ -79,7 +60,7 @@ class TestIngestCLI:
         assert result.exit_code == 0, f"CLI failed: {result.stderr}"
         assert "total_examples=2" in result.stderr
 
-        # Verify output file has exactly 2 examples
+        # Verify output file has exactly 2 examples (uses tmp_artifacts via fixture)
         run_dir = get_run_dir(test_run_id, cli_name="ingest", official=False)
         output_file = run_dir / "samples.ndjson"
         assert output_file.exists()
@@ -118,24 +99,24 @@ class TestIngestCLI:
 
         assert result.exit_code != 0
 
-    def test_multiple_examples_ndjson_format(self, tmp_path: Path):
+    def test_multiple_examples_ndjson_format(self, tmp_path: Path, write_file, tmp_artifacts):
         """Test that multiple examples are written as proper NDJSON (one per line)."""
-        _write(
+        write_file(
             tmp_path,
             "llm4eval_query_2024.txt",
             "q1\tQuery 1\nq2\tQuery 2\n",
         )
-        _write(
+        write_file(
             tmp_path,
             "llm4eval_document_2024.jsonl",
             json.dumps({"docid": "d1", "doc": "Doc 1"}) + "\n"
             + json.dumps({"docid": "d2", "doc": "Doc 2"}) + "\n",
         )
-        _write(
+        write_file(
             tmp_path, "llm4eval_test_qrel_2024.txt", "q1 1 d1\nq2 0 d2\n"
         )
 
-        test_run_id = f"test_multiple_{id(tmp_path)}"
+        test_run_id = "test_multiple"
         result = runner.invoke(
             app,
             ["--adapter", "llm-judge", "--data-dir", str(tmp_path), "--run-id", test_run_id],
@@ -143,7 +124,7 @@ class TestIngestCLI:
 
         assert result.exit_code == 0, f"CLI failed: {result.stderr}"
 
-        # Read output file
+        # Read output file (uses tmp_artifacts via fixture)
         run_dir = get_run_dir(test_run_id, cli_name="ingest", official=False)
         output_file = run_dir / "samples.ndjson"
         assert output_file.exists()
@@ -157,25 +138,22 @@ class TestIngestCLI:
         assert ex1["query_id"] == "q1"
         assert ex2["query_id"] == "q2"
 
-    def test_output_validates_against_schema(self, tmp_path: Path):
+    def test_output_validates_against_schema(self, mock_llm_judge_dataset, tmp_artifacts):
         """Test that ingest CLI output validates against sample.schema.json."""
-        data_dir = _setup_basic_dataset(tmp_path / "data")
-
-        # Use a unique run_id for this test
-        test_run_id = f"test_schema_validation_{id(tmp_path)}"
+        test_run_id = "test_schema_validation"
 
         result = runner.invoke(
             app,
             [
                 "--adapter", "llm-judge",
-                "--data-dir", str(data_dir),
+                "--data-dir", str(mock_llm_judge_dataset),
                 "--run-id", test_run_id,
             ],
         )
 
         assert result.exit_code == 0, f"CLI failed: {result.stderr}"
 
-        # Get output file path using run_manager (matches CLI behavior)
+        # Get output file path using run_manager (uses tmp_artifacts via fixture)
         run_dir = get_run_dir(test_run_id, cli_name="ingest", official=False)
         output_file = run_dir / "samples.ndjson"
         assert output_file.exists(), f"Output file not found at {output_file}"

@@ -33,6 +33,9 @@ def ingest(
         None, "--run-id", help="Custom run ID (auto-generates if not provided)"
     ),
     limit: Optional[int] = typer.Option(None, help="Process at most N examples"),
+    save_logs: bool = typer.Option(
+        False, "--save-logs", help="Save logs to run.log file in run directory"
+    ),
 ):
     """Normalize a raw IR dataset into JudgingExample NDJSON records.
 
@@ -55,8 +58,14 @@ def ingest(
     run_dir.mkdir(parents=True, exist_ok=True)
     output_file = run_dir / "samples.ndjson"
 
+    # Set up log file if requested
+    log_file_handle = None
+    if save_logs:
+        log_file_path = run_dir / "run.log"
+        log_file_handle = open(log_file_path, "w", encoding="utf-8")
+
     # Initialize logger
-    logger = get_logger("ingest", run_id=run_id)
+    logger = get_logger("ingest", run_id=run_id, log_file=log_file_handle)
 
     logger.info("Starting ingest", dataset=dataset, data_dir=str(data_dir), limit=limit)
     logger.info("Run directory", path=str(run_dir))
@@ -89,6 +98,11 @@ def ingest(
     )
 
     logger.info("Manifest written", path=str(run_dir / "manifest.json"))
+
+    # Close log file if opened
+    if log_file_handle is not None:
+        logger.info("Logs saved", path=str(run_dir / "run.log"))
+        log_file_handle.close()
 
 
 if __name__ == "__main__":

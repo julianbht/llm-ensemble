@@ -52,6 +52,7 @@ class Logger:
         run_id: Optional[str] = None,
         use_json: Optional[bool] = None,
         min_level: LogLevel = LogLevel.INFO,
+        log_file: Optional[Any] = None,
     ):
         """Initialize logger.
 
@@ -60,10 +61,12 @@ class Logger:
             run_id: Optional run ID for context
             use_json: Force JSON output (defaults to LOG_FORMAT env var)
             min_level: Minimum log level to output (defaults to INFO)
+            log_file: Optional file handle to write logs to (in addition to stderr)
         """
         self.cli_name = cli_name
         self.run_id = run_id
         self.min_level = min_level
+        self.log_file = log_file
 
         # Determine output format
         if use_json is None:
@@ -131,7 +134,12 @@ class Logger:
         else:
             output = self._format_human(level, message, **kwargs)
 
+        # Always write to stderr
         print(output, file=sys.stderr, flush=True)
+
+        # Also write to log file if configured
+        if self.log_file is not None:
+            print(output, file=self.log_file, flush=True)
 
     def debug(self, message: str, **kwargs: Any) -> None:
         """Log debug message."""
@@ -154,6 +162,7 @@ def get_logger(
     cli_name: str,
     run_id: Optional[str] = None,
     min_level: Optional[str] = None,
+    log_file: Optional[Any] = None,
 ) -> Logger:
     """Get a logger instance for a CLI.
 
@@ -162,6 +171,7 @@ def get_logger(
         run_id: Optional run ID for context
         min_level: Minimum log level (DEBUG, INFO, WARNING, ERROR)
                    Defaults to LOG_LEVEL env var or INFO
+        log_file: Optional file handle to write logs to (in addition to stderr)
 
     Returns:
         Logger instance
@@ -169,6 +179,11 @@ def get_logger(
     Example:
         >>> logger = get_logger("ingest", run_id="20250115_143022_llm-judge")
         >>> logger.info("Starting ingest")
+
+        >>> # With file logging
+        >>> with open("run.log", "w") as f:
+        >>>     logger = get_logger("ingest", run_id="20250115_143022_llm-judge", log_file=f)
+        >>>     logger.info("Starting ingest")
     """
     # Determine minimum log level
     if min_level is None:
@@ -179,4 +194,4 @@ def get_logger(
     except ValueError:
         level_enum = LogLevel.INFO
 
-    return Logger(cli_name=cli_name, run_id=run_id, min_level=level_enum)
+    return Logger(cli_name=cli_name, run_id=run_id, min_level=level_enum, log_file=log_file)

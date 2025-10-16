@@ -15,4 +15,8 @@ dist/
 build/
 # Artifacts
 /out/
-artifacts/
+# Ignore test runs only (official runs can be committed)
+artifacts/runs/*/test/
+# Ignore other artifact directories
+artifacts/cache/
+artifacts/tmp/

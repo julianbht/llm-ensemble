@@ -60,6 +60,12 @@ def infer(
     save_logs: bool = typer.Option(
         False, "--save-logs", help="Save logs to run.log file in run directory"
     ),
+    official: bool = typer.Option(
+        False, "--official", help="Mark as official run (saved to official/ subdirectory for git tracking)"
+    ),
+    notes: Optional[str] = typer.Option(
+        None, "--notes", help="Notes about this run (experiment purpose, hypothesis, etc.)"
+    ),
 ):
     """Run LLM inference on judging examples and output structured judgements.
 
@@ -86,7 +92,7 @@ def infer(
         run_id = create_run_id(model_config.model_id)
 
     # Set up run directory and output file
-    run_dir = get_run_dir(run_id, cli_name="infer")
+    run_dir = get_run_dir(run_id, cli_name="infer", official=official)
     run_dir.mkdir(parents=True, exist_ok=True)
     output_file = run_dir / "judgements.ndjson"
 
@@ -173,6 +179,8 @@ def infer(
             "avg_latency_ms": total_latency_ms / count if count > 0 else 0,
             "output_file": str(output_file),
         },
+        official=official,
+        notes=notes,
     )
 
     logger.info("Manifest written", path=str(run_dir / "manifest.json"))

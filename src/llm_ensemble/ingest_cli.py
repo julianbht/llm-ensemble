@@ -36,6 +36,12 @@ def ingest(
     save_logs: bool = typer.Option(
         False, "--save-logs", help="Save logs to run.log file in run directory"
     ),
+    official: bool = typer.Option(
+        False, "--official", help="Mark as official run (saved to official/ subdirectory for git tracking)"
+    ),
+    notes: Optional[str] = typer.Option(
+        None, "--notes", help="Notes about this run (experiment purpose, hypothesis, etc.)"
+    ),
 ):
     """Normalize a raw IR dataset into JudgingExample NDJSON records.
 
@@ -54,7 +60,7 @@ def ingest(
         run_id = create_run_id(dataset)
 
     # Set up run directory and output file
-    run_dir = get_run_dir(run_id, cli_name="ingest")
+    run_dir = get_run_dir(run_id, cli_name="ingest", official=official)
     run_dir.mkdir(parents=True, exist_ok=True)
     output_file = run_dir / "samples.ndjson"
 
@@ -95,6 +101,8 @@ def ingest(
             "sample_count": count,
             "output_file": str(output_file),
         },
+        official=official,
+        notes=notes,
     )
 
     logger.info("Manifest written", path=str(run_dir / "manifest.json"))

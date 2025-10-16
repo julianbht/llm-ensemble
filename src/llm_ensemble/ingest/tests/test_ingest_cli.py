@@ -78,8 +78,8 @@ class TestIngestCLI:
         assert result.exit_code == 0, f"CLI failed: {result.stderr}"
         assert "total_examples=2" in result.stderr
 
-        # Verify output file has exactly 2 examples
-        output_file = Path("artifacts") / "runs" / "ingest" / test_run_id / "samples.ndjson"
+        # Verify output file has exactly 2 examples (now in test/ subdirectory)
+        output_file = Path("artifacts") / "runs" / "ingest" / "test" / test_run_id / "samples.ndjson"
         assert output_file.exists()
 
         lines = [l for l in output_file.read_text().strip().split("\n") if l]
@@ -141,8 +141,8 @@ class TestIngestCLI:
 
         assert result.exit_code == 0, f"CLI failed: {result.stderr}"
 
-        # Read output file
-        output_file = Path("artifacts") / "runs" / "ingest" / test_run_id / "samples.ndjson"
+        # Read output file (now in test/ subdirectory)
+        output_file = Path("artifacts") / "runs" / "ingest" / "test" / test_run_id / "samples.ndjson"
         assert output_file.exists()
 
         lines = [l for l in output_file.read_text().strip().split("\n") if l]
@@ -172,9 +172,9 @@ class TestIngestCLI:
 
         assert result.exit_code == 0, f"CLI failed: {result.stderr}"
 
-        # The CLI writes to artifacts/runs/ingest/<run_id>/ relative to project root
+        # The CLI writes to artifacts/runs/ingest/test/<run_id>/ relative to project root
         # Find the output file
-        output_file = Path("artifacts") / "runs" / "ingest" / test_run_id / "samples.ndjson"
+        output_file = Path("artifacts") / "runs" / "ingest" / "test" / test_run_id / "samples.ndjson"
         assert output_file.exists(), f"Output file not found at {output_file}"
 
         # Validate against schema

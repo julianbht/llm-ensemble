@@ -33,26 +33,32 @@ def create_run_id(name_hint: str) -> str:
     return f"{timestamp}_{safe_hint}"
 
 
-def get_run_dir(run_id: str, cli_name: str, base_dir: Optional[Path] = None) -> Path:
+def get_run_dir(run_id: str, cli_name: str, official: bool = False, base_dir: Optional[Path] = None) -> Path:
     """Get the directory path for a run.
 
     Args:
         run_id: Run identifier
         cli_name: CLI name (e.g., "ingest", "infer", "aggregate", "evaluate")
+        official: If True, place in official/ subdirectory (for git-tracked runs)
         base_dir: Base artifacts directory (defaults to ./artifacts)
 
     Returns:
-        Path to run directory (artifacts/runs/<cli_name>/<run_id>/)
+        Path to run directory:
+        - Test runs: artifacts/runs/<cli_name>/test/<run_id>/
+        - Official runs: artifacts/runs/<cli_name>/official/<run_id>/
 
     Example:
         >>> get_run_dir("20250115_143022_gpt-oss-20b", "infer")
-        PosixPath('artifacts/runs/infer/20250115_143022_gpt-oss-20b')
+        PosixPath('artifacts/runs/infer/test/20250115_143022_gpt-oss-20b')
+        >>> get_run_dir("20250115_143022_baseline", "infer", official=True)
+        PosixPath('artifacts/runs/infer/official/20250115_143022_baseline')
     """
     if base_dir is None:
         # Default to artifacts/ in project root (4 levels up from this file)
         base_dir = Path(__file__).parents[4] / "artifacts"
 
-    return base_dir / "runs" / cli_name / run_id
+    run_type = "official" if official else "test"
+    return base_dir / "runs" / cli_name / run_type / run_id
 
 
 def write_manifest(
@@ -60,6 +66,8 @@ def write_manifest(
     cli_name: str,
     cli_args: dict[str, Any],
     metadata: dict[str, Any],
+    official: bool = False,
+    notes: Optional[str] = None,
 ) -> Path:
     """Write a manifest.json file for a run.
 
@@ -68,6 +76,8 @@ def write_manifest(
         cli_name: Name of the CLI (e.g., "ingest", "infer")
         cli_args: Command-line arguments as dict
         metadata: Additional metadata (dataset, model, counts, etc.)
+        official: If True, mark as official run (for reproducibility/git tracking)
+        notes: Optional notes about this run (purpose, experiment details, etc.)
 
     Returns:
         Path to the written manifest file
@@ -77,7 +87,9 @@ def write_manifest(
         ...     run_dir,
         ...     "infer",
         ...     {"model": "gpt-oss-20b", "input": "..."},
-        ...     {"inference_count": 10, "avg_latency_ms": 234.5}
+        ...     {"inference_count": 10, "avg_latency_ms": 234.5},
+        ...     official=True,
+        ...     notes="Baseline evaluation for thesis Chapter 4"
         ... )
     """
     # Ensure run directory exists
@@ -86,8 +98,10 @@ def write_manifest(
     # Build manifest
     manifest = {
         "run_id": run_dir.name,
+        "run_type": "official" if official else "test",
         "cli_name": cli_name,
         "timestamp": datetime.now().isoformat(),
+        "notes": notes,
         "cli_args": cli_args,
         **get_git_info(),
         **metadata,

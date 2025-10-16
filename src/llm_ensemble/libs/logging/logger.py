@@ -83,8 +83,15 @@ class Logger:
         levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARNING, LogLevel.ERROR]
         return levels.index(level) >= levels.index(self.min_level)
 
-    def _format_human(self, level: LogLevel, message: str, **kwargs: Any) -> str:
-        """Format log message for human-readable output."""
+    def _format_human(self, level: LogLevel, message: str, use_color: bool = None, **kwargs: Any) -> str:
+        """Format log message for human-readable output.
+
+        Args:
+            level: Log level
+            message: Log message
+            use_color: Override color setting (defaults to self.use_color)
+            **kwargs: Additional key-value pairs to append
+        """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Build context
@@ -99,8 +106,9 @@ class Logger:
             kwargs_parts = [f"{k}={v}" for k, v in kwargs.items()]
             kwargs_str = " " + " ".join(kwargs_parts)
 
-        # Apply color if terminal supports it
-        if self.use_color:
+        # Apply color if requested
+        should_use_color = use_color if use_color is not None else self.use_color
+        if should_use_color:
             color = self.COLORS.get(level, "")
             level_str = f"{color}{level.value}{self.RESET}"
             context_str = f"{self.BOLD}[{context}]{self.RESET}"
@@ -131,15 +139,19 @@ class Logger:
 
         if self.use_json:
             output = self._format_json(level, message, **kwargs)
+            file_output = output  # JSON is the same for both
         else:
-            output = self._format_human(level, message, **kwargs)
+            # Colored output for stderr (terminal)
+            output = self._format_human(level, message, use_color=self.use_color, **kwargs)
+            # Plain output for file (no ANSI codes)
+            file_output = self._format_human(level, message, use_color=False, **kwargs)
 
         # Always write to stderr
         print(output, file=sys.stderr, flush=True)
 
-        # Also write to log file if configured
+        # Write to log file without colors if configured
         if self.log_file is not None:
-            print(output, file=self.log_file, flush=True)
+            print(file_output, file=self.log_file, flush=True)
 
     def debug(self, message: str, **kwargs: Any) -> None:
         """Log debug message."""

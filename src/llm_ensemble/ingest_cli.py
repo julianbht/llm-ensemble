@@ -7,6 +7,11 @@ import typer
 from llm_ensemble.ingest.adapters.llm_judge import iter_examples
 from llm_ensemble.ingest.domain.models import JudgingExample
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
+from llm_ensemble.libs.runtime.env import load_runtime_config
+from llm_ensemble.libs.logging.logger import get_logger
+
+# Load runtime configuration early
+load_runtime_config()
 
 app = typer.Typer(add_completion=False, help="LLM Ensemble – data ingest CLI")
 
@@ -50,8 +55,12 @@ def ingest(
     run_dir.mkdir(parents=True, exist_ok=True)
     output_file = run_dir / "samples.ndjson"
 
-    typer.echo(f"Run ID: {run_id}", err=True)
-    typer.echo(f"Output: {output_file}", err=True)
+    # Initialize logger
+    logger = get_logger("ingest", run_id=run_id)
+
+    logger.info("Starting ingest", dataset=dataset, data_dir=str(data_dir), limit=limit)
+    logger.info("Run directory", path=str(run_dir))
+    logger.info("Output file", path=str(output_file))
 
     # Process examples
     count = 0
@@ -59,10 +68,11 @@ def ingest(
         for ex in iter_examples(data_dir):
             sink.write(_json_dumps(ex) + "\n")
             count += 1
+            logger.info("Processed example", count=count, query_id=ex.query_id, docid=ex.docid)
             if limit is not None and count >= limit:
                 break
 
-    typer.echo(f"Wrote {count} examples", err=True)
+    logger.info("Ingest complete", total_examples=count)
 
     # Write manifest
     write_manifest(
@@ -79,7 +89,7 @@ def ingest(
         },
     )
 
-    typer.echo(f"Manifest: {run_dir / 'manifest.json'}", err=True)
+    logger.info("Manifest written", path=str(run_dir / "manifest.json"))
 
 
 if __name__ == "__main__":

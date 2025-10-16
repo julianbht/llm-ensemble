@@ -10,6 +10,11 @@ from llm_ensemble.ingest.domain.models import JudgingExample
 from llm_ensemble.infer.adapters.config_loader import load_model_config
 from llm_ensemble.infer.adapters.inference_router import iter_judgements
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
+from llm_ensemble.libs.runtime.env import load_runtime_config
+from llm_ensemble.libs.logging.logger import get_logger
+
+# Load runtime configuration early
+load_runtime_config()
 
 app = typer.Typer(add_completion=False, help="LLM Ensemble – inference CLI")
 
@@ -70,10 +75,9 @@ def infer(
     try:
         model_config = load_model_config(model, config_dir)
     except FileNotFoundError as e:
+        # Use basic error output before logger is initialized
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)
-
-    typer.echo(f"Loaded model config: {model_config.model_id} ({model_config.provider})", err=True)
 
     # Create or use provided run ID
     if run_id is None:
@@ -84,17 +88,21 @@ def infer(
     run_dir.mkdir(parents=True, exist_ok=True)
     output_file = run_dir / "judgements.ndjson"
 
-    typer.echo(f"Run ID: {run_id}", err=True)
-    typer.echo(f"Output: {output_file}", err=True)
+    # Initialize logger
+    logger = get_logger("infer", run_id=run_id)
+
+    logger.info("Starting inference", model=model_config.model_id, provider=model_config.provider, prompt=prompt)
+    logger.info("Run directory", path=str(run_dir))
+    logger.info("Output file", path=str(output_file))
 
     # Read examples
-    typer.echo(f"Reading examples from {input_file}...", err=True)
+    logger.info("Reading examples", input_file=str(input_file))
     examples = _read_examples(input_file)
-    typer.echo(f"Loaded {len(examples)} examples", err=True)
+    logger.info("Loaded examples", count=len(examples))
 
     if limit is not None:
         examples = examples[:limit]
-        typer.echo(f"Limited to {len(examples)} examples", err=True)
+        logger.info("Limited examples", count=len(examples))
 
     # Run inference
     count = 0
@@ -102,7 +110,6 @@ def infer(
     total_latency_ms = 0.0
 
     try:
-        typer.echo(f"Starting inference with prompt: {prompt}", err=True)
         with output_file.open("w", encoding="utf-8", newline="\n") as sink:
             for judgement in iter_judgements(
                 iter(examples),
@@ -117,16 +124,28 @@ def infer(
                 # Track errors
                 if judgement.label is None:
                     error_count += 1
-
-                # Progress logging
-                if count % 10 == 0:
-                    typer.echo(f"Processed {count}/{len(examples)} examples...", err=True)
+                    logger.warning(
+                        "Judgement error",
+                        count=count,
+                        query_id=judgement.query_id,
+                        docid=judgement.docid,
+                        warnings=judgement.warnings,
+                    )
+                else:
+                    logger.info(
+                        "Processed judgement",
+                        count=count,
+                        query_id=judgement.query_id,
+                        docid=judgement.docid,
+                        label=judgement.label,
+                        latency_ms=f"{judgement.latency_ms:.1f}",
+                    )
 
     except Exception as e:
-        typer.echo(f"Error during inference: {e}", err=True)
+        logger.error("Inference failed", error=str(e))
         raise typer.Exit(1)
 
-    typer.echo(f"Wrote {count} judgements ({error_count} errors)", err=True)
+    logger.info("Inference complete", total_judgements=count, errors=error_count, avg_latency_ms=f"{total_latency_ms / count if count > 0 else 0:.1f}")
 
     # Write manifest
     write_manifest(
@@ -148,7 +167,7 @@ def infer(
         },
     )
 
-    typer.echo(f"Manifest: {run_dir / 'manifest.json'}", err=True)
+    logger.info("Manifest written", path=str(run_dir / "manifest.json"))
 
 
 if __name__ == "__main__":

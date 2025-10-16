@@ -37,7 +37,7 @@ def _json_dumps(judgement) -> str:
 @app.command("infer")
 def infer(
     model: str = typer.Option(
-        ..., "--model", "-m", help="Model ID (e.g., gpt-oss-20b)"
+        ..., "--model", "-m", help="Model ID for .yaml config file(e.g., gpt-oss-20b)"
     ),
     input_file: Path = typer.Option(
         ..., "--input", "-i", exists=True, file_okay=True, readable=True,

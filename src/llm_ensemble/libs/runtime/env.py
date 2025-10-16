@@ -1,80 +1,60 @@
 """Runtime environment configuration loader.
 
-Loads environment-specific configuration from configs/runtime/*.env files
-based on the APP_ENV environment variable.
+Loads configuration using python-dotenv with a two-layer approach:
+1. Root .env (gitignored) - for secrets and local overrides
+2. configs/runtime/*.env (committed) - for non-secret defaults
 
 This follows 12-factor app principles by separating environment-specific
-configuration from code.
+configuration from code while keeping secrets out of version control.
 """
 
 from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Optional
+from dotenv import load_dotenv
 
 
 def load_runtime_config(app_env: Optional[str] = None) -> None:
-    """Load environment-specific configuration from configs/runtime/*.env.
+    """Load environment configuration using python-dotenv.
 
-    Loads the appropriate .env file based on APP_ENV and sets environment
-    variables. This should be called early in CLI initialization.
+    Loads configuration in two layers:
+    1. Root .env file (gitignored) - secrets and local overrides
+    2. configs/runtime/{env}.env - environment-specific non-secret defaults
 
     Args:
         app_env: Environment name (dev, prod, ci). Defaults to APP_ENV env var or "dev"
 
     Example:
-        >>> load_runtime_config()  # Loads configs/runtime/dev.env by default
-        >>> load_runtime_config("prod")  # Loads configs/runtime/prod.env
+        >>> load_runtime_config()  # Loads .env + configs/runtime/dev.env
+        >>> load_runtime_config("prod")  # Loads .env + configs/runtime/prod.env
 
     Environment precedence (highest to lowest):
-        1. Already-set environment variables (never overwritten)
-        2. Runtime config file (configs/runtime/{env}.env)
-        3. Default values in code
+        1. Already-set shell environment variables
+        2. Root .env file (secrets, local overrides)
+        3. Runtime config file configs/runtime/{env}.env (non-secret defaults)
 
     Note:
-        This function does NOT overwrite existing environment variables.
-        This allows manual overrides via shell environment or .env files.
+        python-dotenv does NOT overwrite existing environment variables.
+        This allows manual overrides via shell environment.
     """
-    # Determine which environment to load
+    # Find project root (4 levels up from this file)
+    project_root = Path(__file__).parents[4]
+
+    # Layer 1: Load root .env first (secrets and local overrides)
+    # override=False means existing env vars take precedence
+    root_env = project_root / ".env"
+    if root_env.exists():
+        load_dotenv(dotenv_path=root_env, override=False)
+
+    # Determine which environment to load (may have been set in root .env)
     if app_env is None:
         app_env = os.getenv("APP_ENV", "dev")
 
-    # Find configs/runtime directory (relative to project root)
-    # This file is at src/llm_ensemble/libs/runtime/env.py
-    # Project root is 4 levels up
-    project_root = Path(__file__).parents[4]
-    runtime_config_dir = project_root / "configs" / "runtime"
-    config_file = runtime_config_dir / f"{app_env}.env"
-
-    if not config_file.exists():
-        # Silent fallback - don't error if config file missing
-        # This allows the system to work with just env vars
-        return
-
-    # Parse and load environment variables
-    with open(config_file, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-
-            # Skip empty lines and comments
-            if not line or line.startswith("#"):
-                continue
-
-            # Parse KEY=VALUE
-            if "=" not in line:
-                continue
-
-            key, _, value = line.partition("=")
-            key = key.strip()
-            value = value.strip()
-
-            # Remove inline comments
-            if "#" in value:
-                value = value.split("#")[0].strip()
-
-            # Only set if not already in environment (precedence rule)
-            if key and key not in os.environ:
-                os.environ[key] = value
+    # Layer 2: Load environment-specific config (non-secret defaults)
+    runtime_config_file = project_root / "configs" / "runtime" / f"{app_env}.env"
+    if runtime_config_file.exists():
+        load_dotenv(dotenv_path=runtime_config_file, override=False)
 
 
 def get_app_env() -> str:

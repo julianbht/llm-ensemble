@@ -9,6 +9,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from llm_ensemble.ingest_cli import app
+from llm_ensemble.libs.schemas.validator import validate_ndjson_file
 
 
 runner = CliRunner()
@@ -38,50 +39,6 @@ def _setup_basic_dataset(tmp_path: Path) -> Path:
 class TestIngestCLI:
     """Test the ingest CLI command."""
 
-    def test_basic_ingest_to_stdout(self, tmp_path: Path):
-        """Test that ingest writes valid NDJSON to stdout."""
-        data_dir = _setup_basic_dataset(tmp_path)
-
-        result = runner.invoke(
-            app, ["--dataset", "llm-judge", "--data-dir", str(data_dir)]
-        )
-
-        assert result.exit_code == 0
-        lines = result.stdout.strip().split("\n")
-        # Last line is the summary to stderr, so check stdout
-        assert "Wrote 1 examples" in result.stderr
-
-        # Parse the NDJSON output
-        example = json.loads(lines[0])
-        assert example["query_id"] == "q1"
-        assert example["docid"] == "d1"
-        assert example["gold_relevance"] == 1
-
-    def test_ingest_to_file(self, tmp_path: Path):
-        """Test that ingest writes to a specified output file."""
-        data_dir = _setup_basic_dataset(tmp_path / "data")
-        out_file = tmp_path / "output" / "samples.ndjson"
-
-        result = runner.invoke(
-            app,
-            [
-                "--dataset",
-                "llm-judge",
-                "--data-dir",
-                str(data_dir),
-                "--out",
-                str(out_file),
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert out_file.exists()
-
-        # Verify content
-        content = out_file.read_text()
-        example = json.loads(content.strip())
-        assert example["query_id"] == "q1"
-
     def test_limit_flag(self, tmp_path: Path):
         """Test that --limit restricts the number of examples processed."""
         # Setup dataset with 3 examples
@@ -103,21 +60,29 @@ class TestIngestCLI:
             "q1 1 d1\nq2 0 d2\nq3 1 d3\n",
         )
 
+        test_run_id = f"test_limit_{id(tmp_path)}"
         result = runner.invoke(
             app,
             [
-                "--dataset",
+                "--adapter",
                 "llm-judge",
                 "--data-dir",
                 str(tmp_path),
                 "--limit",
                 "2",
+                "--run-id",
+                test_run_id,
             ],
         )
 
-        assert result.exit_code == 0
-        assert "Wrote 2 examples" in result.stderr
-        lines = [l for l in result.stdout.strip().split("\n") if l]
+        assert result.exit_code == 0, f"CLI failed: {result.stderr}"
+        assert "total_examples=2" in result.stderr
+
+        # Verify output file has exactly 2 examples
+        output_file = Path("artifacts") / "runs" / "ingest" / test_run_id / "samples.ndjson"
+        assert output_file.exists()
+
+        lines = [l for l in output_file.read_text().strip().split("\n") if l]
         assert len(lines) == 2
 
     def test_unsupported_dataset_fails(self, tmp_path: Path):
@@ -125,7 +90,7 @@ class TestIngestCLI:
         result = runner.invoke(
             app,
             [
-                "--dataset",
+                "--adapter",
                 "unknown-dataset",
                 "--data-dir",
                 str(tmp_path),
@@ -142,7 +107,7 @@ class TestIngestCLI:
         result = runner.invoke(
             app,
             [
-                "--dataset",
+                "--adapter",
                 "llm-judge",
                 "--data-dir",
                 "/nonexistent/path",
@@ -150,27 +115,6 @@ class TestIngestCLI:
         )
 
         assert result.exit_code != 0
-
-    def test_output_creates_parent_dirs(self, tmp_path: Path):
-        """Test that output file creation creates parent directories."""
-        data_dir = _setup_basic_dataset(tmp_path / "data")
-        out_file = tmp_path / "deeply" / "nested" / "output.ndjson"
-
-        result = runner.invoke(
-            app,
-            [
-                "--dataset",
-                "llm-judge",
-                "--data-dir",
-                str(data_dir),
-                "--out",
-                str(out_file),
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert out_file.exists()
-        assert out_file.parent.exists()
 
     def test_multiple_examples_ndjson_format(self, tmp_path: Path):
         """Test that multiple examples are written as proper NDJSON (one per line)."""
@@ -189,13 +133,19 @@ class TestIngestCLI:
             tmp_path, "llm4eval_test_qrel_2024.txt", "q1 1 d1\nq2 0 d2\n"
         )
 
+        test_run_id = f"test_multiple_{id(tmp_path)}"
         result = runner.invoke(
             app,
-            ["--dataset", "llm-judge", "--data-dir", str(tmp_path)],
+            ["--adapter", "llm-judge", "--data-dir", str(tmp_path), "--run-id", test_run_id],
         )
 
-        assert result.exit_code == 0
-        lines = [l for l in result.stdout.strip().split("\n") if l]
+        assert result.exit_code == 0, f"CLI failed: {result.stderr}"
+
+        # Read output file
+        output_file = Path("artifacts") / "runs" / "ingest" / test_run_id / "samples.ndjson"
+        assert output_file.exists()
+
+        lines = [l for l in output_file.read_text().strip().split("\n") if l]
         assert len(lines) == 2
 
         # Each line should be valid JSON
@@ -203,3 +153,35 @@ class TestIngestCLI:
         ex2 = json.loads(lines[1])
         assert ex1["query_id"] == "q1"
         assert ex2["query_id"] == "q2"
+
+    def test_output_validates_against_schema(self, tmp_path: Path):
+        """Test that ingest CLI output validates against sample.schema.json."""
+        data_dir = _setup_basic_dataset(tmp_path / "data")
+
+        # Use a unique run_id for this test
+        test_run_id = f"test_schema_validation_{id(tmp_path)}"
+
+        result = runner.invoke(
+            app,
+            [
+                "--adapter", "llm-judge",
+                "--data-dir", str(data_dir),
+                "--run-id", test_run_id,
+            ],
+        )
+
+        assert result.exit_code == 0, f"CLI failed: {result.stderr}"
+
+        # The CLI writes to artifacts/runs/ingest/<run_id>/ relative to project root
+        # Find the output file
+        output_file = Path("artifacts") / "runs" / "ingest" / test_run_id / "samples.ndjson"
+        assert output_file.exists(), f"Output file not found at {output_file}"
+
+        # Validate against schema
+        valid_count, invalid_count, errors = validate_ndjson_file(
+            output_file, "sample"
+        )
+
+        assert valid_count > 0, "No valid records found"
+        assert invalid_count == 0, f"Schema validation failed: {errors}"
+        assert len(errors) == 0, f"Unexpected errors: {errors}"

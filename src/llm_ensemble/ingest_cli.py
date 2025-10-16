@@ -68,7 +68,6 @@ def ingest(
         for ex in iter_examples(data_dir):
             sink.write(_json_dumps(ex) + "\n")
             count += 1
-            logger.info("Processed example", count=count, query_id=ex.query_id, docid=ex.docid)
             if limit is not None and count >= limit:
                 break
 

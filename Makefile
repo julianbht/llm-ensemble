@@ -1,24 +1,39 @@
 SHELL := /usr/bin/env bash
-.PHONY: ingest infer aggregate evaluate peek
+.PHONY: help install install-dev test test-ingest test-infer test-schema clean
 
 export PYTHONUNBUFFERED=1
 
-ingest:
-	@echo ">> ingest (placeholder) — writes samples.parquet + head"
-	@python apps/ingest/cli/ingest_cli.py
+help:
+	@echo "Available targets:"
+	@echo "  make install       - Install package"
+	@echo "  make install-dev   - Install package with dev dependencies"
+	@echo "  make test          - Run all tests"
+	@echo "  make test-ingest   - Run ingest tests only"
+	@echo "  make test-infer    - Run infer tests only"
+	@echo "  make test-schema   - Run schema validation tests only"
+	@echo "  make clean         - Remove artifacts and cached files"
 
-infer:
-	@echo ">> infer (placeholder) — runs models over samples"
-	@python apps/infer/cli/infer_cli.py
+install:
+	pip install -e .
 
-aggregate:
-	@echo ">> aggregate (placeholder) — majority vote"
-	@python apps/aggregate/cli/aggregate_cli.py
+install-dev:
+	pip install -e ".[dev]"
 
-evaluate:
-	@echo ">> evaluate (placeholder) — metrics + report"
-	@python apps/evaluate/cli/evaluate_cli.py
+test:
+	pytest
 
-peek:
-	@echo ">> DuckDB peek latest run (requires duckdb CLI)"
-	@bash scripts/peek_latest.sh
+test-ingest:
+	pytest src/llm_ensemble/ingest/tests/
+
+test-infer:
+	pytest src/llm_ensemble/infer/tests/
+
+test-schema:
+	pytest -k "schema"
+
+clean:
+	rm -rf artifacts/runs/*/test_*
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	find . -type d -name "*.egg-info" -exec rm -rf {} +
+	find . -type d -name ".pytest_cache" -exec rm -rf {} +

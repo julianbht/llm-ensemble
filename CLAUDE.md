@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**LLM Ensemble** is a CLI-first research system for evaluating LLM-as-judge ensembles on information retrieval tasks. The project follows a 4-stage pipeline architecture with shared libraries. I'm trying to develop an LLM relevance judging system using Python and Ollama / Hugginface Inference Endpoints, for my bachelor thesis. 
+**LLM Ensemble** is a CLI-first research system for evaluating LLM-as-judge ensembles on information retrieval tasks. 
+The project follows a 4-stage pipeline architecture with shared libraries.
+I'm trying to develop an LLM relevance judging system using Python and Ollama / Hugginface Inference Endpoints, for my bachelor thesis. 
 It should be able to read in an easily exchangeable dataset. It should also be able to switch between models. 
-Specifically, I am trying to build an LLM-Ensemble which produces relevance judgements for the LLM Judge Challenge dataset by Rahmani et. al. 
 I am trying to use as many diverse small models as possible and aggregate their judgement with some function which decides on the final judgement.
-Keep in mind that the system will later need to be fully dockerized. Keep in mind 12-factor app design.
+Keep in mind that the system will later need to be fully dockerized. 
+Keep in mind 12-factor app design. 
 
 ### Four Core CLIs
 
@@ -41,9 +43,11 @@ The codebase separates **domain logic** from **infrastructure**:
 # Setup
 python -m venv .venv
 source .venv/bin/activate  # or .venv\Scripts\activate on Windows
-pip install -e .
 
-# Install development dependencies (pytest, coverage tools)
+# Install (use Makefile for convenience)
+make install-dev
+
+# Or manually:
 pip install -e ".[dev]"
 ```
 
@@ -63,34 +67,23 @@ python -m llm_ensemble.ingest_cli --help
 python -m llm_ensemble.infer_cli --help
 ```
 
-**Note:** It is planned to add a makefile later for convenience. 
-
 ### Testing
 
 The project uses pytest for testing. Tests are organized by CLI module (e.g., `src/llm_ensemble/ingest/tests/`).
 
 ```bash
-# Run all tests
-pytest
+# Using Makefile (recommended)
+make test              # Run all tests
+make test-ingest       # Run ingest tests only
+make test-infer        # Run infer tests only
+make test-schema       # Run schema validation tests only
 
-# Run tests for a specific CLI module
-pytest src/llm_ensemble/ingest/tests/
-
-# Run a specific test file
-pytest src/llm_ensemble/ingest/tests/test_llm_judge_ingest.py
-
-# Run a specific test class or function
-pytest src/llm_ensemble/ingest/tests/test_ingest_cli.py::TestIngestCLI::test_basic_ingest_to_stdout
-
-# Run with verbose output
-pytest -v
-
-# Show print statements (useful for debugging)
-pytest -v -s
-
-# Run with coverage reporting (requires pytest-cov)
-pip install pytest-cov
-pytest --cov=llm_ensemble
+# Using pytest directly
+pytest                 # Run all tests
+pytest src/llm_ensemble/ingest/tests/  # Run specific module
+pytest -v              # Verbose output
+pytest -v -s           # Show print statements
+pytest --cov=llm_ensemble  # Coverage report
 ```
 
 **Test Structure:**
@@ -103,7 +96,7 @@ pytest --cov=llm_ensemble
 
 ### Canonical Dataset Record (JudgingExample)
 - `dataset`: Dataset identifier (e.g., "llm-judge-2024")
-- `query_id`, `query_text`: The information need
+- `query_id`, `query_text`: The information needv
 - `docid`, `doc`: Candidate document to judge
 - `gold_relevance`: Ground truth label (for calibration/eval splits)
 

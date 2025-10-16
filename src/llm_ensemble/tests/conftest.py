@@ -5,7 +5,6 @@ and shared helpers to avoid duplication across test files.
 """
 
 import json
-import shutil
 from pathlib import Path
 from typing import Callable
 
@@ -156,6 +155,64 @@ def mock_llm_judge_dataset(write_file, tmp_path: Path) -> Path:
     write_file(data_dir, "llm4eval_test_qrel_2024.txt", "q1 1 d1\n")
 
     return data_dir
+
+
+@pytest.fixture
+def mock_judgements(tmp_path: Path) -> Path:
+    """Fixture providing mock Judgement records for testing schema validation.
+
+    Creates a judgements.ndjson file with 2 valid judgement records.
+
+    Returns:
+        Path to judgements.ndjson file
+
+    Example:
+        >>> def test_schema(mock_judgements):
+        ...     valid, invalid, errors = validate_ndjson_file(mock_judgements, "judgement")
+        ...     assert valid == 2
+    """
+    judgements = [
+        {
+            "model_id": "test-model",
+            "provider": "openrouter",
+            "version": None,
+            "query_id": "q1",
+            "docid": "d1",
+            "label": 2,
+            "score": 2.0,
+            "confidence": 0.95,
+            "rationale": "This document is highly relevant",
+            "raw_text": "Label: 2\nConfidence: 0.95\nRationale: This document is highly relevant",
+            "latency_ms": 234.5,
+            "retries": 0,
+            "cost_estimate": 0.001,
+            "warnings": [],
+        },
+        {
+            "model_id": "test-model",
+            "provider": "openrouter",
+            "version": None,
+            "query_id": "q2",
+            "docid": "d2",
+            "label": 1,
+            "score": 1.0,
+            "confidence": 0.78,
+            "rationale": "Partially relevant",
+            "raw_text": "Label: 1\nConfidence: 0.78\nRationale: Partially relevant",
+            "latency_ms": 187.3,
+            "retries": 0,
+            "cost_estimate": 0.001,
+            "warnings": [],
+        },
+    ]
+
+    judgements_file = tmp_path / "judgements.ndjson"
+    judgements_file.write_text(
+        "\n".join(json.dumps(j) for j in judgements) + "\n",
+        encoding="utf-8"
+    )
+
+    return judgements_file
 
 
 @pytest.fixture(scope="session")

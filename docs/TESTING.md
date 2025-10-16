@@ -99,6 +99,17 @@ def test_infer(mock_samples):
     assert result.exit_code == 0
 ```
 
+### `mock_judgements`
+
+Creates a mock `judgements.ndjson` file with 2 valid Judgement records:
+
+```python
+def test_schema_validation(mock_judgements):
+    valid, invalid, errors = validate_ndjson_file(mock_judgements, "judgement")
+    assert valid == 2
+    assert invalid == 0
+```
+
 ### `mock_llm_judge_dataset`
 
 Creates a complete LLM Judge dataset structure (queries, documents, qrels):

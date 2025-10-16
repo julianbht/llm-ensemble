@@ -1,7 +1,6 @@
 """Tests for prompt loader functionality."""
 
 import pytest
-from pathlib import Path
 
 from llm_ensemble.infer.adapters.prompt_loader import (
     load_prompt_config,
@@ -10,6 +9,7 @@ from llm_ensemble.infer.adapters.prompt_loader import (
 from llm_ensemble.infer.domain.models import PromptConfig
 
 
+@pytest.mark.unit
 def test_load_thomas_et_al_config():
     """Test loading the thomas-et-al-prompt config."""
     config = load_prompt_config("thomas-et-al-prompt")
@@ -25,6 +25,7 @@ def test_load_thomas_et_al_config():
     assert config.response_parser == "parse_thomas_response"
 
 
+@pytest.mark.unit
 def test_load_relevance_v1_config():
     """Test loading the relevance_v1 config."""
     config = load_prompt_config("relevance_v1")
@@ -37,6 +38,7 @@ def test_load_relevance_v1_config():
     assert config.expected_output_format == "json"
 
 
+@pytest.mark.unit
 def test_load_thomas_et_al_template():
     """Test loading the thomas-et-al-prompt template."""
     template = load_prompt_template("thomas-et-al-prompt.jinja")
@@ -57,6 +59,7 @@ def test_load_thomas_et_al_template():
     assert "You are a search quality rater" in result
 
 
+@pytest.mark.unit
 def test_load_prompt_config_not_found():
     """Test error handling when config doesn't exist."""
     with pytest.raises(FileNotFoundError) as exc_info:
@@ -66,6 +69,7 @@ def test_load_prompt_config_not_found():
     assert "Available prompts" in str(exc_info.value)
 
 
+@pytest.mark.unit
 def test_load_prompt_template_not_found():
     """Test error handling when template doesn't exist."""
     with pytest.raises(FileNotFoundError) as exc_info:
@@ -75,19 +79,22 @@ def test_load_prompt_template_not_found():
     assert "Available templates" in str(exc_info.value)
 
 
-def test_load_config_with_custom_dir(tmp_path):
+@pytest.mark.unit
+def test_load_config_with_custom_dir(tmp_path, write_file):
     """Test loading config from a custom directory."""
-    # Create a test config file
-    test_config_path = tmp_path / "test-prompt.yaml"
-    test_config_path.write_text("""
-name: test-prompt
-template_file: test-prompt.jinja
-description: A test prompt
-variables:
-  foo: bar
-  enabled: true
-expected_output_format: text
-""")
+    # Create a test config file using write_file fixture
+    write_file(
+        tmp_path,
+        "test-prompt.yaml",
+        """name: test-prompt
+        template_file: test-prompt.jinja
+        description: A test prompt
+        variables:
+        foo: bar
+        enabled: true
+        expected_output_format: text
+        """
+    )
 
     # Load it
     config = load_prompt_config("test-prompt", prompts_dir=tmp_path)

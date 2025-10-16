@@ -1,14 +1,11 @@
 """Tests for prompt builder functionality."""
 
-from pathlib import Path
 import pytest
-from jinja2 import Template
 
 from llm_ensemble.infer.domain.prompt_builder import (
     build_instruction,
     build_instruction_from_judging_example,
 )
-from llm_ensemble.infer.adapters.prompt_loader import load_prompt_template
 
 
 # Note: thomas_prompt_template fixture is defined in conftest.py (session-scoped)

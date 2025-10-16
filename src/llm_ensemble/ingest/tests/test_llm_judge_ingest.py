@@ -108,6 +108,7 @@ class TestIterExamples:
         assert "1 with missing doc" in captured.out
 
 
+@pytest.mark.unit
 class TestReadQueries:
     """Test the query file parser."""
 
@@ -144,6 +145,7 @@ class TestReadQueries:
             read_queries(qfile)
 
 
+@pytest.mark.unit
 class TestReadDocuments:
     """Test the document JSONL parser."""
 
@@ -193,6 +195,7 @@ class TestReadDocuments:
             read_documents(dfile)
 
 
+@pytest.mark.unit
 class TestReadQrels:
     """Test the qrel (query-document relevance) parser."""
 

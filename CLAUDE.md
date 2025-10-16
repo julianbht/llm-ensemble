@@ -6,10 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **LLM Ensemble** is a CLI-first research system for evaluating LLM-as-judge ensembles on information retrieval tasks. 
 The project follows a 4-stage pipeline architecture with shared libraries.
-I'm trying to develop an LLM relevance judging system using Python with  OpenRouter / Ollama / Hugginface Inference Endpoints, for my bachelor thesis. 
+Specifically, its an LLM relevance judging system using Python with OpenRouter / Ollama / Hugginface Inference Endpoints, for my bachelor thesis. 
 It should be able to easily exchange dataset, model and prompt. 
-Keep in mind that the system will later need to be fully dockerized. 
-Keep in mind 12-factor app design. I want clean reusable code that pays attention to seperation of concerns. 
+
 
 ### Four Core CLIs
 
@@ -186,4 +185,5 @@ Reports live at `artifacts/runs/evaluate/{run_id}/report.html` for thesis append
 - **Run management:** All outputs organized by CLI under `artifacts/runs/{ingest,infer,aggregate,evaluate}/`
 - Shared libs in `src/llm_ensemble/libs/` avoid duplication across the four CLIs
 - Keep in mind that the system will later need to be fully dockerized. 
-- Keep in mind 12-factor app design. I want clean reusable code that pays attention to seperation of concerns. 
+- Keep in mind 12-factor app design. 
+- Follow common software design principles, such as seperation of concerns, to produce clean reusable code.

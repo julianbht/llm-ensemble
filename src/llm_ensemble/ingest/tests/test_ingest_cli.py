@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 
 from llm_ensemble.ingest_cli import app
 from llm_ensemble.libs.schemas.validator import validate_ndjson_file
+from llm_ensemble.libs.runtime.run_manager import get_run_dir
 
 
 runner = CliRunner()
@@ -78,8 +79,9 @@ class TestIngestCLI:
         assert result.exit_code == 0, f"CLI failed: {result.stderr}"
         assert "total_examples=2" in result.stderr
 
-        # Verify output file has exactly 2 examples (now in test/ subdirectory)
-        output_file = Path("artifacts") / "runs" / "ingest" / "test" / test_run_id / "samples.ndjson"
+        # Verify output file has exactly 2 examples
+        run_dir = get_run_dir(test_run_id, cli_name="ingest", official=False)
+        output_file = run_dir / "samples.ndjson"
         assert output_file.exists()
 
         lines = [l for l in output_file.read_text().strip().split("\n") if l]
@@ -141,8 +143,9 @@ class TestIngestCLI:
 
         assert result.exit_code == 0, f"CLI failed: {result.stderr}"
 
-        # Read output file (now in test/ subdirectory)
-        output_file = Path("artifacts") / "runs" / "ingest" / "test" / test_run_id / "samples.ndjson"
+        # Read output file
+        run_dir = get_run_dir(test_run_id, cli_name="ingest", official=False)
+        output_file = run_dir / "samples.ndjson"
         assert output_file.exists()
 
         lines = [l for l in output_file.read_text().strip().split("\n") if l]
@@ -172,9 +175,9 @@ class TestIngestCLI:
 
         assert result.exit_code == 0, f"CLI failed: {result.stderr}"
 
-        # The CLI writes to artifacts/runs/ingest/test/<run_id>/ relative to project root
-        # Find the output file
-        output_file = Path("artifacts") / "runs" / "ingest" / "test" / test_run_id / "samples.ndjson"
+        # Get output file path using run_manager (matches CLI behavior)
+        run_dir = get_run_dir(test_run_id, cli_name="ingest", official=False)
+        output_file = run_dir / "samples.ndjson"
         assert output_file.exists(), f"Output file not found at {output_file}"
 
         # Validate against schema

@@ -11,6 +11,7 @@ import pytest
 
 from llm_ensemble.infer_cli import app
 from llm_ensemble.libs.schemas.validator import validate_ndjson_file
+from llm_ensemble.libs.runtime.run_manager import get_run_dir
 
 
 runner = CliRunner()
@@ -66,9 +67,9 @@ class TestInferCLI:
         # Setup input samples
         input_file = _setup_mock_input_samples(tmp_path / "input")
 
-        # Setup run directory
-        run_dir = tmp_path / "artifacts" / "runs" / "infer" / "test_run"
-        run_dir.mkdir(parents=True, exist_ok=True)
+        # Get run directory using run_manager (matches CLI behavior)
+        test_run_id = "test_run"
+        run_dir = get_run_dir(test_run_id, cli_name="infer", official=False)
         output_file = run_dir / "judgements.ndjson"
 
         # This test requires a working model config and API access

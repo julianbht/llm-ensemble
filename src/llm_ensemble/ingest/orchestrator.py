@@ -40,7 +40,7 @@ def run_ingest(
     - Writing results and manifest
     
     Args:
-        dataset: Dataset ID to ingest (e.g., 'llm-judge-2024')
+        dataset: Dataset config name (e.g., 'llm_judge_challenge')
         data_dir: Override data directory from config (defaults to config value)
         run_id: Custom run ID (auto-generates if not provided)
         limit: Process at most N examples

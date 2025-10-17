@@ -4,7 +4,7 @@ description: "LLM Judge Challenge 2024 - IR relevance judging dataset"
 version: "0.1"
 
 # Default data directory (can be overridden via CLI --data-dir)
-data_dir: data/llm_judge_challenge
+data_dir: data
 
 # File paths relative to data_dir
 files:

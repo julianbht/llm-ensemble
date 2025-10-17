@@ -16,7 +16,7 @@ app = typer.Typer(add_completion=False, help="LLM Ensemble – data ingest CLI")
 @app.command("ingest")
 def ingest(
     dataset: str = typer.Option(
-        ..., "--dataset", "-d", help="Dataset ID to ingest (e.g., 'llm-judge-2024') specified in dataset config"
+        ..., "--dataset", "-d", help="Dataset config name (e.g., 'llm_judge_challenge' for configs/datasets/llm_judge_challenge.yaml)"
     ),
     data_dir: Optional[Path] = typer.Option(
         None, "--data-dir", "-i", exists=True, file_okay=False, readable=True,
@@ -41,8 +41,8 @@ def ingest(
     Writes output to artifacts/runs/<run_id>/samples.ndjson with manifest.
 
     Example:
-        ingest --dataset llm-judge-2024 --limit 100
-        ingest --dataset llm-judge-2024 --data-dir /custom/path
+        ingest --dataset llm_judge_challenge --limit 100
+        ingest --dataset llm_judge_challenge --data-dir /custom/path
     """
     try:
         run_ingest(

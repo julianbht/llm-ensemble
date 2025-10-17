@@ -53,12 +53,12 @@ pip install -e ".[dev]"
 
 ```bash
 # Ingest - Normalize raw datasets into JudgingExamples
-ingest --dataset llm-judge-2024 --limit 100
-# Uses default data_dir from config: configs/datasets/llm_judge_challenge.yaml
+ingest --dataset llm_judge_challenge --limit 100
+# Uses config file: configs/datasets/llm_judge_challenge.yaml
 # Output: artifacts/runs/ingest/<run_id>/samples.ndjson
 
 # Override data directory if needed
-ingest --dataset llm-judge-2024 --data-dir /custom/path --limit 100
+ingest --dataset llm_judge_challenge --data-dir /custom/path --limit 100
 
 # Infer - Run LLM judge inference
 infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_id>/samples.ndjson

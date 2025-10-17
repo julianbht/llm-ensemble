@@ -44,11 +44,11 @@ class DatasetConfig:
         )
 
 
-def load_dataset_config(dataset_id: str, config_dir: Optional[Path] = None) -> DatasetConfig:
-    """Load dataset configuration by dataset_id.
+def load_dataset_config(config_name: str, config_dir: Optional[Path] = None) -> DatasetConfig:
+    """Load dataset configuration by config filename (without extension).
 
     Args:
-        dataset_id: Dataset identifier (e.g., 'llm-judge-2024')
+        config_name: Config filename without extension (e.g., 'llm_judge_challenge')
         config_dir: Optional config directory override (defaults to PROJECT_ROOT/configs/datasets)
 
     Returns:
@@ -63,22 +63,21 @@ def load_dataset_config(dataset_id: str, config_dir: Optional[Path] = None) -> D
         project_root = Path(__file__).parent.parent.parent.parent.parent
         config_dir = project_root / "configs" / "datasets"
 
-    # Look for matching YAML file
-    # Try exact match first, then check all files for matching dataset_id
-    config_files = list(config_dir.glob("*.yaml")) + list(config_dir.glob("*.yml"))
+    # Try to find config file by name (try .yaml first, then .yml)
+    config_file = config_dir / f"{config_name}.yaml"
+    if not config_file.exists():
+        config_file = config_dir / f"{config_name}.yml"
 
-    for config_file in config_files:
-        try:
-            config = DatasetConfig.from_yaml(config_file)
-            if config.dataset_id == dataset_id:
-                return config
-        except (ValueError, KeyError, yaml.YAMLError):
-            # Skip invalid configs
-            continue
+    if not config_file.exists():
+        # List available configs for helpful error message
+        available = [f.stem for f in config_dir.glob("*.yaml")] + [f.stem for f in config_dir.glob("*.yml")]
+        raise FileNotFoundError(
+            f"No config found for config_name='{config_name}'. "
+            f"Available configs: {sorted(set(available))}"
+        )
 
-    # Not found
-    available = [f.stem for f in config_files]
-    raise FileNotFoundError(
-        f"No config found for dataset_id='{dataset_id}'. "
-        f"Available configs: {available}"
-    )
+    # Load and return the config
+    try:
+        return DatasetConfig.from_yaml(config_file)
+    except (ValueError, KeyError, yaml.YAMLError) as e:
+        raise ValueError(f"Invalid config file {config_file}: {e}")

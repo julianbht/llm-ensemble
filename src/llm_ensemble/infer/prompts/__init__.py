@@ -1,10 +1,9 @@
-"""Prompts feature for template loading and rendering."""
+"""Prompts feature for building prompts from templates.
 
-from llm_ensemble.infer.prompts.templates import load_prompt_template
-from llm_ensemble.infer.prompts.builder import build_instruction, build_instruction_from_judging_example
+The prompts module contains builder modules that know how to render
+templates with specific data. Each builder is in prompts/builders/.
+"""
 
-__all__ = [
-    "load_prompt_template",
-    "build_instruction",
-    "build_instruction_from_judging_example",
-]
+from llm_ensemble.infer.prompts.builders import load_builder
+
+__all__ = ["load_builder"]

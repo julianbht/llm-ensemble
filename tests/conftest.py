@@ -228,7 +228,7 @@ def thomas_prompt_template():
         >>> def test_prompt(thomas_prompt_template):
         ...     result = build_instruction(thomas_prompt_template, query="test", page_text="content")
     """
-    from llm_ensemble.infer.prompts.templates import load_prompt_template
+    from llm_ensemble.infer.config_loaders.templates import load_prompt_template
     return load_prompt_template("thomas-et-al-prompt")
 
 

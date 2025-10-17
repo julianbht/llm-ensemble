@@ -16,7 +16,7 @@ def get_default_prompts_dir() -> Path:
         Path to configs/prompts relative to project root
     """
     # Navigate from this file to project root, then to configs/prompts
-    # This file is at: src/llm_ensemble/infer/prompts/templates.py
+    # This file is at: src/llm_ensemble/infer/config_loaders/templates.py
     # Project root is 4 levels up
     project_root = Path(__file__).parents[4]
     return project_root / "configs" / "prompts"

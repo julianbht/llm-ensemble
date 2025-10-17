@@ -3,6 +3,7 @@
 from llm_ensemble.infer.schemas import ModelConfig, PromptConfig
 from llm_ensemble.infer.config_loaders.models import load_model_config, get_endpoint_url
 from llm_ensemble.infer.config_loaders.prompts import load_prompt_config
+from llm_ensemble.infer.config_loaders.templates import load_prompt_template
 
 __all__ = [
     "ModelConfig",
@@ -10,4 +11,5 @@ __all__ = [
     "load_model_config",
     "get_endpoint_url",
     "load_prompt_config",
+    "load_prompt_template",
 ]

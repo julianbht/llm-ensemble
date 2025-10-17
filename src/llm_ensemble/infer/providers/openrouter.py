@@ -11,10 +11,9 @@ from pathlib import Path
 from typing import Optional, Any
 from openai import OpenAI
 
-from llm_ensemble.infer.prompts.builder import build_instruction_from_judging_example
-from llm_ensemble.infer.parsers.thomas import load_parser
-from llm_ensemble.infer.prompts.templates import load_prompt_template
-from llm_ensemble.infer.config_loaders.prompts import load_prompt_config
+from llm_ensemble.infer.config_loaders import load_prompt_config, load_prompt_template
+from llm_ensemble.infer.prompts.builders import load_builder
+from llm_ensemble.infer.parsers import load_parser
 
 
 def send_inference_request(
@@ -66,16 +65,15 @@ def send_inference_request(
             "or pass api_key parameter."
         )
 
-    # Load prompt config and template
+    # Load prompt config
     prompt_config = load_prompt_config(prompt_template_name, prompts_dir)
-    template = load_prompt_template(prompt_config.template_file, prompts_dir)
 
-    # Build instruction using variables from config
-    instruction = build_instruction_from_judging_example(
-        template=template,
-        example=example,
-        **prompt_config.variables  # Unpack variables from config
-    )
+    # Load template
+    template = load_prompt_template(prompt_config.prompt_template, prompts_dir)
+
+    # Load builder and build instruction
+    builder = load_builder(prompt_config.prompt_builder)
+    instruction = builder.build(template, example)
 
     # Initialize OpenAI client configured for OpenRouter
     client = OpenAI(
@@ -101,11 +99,9 @@ def send_inference_request(
     # Extract response
     raw_text = response.choices[0].message.content
 
-    # Load parser dynamically from config
+    # Load parser module and parse the model output
     parser = load_parser(prompt_config.response_parser)
-
-    # Parse the model output
-    label, parse_warnings = parser(raw_text)
+    label, parse_warnings = parser.parse(raw_text)
     warnings.extend(parse_warnings)
 
     # Extract model version if available

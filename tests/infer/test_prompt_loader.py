@@ -3,7 +3,7 @@
 import pytest
 
 from llm_ensemble.infer.config_loaders.prompts import load_prompt_config
-from llm_ensemble.infer.prompts.templates import load_prompt_template
+from llm_ensemble.infer.config_loaders.templates import load_prompt_template
 from llm_ensemble.infer.schemas.prompt_config import PromptConfig
 
 
@@ -14,26 +14,9 @@ def test_load_thomas_et_al_config():
 
     assert isinstance(config, PromptConfig)
     assert config.name == "thomas-et-al-prompt"
-    assert config.template_file == "thomas-et-al-prompt.jinja"
-    assert "role" in config.variables
-    assert "aspects" in config.variables
-    assert config.variables["role"] is True
-    assert config.variables["aspects"] is False
-    assert config.expected_output_format == "json"
-    assert config.response_parser == "parse_thomas_response"
-
-
-@pytest.mark.unit
-def test_load_relevance_v1_config():
-    """Test loading the relevance_v1 config."""
-    config = load_prompt_config("relevance_v1")
-
-    assert isinstance(config, PromptConfig)
-    assert config.name == "relevance_v1"
-    assert config.template_file == "relevance_v1.jinja"
-    assert "query" in config.variables
-    assert "candidate" in config.variables
-    assert config.expected_output_format == "json"
+    assert config.prompt_template == "thomas-et-al-prompt"
+    assert config.prompt_builder == "thomas"
+    assert config.response_parser == "thomas"
 
 
 @pytest.mark.unit
@@ -44,17 +27,14 @@ def test_load_thomas_et_al_template():
     # Should be a Jinja2 template
     assert hasattr(template, "render")
 
-    # Test basic rendering
+    # Test basic rendering (template uses query and page_text variables)
     result = template.render(
         query="test query",
         page_text="test content",
-        role=True,
-        aspects=False,
     )
 
     assert "test query" in result
     assert "test content" in result
-    assert "You are a search quality rater" in result
 
 
 @pytest.mark.unit
@@ -85,12 +65,10 @@ def test_load_config_with_custom_dir(tmp_path, write_file):
         tmp_path,
         "test-prompt.yaml",
         """name: test-prompt
-template_file: test-prompt.jinja
 description: A test prompt
-variables:
-  foo: bar
-  enabled: true
-expected_output_format: text
+prompt_template: test-prompt
+prompt_builder: test
+response_parser: test
 """
     )
 
@@ -98,6 +76,6 @@ expected_output_format: text
     config = load_prompt_config("test-prompt", prompts_dir=tmp_path)
 
     assert config.name == "test-prompt"
-    assert config.variables["foo"] == "bar"
-    assert config.variables["enabled"] is True
-    assert config.expected_output_format == "text"
+    assert config.prompt_template == "test-prompt"
+    assert config.prompt_builder == "test"
+    assert config.response_parser == "test"

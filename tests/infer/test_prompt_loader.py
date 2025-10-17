@@ -2,8 +2,7 @@
 
 import pytest
 
-from llm_ensemble.infer.config_loaders.prompts import load_prompt_config
-from llm_ensemble.infer.config_loaders.templates import load_prompt_template
+from llm_ensemble.infer.config_loaders import load_prompt_config, load_prompt_template
 from llm_ensemble.infer.schemas.prompt_config import PromptConfig
 
 

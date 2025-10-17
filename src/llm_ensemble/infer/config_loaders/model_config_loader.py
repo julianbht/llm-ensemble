@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional
 import yaml
 
-from llm_ensemble.infer.schemas.model_config import ModelConfig
+from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 
 
 def get_default_config_dir() -> Path:

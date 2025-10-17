@@ -1,36 +1,16 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Optional
-import json
 
 import typer
 
-from llm_ensemble.ingest.domain.models import JudgingExample
-from llm_ensemble.infer.config_loaders import load_model_config
-from llm_ensemble.infer.providers import iter_judgements
-from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
+from llm_ensemble.infer.orchestrator import run_inference
 from llm_ensemble.libs.runtime.env import load_runtime_config
-from llm_ensemble.libs.logging.logger import get_logger
 
 # Load runtime configuration early
 load_runtime_config()
 
 app = typer.Typer(add_completion=False, help="LLM Ensemble – inference CLI")
-
-
-def _read_examples(input_path: Path) -> list[JudgingExample]:
-    """Read NDJSON examples from file."""
-    examples = []
-    with input_path.open("r") as f:
-        for line in f:
-            if line.strip():
-                examples.append(JudgingExample(**json.loads(line)))
-    return examples
-
-
-def _json_dumps(judgement) -> str:
-    """Serialize ModelJudgement to JSON."""
-    return judgement.model_dump_json()
 
 
 @app.command("infer")
@@ -79,116 +59,25 @@ def infer(
         OPENROUTER_API_KEY: OpenRouter API key (required for OpenRouter models)
         HF_TOKEN: HuggingFace API token (required for HF models)
     """
-    # Load model config
     try:
-        model_config = load_model_config(model, config_dir)
+        run_inference(
+            model=model,
+            input_file=input_file,
+            run_id=run_id,
+            limit=limit,
+            config_dir=config_dir,
+            prompts_dir=prompts_dir,
+            prompt=prompt,
+            save_logs=save_logs,
+            official=official,
+            notes=notes,
+        )
     except FileNotFoundError as e:
-        # Use basic error output before logger is initialized
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)
-
-    # Create or use provided run ID
-    if run_id is None:
-        run_id = create_run_id(model_config.model_id)
-
-    # Set up run directory and output file
-    run_dir = get_run_dir(run_id, cli_name="infer", official=official)
-    run_dir.mkdir(parents=True, exist_ok=True)
-    output_file = run_dir / "judgements.ndjson"
-
-    # Set up log file if requested
-    log_file_handle = None
-    if save_logs:
-        log_file_path = run_dir / "run.log"
-        log_file_handle = open(log_file_path, "w", encoding="utf-8")
-
-    # Initialize logger
-    logger = get_logger("infer", run_id=run_id, log_file=log_file_handle)
-
-    logger.info("Starting inference", model=model_config.model_id, provider=model_config.provider, prompt=prompt)
-    logger.info("Run directory", path=str(run_dir))
-    logger.info("Output file", path=str(output_file))
-
-    # Read examples
-    logger.info("Reading examples", input_file=str(input_file))
-    examples = _read_examples(input_file)
-    logger.info("Loaded examples", count=len(examples))
-
-    if limit is not None:
-        examples = examples[:limit]
-        logger.info("Limited examples", count=len(examples))
-
-    # Run inference
-    count = 0
-    error_count = 0
-    total_latency_ms = 0.0
-
-    try:
-        with output_file.open("w", encoding="utf-8", newline="\n") as sink:
-            for judgement in iter_judgements(
-                iter(examples),
-                model_config,
-                prompts_dir=prompts_dir,
-                prompt_template_name=prompt,
-            ):
-                sink.write(_json_dumps(judgement) + "\n")
-                count += 1
-                total_latency_ms += judgement.latency_ms
-
-                # Track errors
-                if judgement.label is None:
-                    error_count += 1
-                    logger.warning(
-                        "Judgement error",
-                        count=count,
-                        query_id=judgement.query_id,
-                        docid=judgement.docid,
-                        warnings=judgement.warnings,
-                    )
-                else:
-                    logger.info(
-                        "Processed judgement",
-                        count=count,
-                        query_id=judgement.query_id,
-                        docid=judgement.docid,
-                        label=judgement.label,
-                        latency_ms=f"{judgement.latency_ms:.1f}",
-                    )
-
     except Exception as e:
-        logger.error("Inference failed", error=str(e))
+        typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)
-
-    logger.info("Inference complete", total_judgements=count, errors=error_count, avg_latency_ms=f"{total_latency_ms / count if count > 0 else 0:.1f}")
-
-    # Write manifest
-    write_manifest(
-        run_dir=run_dir,
-        cli_name="infer",
-        cli_args={
-            "model": model,
-            "input_file": str(input_file),
-            "limit": limit,
-            "prompt": prompt,
-        },
-        metadata={
-            "model_config": model_config.model_dump(),
-            "prompt_template": prompt,
-            "judgement_count": count,
-            "error_count": error_count,
-            "avg_latency_ms": total_latency_ms / count if count > 0 else 0,
-            "output_file": str(output_file),
-        },
-        official=official,
-        notes=notes,
-    )
-
-    logger.info("Manifest written", path=str(run_dir / "manifest.json"))
-
-    # Close log file if opened
-    if log_file_handle is not None:
-        logger.info("Logs saved", path=str(run_dir / "run.log"))
-        log_file_handle.close()
 
 
 if __name__ == "__main__":

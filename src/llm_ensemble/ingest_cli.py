@@ -24,7 +24,7 @@ def _json_dumps(obj: JudgingExample) -> str:
 @app.command("ingest")
 def ingest(
     dataset: str = typer.Option(
-        ..., "--dataset", "-d", help="Dataset ID to ingest (e.g., 'llm-judge-2024')"
+        ..., "--dataset", "-d", help="Dataset ID to ingest (e.g., 'llm-judge-2024') specified in dataset config"
     ),
     data_dir: Optional[Path] = typer.Option(
         None, "--data-dir", "-i", exists=True, file_okay=False, readable=True,

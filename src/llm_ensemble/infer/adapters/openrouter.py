@@ -12,7 +12,7 @@ from typing import Optional, Any
 from openai import OpenAI
 
 from llm_ensemble.infer.domain.prompt_builder import build_instruction_from_judging_example
-from llm_ensemble.infer.domain.response_parser import parse_thomas_response
+from llm_ensemble.infer.domain.response_parser import load_parser
 from llm_ensemble.infer.adapters.prompt_loader import load_prompt_template, load_prompt_config
 
 
@@ -100,8 +100,11 @@ def send_inference_request(
     # Extract response
     raw_text = response.choices[0].message.content
 
+    # Load parser dynamically from config
+    parser = load_parser(prompt_config.response_parser)
+
     # Parse the model output
-    label, parse_warnings = parse_thomas_response(raw_text)
+    label, parse_warnings = parser(raw_text)
     warnings.extend(parse_warnings)
 
     # Extract model version if available

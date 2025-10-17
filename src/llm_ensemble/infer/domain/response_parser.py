@@ -7,7 +7,11 @@ Handles the thomas-et-al prompt format which expects JSON output.
 from __future__ import annotations
 import json
 import re
-from typing import Optional
+from typing import Optional, Callable
+
+
+# Type alias for parser functions
+ParserFunction = Callable[[str], tuple[Optional[int], list[str]]]
 
 
 def parse_thomas_response(raw_text: str) -> tuple[Optional[int], list[str]]:
@@ -66,3 +70,46 @@ def parse_thomas_response(raw_text: str) -> tuple[Optional[int], list[str]]:
         return None, warnings
 
     return o_score, warnings
+
+
+def load_parser(parser_name: str) -> ParserFunction:
+    """Load a response parser function by name.
+
+    Args:
+        parser_name: Name of the parser function (e.g., "parse_thomas_response")
+
+    Returns:
+        The parser function
+
+    Raises:
+        ValueError: If the parser function doesn't exist
+
+    Example:
+        >>> parser = load_parser("parse_thomas_response")
+        >>> label, warnings = parser('{"O": 2}')
+        >>> label
+        2
+    """
+    # Get all functions in this module
+    import sys
+    current_module = sys.modules[__name__]
+
+    # Try to get the parser function
+    if not hasattr(current_module, parser_name):
+        # List available parsers (functions that start with 'parse_')
+        available = [
+            name for name in dir(current_module)
+            if name.startswith('parse_') and callable(getattr(current_module, name))
+        ]
+        raise ValueError(
+            f"Parser '{parser_name}' not found. "
+            f"Available parsers: {', '.join(available)}"
+        )
+
+    parser_func = getattr(current_module, parser_name)
+
+    # Verify it's callable
+    if not callable(parser_func):
+        raise ValueError(f"'{parser_name}' is not a callable parser function")
+
+    return parser_func

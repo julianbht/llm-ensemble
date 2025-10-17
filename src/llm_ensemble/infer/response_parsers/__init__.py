@@ -33,7 +33,7 @@ def load_parser(parser_name: str):
         2
     """
     try:
-        module = importlib.import_module(f"llm_ensemble.infer.parsers.{parser_name}")
+        module = importlib.import_module(f"llm_ensemble.infer.response_parsers.{parser_name}")
     except ImportError as e:
         # List available parsers
         parsers_dir = Path(__file__).parent

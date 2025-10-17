@@ -2,8 +2,8 @@
 
 import pytest
 
-from llm_ensemble.infer.parsers import load_parser
-from llm_ensemble.infer.parsers import thomas
+from llm_ensemble.infer.response_parsers import load_parser
+from llm_ensemble.infer.response_parsers import thomas
 
 
 @pytest.mark.unit

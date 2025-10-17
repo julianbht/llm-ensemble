@@ -2,6 +2,6 @@ name: thomas-et-al-prompt
 description: |
   Thomas et al. search quality rater prompt with structured JSON output.
   Uses simple O-only format for relevance scoring (0, 1, or 2).
-prompt_template: thomas-et-al-prompt
-prompt_builder: thomas
-response_parser: thomas
+prompt_template: thomas-et-al-prompt  # Loads thomas-et-al-prompt.jinja
+prompt_builder: thomas                 # Loads prompt_builders/thomas.py
+response_parser: thomas                # Loads response_parsers/thomas.py

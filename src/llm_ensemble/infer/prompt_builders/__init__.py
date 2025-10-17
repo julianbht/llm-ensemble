@@ -31,7 +31,7 @@ def load_builder(builder_name: str):
         >>> prompt = builder.build(template, example)
     """
     try:
-        module = importlib.import_module(f"llm_ensemble.infer.prompts.builders.{builder_name}")
+        module = importlib.import_module(f"llm_ensemble.infer.prompt_builders.{builder_name}")
     except ImportError as e:
         # List available builders
         builders_dir = Path(__file__).parent

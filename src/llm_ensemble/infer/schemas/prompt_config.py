@@ -17,5 +17,5 @@ class PromptConfig(BaseModel):
     name: str = Field(..., description="Prompt identifier")
     description: Optional[str] = Field(None, description="Human-readable description of the prompt")
     prompt_template: str = Field(..., description="Template filename (without .jinja extension)")
-    prompt_builder: str = Field(..., description="Name of builder module in prompts/builders/")
-    response_parser: str = Field(..., description="Name of parser module in parsers/")
+    prompt_builder: str = Field(..., description="Name of builder module in prompt_builders/")
+    response_parser: str = Field(..., description="Name of parser module in response_parsers/")

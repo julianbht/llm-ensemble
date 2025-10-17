@@ -23,10 +23,10 @@ test:
 	pytest
 
 test-ingest:
-	pytest src/llm_ensemble/ingest/tests/
+	pytest tests/ingest/
 
 test-infer:
-	pytest src/llm_ensemble/infer/tests/
+	pytest tests/infer/
 
 test-schema:
 	pytest -k "schema"

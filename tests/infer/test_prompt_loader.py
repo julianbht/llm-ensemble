@@ -87,13 +87,13 @@ def test_load_config_with_custom_dir(tmp_path, write_file):
         tmp_path,
         "test-prompt.yaml",
         """name: test-prompt
-        template_file: test-prompt.jinja
-        description: A test prompt
-        variables:
-        foo: bar
-        enabled: true
-        expected_output_format: text
-        """
+template_file: test-prompt.jinja
+description: A test prompt
+variables:
+  foo: bar
+  enabled: true
+expected_output_format: text
+"""
     )
 
     # Load it

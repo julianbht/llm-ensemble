@@ -16,7 +16,7 @@ app = typer.Typer(add_completion=False, help="LLM Ensemble – inference CLI")
 @app.command("infer")
 def infer(
     model: str = typer.Option(
-        ..., "--model", "-m", help="Model ID for .yaml config file(e.g., gpt-oss-20b)"
+        ..., "--model", "-m", help="Model config name (e.g., 'gpt-oss-20b' for configs/models/gpt-oss-20b.yaml)"
     ),
     input_file: Path = typer.Option(
         ..., "--input", "-i", exists=True, file_okay=True, readable=True,
@@ -29,13 +29,13 @@ def infer(
         None, help="Process at most N examples"
     ),
     config_dir: Optional[Path] = typer.Option(
-        None, "--config-dir", help="Path to model configs directory"
+        None, "--config-dir", help="Path to model configs directory (defaults to configs/models)"
     ),
     prompts_dir: Optional[Path] = typer.Option(
-        None, "--prompts-dir", help="Path to prompt templates directory (defaults to configs/prompts)"
+        None, "--prompts-dir", help="Path to prompts directory (defaults to configs/prompts)"
     ),
     prompt: str = typer.Option(
-        "thomas-et-al-prompt", "--prompt", "-p", help="Prompt template name (without .jinja extension)"
+        "thomas-et-al-prompt", "--prompt", "-p", help="Prompt config name (e.g., 'thomas-et-al-prompt' for configs/prompts/thomas-et-al-prompt.yaml)"
     ),
     save_logs: bool = typer.Option(
         False, "--save-logs", help="Save logs to run.log file in run directory"

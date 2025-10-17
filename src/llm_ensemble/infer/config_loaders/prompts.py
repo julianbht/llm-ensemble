@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional
 import yaml
 
-from llm_ensemble.infer.configs.schemas import PromptConfig
+from llm_ensemble.infer.schemas.prompt_config import PromptConfig
 
 
 def get_default_prompts_dir() -> Path:

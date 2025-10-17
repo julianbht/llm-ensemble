@@ -2,9 +2,9 @@
 
 import pytest
 
-from llm_ensemble.infer.configs.prompts import load_prompt_config
+from llm_ensemble.infer.config_loaders.prompts import load_prompt_config
 from llm_ensemble.infer.prompts.templates import load_prompt_template
-from llm_ensemble.infer.configs.schemas import PromptConfig
+from llm_ensemble.infer.schemas.prompt_config import PromptConfig
 
 
 @pytest.mark.unit

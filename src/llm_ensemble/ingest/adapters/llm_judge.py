@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Generator, Iterable, Tuple
 
-from llm_ensemble.ingest.domain.models import Query, Document, Relevance, JudgingExample    
+from llm_ensemble.ingest.schemas import Query, Document, Relevance, JudgingExample    
 
 @dataclass(frozen=True)
 class LlmJudgePaths:

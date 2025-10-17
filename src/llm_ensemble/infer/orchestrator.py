@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional, TextIO
 import json
 
-from llm_ensemble.ingest.domain.models import JudgingExample
+from llm_ensemble.ingest.schemas import JudgingExample
 from llm_ensemble.infer.config_loaders import load_model_config
 from llm_ensemble.infer.providers import iter_judgements
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest

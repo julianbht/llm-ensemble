@@ -155,23 +155,26 @@ def run_<operation>(
     }
 ```
 
-## Comparison with Ingest CLI
+## Ingest CLI Structure
 
-The ingest CLI already follows a similar pattern but the orchestration is still in the CLI file. For full consistency, you could extract it to `ingest/orchestrator.py` as well.
+The ingest CLI now follows the same refactored pattern:
 
-Current ingest structure:
 ```
-ingest_cli.py
-└── All logic in the CLI file (could be extracted)
-```
+ingest_cli.py (69 lines) - THIN ENTRY POINT
+├── Typer CLI setup
+├── Argument definitions
+└── Delegates to orchestrator
 
-Recommended ingest refactoring (for consistency):
-```
-ingest_cli.py - Thin entry point
-└── Delegates to ingest/orchestrator.py
-
-ingest/orchestrator.py - Orchestration logic (NEW)
-└── run_ingest() function
+ingest/orchestrator.py (157 lines) - ORCHESTRATION LOGIC
+├── Helper functions (_json_dumps)
+└── run_ingest() function with ALL business logic:
+    ├── Config loading
+    ├── Adapter loading
+    ├── Run directory setup
+    ├── Logger initialization
+    ├── Example processing
+    ├── Manifest writing
+    └── Cleanup
 ```
 
 ## Testing Strategy
@@ -209,7 +212,7 @@ def test_run_inference(tmp_path):
 ## Next Steps
 
 1. ✅ **infer CLI**: DONE - Refactored with orchestrator pattern
-2. **ingest CLI**: OPTIONAL - Could extract to `ingest/orchestrator.py` for full consistency
+2. ✅ **ingest CLI**: DONE - Refactored with orchestrator pattern  
 3. **aggregate CLI**: When implementing, use this pattern from the start
 4. **evaluate CLI**: When implementing, use this pattern from the start
 
@@ -217,17 +220,17 @@ def test_run_inference(tmp_path):
 
 ```
 src/llm_ensemble/
-├── infer_cli.py          # Thin CLI entry point
-├── ingest_cli.py         # CLI entry point (could be refactored)
+├── infer_cli.py          # ✅ Thin CLI entry point
+├── ingest_cli.py         # ✅ Thin CLI entry point
 ├── aggregate_cli.py      # Future: thin CLI entry point
 ├── evaluate_cli.py       # Future: thin CLI entry point
 ├── infer/
-│   ├── orchestrator.py   # NEW: Orchestration logic
+│   ├── orchestrator.py   # ✅ Orchestration logic
 │   ├── domain/           # Pure business logic
 │   ├── adapters/         # I/O and external services
 │   └── ...
 ├── ingest/
-│   ├── orchestrator.py   # FUTURE: Extract from ingest_cli.py
+│   ├── orchestrator.py   # ✅ Orchestration logic
 │   ├── domain/
 │   ├── adapters/
 │   └── ...

@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterator, Optional
 
-from llm_ensemble.ingest.domain.models import JudgingExample
+from llm_ensemble.ingest.schemas import JudgingExample
 from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig
 from llm_ensemble.infer.providers.openrouter import send_inference_request
 

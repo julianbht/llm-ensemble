@@ -4,7 +4,7 @@ import importlib
 from pathlib import Path
 from typing import Callable, Generator
 
-from llm_ensemble.ingest.domain.models import JudgingExample
+from llm_ensemble.ingest.schemas import JudgingExample
 
 
 # Type alias for adapter functions

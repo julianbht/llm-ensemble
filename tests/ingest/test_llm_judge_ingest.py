@@ -14,7 +14,7 @@ from llm_ensemble.ingest.adapters.llm_judge import (
     read_documents,
     read_qrels,
 )
-from llm_ensemble.ingest.domain.models import JudgingExample
+from llm_ensemble.ingest.schemas import JudgingExample
 
 
 @pytest.mark.unit

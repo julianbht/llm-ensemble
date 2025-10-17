@@ -14,7 +14,7 @@ from openai import OpenAI
 from llm_ensemble.infer.prompts.builder import build_instruction_from_judging_example
 from llm_ensemble.infer.parsers.thomas import load_parser
 from llm_ensemble.infer.prompts.templates import load_prompt_template
-from llm_ensemble.infer.config.prompts_loader import load_prompt_config
+from llm_ensemble.infer.configs.prompts_loader import load_prompt_config
 
 
 def send_inference_request(

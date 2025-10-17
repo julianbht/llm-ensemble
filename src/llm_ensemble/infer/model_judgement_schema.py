@@ -1,3 +1,4 @@
+
 """Shared data models for the infer CLI.
 
 This module contains the canonical ModelJudgement schema that all features

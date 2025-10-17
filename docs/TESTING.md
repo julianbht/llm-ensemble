@@ -13,20 +13,24 @@ The project uses **pytest** for testing with a focus on:
 
 ## Test Structure
 
+The project follows the standard **src-layout** with tests at the project root:
+
 ```
-src/llm_ensemble/
-├── tests/
-│   └── conftest.py         # Shared fixtures for all tests
-├── ingest/
-│   └── tests/
-│       ├── test_llm_judge_ingest.py   # Unit tests for adapters
-│       └── test_ingest_cli.py         # Integration tests for CLI
-├── infer/
-│   └── tests/
-│       ├── test_prompt_builder.py     # Unit tests for domain logic
-│       ├── test_prompt_loader.py      # Unit tests for adapters
-│       └── test_infer_cli.py          # Integration tests for CLI
-└── ...
+llm-ensemble/
+├── src/
+│   └── llm_ensemble/       # Source code (no tests here)
+│       ├── ingest/
+│       ├── infer/
+│       └── libs/
+└── tests/                  # All tests at project root
+    ├── conftest.py         # Shared fixtures for all tests
+    ├── ingest/
+    │   ├── test_llm_judge_ingest.py   # Unit tests for adapters
+    │   └── test_ingest_cli.py         # Integration tests for CLI
+    └── infer/
+        ├── test_prompt_builder.py     # Unit tests for domain logic
+        ├── test_prompt_loader.py      # Unit tests for adapters
+        └── test_infer_cli.py          # Integration tests for CLI
 ```
 
 ## Running Tests
@@ -53,7 +57,7 @@ pytest -v -s
 
 ## Shared Fixtures
 
-All shared fixtures are defined in `src/llm_ensemble/tests/conftest.py`:
+All shared fixtures are defined in `tests/conftest.py`:
 
 ### `write_file`
 
@@ -217,7 +221,7 @@ class TestIngestCLI:
         result = runner.invoke(
             app,
             [
-                "--adapter", "llm-judge",
+                "--dataset", "llm-judge-2024",
                 "--data-dir", str(mock_llm_judge_dataset),
                 "--run-id", "test_run",
             ]
@@ -244,7 +248,7 @@ class TestIngestCLI:
 ```python
 # BAD: Writes to real artifacts/ directory
 def test_cli():
-    result = runner.invoke(app, ["--adapter", "llm-judge"])
+    result = runner.invoke(app, ["--dataset", "llm-judge-2024"])
     # Output goes to artifacts/runs/... (pollutes repo)
 
 # BAD: No cleanup
@@ -264,7 +268,7 @@ def test_foo():
 ```python
 # GOOD: Uses tmp_artifacts fixture
 def test_cli(tmp_artifacts):
-    result = runner.invoke(app, ["--adapter", "llm-judge"])
+    result = runner.invoke(app, ["--dataset", "llm-judge-2024"])
     # Output goes to tmp_artifacts/runs/... (auto-cleanup)
 
 # GOOD: Uses write_file fixture
@@ -285,6 +289,10 @@ Test configuration is in `pyproject.toml`:
 ```toml
 [tool.pytest.ini_options]
 addopts = "-q"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 ```
 
 **Common pytest options:**

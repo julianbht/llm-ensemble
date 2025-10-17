@@ -1,8 +1,13 @@
-## this is currently not used
-name: llm_judge_challenge
+dataset_id: llm-judge-2024
+adapter: llm_judge
+description: "LLM Judge Challenge 2024 - IR relevance judging dataset"
 version: "0.1"
-source: "local"
-splits:
-  train: "data/llm_judge_challenge/train.jsonl"
-  test: "data/llm_judge_challenge/test.jsonl"
-label_space: [relevant, partially, irrelevant]
+
+# Default data directory (can be overridden via CLI --data-dir)
+data_dir: data/llm_judge_challenge
+
+# File paths relative to data_dir
+files:
+  queries: llm4eval_query_2024.txt
+  documents: llm4eval_document_2024.jsonl
+  qrels: llm4eval_test_qrel_2024.txt

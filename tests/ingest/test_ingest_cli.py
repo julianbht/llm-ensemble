@@ -46,8 +46,8 @@ class TestIngestCLI:
         result = runner.invoke(
             app,
             [
-                "--adapter",
-                "llm-judge",
+                "--dataset",
+                "llm-judge-2024",
                 "--data-dir",
                 str(tmp_path),
                 "--limit",
@@ -73,7 +73,7 @@ class TestIngestCLI:
         result = runner.invoke(
             app,
             [
-                "--adapter",
+                "--dataset",
                 "unknown-dataset",
                 "--data-dir",
                 str(tmp_path),
@@ -83,15 +83,15 @@ class TestIngestCLI:
         assert result.exit_code != 0
         # Typer shows errors in stdout
         output = result.stdout + result.stderr
-        assert "Unsupported dataset" in output
+        assert "No config found" in output
 
     def test_missing_data_dir_fails(self):
         """Test that missing data directory is rejected."""
         result = runner.invoke(
             app,
             [
-                "--adapter",
-                "llm-judge",
+                "--dataset",
+                "llm-judge-2024",
                 "--data-dir",
                 "/nonexistent/path",
             ],
@@ -119,7 +119,7 @@ class TestIngestCLI:
         test_run_id = "test_multiple"
         result = runner.invoke(
             app,
-            ["--adapter", "llm-judge", "--data-dir", str(tmp_path), "--run-id", test_run_id],
+            ["--dataset", "llm-judge-2024", "--data-dir", str(tmp_path), "--run-id", test_run_id],
         )
 
         assert result.exit_code == 0, f"CLI failed: {result.stderr}"
@@ -145,7 +145,7 @@ class TestIngestCLI:
         result = runner.invoke(
             app,
             [
-                "--adapter", "llm-judge",
+                "--dataset", "llm-judge-2024",
                 "--data-dir", str(mock_llm_judge_dataset),
                 "--run-id", test_run_id,
             ],

@@ -53,8 +53,12 @@ pip install -e ".[dev]"
 
 ```bash
 # Ingest - Normalize raw datasets into JudgingExamples
-ingest --adapter llm-judge --data-dir ./data --limit 100
+ingest --dataset llm-judge-2024 --limit 100
+# Uses default data_dir from config: configs/datasets/llm_judge_challenge.yaml
 # Output: artifacts/runs/ingest/<run_id>/samples.ndjson
+
+# Override data directory if needed
+ingest --dataset llm-judge-2024 --data-dir /custom/path --limit 100
 
 # Infer - Run LLM judge inference
 infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_id>/samples.ndjson
@@ -127,12 +131,22 @@ default_params:
 
 ### Datasets (`configs/datasets/*.yaml`)
 ```yaml
-name: llm_judge_challenge
-splits:
-  train: "data/llm_judge_challenge/train.jsonl"
-  test: "data/llm_judge_challenge/test.jsonl"
-label_space: [relevant, partially, irrelevant]
+dataset_id: llm-judge-2024
+adapter: llm_judge  # Maps to ingest/adapters/llm_judge.py
+description: "LLM Judge Challenge 2024 - IR relevance judging dataset"
+version: "0.1"
+
+# Default data directory (can be overridden via CLI --data-dir)
+data_dir: data/llm_judge_challenge
+
+# File paths relative to data_dir
+files:
+  queries: llm4eval_query_2024.txt
+  documents: llm4eval_document_2024.jsonl
+  qrels: llm4eval_test_qrel_2024.txt
 ```
+
+**Note:** The `adapter` field specifies which ingest adapter module to use, making the dataset-adapter coupling explicit and enabling easy addition of new datasets without code changes.
 
 ### Ensembles (`configs/ensembles/*.yaml`)
 ```yaml
@@ -160,6 +174,7 @@ src/llm_ensemble/
 ├── aggregate/       # Aggregate logic
 ├── evaluate/        # Evaluate logic
 └── libs/            # Shared utilities
+    ├── config/      # Config loaders (dataset, model, etc.)
     ├── io/          # Parquet readers/writers
     ├── logging/     # JSON logger
     ├── runtime/     # Environment config
@@ -180,7 +195,8 @@ Reports live at `artifacts/runs/evaluate/{run_id}/report.html` for thesis append
 
 - **12-factor friendly:** CLIs read from files, write to `artifacts/runs/`, configurable via flags/env
 - **Environment variables:** For secrets (API keys) and infrastructure (endpoints)
-- **CLI flags:** All task parameters (model, input, adapter) are explicit via required flags
+- **CLI flags:** All task parameters (model, input, dataset) are explicit via required flags
+- **Config files:** Dataset configs define adapter mappings and default paths (can be overridden)
 - **No hidden state:** Everything persisted to disk with manifests tracking git SHA and full metadata
 - **Run management:** All outputs organized by CLI under `artifacts/runs/{ingest,infer,aggregate,evaluate}/`
 - Shared libs in `src/llm_ensemble/libs/` avoid duplication across the four CLIs

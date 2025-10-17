@@ -40,7 +40,7 @@ markers = [
     "requires_api: Tests requiring API credentials",
 ]
 # Test discovery
-testpaths = ["src"]
+testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

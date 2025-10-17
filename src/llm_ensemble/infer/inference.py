@@ -1,6 +1,6 @@
-"""Inference router that dispatches to the appropriate provider adapter.
+"""Main inference orchestration.
 
-Routes inference requests based on model config provider field.
+Routes inference requests to the appropriate provider adapter based on model config.
 """
 
 from __future__ import annotations
@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Iterator, Optional
 
 from llm_ensemble.ingest.domain.models import JudgingExample
-from llm_ensemble.infer.domain.models import ModelConfig, ModelJudgement
-from llm_ensemble.infer.adapters.openrouter import send_inference_request
+from llm_ensemble.infer.models import ModelJudgement
+from llm_ensemble.infer.config.models import ModelConfig
+from llm_ensemble.infer.providers.openrouter import send_inference_request
 
 
 def iter_judgements(
@@ -33,7 +34,7 @@ def iter_judgements(
         ValueError: If provider is not supported
 
     Example:
-        >>> from llm_ensemble.infer.adapters.config_loader import load_model_config
+        >>> from llm_ensemble.infer.config import load_model_config
         >>> config = load_model_config("gpt-oss-20b")
         >>> examples = [example1, example2]
         >>> for judgement in iter_judgements(iter(examples), config):

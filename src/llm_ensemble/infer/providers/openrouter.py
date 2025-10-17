@@ -1,4 +1,4 @@
-"""OpenRouter adapter for LLM inference.
+"""OpenRouter provider for LLM inference.
 
 Handles HTTP communication with OpenRouter API and converts responses
 to ModelJudgement domain objects.
@@ -11,9 +11,10 @@ from pathlib import Path
 from typing import Optional, Any
 from openai import OpenAI
 
-from llm_ensemble.infer.domain.prompt_builder import build_instruction_from_judging_example
-from llm_ensemble.infer.domain.response_parser import load_parser
-from llm_ensemble.infer.adapters.prompt_loader import load_prompt_template, load_prompt_config
+from llm_ensemble.infer.prompts.builder import build_instruction_from_judging_example
+from llm_ensemble.infer.parsers.thomas import load_parser
+from llm_ensemble.infer.prompts.templates import load_prompt_template
+from llm_ensemble.infer.config.prompts import load_prompt_config
 
 
 def send_inference_request(

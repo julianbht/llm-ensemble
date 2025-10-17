@@ -2,7 +2,7 @@
 
 import pytest
 
-from llm_ensemble.infer.domain.response_parser import (
+from llm_ensemble.infer.parsers.thomas import (
     parse_thomas_response,
     load_parser,
 )

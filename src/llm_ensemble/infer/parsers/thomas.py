@@ -1,7 +1,6 @@
-"""Response parser for LLM judge outputs.
+"""Response parser for thomas-et-al prompt format.
 
-Pure domain logic for parsing model responses into structured data.
-Handles the thomas-et-al prompt format which expects JSON output.
+Handles parsing of JSON-formatted LLM judge outputs.
 """
 
 from __future__ import annotations

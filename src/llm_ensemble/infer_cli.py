@@ -6,8 +6,8 @@ import json
 import typer
 
 from llm_ensemble.ingest.domain.models import JudgingExample
-from llm_ensemble.infer.adapters.config_loader import load_model_config
-from llm_ensemble.infer.adapters.inference_router import iter_judgements
+from llm_ensemble.infer.config import load_model_config
+from llm_ensemble.infer.inference import iter_judgements
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.logging.logger import get_logger

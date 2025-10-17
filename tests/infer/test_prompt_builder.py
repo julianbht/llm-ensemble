@@ -2,7 +2,7 @@
 
 import pytest
 
-from llm_ensemble.infer.domain.prompt_builder import (
+from llm_ensemble.infer.prompts.builder import (
     build_instruction,
     build_instruction_from_judging_example,
 )

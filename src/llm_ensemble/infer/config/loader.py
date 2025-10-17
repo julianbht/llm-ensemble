@@ -1,4 +1,4 @@
-"""Configuration loader for model configs.
+"""Model configuration loader.
 
 Loads YAML model configuration files and returns ModelConfig domain objects.
 """
@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional
 import yaml
 
-from llm_ensemble.infer.domain.models import ModelConfig
+from llm_ensemble.infer.config.models import ModelConfig
 
 
 def get_default_config_dir() -> Path:
@@ -19,7 +19,7 @@ def get_default_config_dir() -> Path:
         Path to configs/models relative to project root
     """
     # Navigate from this file to project root, then to configs/models
-    # This file is at: src/llm_ensemble/infer/adapters/config_loader.py
+    # This file is at: src/llm_ensemble/infer/config/loader.py
     # Project root is 4 levels up
     project_root = Path(__file__).parents[4]
     return project_root / "configs" / "models"

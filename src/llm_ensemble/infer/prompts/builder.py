@@ -1,7 +1,6 @@
 """Prompt builder for LLM judge instructions.
 
-Pure domain logic for building prompts from templates and JudgingExamples.
-No I/O - templates are loaded by adapters and passed in.
+Pure logic for building prompts from templates and JudgingExamples.
 """
 
 from __future__ import annotations

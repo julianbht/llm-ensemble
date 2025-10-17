@@ -71,7 +71,7 @@ python -m llm_ensemble.infer_cli --help
 
 ### Testing
 
-The project uses pytest for testing. Tests are organized by CLI module (e.g., `src/llm_ensemble/ingest/tests/`).
+The project uses pytest for testing. Tests are organized in the `tests/` directory, mirroring the CLI structure.
 
 ```bash
 # Using Makefile (recommended)
@@ -82,17 +82,29 @@ make test-schema       # Run schema validation tests only
 
 # Using pytest directly
 pytest                 # Run all tests
-pytest src/llm_ensemble/ingest/tests/  # Run specific module
+pytest tests/ingest/   # Run specific module
 pytest -v              # Verbose output
 pytest -v -s           # Show print statements
 pytest --cov=llm_ensemble  # Coverage report
+
+# Using markers
+pytest -m unit         # Run only unit tests (fast, isolated)
+pytest -m integration  # Run integration tests (file I/O, adapters)
+pytest -m "not slow"   # Skip slow tests
+pytest -m requires_api # Run tests requiring API credentials
 ```
 
 **Test Structure:**
 - **Domain/Adapter tests** — Test pure logic and I/O adapters in isolation (e.g., `test_llm_judge_ingest.py`)
 - **CLI integration tests** — Test end-to-end CLI behavior (e.g., `test_ingest_cli.py`)
 
-**Note:** pytest is configured in `pyproject.toml` with `-q` (quiet mode) by default.
+**Test Markers:**
+- `@pytest.mark.unit` — Fast, isolated tests with no I/O
+- `@pytest.mark.integration` — Tests using files or adapters
+- `@pytest.mark.slow` — Long-running tests or API calls
+- `@pytest.mark.requires_api` — Tests requiring API credentials
+
+**Configuration:** Tests are discovered from `tests/` directory. pytest is configured in `pyproject.toml` with `-q` (quiet mode) by default.
 
 ## Data Contracts
 
@@ -146,7 +158,7 @@ files:
   qrels: llm4eval_test_qrel_2024.txt
 ```
 
-**Note:** The `adapter` field specifies which ingest adapter module to use, making the dataset-adapter coupling explicit and enabling easy addition of new datasets without code changes.
+**Note:** The `adapter` field specifies which ingest adapter module to use, making the dataset-adapter coupling explicit.
 
 ### Ensembles (`configs/ensembles/*.yaml`)
 ```yaml
@@ -156,6 +168,26 @@ params:
   per_model_weights:
     phi3-mini: 1.0
     tinyllama: 1.0
+```
+
+### Prompts (`configs/prompts/*.yaml`)
+```yaml
+name: thomas-et-al-prompt
+template_file: thomas-et-al-prompt.jinja
+description: |
+  Thomas et al. search quality rater prompt with structured JSON output.
+  Supports optional role description, query context, and multi-aspect evaluation.
+
+# Variables passed to the Jinja2 template
+variables:
+  role: true           # Include "You are a search quality rater" role description
+  aspects: false       # Use simple O-only format instead of M/T/O aspects
+  description: null    # Optional query description
+  narrative: null      # Optional query narrative
+
+# Output parsing configuration
+expected_output_format: json
+response_parser: parse_thomas_response
 ```
 
 ## Project Structure
@@ -169,7 +201,6 @@ src/llm_ensemble/
 ├── ingest/          # Ingest logic
 │   ├── domain/      # Pure logic: models, validation
 │   ├── adapters/    # I/O: TSV/JSONL/HF loaders
-│   └── tests/       # Unit tests
 ├── infer/           # Infer logic
 ├── aggregate/       # Aggregate logic
 ├── evaluate/        # Evaluate logic

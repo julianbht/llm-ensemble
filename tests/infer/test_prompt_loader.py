@@ -4,7 +4,7 @@ import pytest
 
 from llm_ensemble.infer.config.prompts import load_prompt_config
 from llm_ensemble.infer.prompts.templates import load_prompt_template
-from llm_ensemble.infer.config.models import PromptConfig
+from llm_ensemble.infer.config.schemas import PromptConfig
 
 
 @pytest.mark.unit

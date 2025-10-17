@@ -9,7 +9,7 @@ from typing import Iterator, Optional
 
 from llm_ensemble.ingest.domain.models import JudgingExample
 from llm_ensemble.infer.models import ModelJudgement
-from llm_ensemble.infer.config.models import ModelConfig
+from llm_ensemble.infer.config.schemas import ModelConfig
 from llm_ensemble.infer.providers.openrouter import send_inference_request
 
 

@@ -35,7 +35,7 @@ def infer(
         None, "--prompts-dir", help="Path to prompts directory (defaults to configs/prompts)"
     ),
     prompt: str = typer.Option(
-        "thomas-et-al-prompt", "--prompt", "-p", help="Prompt config name (e.g., 'thomas-et-al-prompt' for configs/prompts/thomas-et-al-prompt.yaml)"
+        "thomas-et-al-prompt", "--prompt", "-p", help="Prompt config name (located in ./configs/prompts)"
     ),
     save_logs: bool = typer.Option(
         False, "--save-logs", help="Save logs to run.log file in run directory"

@@ -61,8 +61,6 @@ Domain Service (InferenceService) - coordinates: reader.read() → provider.infe
 Adapters - concrete implementations:
   • NdjsonExampleReader (io/)
   • OpenRouterAdapter (providers/)
-  • JinjaPromptBuilder (prompts/)
-  • JsonResponseParser (parsers/)
 ```
 
 **Benefits:** Test domain logic without APIs/GPUs, swap providers via config, refactor layers independently.
@@ -116,9 +114,6 @@ ingest --dataset llm_judge_challenge --data-dir /custom/path --limit 100
 # Infer - Run LLM judge inference
 # Uses configs: configs/models/gpt-oss-20b.yaml, configs/prompts/thomas-et-al-prompt.yaml, configs/io/ndjson.yaml
 infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_id>/samples.ndjson
-
-# Explicit prompt and I/O format
-infer --model gpt-oss-20b --input data.ndjson --prompt thomas-et-al-prompt --io ndjson
 
 # Alternative: run via python module
 python -m llm_ensemble.ingest_cli --help
@@ -248,16 +243,6 @@ src/llm_ensemble/
     ├── runtime/     # Environment config
     └── utils/       # Chunking, etc.
 ```
-
-## Reproducibility Requirements
-
-All reports and artifacts must include:
-- **Git SHA** — Exact code version
-- **run_id** — Unique run identifier
-- **Dataset checksum** — Data integrity
-- **Model registry snapshot path** — Model versions used
-
-Reports live at `artifacts/runs/evaluate/{run_id}/report.html` for thesis appendices.
 
 ## Important Notes
 

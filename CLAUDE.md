@@ -17,21 +17,55 @@ It should be able to easily exchange dataset, model and prompt.
 3. **aggregate** — Combine judgements using ensemble strategies (e.g., weighted majority vote)
 4. **evaluate** — Compute metrics and generate HTML reports with reproducibility footers
 
-All artifacts are written to `artifacts/runs/<cli_name>/<run_id>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
+All artifacts are managed via the **run manager** (`libs/runtime/run_manager.py`), which handles run directory creation, ID generation, and manifest writing. Artifacts are written to `artifacts/runs/<cli_name>/<run_id>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
 
 ## Architecture: Clean Architecture / Ports & Adapters
 
-The codebase separates **domain logic** from **infrastructure**:
+The codebase follows hexagonal architecture with clear separation of concerns. Using the **infer** CLI as the reference implementation:
 
-- **Domain layer** (`domain/`) — Pure Python logic with no I/O. Works with data structures (dicts, DataFrames, Pydantic models). Easy to test and reason about.
-  - Example: `ingest/domain/models.py` defines `Query`, `Document`, `Relevance`, and `JudgingExample` schemas
+### Layers
 
-- **Adapters layer** (`adapters/`) — Handles I/O, APIs, file formats, retries, HTTP clients
-  - Example: `ingest/adapters/llm_judge.py` reads TSV/JSONL files and yields domain models
+1. **CLI Layer** (e.g., `infer_cli.py`)
+   - Typer-based entrypoints that parse arguments and delegate to orchestrators
+   - No business logic - pure wiring
 
-- **CLI layer** (`cli/`) — Typer-based entrypoints that wire adapters to domain logic
+2. **Orchestrator Layer** (e.g., `infer/orchestrator.py`)
+   - Infrastructure concerns: run management, logging, manifests
+   - Loads configurations, instantiates adapters via factories
+   - Delegates business logic to domain services
 
-**Benefits:** Test logic without APIs/GPUs, swap providers easily, refactor layers independently.
+3. **Domain Layer** (e.g., `infer/domain/inference_service.py`)
+   - Pure business logic with no I/O dependencies
+   - Depends only on port abstractions (ABCs)
+   - Coordinates the core workflow (read → process → write)
+
+4. **Ports Layer** (e.g., `infer/ports/`)
+   - Abstract base classes defining contracts for infrastructure
+   - Examples: `LLMProvider`, `ExampleReader`, `JudgementWriter`, `PromptBuilder`, `ResponseParser`
+
+5. **Adapters Layer** (e.g., `infer/adapters/`)
+   - Concrete implementations of ports
+   - Handle I/O, APIs, file formats, retries, HTTP clients
+   - Organized by concern: `io/`, `providers/`, `prompts/`, `parsers/`
+   - Instantiated via factory functions (e.g., `get_provider()`, `get_example_reader()`)
+
+### Example: Infer CLI Flow
+
+```
+CLI (infer_cli.py)
+  ↓
+Orchestrator (orchestrator.py) - loads configs, creates run dir, sets up logging
+  ↓
+Domain Service (InferenceService) - coordinates: reader.read() → provider.infer() → writer.write()
+  ↓
+Adapters - concrete implementations:
+  • NdjsonExampleReader (io/)
+  • OpenRouterAdapter (providers/)
+  • JinjaPromptBuilder (prompts/)
+  • JsonResponseParser (parsers/)
+```
+
+**Benefits:** Test domain logic without APIs/GPUs, swap providers via config, refactor layers independently.
 
 ## Design Principles
 
@@ -73,20 +107,18 @@ pip install -e ".[dev]"
 
 ```bash
 # Ingest - Normalize raw datasets into JudgingExamples
-ingest --dataset llm_judge_challenge --limit 100
 # Uses config file: configs/datasets/llm_judge_challenge.yaml
-# Output: artifacts/runs/ingest/<run_id>/samples.ndjson
+ingest --dataset llm_judge_challenge --limit 100
 
 # Override data directory if needed
 ingest --dataset llm_judge_challenge --data-dir /custom/path --limit 100
 
 # Infer - Run LLM judge inference
+# Uses configs: configs/models/gpt-oss-20b.yaml, configs/prompts/thomas-et-al-prompt.yaml, configs/io/ndjson.yaml
 infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_id>/samples.ndjson
-# Uses configs: configs/models/gpt-oss-20b.yaml, configs/io/ndjson.yaml (default)
-# Output: artifacts/runs/infer/<run_id>/judgements.ndjson
 
-# Explicit I/O format (same as default, but visible)
-infer --model gpt-oss-20b --input data.ndjson --io ndjson
+# Explicit prompt and I/O format
+infer --model gpt-oss-20b --input data.ndjson --prompt thomas-et-al-prompt --io ndjson
 
 # Alternative: run via python module
 python -m llm_ensemble.ingest_cli --help
@@ -132,101 +164,63 @@ pytest -m requires_api # Run tests requiring API credentials
 
 ## Data Contracts
 
-### Canonical Dataset Record (JudgingExample)
-- `dataset`: Dataset identifier (e.g., "llm-judge-2024")
-- `query_id`, `query_text`: The information needv
-- `docid`, `doc`: Candidate document to judge
-- `gold_relevance`: Ground truth label (for calibration/eval splits)
+The pipeline uses Pydantic models to enforce schemas at CLI boundaries, ensuring type safety and validation across the entire workflow.
 
-### Canonical Model Judgement
-- `model_id`, `provider`, `version`: Model identity
-- `label`: Predicted relevance (0, 1, 2, or null if parsing failed)
-- `score`: Relevance score [0-2 scale]
-- `confidence`: Model self-reported confidence (optional)
-- `rationale`, `raw_text`: Explainability
-- `latency_ms`, `retries`, `cost_estimate`: Observability
-- `warnings`: Parser warnings, fallbacks
+### JudgingExample (ingest → infer)
 
-### Ensemble Output
-- `final_label`, `final_confidence`: Aggregated decision
-- `per_model_votes`: List of individual judgements
-- `aggregation_strategy`: Name + params (e.g., "weighted_majority")
-- `warnings`: Ties, low agreement, parser fallbacks
+Normalized query-document pairs with ground truth labels. Created by `ingest` CLI, consumed by `infer` CLI.
+
+**Schema:** `ingest/schemas/judging_example.py` → `JudgingExample`
+**Key fields:** `dataset`, `query_id`, `query_text`, `docid`, `doc`, `gold_relevance`
+**Purpose:** Standardize diverse IR datasets into a single format for downstream processing
+
+### ModelJudgement (infer → aggregate)
+
+LLM-generated relevance assessments with observability metadata. Created by `infer` CLI, consumed by `aggregate` CLI.
+
+**Schema:** `infer/schemas/model_judgement_schema.py` → `ModelJudgement`
+**Key fields:**
+- **Identity:** `model_id`, `provider`, `version`
+- **Judgement:** `label` (0/1/2 or null), `score`, `confidence`
+- **Explainability:** `rationale`, `raw_text`
+- **Observability:** `latency_ms`, `retries`, `cost_estimate`, `warnings`
+
+**Purpose:** Track both judgements and metadata for analysis, debugging, and cost estimation
+
+### EnsembleOutput (aggregate → evaluate)
+
+Aggregated decisions from multiple models with voting metadata.
+
+**Schema:** TBD in `aggregate/schemas/` (planned)
+**Expected fields:** `final_label`, `final_confidence`, `per_model_votes`, `aggregation_strategy`, `warnings`
+**Purpose:** Combine multiple model judgements into consensus decisions
 
 ## Configuration
 
-### Models (`configs/models/*.yaml`)
-```yaml
-model_id: tinyllama
-provider: ollama
-context_window: 2048
-default_params:
-  temperature: 0.0
-  max_tokens: 256
-```
+All system behavior is controlled via YAML configuration files in `configs/`. CLI flags reference config names (not paths), promoting a "config-first" design.
 
-### Datasets (`configs/datasets/*.yaml`)
-```yaml
-dataset_id: llm-judge-2024
-adapter: llm_judge  # Maps to ingest/adapters/llm_judge.py
-description: "LLM Judge Challenge 2024 - IR relevance judging dataset"
-version: "0.1"
+**Configuration Types:**
 
-# Default data directory (can be overridden via CLI --data-dir)
-data_dir: data/llm_judge_challenge
+- **Models** (`configs/models/*.yaml`) — Provider, context window, default parameters
+  - Example: `--model gpt-oss-20b` loads `configs/models/gpt-oss-20b.yaml`
+  - Schema: `infer/schemas/model_config_schema.py`
 
-# File paths relative to data_dir
-files:
-  queries: llm4eval_query_2024.txt
-  documents: llm4eval_document_2024.jsonl
-  qrels: llm4eval_test_qrel_2024.txt
-```
+- **Datasets** (`configs/datasets/*.yaml`) — Adapter mapping, file paths, metadata
+  - Example: `--dataset llm_judge_challenge` loads `configs/datasets/llm_judge_challenge.yaml`
+  - Schema: `libs/config/dataset_loader.py`
 
-**Note:** The `adapter` field specifies which ingest adapter module to use, making the dataset-adapter coupling explicit.
+- **Prompts** (`configs/prompts/*.yaml`) — Template file, variables, bundled builder + parser
+  - Example: `--prompt thomas-et-al-prompt` loads `configs/prompts/thomas-et-al-prompt.yaml`
+  - Schema: `infer/schemas/prompt_config_schema.py`
 
-### Ensembles (`configs/ensembles/*.yaml`)
-```yaml
-strategy: weighted_majority
-params:
-  default_weight: 1.0
-  per_model_weights:
-    phi3-mini: 1.0
-    tinyllama: 1.0
-```
+- **I/O Formats** (`configs/io/*.yaml`) — Bundled reader + writer adapters
+  - Example: `--io ndjson` loads `configs/io/ndjson.yaml`
+  - Schema: `infer/schemas/io_config_schema.py`
 
-### Prompts (`configs/prompts/*.yaml`)
-```yaml
-name: thomas-et-al-prompt
-template_file: thomas-et-al-prompt.jinja
-description: |
-  Thomas et al. search quality rater prompt with structured JSON output.
-  Supports optional role description, query context, and multi-aspect evaluation.
+- **Ensembles** (`configs/ensembles/*.yaml`) — Strategy, model weights
+  - Example: `--ensemble weighted_majority` loads `configs/ensembles/weighted_majority.yaml` (planned)
 
-# Variables passed to the Jinja2 template
-variables:
-  role: true           # Include "You are a search quality rater" role description
-  aspects: false       # Use simple O-only format instead of M/T/O aspects
-  description: null    # Optional query description
-  narrative: null      # Optional query narrative
-
-# Output parsing configuration
-expected_output_format: json
-response_parser: parse_thomas_response
-```
-
-### I/O Formats (`configs/io/*.yaml`)
-```yaml
-io_format: ndjson
-description: |
-  Newline-delimited JSON format (NDJSON).
-  Standard format for ingest → infer → aggregate → evaluate pipeline.
-
-# Adapter module names (bundles reader + writer together)
-reader: ndjson_example_reader
-writer: ndjson_judgement_writer
-```
-
-**Note:** I/O configs bundle reader and writer adapters for a specific format, following the same pattern as prompt configs (which bundle builder + parser).
+**Config Overrides:** All configs support runtime overrides via `--override key=value` for experimentation without modifying files.
 
 ## Project Structure
 

@@ -6,9 +6,11 @@ Centralizes all data structure definitions.
 from llm_ensemble.infer.schemas.model_judgement_schema import ModelJudgement
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
+from llm_ensemble.infer.schemas.io_config_schema import IOConfig
 
 __all__ = [
     "ModelJudgement",
     "ModelConfig",
     "PromptConfig",
+    "IOConfig",
 ]

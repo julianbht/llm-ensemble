@@ -4,16 +4,17 @@ This module handles infrastructure concerns (run management, logging, manifests)
 and wires up the domain service with concrete adapter implementations.
 It follows hexagonal architecture by delegating business logic to the domain
 service while handling all infrastructure responsibilities.
+
+All adapters are instantiated via explicit configuration - no implicit defaults.
 """
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional, TextIO, Callable
+from typing import Optional, TextIO
 
-from llm_ensemble.infer.config_loaders import load_model_config
+from llm_ensemble.infer.config_loaders import load_model_config, load_io_config
 from llm_ensemble.infer.schemas import ModelJudgement
-from llm_ensemble.infer.ports import LLMProvider, ExampleReader, JudgementWriter
 from llm_ensemble.infer.domain import InferenceService
-from llm_ensemble.infer.adapters.io import NdjsonExampleReader, NdjsonJudgementWriter
+from llm_ensemble.infer.adapters.io_factory import get_example_reader, get_judgement_writer
 from llm_ensemble.infer.adapters.provider_factory import get_provider
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
 from llm_ensemble.libs.logging.logger import get_logger
@@ -22,45 +23,44 @@ from llm_ensemble.libs.logging.logger import get_logger
 def run_inference(
     model: str,
     input_file: Path,
+    io_format: str = "ndjson",
     run_id: Optional[str] = None,
     limit: Optional[int] = None,
     config_dir: Optional[Path] = None,
+    io_dir: Optional[Path] = None,
     prompts_dir: Optional[Path] = None,
     prompt: str = "thomas-et-al-prompt",
     save_logs: bool = False,
     official: bool = False,
     notes: Optional[str] = None,
     log_file: Optional[TextIO] = None,
-    # Dependency injection (defaults to production implementations)
-    example_reader: Optional[ExampleReader] = None,
-    judgement_writer_factory: Optional[Callable[[Path], JudgementWriter]] = None,
-    provider_factory_fn: Optional[Callable] = None,
 ) -> dict:
     """Run LLM inference on judging examples and output structured judgements.
 
     This orchestrator handles infrastructure concerns:
     - Run management (directories, IDs, manifests)
     - Logging setup and output
-    - Adapter instantiation and dependency injection
+    - Adapter instantiation via explicit configuration
     - Delegating business logic to InferenceService
 
     The domain service handles the pure business logic of the inference pipeline.
 
+    All behavior is explicitly configured - no implicit defaults.
+
     Args:
-        model: Model ID for .yaml config file (e.g., 'gpt-oss-20b')
-        input_file: Input NDJSON file with JudgingExample records (from ingest CLI)
+        model: Model ID for .yaml config file (e.g., 'gpt-oss-20b' for configs/models/gpt-oss-20b.yaml)
+        input_file: Input file with JudgingExample records (from ingest CLI)
+        io_format: I/O format config name (e.g., 'ndjson' for configs/io/ndjson.yaml)
         run_id: Custom run ID (auto-generates if not provided)
         limit: Process at most N examples
-        config_dir: Path to model configs directory
+        config_dir: Path to model configs directory (defaults to configs/models)
+        io_dir: Path to I/O configs directory (defaults to configs/io)
         prompts_dir: Path to prompt templates directory (defaults to configs/prompts)
         prompt: Prompt template name (without .jinja extension)
         save_logs: Save logs to run.log file in run directory
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
         log_file: Optional file handle for logging (used when save_logs=True)
-        example_reader: Optional ExampleReader adapter (defaults to NdjsonExampleReader)
-        judgement_writer_factory: Optional factory for JudgementWriter (defaults to NdjsonJudgementWriter)
-        provider_factory_fn: Optional provider factory function (defaults to get_provider)
 
     Returns:
         Dictionary with run metadata including:
@@ -72,11 +72,13 @@ def run_inference(
         - avg_latency_ms: Average latency per judgement
 
     Raises:
-        FileNotFoundError: If model config not found
+        FileNotFoundError: If model/io config not found
+        ValueError: If config validation fails
         Exception: If inference fails
     """
-    # Load model config
+    # Load configurations
     model_config = load_model_config(model, config_dir)
+    io_config = load_io_config(io_format, io_dir)
 
     # Create or use provided run ID
     if run_id is None:
@@ -85,7 +87,7 @@ def run_inference(
     # Set up run directory and output file
     run_dir = get_run_dir(run_id, cli_name="infer", official=official)
     run_dir.mkdir(parents=True, exist_ok=True)
-    output_file = run_dir / "judgements.ndjson"
+    output_file = run_dir / f"judgements.{io_config.io_format}"
 
     # Set up log file if requested and not already provided
     log_file_handle = log_file
@@ -98,17 +100,20 @@ def run_inference(
     # Initialize logger
     logger = get_logger("infer", run_id=run_id, log_file=log_file_handle)
 
-    logger.info("Starting inference", model=model_config.model_id, provider=model_config.provider, prompt=prompt)
+    logger.info(
+        "Starting inference",
+        model=model_config.model_id,
+        provider=model_config.provider,
+        io_format=io_config.io_format,
+        prompt=prompt,
+    )
     logger.info("Run directory", path=str(run_dir))
     logger.info("Output file", path=str(output_file))
 
-    # Instantiate adapters (dependency injection)
-    reader = example_reader or NdjsonExampleReader()
-    writer_factory = judgement_writer_factory or NdjsonJudgementWriter
-    provider_factory = provider_factory_fn or get_provider
-
-    writer = writer_factory(output_file)
-    provider = provider_factory(model_config)
+    # Instantiate adapters via explicit configuration (no defaults)
+    reader = get_example_reader(io_config)
+    writer = get_judgement_writer(io_config, output_file)
+    provider = get_provider(model_config)
 
     # Create domain service with injected ports
     service = InferenceService(
@@ -169,11 +174,13 @@ def run_inference(
         cli_args={
             "model": model,
             "input_file": str(input_file),
+            "io_format": io_format,
             "limit": limit,
             "prompt": prompt,
         },
         metadata={
             "model_config": model_config.model_dump(),
+            "io_config": io_config.model_dump(),
             "prompt_template": prompt,
             "judgement_count": stats["judgement_count"],
             "error_count": stats["error_count"],

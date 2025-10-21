@@ -1,0 +1,9 @@
+io_format: ndjson
+description: |
+  Newline-delimited JSON format (NDJSON).
+  Standard format for ingest → infer → aggregate → evaluate pipeline.
+  One JSON object per line, optimized for streaming and line-by-line processing.
+
+# Adapter module names (loaded dynamically)
+reader: ndjson_example_reader
+writer: ndjson_judgement_writer

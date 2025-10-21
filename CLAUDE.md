@@ -33,6 +33,26 @@ The codebase separates **domain logic** from **infrastructure**:
 
 **Benefits:** Test logic without APIs/GPUs, swap providers easily, refactor layers independently.
 
+## Design Principles
+
+### Explicit Configuration Over Implicit Defaults
+
+**Minimize defaults to ensure users are aware of all behavior.**
+
+- **All adapters** must be explicitly specified via configuration files (no hidden fallbacks)
+- **All CLI behavior** should be visible through flags or configs
+- **Configuration files bundle related concerns** (e.g., prompts bundle builder + parser, I/O configs bundle reader + writer)
+- **Errors over silent fallbacks** - if config is missing or invalid, raise clear errors explaining what's needed
+- **Verbosity confronts users with choices** - this helps them understand how the system works and what they can adjust
+
+**Examples:**
+- ✅ `--model gpt-oss-20b` (loads `configs/models/gpt-oss-20b.yaml` which explicitly specifies `provider: openrouter`)
+- ✅ `--io ndjson` (loads `configs/io/ndjson.yaml` which explicitly specifies reader and writer adapters)
+- ✅ Missing `provider` field in model config → **ValidationError** (not silent default)
+- ❌ Don't silently default to a specific provider or I/O format without user knowledge
+
+**Rationale:** Explicit configuration makes the system's behavior transparent and predictable. Users understand what's happening and can adjust behavior by modifying configs, not by discovering hidden defaults through trial and error.
+
 ## Development Commands
 
 ### Quick Start
@@ -62,7 +82,11 @@ ingest --dataset llm_judge_challenge --data-dir /custom/path --limit 100
 
 # Infer - Run LLM judge inference
 infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_id>/samples.ndjson
+# Uses configs: configs/models/gpt-oss-20b.yaml, configs/io/ndjson.yaml (default)
 # Output: artifacts/runs/infer/<run_id>/judgements.ndjson
+
+# Explicit I/O format (same as default, but visible)
+infer --model gpt-oss-20b --input data.ndjson --io ndjson
 
 # Alternative: run via python module
 python -m llm_ensemble.ingest_cli --help
@@ -190,6 +214,20 @@ expected_output_format: json
 response_parser: parse_thomas_response
 ```
 
+### I/O Formats (`configs/io/*.yaml`)
+```yaml
+io_format: ndjson
+description: |
+  Newline-delimited JSON format (NDJSON).
+  Standard format for ingest → infer → aggregate → evaluate pipeline.
+
+# Adapter module names (bundles reader + writer together)
+reader: ndjson_example_reader
+writer: ndjson_judgement_writer
+```
+
+**Note:** I/O configs bundle reader and writer adapters for a specific format, following the same pattern as prompt configs (which bundle builder + parser).
+
 ## Project Structure
 
 ```
@@ -202,6 +240,11 @@ src/llm_ensemble/
 │   ├── domain/      # Pure logic: models, validation
 │   ├── adapters/    # I/O: TSV/JSONL/HF loaders
 ├── infer/           # Infer logic
+│   ├── domain/      # Pure logic: inference service
+│   ├── ports/       # Abstract interfaces (ABCs)
+│   ├── adapters/    # Concrete implementations
+│   │   ├── io/      # NDJSON reader/writer
+│   │   └── providers/ # OpenRouter, Ollama, HF
 ├── aggregate/       # Aggregate logic
 ├── evaluate/        # Evaluate logic
 └── libs/            # Shared utilities

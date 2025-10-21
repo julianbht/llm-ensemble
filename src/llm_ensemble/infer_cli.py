@@ -6,6 +6,7 @@ import typer
 
 from llm_ensemble.infer.orchestrator import run_inference
 from llm_ensemble.libs.runtime.env import load_runtime_config
+from llm_ensemble.libs.utils.config_overrides import parse_overrides
 
 # Load runtime configuration early
 load_runtime_config()
@@ -52,6 +53,12 @@ def infer(
     notes: Optional[str] = typer.Option(
         None, "--notes", help="Notes about this run (experiment purpose, hypothesis, etc.)"
     ),
+    override: list[str] = typer.Option(
+        [],
+        "--override",
+        "-O",
+        help="Override config values (format: key=value, e.g., 'default_params.temperature=0.7'). Can be specified multiple times."
+    ),
 ):
     """Run LLM inference on judging examples and output structured judgements.
 
@@ -60,17 +67,36 @@ def infer(
 
     All behavior is explicitly configured via config files - no implicit defaults.
 
-    Example:
-        infer --model gpt-oss-20b --input artifacts/runs/20250115_143022_llm-judge/samples.ndjson
+    Examples:
+        # Basic usage
+        infer --model gpt-oss-20b --input data.ndjson
 
-        # Explicit I/O format (same as default)
-        infer --model gpt-oss-20b --input data.ndjson --io ndjson
+        # Override model parameters
+        infer --model gpt-oss-20b --input data.ndjson \\
+              --override default_params.temperature=0.7 \\
+              --override default_params.max_tokens=512
+
+        # Override prompt variables
+        infer --model gpt-oss-20b --input data.ndjson \\
+              --prompt thomas-et-al-prompt \\
+              --override variables.role=false
+
+    Override format:
+        Model params:    --override default_params.temperature=0.7
+        Prompt vars:     --override variables.role=false
+        I/O adapters:    --override reader=custom_reader
+
+        See config files in configs/ for available fields.
+        Overrides are tracked in manifest for reproducibility.
 
     Environment variables:
         OPENROUTER_API_KEY: OpenRouter API key (required for OpenRouter models)
         HF_TOKEN: HuggingFace API token (required for HF models)
     """
     try:
+        # Parse overrides
+        config_overrides = parse_overrides(override) if override else {}
+
         run_inference(
             model=model,
             input_file=input_file,
@@ -84,6 +110,7 @@ def infer(
             save_logs=save_logs,
             official=official,
             notes=notes,
+            config_overrides=config_overrides,
         )
     except FileNotFoundError as e:
         typer.echo(f"Error: {e}", err=True)

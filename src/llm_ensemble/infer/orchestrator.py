@@ -11,13 +11,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, TextIO
 
-from llm_ensemble.infer.config_loaders import load_model_config, load_io_config
+from llm_ensemble.infer.config_loaders import load_model_config, load_io_config, load_prompt_config
 from llm_ensemble.infer.schemas import ModelJudgement
 from llm_ensemble.infer.domain import InferenceService
 from llm_ensemble.infer.adapters.io_factory import get_example_reader, get_judgement_writer
 from llm_ensemble.infer.adapters.provider_factory import get_provider
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
 from llm_ensemble.libs.logging.logger import get_logger
+from llm_ensemble.libs.utils.config_overrides import apply_overrides
 
 
 def run_inference(
@@ -34,6 +35,7 @@ def run_inference(
     official: bool = False,
     notes: Optional[str] = None,
     log_file: Optional[TextIO] = None,
+    config_overrides: Optional[dict] = None,
 ) -> dict:
     """Run LLM inference on judging examples and output structured judgements.
 
@@ -61,6 +63,7 @@ def run_inference(
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
         log_file: Optional file handle for logging (used when save_logs=True)
+        config_overrides: Optional dict of config overrides (e.g., {"default_params": {"temperature": 0.7}})
 
     Returns:
         Dictionary with run metadata including:
@@ -79,6 +82,37 @@ def run_inference(
     # Load configurations
     model_config = load_model_config(model, config_dir)
     io_config = load_io_config(io_format, io_dir)
+    prompt_config = load_prompt_config(prompt, prompts_dir)
+
+    # Apply overrides if provided by cli
+    if config_overrides:
+        # Separate overrides by config type based on keys
+        model_overrides = {}
+        io_overrides = {}
+        prompt_overrides = {}
+
+        for key, value in config_overrides.items():
+            # Model config fields: provider, default_params, context_window, etc.
+            if key in ["provider", "context_window", "default_params", "capabilities",
+                       "hf_endpoint_url", "hf_model_name", "openrouter_model_id"]:
+                model_overrides[key] = value
+            # I/O config fields: reader, writer
+            elif key in ["reader", "writer"]:
+                io_overrides[key] = value
+            # Prompt config fields: variables, prompt_builder, response_parser, etc.
+            elif key in ["variables", "prompt_builder", "response_parser", "template_file"]:
+                prompt_overrides[key] = value
+            else:
+                # Try model first (most common), will fail with validation error if wrong
+                model_overrides[key] = value
+
+        # Apply overrides to each config
+        if model_overrides:
+            model_config = apply_overrides(model_config, model_overrides)
+        if io_overrides:
+            io_config = apply_overrides(io_config, io_overrides)
+        if prompt_overrides:
+            prompt_config = apply_overrides(prompt_config, prompt_overrides)
 
     # Create or use provided run ID
     if run_id is None:
@@ -106,6 +140,7 @@ def run_inference(
         provider=model_config.provider,
         io_format=io_config.io_format,
         prompt=prompt,
+        overrides=config_overrides if config_overrides else None,
     )
     logger.info("Run directory", path=str(run_dir))
     logger.info("Output file", path=str(output_file))
@@ -168,6 +203,20 @@ def run_inference(
         raise
 
     # Write manifest
+    manifest_metadata = {
+        "model_config": model_config.model_dump(),
+        "io_config": io_config.model_dump(),
+        "prompt_config": prompt_config.model_dump(),
+        "judgement_count": stats["judgement_count"],
+        "error_count": stats["error_count"],
+        "avg_latency_ms": stats["avg_latency_ms"],
+        "output_file": str(output_file),
+    }
+
+    # Track overrides for full reproducibility
+    if config_overrides:
+        manifest_metadata["config_overrides"] = config_overrides
+
     write_manifest(
         run_dir=run_dir,
         cli_name="infer",
@@ -178,15 +227,7 @@ def run_inference(
             "limit": limit,
             "prompt": prompt,
         },
-        metadata={
-            "model_config": model_config.model_dump(),
-            "io_config": io_config.model_dump(),
-            "prompt_template": prompt,
-            "judgement_count": stats["judgement_count"],
-            "error_count": stats["error_count"],
-            "avg_latency_ms": stats["avg_latency_ms"],
-            "output_file": str(output_file),
-        },
+        metadata=manifest_metadata,
         official=official,
         notes=notes,
     )

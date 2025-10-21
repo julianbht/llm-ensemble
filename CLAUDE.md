@@ -39,7 +39,7 @@ The codebase separates **domain logic** from **infrastructure**:
 
 **Minimize defaults to ensure users are aware of all behavior.**
 
-- **All adapters** must be explicitly specified via configuration files (no hidden fallbacks)
+- **All adapters** must be explicitly specified via configuration files (no hidden fallbacks, "config first")
 - **All CLI behavior** should be visible through flags or configs
 - **Configuration files bundle related concerns** (e.g., prompts bundle builder + parser, I/O configs bundle reader + writer)
 - **Errors over silent fallbacks** - if config is missing or invalid, raise clear errors explaining what's needed

@@ -1,34 +1,22 @@
 """Orchestrator for the infer CLI.
 
-This module contains the top-level orchestration logic for running LLM inference
-on judging examples. It is separated from the CLI entry point (infer_cli.py)
-to enable better testability and reusability.
+This module handles infrastructure concerns (run management, logging, manifests)
+and wires up the domain service with concrete adapter implementations.
+It follows hexagonal architecture by delegating business logic to the domain
+service while handling all infrastructure responsibilities.
 """
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional, TextIO
-import json
+from typing import Optional, TextIO, Callable
 
-from llm_ensemble.ingest.schemas import JudgingExample
 from llm_ensemble.infer.config_loaders import load_model_config
-from llm_ensemble.infer.providers import iter_judgements
+from llm_ensemble.infer.schemas import ModelJudgement
+from llm_ensemble.infer.ports import LLMProvider, ExampleReader, JudgementWriter
+from llm_ensemble.infer.domain import InferenceService
+from llm_ensemble.infer.adapters.io import NdjsonExampleReader, NdjsonJudgementWriter
+from llm_ensemble.infer.adapters.provider_factory import get_provider
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
 from llm_ensemble.libs.logging.logger import get_logger
-
-
-def _read_examples(input_path: Path) -> list[JudgingExample]:
-    """Read NDJSON examples from file."""
-    examples = []
-    with input_path.open("r") as f:
-        for line in f:
-            if line.strip():
-                examples.append(JudgingExample(**json.loads(line)))
-    return examples
-
-
-def _json_dumps(judgement) -> str:
-    """Serialize ModelJudgement to JSON."""
-    return judgement.model_dump_json()
 
 
 def run_inference(
@@ -43,16 +31,21 @@ def run_inference(
     official: bool = False,
     notes: Optional[str] = None,
     log_file: Optional[TextIO] = None,
+    # Dependency injection (defaults to production implementations)
+    example_reader: Optional[ExampleReader] = None,
+    judgement_writer_factory: Optional[Callable[[Path], JudgementWriter]] = None,
+    provider_factory_fn: Optional[Callable] = None,
 ) -> dict:
     """Run LLM inference on judging examples and output structured judgements.
-    
-    This is the main orchestration function that coordinates:
-    - Loading model configuration
-    - Setting up run directory and output files
-    - Reading input examples
-    - Running inference via providers
-    - Writing results and manifest
-    
+
+    This orchestrator handles infrastructure concerns:
+    - Run management (directories, IDs, manifests)
+    - Logging setup and output
+    - Adapter instantiation and dependency injection
+    - Delegating business logic to InferenceService
+
+    The domain service handles the pure business logic of the inference pipeline.
+
     Args:
         model: Model ID for .yaml config file (e.g., 'gpt-oss-20b')
         input_file: Input NDJSON file with JudgingExample records (from ingest CLI)
@@ -65,7 +58,10 @@ def run_inference(
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
         log_file: Optional file handle for logging (used when save_logs=True)
-        
+        example_reader: Optional ExampleReader adapter (defaults to NdjsonExampleReader)
+        judgement_writer_factory: Optional factory for JudgementWriter (defaults to NdjsonJudgementWriter)
+        provider_factory_fn: Optional provider factory function (defaults to get_provider)
+
     Returns:
         Dictionary with run metadata including:
         - run_id: The run identifier
@@ -74,23 +70,23 @@ def run_inference(
         - judgement_count: Total number of judgements processed
         - error_count: Number of failed judgements
         - avg_latency_ms: Average latency per judgement
-        
+
     Raises:
         FileNotFoundError: If model config not found
         Exception: If inference fails
     """
     # Load model config
     model_config = load_model_config(model, config_dir)
-    
+
     # Create or use provided run ID
     if run_id is None:
         run_id = create_run_id(model_config.model_id)
-    
+
     # Set up run directory and output file
     run_dir = get_run_dir(run_id, cli_name="infer", official=official)
     run_dir.mkdir(parents=True, exist_ok=True)
     output_file = run_dir / "judgements.ndjson"
-    
+
     # Set up log file if requested and not already provided
     log_file_handle = log_file
     close_log_file = False
@@ -98,69 +94,74 @@ def run_inference(
         log_file_path = run_dir / "run.log"
         log_file_handle = open(log_file_path, "w", encoding="utf-8")
         close_log_file = True
-    
+
     # Initialize logger
     logger = get_logger("infer", run_id=run_id, log_file=log_file_handle)
-    
+
     logger.info("Starting inference", model=model_config.model_id, provider=model_config.provider, prompt=prompt)
     logger.info("Run directory", path=str(run_dir))
     logger.info("Output file", path=str(output_file))
-    
-    # Read examples
-    logger.info("Reading examples", input_file=str(input_file))
-    examples = _read_examples(input_file)
-    logger.info("Loaded examples", count=len(examples))
-    
-    if limit is not None:
-        examples = examples[:limit]
-        logger.info("Limited examples", count=len(examples))
-    
-    # Run inference
-    count = 0
-    error_count = 0
-    total_latency_ms = 0.0
-    
+
+    # Instantiate adapters (dependency injection)
+    reader = example_reader or NdjsonExampleReader()
+    writer_factory = judgement_writer_factory or NdjsonJudgementWriter
+    provider_factory = provider_factory_fn or get_provider
+
+    writer = writer_factory(output_file)
+    provider = provider_factory(model_config)
+
+    # Create domain service with injected ports
+    service = InferenceService(
+        example_reader=reader,
+        judgement_writer=writer,
+        llm_provider=provider,
+    )
+
+    # Define logging callback for domain service
+    def log_judgement(judgement: ModelJudgement) -> None:
+        """Callback to log each judgement (infrastructure concern)."""
+        if judgement.label is None:
+            logger.warning(
+                "Judgement error",
+                query_id=judgement.query_id,
+                docid=judgement.docid,
+                warnings=judgement.warnings,
+            )
+        else:
+            logger.info(
+                "Processed judgement",
+                query_id=judgement.query_id,
+                docid=judgement.docid,
+                label=judgement.label,
+                latency_ms=f"{judgement.latency_ms:.1f}",
+            )
+
+    # Run inference via domain service
     try:
-        with output_file.open("w", encoding="utf-8", newline="\n") as sink:
-            for judgement in iter_judgements(
-                iter(examples),
-                model_config,
-                prompts_dir=prompts_dir,
-                prompt_template_name=prompt,
-            ):
-                sink.write(_json_dumps(judgement) + "\n")
-                count += 1
-                total_latency_ms += judgement.latency_ms
-                
-                # Track errors
-                if judgement.label is None:
-                    error_count += 1
-                    logger.warning(
-                        "Judgement error",
-                        count=count,
-                        query_id=judgement.query_id,
-                        docid=judgement.docid,
-                        warnings=judgement.warnings,
-                    )
-                else:
-                    logger.info(
-                        "Processed judgement",
-                        count=count,
-                        query_id=judgement.query_id,
-                        docid=judgement.docid,
-                        label=judgement.label,
-                        latency_ms=f"{judgement.latency_ms:.1f}",
-                    )
-    
+        logger.info("Reading examples", input_file=str(input_file))
+
+        stats = service.run_inference(
+            input_path=input_file,
+            model_config=model_config,
+            prompt_template_name=prompt,
+            prompts_dir=prompts_dir,
+            limit=limit,
+            on_judgement=log_judgement,
+        )
+
+        logger.info(
+            "Inference complete",
+            total_judgements=stats["judgement_count"],
+            errors=stats["error_count"],
+            avg_latency_ms=f"{stats['avg_latency_ms']:.1f}",
+        )
+
     except Exception as e:
         logger.error("Inference failed", error=str(e))
         if close_log_file and log_file_handle is not None:
             log_file_handle.close()
         raise
-    
-    avg_latency = total_latency_ms / count if count > 0 else 0
-    logger.info("Inference complete", total_judgements=count, errors=error_count, avg_latency_ms=f"{avg_latency:.1f}")
-    
+
     # Write manifest
     write_manifest(
         run_dir=run_dir,
@@ -174,27 +175,26 @@ def run_inference(
         metadata={
             "model_config": model_config.model_dump(),
             "prompt_template": prompt,
-            "judgement_count": count,
-            "error_count": error_count,
-            "avg_latency_ms": avg_latency,
+            "judgement_count": stats["judgement_count"],
+            "error_count": stats["error_count"],
+            "avg_latency_ms": stats["avg_latency_ms"],
             "output_file": str(output_file),
         },
         official=official,
         notes=notes,
     )
-    
+
     logger.info("Manifest written", path=str(run_dir / "manifest.json"))
-    
+
     # Close log file if we opened it
     if close_log_file and log_file_handle is not None:
         logger.info("Logs saved", path=str(run_dir / "run.log"))
         log_file_handle.close()
-    
+
+    # Return combined metadata and statistics
     return {
         "run_id": run_id,
         "run_dir": run_dir,
         "output_file": output_file,
-        "judgement_count": count,
-        "error_count": error_count,
-        "avg_latency_ms": avg_latency,
+        **stats,  # Include judgement_count, error_count, avg_latency_ms
     }

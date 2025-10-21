@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**LLM Ensemble** is a CLI-first research system for evaluating LLM-as-judge ensembles on information retrieval tasks. 
+**LLM Ensemble** is a CLI-first LLM relevance labeling system for information retrieval tasks. 
 The project follows a 4-stage pipeline architecture with shared libraries.
 Specifically, its an LLM relevance judging system using Python with OpenRouter / Ollama / Hugginface Inference Endpoints, for my bachelor thesis. 
 It should be able to easily exchange dataset, model and prompt. 

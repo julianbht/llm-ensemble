@@ -56,8 +56,6 @@ class InferenceService:
         self,
         input_path: Path,
         model_config: ModelConfig,
-        prompt_template_name: str,
-        prompts_dir: Optional[Path] = None,
         limit: Optional[int] = None,
         on_judgement: Optional[Callable[[ModelJudgement], None]] = None,
     ) -> dict:
@@ -72,8 +70,6 @@ class InferenceService:
         Args:
             input_path: Path to input examples
             model_config: Model configuration
-            prompt_template_name: Name of prompt template to use
-            prompts_dir: Directory containing prompt templates
             limit: Optional maximum number of examples to process
             on_judgement: Optional callback invoked for each judgement (for logging/progress)
 
@@ -96,12 +92,7 @@ class InferenceService:
         total_latency_ms = 0.0
 
         # Run inference pipeline
-        for judgement in self._process_examples(
-            examples,
-            model_config,
-            prompt_template_name,
-            prompts_dir,
-        ):
+        for judgement in self._process_examples(examples, model_config):
             # Write judgement
             self.judgement_writer.write(judgement)
 
@@ -132,23 +123,14 @@ class InferenceService:
         self,
         examples: list[JudgingExample],
         model_config: ModelConfig,
-        prompt_template_name: str,
-        prompts_dir: Optional[Path],
     ) -> Iterator[ModelJudgement]:
         """Process examples through LLM provider.
 
         Args:
             examples: List of judging examples
             model_config: Model configuration
-            prompt_template_name: Prompt template name
-            prompts_dir: Prompt templates directory
 
         Yields:
             ModelJudgement objects from inference
         """
-        yield from self.llm_provider.infer(
-            iter(examples),
-            model_config,
-            prompt_template_name,
-            prompts_dir,
-        )
+        yield from self.llm_provider.infer(iter(examples), model_config)

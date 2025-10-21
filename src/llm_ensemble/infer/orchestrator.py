@@ -16,6 +16,8 @@ from llm_ensemble.infer.schemas import ModelJudgement
 from llm_ensemble.infer.domain import InferenceService
 from llm_ensemble.infer.adapters.io_factory import get_example_reader, get_judgement_writer
 from llm_ensemble.infer.adapters.provider_factory import get_provider
+from llm_ensemble.infer.adapters.prompt_builder_factory import get_prompt_builder
+from llm_ensemble.infer.adapters.response_parser_factory import get_response_parser
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
 from llm_ensemble.libs.logging.logger import get_logger
 from llm_ensemble.libs.utils.config_overrides import apply_overrides
@@ -148,7 +150,13 @@ def run_inference(
     # Instantiate adapters via explicit configuration (no defaults)
     reader = get_example_reader(io_config)
     writer = get_judgement_writer(io_config, output_file)
-    provider = get_provider(model_config)
+
+    # Instantiate prompt builder and response parser from prompt config
+    prompt_builder = get_prompt_builder(prompt_config, prompts_dir)
+    response_parser = get_response_parser(prompt_config)
+
+    # Instantiate provider with injected prompt builder and parser
+    provider = get_provider(model_config, prompt_builder, response_parser)
 
     # Create domain service with injected ports
     service = InferenceService(
@@ -183,8 +191,6 @@ def run_inference(
         stats = service.run_inference(
             input_path=input_file,
             model_config=model_config,
-            prompt_template_name=prompt,
-            prompts_dir=prompts_dir,
             limit=limit,
             on_judgement=log_judgement,
         )

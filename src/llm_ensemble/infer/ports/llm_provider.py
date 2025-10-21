@@ -7,8 +7,7 @@ provider implementations (OpenRouter, Ollama, HuggingFace, etc.).
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterator
 
 from llm_ensemble.ingest.schemas import JudgingExample
 from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig
@@ -20,10 +19,16 @@ class LLMProvider(ABC):
     All provider adapters (OpenRouter, Ollama, HuggingFace) must inherit
     from this class and implement the infer() method.
 
+    Providers are initialized with injected PromptBuilder and ResponseParser
+    ports, following dependency inversion principles.
+
     Example:
         >>> class OpenRouterAdapter(LLMProvider):
-        ...     def infer(self, examples, model_config, ...):
-        ...         # Implementation
+        ...     def __init__(self, prompt_builder, response_parser, ...):
+        ...         self.prompt_builder = prompt_builder
+        ...         self.response_parser = response_parser
+        ...     def infer(self, examples, model_config):
+        ...         # Implementation using injected ports
         ...         yield judgement
     """
 
@@ -32,16 +37,12 @@ class LLMProvider(ABC):
         self,
         examples: Iterator[JudgingExample],
         model_config: ModelConfig,
-        prompt_template_name: str,
-        prompts_dir: Optional[Path] = None,
     ) -> Iterator[ModelJudgement]:
         """Run inference on examples and yield judgements.
 
         Args:
             examples: Iterator of JudgingExample objects to judge
             model_config: Model configuration with provider and settings
-            prompt_template_name: Name of the prompt template to use
-            prompts_dir: Directory containing prompt templates (defaults to configs/prompts)
 
         Yields:
             ModelJudgement objects with predictions and metadata

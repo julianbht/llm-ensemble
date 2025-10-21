@@ -1,30 +1,28 @@
 """Prompt builders for different prompt templates.
 
-Each builder module should export a `build()` function that takes:
-- template: Jinja2 Template object
-- example: Dict with judging example data
-
-And returns a rendered prompt string.
+Each builder module should export a concrete class that implements the
+PromptBuilder port interface.
 """
 
 from __future__ import annotations
 import importlib
 from pathlib import Path
-from jinja2 import Template
+
+from llm_ensemble.infer.ports import PromptBuilder
 
 
-def load_builder(builder_name: str):
-    """Load a prompt builder module by name.
+def load_builder(builder_name: str) -> PromptBuilder:
+    """Load a prompt builder adapter by name.
 
     Args:
         builder_name: Name of the builder module (e.g., "thomas")
 
     Returns:
-        The builder module with a `build()` function
+        An instance of the PromptBuilder implementation
 
     Raises:
         ImportError: If the builder module doesn't exist
-        AttributeError: If the module doesn't have a `build()` function
+        AttributeError: If the module doesn't have the expected class
 
     Example:
         >>> builder = load_builder("thomas")
@@ -44,9 +42,17 @@ def load_builder(builder_name: str):
             f"Available builders: {', '.join(available)}"
         ) from e
 
-    if not hasattr(module, "build"):
+    # Convert builder_name to class name (e.g., "thomas" -> "ThomasPromptBuilder")
+    class_name = "".join(word.capitalize() for word in builder_name.split("_")) + "PromptBuilder"
+    
+    if not hasattr(module, class_name):
         raise AttributeError(
-            f"Builder module '{builder_name}' must define a build() function"
+            f"Builder module '{builder_name}' must define a {class_name} class "
+            f"that implements the PromptBuilder interface"
         )
 
-    return module
+    builder_class = getattr(module, class_name)
+    return builder_class()
+
+
+__all__ = ["load_builder"]

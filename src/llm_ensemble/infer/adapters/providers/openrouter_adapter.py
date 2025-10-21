@@ -2,50 +2,68 @@
 
 Handles HTTP communication with OpenRouter API and converts responses
 to ModelJudgement domain objects. Implements the LLMProvider port.
+
+Dependencies (builder, parser, template) are injected via constructor,
+following dependency injection principle.
 """
 
 from __future__ import annotations
 import os
 import time
-from pathlib import Path
 from typing import Iterator, Optional
 from openai import OpenAI
+from jinja2 import Template
 
 from llm_ensemble.ingest.schemas import JudgingExample
 from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig
-from llm_ensemble.infer.ports import LLMProvider
-from llm_ensemble.infer.config_loaders import load_prompt_config, load_prompt_template
-from llm_ensemble.infer.prompt_builders import load_builder
-from llm_ensemble.infer.response_parsers import load_parser
+from llm_ensemble.infer.ports import LLMProvider, PromptBuilder, ResponseParser
 
 
 class OpenRouterAdapter(LLMProvider):
     """OpenRouter implementation of the LLMProvider port.
 
     Sends inference requests to OpenRouter API and yields ModelJudgement
-    objects. Uses prompt builders and response parsers for flexible
-    prompt formatting and output parsing.
+    objects. Receives prompt builder, response parser, and template as
+    constructor dependencies (dependency injection pattern).
 
     Example:
-        >>> from llm_ensemble.infer.config_loaders import load_model_config
-        >>> config = load_model_config("gpt-oss-20b")
-        >>> adapter = OpenRouterAdapter()
-        >>> judgements = adapter.infer(examples, config, "thomas-et-al-prompt")
+        >>> builder = ThomasPromptBuilder()
+        >>> parser = ThomasResponseParser()
+        >>> template = load_template("thomas-et-al-prompt.jinja")
+        >>> adapter = OpenRouterAdapter(
+        ...     builder=builder,
+        ...     parser=parser,
+        ...     template=template,
+        ...     api_key="..."
+        ... )
+        >>> judgements = adapter.infer(examples, config)
         >>> for judgement in judgements:
         ...     print(judgement.label)
     """
 
     def __init__(
         self,
+        builder: PromptBuilder,
+        parser: ResponseParser,
+        template: Template,
         api_key: Optional[str] = None,
         timeout: int = 30,
     ):
-        """Initialize OpenRouter adapter.
+        """Initialize OpenRouter adapter with injected dependencies.
 
         Args:
+            builder: PromptBuilder adapter for building prompts from examples
+            parser: ResponseParser adapter for parsing LLM responses
+            template: Jinja2 Template for prompt formatting
             api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
             timeout: Request timeout in seconds (default: 30)
         """
+        # Store injected dependencies
+        self.builder = builder
+        self.parser = parser
+        self.template = template
+        
+        # API configuration
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         self.timeout = timeout
 
@@ -59,16 +77,15 @@ class OpenRouterAdapter(LLMProvider):
         self,
         examples: Iterator[JudgingExample],
         model_config: ModelConfig,
-        prompt_template_name: str,
-        prompts_dir: Optional[Path] = None,
     ) -> Iterator[ModelJudgement]:
         """Run inference on examples using OpenRouter API.
+
+        Uses injected dependencies (builder, parser, template) to process examples.
+        No config loading needed - all dependencies already injected.
 
         Args:
             examples: Iterator of JudgingExample objects to judge
             model_config: Model configuration with provider and settings
-            prompt_template_name: Name of the prompt template to use
-            prompts_dir: Directory containing prompt templates (defaults to configs/prompts)
 
         Yields:
             ModelJudgement objects with predictions and metadata
@@ -82,14 +99,6 @@ class OpenRouterAdapter(LLMProvider):
                 f"Model {model_config.model_id} is configured for OpenRouter "
                 f"but missing openrouter_model_id field"
             )
-
-        # Load prompt config and template
-        prompt_config = load_prompt_config(prompt_template_name, prompts_dir)
-        template = load_prompt_template(prompt_config.prompt_template, prompts_dir)
-
-        # Load builder and parser
-        builder = load_builder(prompt_config.prompt_builder)
-        parser = load_parser(prompt_config.response_parser)
 
         # Extract model parameters
         temperature = model_config.default_params.get("temperature", 0.0)
@@ -107,8 +116,8 @@ class OpenRouterAdapter(LLMProvider):
             # Convert example to dict for builder
             example_dict = example.model_dump()
 
-            # Build prompt instruction
-            instruction = builder.build(template, example_dict)
+            # Build prompt instruction using injected builder and template
+            instruction = self.builder.build(self.template, example_dict)
 
             # Track timing
             warnings = []
@@ -127,8 +136,8 @@ class OpenRouterAdapter(LLMProvider):
             # Extract response
             raw_text = response.choices[0].message.content
 
-            # Parse the model output
-            label, parse_warnings = parser.parse(raw_text)
+            # Parse the model output using injected parser
+            label, parse_warnings = self.parser.parse(raw_text)
             warnings.extend(parse_warnings)
 
             # Extract model version if available

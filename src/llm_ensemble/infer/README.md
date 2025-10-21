@@ -4,30 +4,58 @@ The **infer** CLI runs LLM inference on judging examples and outputs structured 
 
 ## Architecture
 
-Follows clean architecture / ports & adapters pattern with orchestrator coordination:
+Follows **clean architecture / ports & adapters** pattern (Alistair Cockburn's Hexagonal Architecture):
 
-- **Orchestrator** (`orchestrator.py`) — Top-level coordination logic that wires components together
+### Core Layers
 
-- **Schemas** (`schemas/`) — Pydantic models for data structures
-  - `model_judgement.py`: Output judgement records
-  - `model_config.py`: Model configuration schema
+- **Domain** (`domain/`) — Pure business logic with no I/O dependencies
+  - `inference_service.py`: Orchestrates inference pipeline using port abstractions
 
-- **Prompts** (`prompts/`) — Prompt construction and template rendering
-  - Template loading and variable interpolation
+- **Ports** (`ports/`) — Abstract interfaces (ABCs) defining contracts
+  - `llm_provider.py`: LLM inference abstraction
+  - `example_reader.py`: Input reading abstraction
+  - `judgement_writer.py`: Output writing abstraction
+  - `prompt_builder.py`: Prompt construction abstraction
+  - `response_parser.py`: Response parsing abstraction
 
-- **Parsers** (`parsers/`) — Response parsing logic
-  - Extract structured data from LLM outputs
+- **Adapters** (`adapters/`) — Concrete implementations of ports
+  - **Providers** (`adapters/providers/`)
+    - `openrouter_adapter.py`: OpenRouter API implementation
+    - `ollama_adapter.py`: Ollama local inference implementation
+    - `huggingface_adapter.py`: HuggingFace Inference Endpoints implementation
+  - **I/O** (`adapters/io/`)
+    - `ndjson_example_reader.py`: NDJSON input reader
+    - `ndjson_judgement_writer.py`: NDJSON output writer
 
-- **Providers** (`providers/`) — LLM provider adapters (I/O boundary)
-  - `openrouter.py`: OpenRouter API adapter
-  - `ollama.py`: Ollama local inference adapter
-  - `huggingface.py`: HuggingFace Inference Endpoints adapter
-  - `provider_router.py`: Routes to appropriate provider based on config
+- **Prompt Builders** (`prompt_builders/`) — Prompt construction adapters
+  - `thomas.py`: Thomas et al. prompt format implementation
+  - Each builder implements `PromptBuilder` port
+
+- **Response Parsers** (`response_parsers/`) — Response parsing adapters
+  - `thomas.py`: Thomas et al. JSON response parser
+  - Each parser implements `ResponseParser` port
+
+- **Schemas** (`schemas/`) — Pydantic models for data contracts
+  - `model_judgement_schema.py`: Output judgement records
+  - `model_config_schema.py`: Model configuration
+  - `prompt_config_schema.py`: Prompt configuration
+  - `io_config_schema.py`: I/O format configuration
 
 - **Config Loaders** (`config_loaders/`) — YAML configuration loading
-  - Model and prompt config readers
+  - Model, prompt, and I/O config readers
 
-- **CLI layer** (`infer_cli.py`) — Typer entrypoint that delegates to orchestrator
+- **CLI layer** (`infer_cli.py`) — Typer entrypoint that wires adapters to domain service
+
+### Dependency Flow
+
+```
+CLI → Domain Service → Ports (ABC) ← Adapters (Concrete)
+```
+
+The domain layer depends only on port abstractions, never on concrete adapters. This enables:
+- **Testing**: Mock implementations for isolated unit tests
+- **Substitutability**: Swap providers, parsers, I/O formats without changing domain logic
+- **Clarity**: Explicit boundaries between business logic and infrastructure
 
 ## Usage
 
@@ -161,12 +189,89 @@ artifacts/runs/infer/<run_id>/
 
 Use `--official` flag to save to `artifacts/runs/infer/official/<run_id>/` for git-tracked official runs.
 
-## Extending with New Providers
+## Extending the System
 
-To add support for a new provider:
+### Adding a New LLM Provider
 
-1. Create `providers/new_provider.py` with `infer()` function that takes model config and judging example
-2. Update `providers/provider_router.py` to route to your provider based on `provider` field
-3. Add model configs to `configs/models/` with `provider: new_provider`
+1. **Create adapter** implementing `LLMProvider` port:
+   ```python
+   # adapters/providers/my_provider_adapter.py
+   from llm_ensemble.infer.ports import LLMProvider
+   
+   class MyProviderAdapter(LLMProvider):
+       def infer(self, examples, model_config, prompt_template_name, prompts_dir):
+           # Implementation
+           yield ModelJudgement(...)
+   ```
 
-The prompts, parsers, and schemas are provider-agnostic and can be reused.
+2. **Update provider factory** (`adapters/provider_factory.py`) to instantiate your adapter
+
+3. **Add model configs** to `configs/models/` with `provider: my_provider`
+
+### Adding a New Prompt Format
+
+1. **Create builder adapter** implementing `PromptBuilder` port:
+   ```python
+   # prompt_builders/my_format.py
+   from llm_ensemble.infer.ports import PromptBuilder
+   
+   class MyFormatPromptBuilder(PromptBuilder):
+       def build(self, template, example):
+           return template.render(...)
+   ```
+
+2. **Create parser adapter** implementing `ResponseParser` port:
+   ```python
+   # response_parsers/my_format.py
+   from llm_ensemble.infer.ports import ResponseParser
+   
+   class MyFormatResponseParser(ResponseParser):
+       def parse(self, raw_text):
+           # Extract label and warnings
+           return (label, warnings)
+   ```
+
+3. **Add prompt config** to `configs/prompts/my-format-prompt.yaml`:
+   ```yaml
+   name: my-format-prompt
+   prompt_template: my-format-prompt  # References my-format-prompt.jinja
+   prompt_builder: my_format          # References prompt_builders/my_format.py
+   response_parser: my_format         # References response_parsers/my_format.py
+   ```
+
+4. **Create Jinja2 template** at `configs/prompts/my-format-prompt.jinja`
+
+### Adding a New I/O Format
+
+1. **Create reader adapter** implementing `ExampleReader` port:
+   ```python
+   # adapters/io/my_format_example_reader.py
+   from llm_ensemble.infer.ports import ExampleReader
+   
+   class MyFormatExampleReader(ExampleReader):
+       def read(self, input_path, limit=None):
+           # Return list of JudgingExample
+           return examples
+   ```
+
+2. **Create writer adapter** implementing `JudgementWriter` port:
+   ```python
+   # adapters/io/my_format_judgement_writer.py
+   from llm_ensemble.infer.ports import JudgementWriter
+   
+   class MyFormatJudgementWriter(JudgementWriter):
+       def write(self, judgement):
+           # Write judgement to file
+           pass
+   ```
+
+3. **Update I/O factory** (`adapters/io_factory.py`) to instantiate your adapters
+
+4. **Add I/O config** to `configs/io/my-format.yaml`:
+   ```yaml
+   io_format: my_format
+   reader: my_format_example_reader
+   writer: my_format_judgement_writer
+   ```
+
+All extensions follow the ports & adapters pattern: implement the port interface, register in the factory, add configuration. The domain service remains unchanged.

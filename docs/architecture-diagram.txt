@@ -1,0 +1,100 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    INFER CLI - PORTS & ADAPTERS ARCHITECTURE             ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                             CLI LAYER                                    │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  infer_cli.py (Typer entrypoint)                                │   │
+│  │  • Parses CLI arguments                                          │   │
+│  │  • Loads configs                                                 │   │
+│  │  • Wires adapters to domain service                              │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          DOMAIN LAYER (Pure Logic)                       │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  InferenceService                                                │   │
+│  │  • Orchestrates inference pipeline                               │   │
+│  │  • Depends ONLY on port abstractions                             │   │
+│  │  • No knowledge of infrastructure                                │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         PORTS LAYER (Abstractions)                       │
+│                                                                          │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐     │
+│  │  LLMProvider     │  │  PromptBuilder   │  │  ResponseParser  │     │
+│  │  (ABC)           │  │  (ABC)           │  │  (ABC)           │     │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘     │
+│                                                                          │
+│  ┌──────────────────┐  ┌──────────────────┐                            │
+│  │  ExampleReader   │  │  JudgementWriter │                            │
+│  │  (ABC)           │  │  (ABC)           │                            │
+│  └──────────────────┘  └──────────────────┘                            │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    ADAPTERS LAYER (Implementations)                      │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │  LLM PROVIDERS                                                    │  │
+│  │  • OpenRouterAdapter  → OpenRouter API                            │  │
+│  │  • OllamaAdapter      → Local Ollama server                       │  │
+│  │  • HuggingFaceAdapter → HuggingFace Inference Endpoints           │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │  PROMPT BUILDERS                                                  │  │
+│  │  • ThomasPromptBuilder → Thomas et al. format                     │  │
+│  │  • [Future builders...]                                           │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │  RESPONSE PARSERS                                                 │  │
+│  │  • ThomasResponseParser → JSON parser for Thomas format           │  │
+│  │  • [Future parsers...]                                            │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │  I/O ADAPTERS                                                     │  │
+│  │  • NdjsonExampleReader    → Read NDJSON input                     │  │
+│  │  • NdjsonJudgementWriter  → Write NDJSON output                   │  │
+│  │  • [ParquetReader/Writer coming...]                               │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    INFRASTRUCTURE (External Systems)                     │
+│                                                                          │
+│  • OpenRouter API    • Ollama Server    • HuggingFace API               │
+│  • File System       • Environment Variables                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+
+KEY PRINCIPLES:
+═══════════════
+
+1. DEPENDENCY RULE
+   Domain → Ports (ABC) ← Adapters (Concrete)
+   Dependencies point INWARD, never outward
+
+2. SUBSTITUTABILITY
+   Any adapter can be swapped without changing domain logic
+   Example: OpenRouter → Ollama, NDJSON → Parquet
+
+3. TESTABILITY
+   Domain can be tested with mock adapters
+   No real APIs, files, or infrastructure needed
+
+4. EXPLICIT CONFIGURATION
+   All adapters specified via YAML configs
+   No hidden defaults or magic behavior
+
+5. CLEAN BOUNDARIES
+   - Domain: Pure business logic (no I/O)
+   - Ports: Abstract contracts (ABCs)
+   - Adapters: Infrastructure implementations
+

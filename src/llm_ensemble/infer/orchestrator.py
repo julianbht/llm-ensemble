@@ -6,12 +6,21 @@ It follows hexagonal architecture by delegating business logic to the domain
 service while handling all infrastructure responsibilities.
 
 All adapters are instantiated via explicit configuration - no implicit defaults.
+The orchestrator is responsible for loading configs and creating all adapters
+(reader, writer, provider, builder, parser, template) via dependency injection.
 """
 from __future__ import annotations
 from pathlib import Path
 from typing import Optional, TextIO
 
-from llm_ensemble.infer.config_loaders import load_model_config, load_io_config, load_prompt_config
+from llm_ensemble.infer.config_loaders import (
+    load_model_config,
+    load_io_config,
+    load_prompt_config,
+    load_prompt_template,
+)
+from llm_ensemble.infer.prompt_builders import load_builder
+from llm_ensemble.infer.response_parsers import load_parser
 from llm_ensemble.infer.schemas import ModelJudgement
 from llm_ensemble.infer.domain import InferenceService
 from llm_ensemble.infer.adapters.io_factory import get_example_reader, get_judgement_writer
@@ -145,10 +154,29 @@ def run_inference(
     logger.info("Run directory", path=str(run_dir))
     logger.info("Output file", path=str(output_file))
 
+    # Load prompt template and create builder/parser adapters
+    # These are created by orchestrator and injected into provider
+    template = load_prompt_template(prompt_config.prompt_template, prompts_dir)
+    builder = load_builder(prompt_config.prompt_builder)
+    parser = load_parser(prompt_config.response_parser)
+
+    logger.info(
+        "Loaded prompt components",
+        template=prompt_config.prompt_template,
+        builder=prompt_config.prompt_builder,
+        parser=prompt_config.response_parser,
+    )
+
     # Instantiate adapters via explicit configuration (no defaults)
+    # All dependencies injected - no config loading inside adapters
     reader = get_example_reader(io_config)
     writer = get_judgement_writer(io_config, output_file)
-    provider = get_provider(model_config)
+    provider = get_provider(
+        model_config,
+        builder=builder,
+        parser=parser,
+        template=template,
+    )
 
     # Create domain service with injected ports
     service = InferenceService(
@@ -177,14 +205,13 @@ def run_inference(
             )
 
     # Run inference via domain service
+    # Provider already has builder/parser/template injected, so no prompt params needed
     try:
         logger.info("Reading examples", input_file=str(input_file))
 
         stats = service.run_inference(
             input_path=input_file,
             model_config=model_config,
-            prompt_template_name=prompt,
-            prompts_dir=prompts_dir,
             limit=limit,
             on_judgement=log_judgement,
         )

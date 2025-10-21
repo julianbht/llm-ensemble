@@ -3,12 +3,14 @@
 Defines the abstract contract that all LLM provider adapters must implement.
 This allows the orchestrator to depend on an abstraction rather than concrete
 provider implementations (OpenRouter, Ollama, HuggingFace, etc.).
+
+Providers receive all dependencies (builder, parser, template) via dependency injection,
+eliminating the need for internal config loading.
 """
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterator
 
 from llm_ensemble.ingest.schemas import JudgingExample
 from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig
@@ -20,10 +22,19 @@ class LLMProvider(ABC):
     All provider adapters (OpenRouter, Ollama, HuggingFace) must inherit
     from this class and implement the infer() method.
 
+    Providers receive PromptBuilder, ResponseParser, and Template as constructor
+    dependencies, configured by the orchestrator. Providers only implement
+    the provider-specific API communication logic.
+
     Example:
         >>> class OpenRouterAdapter(LLMProvider):
-        ...     def infer(self, examples, model_config, ...):
-        ...         # Implementation
+        ...     def __init__(self, builder, parser, template, api_key):
+        ...         self.builder = builder
+        ...         self.parser = parser
+        ...         self.template = template
+        ...     
+        ...     def infer(self, examples, model_config):
+        ...         # Implementation using injected dependencies
         ...         yield judgement
     """
 
@@ -32,16 +43,12 @@ class LLMProvider(ABC):
         self,
         examples: Iterator[JudgingExample],
         model_config: ModelConfig,
-        prompt_template_name: str,
-        prompts_dir: Optional[Path] = None,
     ) -> Iterator[ModelJudgement]:
         """Run inference on examples and yield judgements.
 
         Args:
             examples: Iterator of JudgingExample objects to judge
             model_config: Model configuration with provider and settings
-            prompt_template_name: Name of the prompt template to use
-            prompts_dir: Directory containing prompt templates (defaults to configs/prompts)
 
         Yields:
             ModelJudgement objects with predictions and metadata

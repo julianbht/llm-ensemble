@@ -56,8 +56,6 @@ class InferenceService:
         self,
         input_path: Path,
         model_config: ModelConfig,
-        prompt_template_name: str,
-        prompts_dir: Optional[Path] = None,
         limit: Optional[int] = None,
         on_judgement: Optional[Callable[[ModelJudgement], None]] = None,
     ) -> dict:
@@ -69,11 +67,12 @@ class InferenceService:
         3. Writing judgements via JudgementWriter port
         4. Collecting statistics
 
+        The LLMProvider has already been configured with builder, parser, and template
+        via dependency injection, so no prompt configuration is needed here.
+
         Args:
             input_path: Path to input examples
             model_config: Model configuration
-            prompt_template_name: Name of prompt template to use
-            prompts_dir: Directory containing prompt templates
             limit: Optional maximum number of examples to process
             on_judgement: Optional callback invoked for each judgement (for logging/progress)
 
@@ -99,8 +98,6 @@ class InferenceService:
         for judgement in self._process_examples(
             examples,
             model_config,
-            prompt_template_name,
-            prompts_dir,
         ):
             # Write judgement
             self.judgement_writer.write(judgement)
@@ -132,16 +129,15 @@ class InferenceService:
         self,
         examples: list[JudgingExample],
         model_config: ModelConfig,
-        prompt_template_name: str,
-        prompts_dir: Optional[Path],
     ) -> Iterator[ModelJudgement]:
         """Process examples through LLM provider.
+
+        Provider has already been configured with builder, parser, and template,
+        so just pass examples and model config.
 
         Args:
             examples: List of judging examples
             model_config: Model configuration
-            prompt_template_name: Prompt template name
-            prompts_dir: Prompt templates directory
 
         Yields:
             ModelJudgement objects from inference
@@ -149,6 +145,4 @@ class InferenceService:
         yield from self.llm_provider.infer(
             iter(examples),
             model_config,
-            prompt_template_name,
-            prompts_dir,
         )

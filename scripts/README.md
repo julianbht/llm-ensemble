@@ -27,10 +27,10 @@ python scripts/generate_schemas.py
 **Schema Categories:**
 
 1. **Data Contracts** (`data_contracts/`) - Define data flow between CLI stages
-   - `sample.schema.json` (JudgingExample) - ingest → infer
-   - `judgement.schema.json` (ModelJudgement) - infer → aggregate
-   - `ensemble.schema.json` (EnsembleResult) - aggregate → evaluate
-   - `metrics.schema.json` (EvaluationMetrics) - evaluate → final
+   - `judging-example.schema.json` (JudgingExample) - ingest → infer
+   - `model-judgement.schema.json` (ModelJudgement) - infer → aggregate
+   - `ensemble-result.schema.json` (EnsembleResult) - aggregate → evaluate
+   - `evaluation-metrics.schema.json` (EvaluationMetrics) - evaluate → final
 
 2. **Configuration Schemas** (`configurations/`) - Define YAML config file formats
    - `model-config.schema.json` (ModelConfig)

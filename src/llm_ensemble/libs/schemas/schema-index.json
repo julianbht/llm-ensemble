@@ -7,10 +7,10 @@
       "description": "Schemas defining data flow between CLI stages",
       "path": "data_contracts/",
       "schemas": [
-        "sample.schema.json",
-        "judgement.schema.json",
-        "ensemble.schema.json",
-        "metrics.schema.json"
+        "judging-example.schema.json",
+        "model-judgement.schema.json",
+        "ensemble-result.schema.json",
+        "evaluation-metrics.schema.json"
       ],
       "pipeline": "ingest → infer → aggregate → evaluate"
     },

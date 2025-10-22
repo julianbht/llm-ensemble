@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Iterator, Optional
 
 try:
-    from jsonschema import validate, ValidationError, Draft202012Validator
+    from jsonschema import ValidationError, Draft202012Validator
     JSONSCHEMA_AVAILABLE = True
 except ImportError:
     JSONSCHEMA_AVAILABLE = False
@@ -20,24 +20,42 @@ def get_schema_path(schema_name: str) -> Path:
     """Get the path to a JSON schema file.
 
     Args:
-        schema_name: Name of the schema (e.g., 'sample', 'judgement', 'ensemble', 'metrics')
+        schema_name: Name of the schema (e.g., 'judging-example', 'model-judgement',
+                    'ensemble-result', 'evaluation-metrics')
 
     Returns:
         Path to the schema file
 
+    Raises:
+        FileNotFoundError: If schema file doesn't exist
+
     Example:
-        >>> get_schema_path('sample')
-        PosixPath('.../libs/schemas/sample.schema.json')
+        >>> get_schema_path('judging-example')
+        PosixPath('.../libs/schemas/data_contracts/judging-example.schema.json')
     """
     schema_dir = Path(__file__).parent
-    return schema_dir / f"{schema_name}.schema.json"
+
+    # Search in subdirectories (data_contracts, configurations, internal)
+    subdirs = ['data_contracts', 'configurations', 'internal']
+
+    for subdir in subdirs:
+        schema_path = schema_dir / subdir / f"{schema_name}.schema.json"
+        if schema_path.exists():
+            return schema_path
+
+    # If not found, raise with helpful message
+    raise FileNotFoundError(
+        f"Schema '{schema_name}.schema.json' not found in any category. "
+        f"Available categories: {', '.join(subdirs)}"
+    )
 
 
 def load_schema(schema_name: str) -> dict:
     """Load a JSON schema from file.
 
     Args:
-        schema_name: Name of the schema (e.g., 'sample', 'judgement')
+        schema_name: Name of the schema (e.g., 'judging-example', 'model-judgement',
+                    'ensemble-result', 'evaluation-metrics')
 
     Returns:
         Schema dictionary
@@ -47,7 +65,7 @@ def load_schema(schema_name: str) -> dict:
         json.JSONDecodeError: If schema is invalid JSON
 
     Example:
-        >>> schema = load_schema('sample')
+        >>> schema = load_schema('judging-example')
         >>> schema['title']
         'JudgingExample'
     """
@@ -61,7 +79,8 @@ def validate_record(record: dict, schema_name: str) -> tuple[bool, Optional[str]
 
     Args:
         record: Record to validate (as dict)
-        schema_name: Name of the schema to validate against
+        schema_name: Name of the schema to validate against (e.g., 'judging-example',
+                    'model-judgement', 'ensemble-result', 'evaluation-metrics')
 
     Returns:
         Tuple of (is_valid, error_message)
@@ -70,7 +89,7 @@ def validate_record(record: dict, schema_name: str) -> tuple[bool, Optional[str]
 
     Example:
         >>> record = {"dataset": "llm-judge-2024", "query_id": "q1", ...}
-        >>> is_valid, error = validate_record(record, "sample")
+        >>> is_valid, error = validate_record(record, "judging-example")
         >>> assert is_valid
     """
     if not JSONSCHEMA_AVAILABLE:
@@ -97,7 +116,8 @@ def validate_ndjson_file(
 
     Args:
         file_path: Path to NDJSON file
-        schema_name: Name of schema to validate against
+        schema_name: Name of schema to validate against (e.g., 'judging-example',
+                    'model-judgement', 'ensemble-result', 'evaluation-metrics')
         max_errors: Maximum number of errors to collect (default 10)
 
     Returns:
@@ -105,7 +125,7 @@ def validate_ndjson_file(
 
     Example:
         >>> valid, invalid, errors = validate_ndjson_file(
-        ...     Path("samples.ndjson"), "sample"
+        ...     Path("samples.ndjson"), "judging-example"
         ... )
         >>> print(f"Valid: {valid}, Invalid: {invalid}")
         Valid: 100, Invalid: 0
@@ -154,14 +174,15 @@ def iter_validated_records(
 
     Args:
         file_path: Path to NDJSON file
-        schema_name: Name of schema to validate against
+        schema_name: Name of schema to validate against (e.g., 'judging-example',
+                    'model-judgement', 'ensemble-result', 'evaluation-metrics')
         skip_invalid: If True, skip invalid records; if False, yield them anyway
 
     Yields:
         Tuples of (record, is_valid, error_message)
 
     Example:
-        >>> for record, is_valid, error in iter_validated_records(Path("samples.ndjson"), "sample"):
+        >>> for record, is_valid, error in iter_validated_records(Path("samples.ndjson"), "judging-example"):
         ...     if not is_valid:
         ...         print(f"Invalid record: {error}")
         ...     else:

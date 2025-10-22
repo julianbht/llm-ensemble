@@ -37,10 +37,10 @@ from llm_ensemble.evaluate.schemas.evaluation_metrics import EvaluationMetrics
 # Categories determine subfolder structure in libs/schemas/
 SCHEMAS = [
     # Data contract schemas (pipeline boundaries)
-    ("data_contracts", JudgingExample, "sample.schema.json", "Normalized query-document pair (ingest → infer)"),
-    ("data_contracts", ModelJudgement, "judgement.schema.json", "LLM judge output (infer → aggregate)"),
-    ("data_contracts", EnsembleResult, "ensemble.schema.json", "Ensemble aggregation output (aggregate → evaluate)"),
-    ("data_contracts", EvaluationMetrics, "metrics.schema.json", "Evaluation metrics output (evaluate → final)"),
+    ("data_contracts", JudgingExample, "judging-example.schema.json", "Normalized query-document pair (ingest → infer)"),
+    ("data_contracts", ModelJudgement, "model-judgement.schema.json", "LLM judge output (infer → aggregate)"),
+    ("data_contracts", EnsembleResult, "ensemble-result.schema.json", "Ensemble aggregation output (aggregate → evaluate)"),
+    ("data_contracts", EvaluationMetrics, "evaluation-metrics.schema.json", "Evaluation metrics output (evaluate → final)"),
 
     # Configuration schemas (YAML configs)
     ("configurations", ModelConfig, "model-config.schema.json", "Model configuration (configs/models/*.yaml)"),

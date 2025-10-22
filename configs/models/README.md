@@ -15,9 +15,23 @@ Model configs for LLM judge inference. One YAML file per model.
 model_id: gpt-oss-20b
 provider: openrouter              # openrouter | hf | ollama
 context_window: 8192
-default_params:
-  temperature: 0.0
-  max_tokens: 256
+
+# Core inference parameters (explicit for discoverability)
+temperature: 0.0                  # [0.0-2.0] Sampling temperature
+max_tokens: 256                   # Maximum tokens to generate
+seed: 42                          # For reproducibility (optional)
+top_p: 0.95                       # Nucleus sampling (optional)
+frequency_penalty: 0.0            # Reduce repetition (optional)
+presence_penalty: 0.0             # Encourage diversity (optional)
+stop: ["END"]                     # Stop sequences (optional)
+
+# Output control
+response_format:                  # Force structured output (optional)
+  type: json_object
+
+# Advanced/provider-specific parameters
+additional_params:
+  top_k: 50                       # Provider-specific advanced params
 
 # Provider-specific fields
 openrouter_model_id: openai/gpt-oss-20b:free   # For OpenRouter

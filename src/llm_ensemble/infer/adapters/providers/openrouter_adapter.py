@@ -86,9 +86,31 @@ class OpenRouterAdapter(LLMProvider):
                 f"but missing openrouter_model_id field"
             )
 
-        # Extract model parameters
-        temperature = model_config.default_params.get("temperature", 0.0)
-        max_tokens = model_config.default_params.get("max_tokens", 256)
+        # Build API parameters from explicit config fields
+        api_params = {
+            "model": model_config.openrouter_model_id,
+        }
+
+        # Add explicit parameters if set
+        if model_config.temperature is not None:
+            api_params["temperature"] = model_config.temperature
+        if model_config.max_tokens is not None:
+            api_params["max_tokens"] = model_config.max_tokens
+        if model_config.top_p is not None:
+            api_params["top_p"] = model_config.top_p
+        if model_config.frequency_penalty is not None:
+            api_params["frequency_penalty"] = model_config.frequency_penalty
+        if model_config.presence_penalty is not None:
+            api_params["presence_penalty"] = model_config.presence_penalty
+        if model_config.seed is not None:
+            api_params["seed"] = model_config.seed
+        if model_config.stop is not None:
+            api_params["stop"] = model_config.stop
+        if model_config.response_format is not None:
+            api_params["response_format"] = model_config.response_format
+
+        # Add additional parameters (advanced/provider-specific)
+        api_params.update(model_config.additional_params)
 
         # Initialize OpenAI client configured for OpenRouter
         client = OpenAI(
@@ -106,12 +128,10 @@ class OpenRouterAdapter(LLMProvider):
             warnings = []
             start_time = time.time()
 
-            # Send request
+            # Send request with all configured parameters
             response = client.chat.completions.create(
-                model=model_config.openrouter_model_id,
                 messages=[{"role": "user", "content": instruction}],
-                temperature=temperature,
-                max_tokens=max_tokens,
+                **api_params
             )
 
             latency_ms = (time.time() - start_time) * 1000

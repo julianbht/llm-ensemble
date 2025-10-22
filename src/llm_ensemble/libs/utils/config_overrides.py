@@ -13,7 +13,7 @@ from pydantic import BaseModel
 def parse_overrides(override_list: list[str]) -> dict[str, Any]:
     """Parse --override flags into nested dict.
 
-    Supports nested keys using dot notation (e.g., "default_params.temperature=0.7").
+    Supports nested keys using dot notation (e.g., "additional_params.top_k=50").
     Automatically converts values to appropriate types (bool, int, float, None, str).
 
     Args:
@@ -29,8 +29,8 @@ def parse_overrides(override_list: list[str]) -> dict[str, Any]:
         >>> parse_overrides(["temperature=0.7", "max_tokens=512"])
         {'temperature': 0.7, 'max_tokens': 512}
 
-        >>> parse_overrides(["default_params.temperature=0.5"])
-        {'default_params': {'temperature': 0.5}}
+        >>> parse_overrides(["additional_params.top_k=50"])
+        {'additional_params': {'top_k': 50}}
 
         >>> parse_overrides(["variables.role=false", "variables.aspects=true"])
         {'variables': {'role': False, 'aspects': True}}
@@ -80,9 +80,9 @@ def apply_overrides(config: BaseModel, overrides: dict[str, Any]) -> BaseModel:
 
     Example:
         >>> model_config = load_model_config("gpt-oss-20b")
-        >>> overrides = parse_overrides(["default_params.temperature=0.7"])
+        >>> overrides = parse_overrides(["temperature=0.7", "seed=123"])
         >>> new_config = apply_overrides(model_config, overrides)
-        >>> new_config.default_params["temperature"]
+        >>> new_config.temperature
         0.7
     """
     # Convert to dict

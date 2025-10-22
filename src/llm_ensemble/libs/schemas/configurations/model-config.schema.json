@@ -2,10 +2,12 @@
   "description": "Model configuration (configs/models/*.yaml)",
   "properties": {
     "model_id": {
+      "description": "Model identifier",
       "title": "Model Id",
       "type": "string"
     },
     "provider": {
+      "description": "Provider name",
       "enum": [
         "hf",
         "ollama",
@@ -15,16 +17,139 @@
       "type": "string"
     },
     "context_window": {
+      "description": "Maximum context window size in tokens",
+      "exclusiveMinimum": 0,
       "title": "Context Window",
       "type": "integer"
     },
-    "default_params": {
+    "temperature": {
+      "anyOf": [
+        {
+          "maximum": 2.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Sampling temperature: 0.0=deterministic, 2.0=very random",
+      "title": "Temperature"
+    },
+    "max_tokens": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Maximum number of tokens to generate",
+      "title": "Max Tokens"
+    },
+    "top_p": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0.0,
+          "maximum": 1.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Nucleus sampling: only consider tokens with top_p cumulative probability",
+      "title": "Top P"
+    },
+    "frequency_penalty": {
+      "anyOf": [
+        {
+          "maximum": 2.0,
+          "minimum": -2.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Penalize tokens based on frequency in the text so far (-2 to 2)",
+      "title": "Frequency Penalty"
+    },
+    "presence_penalty": {
+      "anyOf": [
+        {
+          "maximum": 2.0,
+          "minimum": -2.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Penalize tokens based on whether they appear in the text so far (-2 to 2)",
+      "title": "Presence Penalty"
+    },
+    "seed": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Random seed for reproducible sampling",
+      "title": "Seed"
+    },
+    "stop": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "List of sequences where the API will stop generating further tokens",
+      "title": "Stop"
+    },
+    "response_format": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Force specific output format, e.g., {'type': 'json_object'}",
+      "title": "Response Format"
+    },
+    "additional_params": {
       "additionalProperties": true,
-      "title": "Default Params",
+      "description": "Additional provider-specific parameters (e.g., top_k, transforms, etc.)",
+      "title": "Additional Params",
       "type": "object"
     },
     "capabilities": {
       "additionalProperties": true,
+      "description": "Model capabilities (e.g., multilingual, function_calling, vision)",
       "title": "Capabilities",
       "type": "object"
     },
@@ -64,7 +189,7 @@
         }
       ],
       "default": null,
-      "description": "OpenRouter model ID",
+      "description": "OpenRouter model ID (e.g., 'openai/gpt-4')",
       "title": "Openrouter Model Id"
     }
   },

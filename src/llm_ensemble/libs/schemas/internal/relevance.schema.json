@@ -1,0 +1,25 @@
+{
+  "description": "Relevance label component (ingest-internal)",
+  "properties": {
+    "query_id": {
+      "title": "Query Id",
+      "type": "string"
+    },
+    "docid": {
+      "title": "Docid",
+      "type": "string"
+    },
+    "relevance": {
+      "description": "Relevance label from dataset",
+      "title": "Relevance",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "query_id",
+    "docid",
+    "relevance"
+  ],
+  "title": "Relevance",
+  "type": "object"
+}

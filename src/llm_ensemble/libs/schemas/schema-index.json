@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Ensemble Schema Index",
+  "description": "Index of all schemas in the llm-ensemble project. All schemas are auto-generated from Pydantic models. Schemas are organized into subfolders by category.",
+  "categories": {
+    "data_contracts": {
+      "description": "Schemas defining data flow between CLI stages",
+      "path": "data_contracts/",
+      "schemas": [
+        "sample.schema.json",
+        "judgement.schema.json",
+        "ensemble.schema.json",
+        "metrics.schema.json"
+      ],
+      "pipeline": "ingest → infer → aggregate → evaluate"
+    },
+    "configurations": {
+      "description": "Schemas for YAML configuration files",
+      "path": "configurations/",
+      "schemas": [
+        "model-config.schema.json",
+        "prompt-config.schema.json",
+        "io-config.schema.json"
+      ]
+    },
+    "internal": {
+      "description": "Internal domain models for documentation (CLI-specific, not pipeline contracts)",
+      "path": "internal/",
+      "schemas": [
+        "query.schema.json",
+        "document.schema.json",
+        "relevance.schema.json"
+      ]
+    }
+  }
+}

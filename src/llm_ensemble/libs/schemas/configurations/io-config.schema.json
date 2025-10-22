@@ -1,0 +1,34 @@
+{
+  "additionalProperties": false,
+  "description": "I/O format configuration (configs/io/*.yaml)",
+  "properties": {
+    "io_format": {
+      "description": "I/O format identifier (e.g., 'ndjson', 'parquet')",
+      "title": "Io Format",
+      "type": "string"
+    },
+    "description": {
+      "description": "Human-readable description of the format",
+      "title": "Description",
+      "type": "string"
+    },
+    "reader": {
+      "description": "Reader adapter module name",
+      "title": "Reader",
+      "type": "string"
+    },
+    "writer": {
+      "description": "Writer adapter module name",
+      "title": "Writer",
+      "type": "string"
+    }
+  },
+  "required": [
+    "io_format",
+    "description",
+    "reader",
+    "writer"
+  ],
+  "title": "IOConfig",
+  "type": "object"
+}

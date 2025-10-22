@@ -1,0 +1,21 @@
+{
+  "description": "Document component (ingest-internal)",
+  "properties": {
+    "docid": {
+      "description": "Document ID",
+      "title": "Docid",
+      "type": "string"
+    },
+    "doc": {
+      "description": "Document text",
+      "title": "Doc",
+      "type": "string"
+    }
+  },
+  "required": [
+    "docid",
+    "doc"
+  ],
+  "title": "Document",
+  "type": "object"
+}

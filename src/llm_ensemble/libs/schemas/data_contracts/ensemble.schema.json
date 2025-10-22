@@ -1,0 +1,134 @@
+{
+  "$defs": {
+    "ModelVote": {
+      "description": "Individual model vote used in ensemble aggregation.",
+      "properties": {
+        "model_id": {
+          "description": "Model identifier",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "enum": [
+                0,
+                1,
+                2
+              ],
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Model's predicted label",
+          "title": "Label"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Model's confidence score",
+          "title": "Confidence"
+        }
+      },
+      "required": [
+        "model_id"
+      ],
+      "title": "ModelVote",
+      "type": "object"
+    }
+  },
+  "description": "Ensemble aggregation output (aggregate → evaluate)",
+  "properties": {
+    "query_id": {
+      "description": "Query ID",
+      "title": "Query Id",
+      "type": "string"
+    },
+    "docid": {
+      "description": "Document ID",
+      "title": "Docid",
+      "type": "string"
+    },
+    "final_label": {
+      "description": "Ensemble aggregated label: 2 = highly relevant, 1 = relevant, 0 = not relevant",
+      "enum": [
+        0,
+        1,
+        2
+      ],
+      "title": "Final Label",
+      "type": "integer"
+    },
+    "final_confidence": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Aggregated confidence score",
+      "title": "Final Confidence"
+    },
+    "per_model_votes": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/ModelVote"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Individual model votes used in aggregation",
+      "title": "Per Model Votes"
+    },
+    "aggregation_strategy": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Name of aggregation strategy used (e.g., 'weighted_majority', 'unanimous')",
+      "title": "Aggregation Strategy"
+    },
+    "warnings": {
+      "description": "Warnings from aggregation (e.g., ties, low agreement)",
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "query_id",
+    "docid",
+    "final_label"
+  ],
+  "title": "EnsembleResult",
+  "type": "object"
+}

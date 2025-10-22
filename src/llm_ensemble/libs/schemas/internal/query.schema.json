@@ -1,0 +1,21 @@
+{
+  "description": "Query component (ingest-internal)",
+  "properties": {
+    "query_id": {
+      "description": "Unique query ID",
+      "title": "Query Id",
+      "type": "string"
+    },
+    "query_text": {
+      "description": "The natural language query",
+      "title": "Query Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "query_id",
+    "query_text"
+  ],
+  "title": "Query",
+  "type": "object"
+}

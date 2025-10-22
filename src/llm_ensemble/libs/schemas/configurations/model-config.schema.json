@@ -1,0 +1,78 @@
+{
+  "description": "Model configuration (configs/models/*.yaml)",
+  "properties": {
+    "model_id": {
+      "title": "Model Id",
+      "type": "string"
+    },
+    "provider": {
+      "enum": [
+        "hf",
+        "ollama",
+        "openrouter"
+      ],
+      "title": "Provider",
+      "type": "string"
+    },
+    "context_window": {
+      "title": "Context Window",
+      "type": "integer"
+    },
+    "default_params": {
+      "additionalProperties": true,
+      "title": "Default Params",
+      "type": "object"
+    },
+    "capabilities": {
+      "additionalProperties": true,
+      "title": "Capabilities",
+      "type": "object"
+    },
+    "hf_endpoint_url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "HF Inference Endpoint URL",
+      "title": "Hf Endpoint Url"
+    },
+    "hf_model_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "HF model repo name",
+      "title": "Hf Model Name"
+    },
+    "openrouter_model_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "OpenRouter model ID",
+      "title": "Openrouter Model Id"
+    }
+  },
+  "required": [
+    "model_id",
+    "provider",
+    "context_window"
+  ],
+  "title": "ModelConfig",
+  "type": "object"
+}

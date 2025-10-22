@@ -1,5 +1,5 @@
 SHELL := /usr/bin/env bash
-.PHONY: help install install-dev test test-ingest test-infer test-schema clean
+.PHONY: help install install-dev test test-ingest test-infer test-schema schemas clean
 
 export PYTHONUNBUFFERED=1
 
@@ -11,6 +11,7 @@ help:
 	@echo "  make test-ingest   - Run ingest tests only"
 	@echo "  make test-infer    - Run infer tests only"
 	@echo "  make test-schema   - Run schema validation tests only"
+	@echo "  make schemas       - Generate JSON schemas from Pydantic models"
 	@echo "  make clean         - Remove artifacts and cached files"
 
 install:
@@ -30,6 +31,13 @@ test-infer:
 
 test-schema:
 	pytest -k "schema"
+
+schemas:
+	@if [ -d .venv ]; then \
+		. .venv/bin/activate && python scripts/generate_schemas.py; \
+	else \
+		python3 scripts/generate_schemas.py; \
+	fi
 
 clean:
 	rm -rf artifacts/runs/*/test_*

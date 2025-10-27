@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import Optional, TextIO
 
 from llm_ensemble.ingest.domain import IngestionService
-from llm_ensemble.ingest.adapters import get_dataset_adapter, get_example_writer
+from llm_ensemble.ingest.adapters import get_example_reader, get_example_writer
+from llm_ensemble.infer.config_loaders import load_io_config
 from llm_ensemble.libs.config import load_dataset_config
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
 from llm_ensemble.libs.logging.logger import get_logger
@@ -61,11 +62,12 @@ def run_ingest(
         FileNotFoundError: If dataset config not found or data directory doesn't exist
         ValueError: If adapter is not recognized or dataset files are malformed
     """
-    # Load dataset config
-    config = load_dataset_config(dataset)
+    # Load dataset config and I/O config
+    dataset_config = load_dataset_config(dataset)
+    io_config = load_io_config(dataset_config.io_format)
 
     # Use data_dir override if provided, otherwise use config default
-    actual_data_dir = data_dir if data_dir is not None else config.data_dir
+    actual_data_dir = data_dir if data_dir is not None else dataset_config.data_dir
 
     # Verify data directory exists
     if not actual_data_dir.exists():
@@ -73,12 +75,12 @@ def run_ingest(
 
     # Create or use provided run ID
     if run_id is None:
-        run_id = create_run_id(config.dataset_id)
+        run_id = create_run_id(dataset_config.dataset_id)
 
     # Set up run directory and output file
     run_dir = get_run_dir(run_id, cli_name="ingest", official=official)
     run_dir.mkdir(parents=True, exist_ok=True)
-    output_file = run_dir / "samples.ndjson"
+    output_file = run_dir / f"samples.{io_config.io_format.replace('_ingest', '')}"
 
     # Set up log file if requested and not already provided
     log_file_handle = log_file
@@ -93,8 +95,8 @@ def run_ingest(
 
     logger.info(
         "Starting ingest",
-        dataset_id=config.dataset_id,
-        adapter=config.adapter,
+        dataset_id=dataset_config.dataset_id,
+        io_format=dataset_config.io_format,
         data_dir=str(actual_data_dir),
         limit=limit,
     )
@@ -102,12 +104,12 @@ def run_ingest(
     logger.info("Output file", path=str(output_file))
 
     # Instantiate adapters via factories
-    dataset_adapter = get_dataset_adapter(config.adapter, config.dataset_id)
-    example_writer = get_example_writer(output_file, format="ndjson")
+    example_reader = get_example_reader(io_config, dataset_config.dataset_id)
+    example_writer = get_example_writer(io_config, output_file)
 
     # Create domain service
     service = IngestionService(
-        dataset_adapter=dataset_adapter,
+        example_reader=example_reader,
         example_writer=example_writer,
     )
 
@@ -131,15 +133,15 @@ def run_ingest(
         run_dir=run_dir,
         cli_name="ingest",
         cli_args={
-            "dataset_id": config.dataset_id,
-            "adapter": config.adapter,
+            "dataset_id": dataset_config.dataset_id,
+            "io_format": dataset_config.io_format,
             "data_dir": str(actual_data_dir),
             "limit": limit,
         },
         metadata={
             "sample_count": count,
             "output_file": str(output_file),
-            "dataset_version": config.version,
+            "dataset_version": dataset_config.version,
         },
         official=official,
         notes=notes,
@@ -157,5 +159,5 @@ def run_ingest(
         "run_dir": run_dir,
         "output_file": output_file,
         "sample_count": count,
-        "dataset_version": config.version,
+        "dataset_version": dataset_config.version,
     }

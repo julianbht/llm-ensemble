@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional, Callable
 
 from llm_ensemble.ingest.schemas import JudgingExample
-from llm_ensemble.ingest.ports import DatasetAdapter, ExampleWriter
+from llm_ensemble.ingest.ports import ExampleReader, ExampleWriter
 
 
 class IngestionService:
@@ -21,25 +21,25 @@ class IngestionService:
     enabling complete independence from infrastructure concerns.
 
     Example:
-        >>> adapter = LlmJudgeAdapter()
+        >>> reader = LlmJudgeExampleReader()
         >>> writer = NdjsonExampleWriter(output_path)
-        >>> service = IngestionService(adapter, writer)
+        >>> service = IngestionService(reader, writer)
         >>> stats = service.run_ingestion(data_dir, limit=100)
         >>> print(f"Processed {stats['sample_count']} examples")
     """
 
     def __init__(
         self,
-        dataset_adapter: DatasetAdapter,
+        example_reader: ExampleReader,
         example_writer: ExampleWriter,
     ):
         """Initialize ingestion service with port dependencies.
 
         Args:
-            dataset_adapter: Port for reading raw datasets
+            example_reader: Port for reading raw datasets
             example_writer: Port for writing normalized examples
         """
-        self.dataset_adapter = dataset_adapter
+        self.example_reader = example_reader
         self.example_writer = example_writer
 
     def run_ingestion(
@@ -51,7 +51,7 @@ class IngestionService:
         """Execute the ingestion pipeline.
 
         Pure business logic that coordinates:
-        1. Reading raw dataset via DatasetAdapter port
+        1. Reading raw dataset via ExampleReader port
         2. Writing normalized examples via ExampleWriter port
         3. Collecting statistics
 
@@ -69,11 +69,12 @@ class IngestionService:
             ValueError: If dataset files are malformed
             Exception: If any step in the pipeline fails
         """
-        # Track statistics
-        count = 0
+        # Read examples from dataset (ExampleReader handles limit internally)
+        examples = self.example_reader.read(data_dir, limit=limit)
 
-        # Run ingestion pipeline
-        for example in self.dataset_adapter.read(data_dir):
+        # Write examples and track statistics
+        count = 0
+        for example in examples:
             # Write example
             self.example_writer.write(example)
 
@@ -83,10 +84,6 @@ class IngestionService:
             # Invoke callback if provided (for logging/progress tracking)
             if on_example:
                 on_example(example)
-
-            # Stop if limit reached
-            if limit is not None and count >= limit:
-                break
 
         # Finalize writer
         self.example_writer.close()

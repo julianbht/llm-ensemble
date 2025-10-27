@@ -13,7 +13,7 @@ class DatasetConfig:
     """Configuration for a dataset, loaded from configs/datasets/*.yaml"""
 
     dataset_id: str
-    adapter: str
+    io_format: str
     data_dir: Path
     files: Dict[str, str]
     description: Optional[str] = None
@@ -29,14 +29,14 @@ class DatasetConfig:
             raise ValueError(f"Empty config file: {yaml_path}")
 
         # Validate required fields
-        required = {"dataset_id", "adapter", "data_dir", "files"}
+        required = {"dataset_id", "io_format", "data_dir", "files"}
         missing = required - set(data.keys())
         if missing:
             raise ValueError(f"Missing required fields in {yaml_path}: {missing}")
 
         return cls(
             dataset_id=data["dataset_id"],
-            adapter=data["adapter"],
+            io_format=data["io_format"],
             data_dir=Path(data["data_dir"]),
             files=data["files"],
             description=data.get("description"),

@@ -1,4 +1,4 @@
-"""Abstract port for dataset adapters.
+s"""Abstract port for dataset adapters.
 
 Defines the contract for reading raw IR datasets and converting them
 into normalized JudgingExample records.

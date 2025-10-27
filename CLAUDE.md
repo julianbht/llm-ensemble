@@ -127,19 +127,29 @@ pip install -e ".[dev]"
 
 ```bash
 # Ingest - Normalize raw datasets into JudgingExamples
-# Uses config file: configs/datasets/llm_judge_challenge.yaml
-ingest --dataset llm_judge_challenge --limit 100
+# Uses config file: configs/io/llm_judge_ingest.yaml
+ingest --io llm_judge_ingest --limit 100
 
 # Override data directory if needed
-ingest --dataset llm_judge_challenge --data-dir /custom/path --limit 100
+ingest --io llm_judge_ingest --override data_dir=/custom/path --limit 100
 
 # Infer - Run LLM judge inference
 # Uses configs: configs/models/gpt-oss-20b.yaml, configs/prompts/thomas-et-al-prompt.yaml, configs/io/ndjson.yaml
-infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_id>/samples.ndjson
+infer --model gpt-oss-20b --prompt thomas-et-al-prompt --io ndjson --input artifacts/runs/ingest/<run_id>/samples.ndjson
+
+# Aggregate - Combine model judgements using ensemble strategies
+# Uses configs: configs/ensembles/weighted_majority.yaml, configs/io/ndjson.yaml
+aggregate --ensemble weighted_majority --io ndjson --input artifacts/runs/infer/<run_id>/judgements.ndjson
+
+# Evaluate - Compute metrics and generate reports
+# Uses config: configs/io/ndjson.yaml
+evaluate --io ndjson --input artifacts/runs/aggregate/<run_id>/ensemble.ndjson
 
 # Alternative: run via python module
 python3 -m llm_ensemble.ingest_cli --help
 python3 -m llm_ensemble.infer_cli --help
+python3 -m llm_ensemble.aggregate_cli --help
+python3 -m llm_ensemble.evaluate_cli --help
 ```
 
 ### Testing
@@ -256,17 +266,15 @@ All system behavior is controlled via YAML configuration files in `configs/`. CL
   - Example: `--model gpt-oss-20b` loads `configs/models/gpt-oss-20b.yaml`
   - Schema: `infer/schemas/model_config_schema.py`
 
-- **Datasets** (`configs/datasets/*.yaml`) — Adapter mapping, file paths, metadata
-  - Example: `--dataset llm_judge_challenge` loads `configs/datasets/llm_judge_challenge.yaml`
-  - Schema: `libs/config/dataset_loader.py`
-
 - **Prompts** (`configs/prompts/*.yaml`) — Template file, variables, bundled builder + parser
   - Example: `--prompt thomas-et-al-prompt` loads `configs/prompts/thomas-et-al-prompt.yaml`
   - Schema: `infer/schemas/prompt_config_schema.py`
 
-- **I/O Formats** (`configs/io/*.yaml`) — Bundled reader + writer adapters
+- **I/O Formats** (`configs/io/*.yaml`) — Bundled reader + writer adapters, dataset paths
   - Example: `--io ndjson` loads `configs/io/ndjson.yaml`
+  - For ingest: `--io llm_judge_ingest` loads `configs/io/llm_judge_ingest.yaml` (includes dataset adapter and paths)
   - Schema: `infer/schemas/io_config_schema.py`
+  - All CLIs now use the `--io` flag for consistent I/O configuration
 
 - **Ensembles** (`configs/ensembles/*.yaml`) — Strategy, model weights
   - Example: `--ensemble weighted_majority` loads `configs/ensembles/weighted_majority.yaml` (planned)
@@ -304,11 +312,12 @@ src/llm_ensemble/
 
 - **12-factor friendly:** CLIs read from files, write to `artifacts/runs/`, configurable via flags/env
 - **Environment variables:** For secrets (API keys) and infrastructure (endpoints)
-- **CLI flags:** All task parameters (model, input, dataset) are explicit via required flags
-- **Config files:** Dataset configs define adapter mappings and default paths (can be overridden)
+- **CLI flags:** All task parameters (model, input, I/O format) are explicit via required flags
+- **Config files:** I/O configs bundle reader/writer adapters and dataset paths (can be overridden via `--override`)
+- **Unified I/O:** All CLIs use the `--io` flag for consistent I/O configuration across the pipeline
 - **No hidden state:** Everything persisted to disk with manifests tracking git SHA and full metadata
 - **Run management:** All outputs organized by CLI under `artifacts/runs/{ingest,infer,aggregate,evaluate}/`
 - Shared libs in `src/llm_ensemble/libs/` avoid duplication across the four CLIs
-- Keep in mind that the system will later need to be fully dockerized. 
-- Keep in mind 12-factor app design. 
+- Keep in mind that the system will later need to be fully dockerized.
+- Keep in mind 12-factor app design.
 - Follow common software design principles, such as seperation of concerns, to produce clean reusable code.

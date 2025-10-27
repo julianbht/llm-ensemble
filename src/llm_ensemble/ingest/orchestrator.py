@@ -5,8 +5,7 @@ This module handles infrastructure concerns for the ingestion pipeline:
 - Setting up run directories and logging
 - Building manifests with git info and execution parameters
 - Instantiating adapters via factories
-- Coordinating the ingestion flow
-- Writing the complete NormalizedDataset
+- Delegating business logic to domain service
 
 It is separated from the CLI entry point (ingest_cli.py) for testability.
 """
@@ -16,7 +15,8 @@ from pathlib import Path
 from typing import Optional, TextIO
 from uuid import uuid4
 
-from llm_ensemble.ingest.schemas import IngestManifest, NormalizedDataset
+from llm_ensemble.ingest.schemas import IngestManifest
+from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.ingest.adapters import get_sample_reader, get_dataset_writer
 from llm_ensemble.ingest.config_loaders import load_ingest_io_config
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir
@@ -114,53 +114,50 @@ def run_ingest(
     logger.info("Run directory", path=str(run_dir))
     logger.info("Output file", path=str(output_file))
 
+    # Capture git info
+    git_info = get_git_info()
+
+    # Build IngestManifest (sample_count will be filled by service)
+    manifest = IngestManifest(
+        run_id=uuid4(),
+        run_type="official" if official else "test",
+        cli_name="ingest",
+        start_time=start_time,
+        end_time=None,  # Will be set after ingestion completes
+        notes=notes,
+        git_sha=git_info["git_sha"],
+        git_clean=git_info["git_clean"],
+        git_branch=git_info["git_branch"],
+        io_config_name=io_format,
+        io_config=io_config,
+        limit=limit,
+        config_overrides=config_overrides or {},
+        sample_count=None,  # Will be set by service after reading samples
+    )
+
+    # Instantiate adapters via factories
+    sample_reader = get_sample_reader(io_config)
+    dataset_writer = get_dataset_writer(io_config)
+
+    # Create domain service
+    service = IngestionService(
+        sample_reader=sample_reader,
+        dataset_writer=dataset_writer,
+    )
+
+    # Run ingestion pipeline (pure business logic)
     try:
-        # Instantiate sample reader via factory
-        sample_reader = get_sample_reader(io_config)
-
-        # Read samples from raw dataset
-        logger.info("Reading samples from dataset")
-        judging_samples = sample_reader.read(actual_data_dir, limit=limit)
-        sample_count = len(judging_samples)
-        logger.info("Samples read", count=sample_count)
-
-        # Capture end time
-        end_time = datetime.now()
-
-        # Capture git info
-        git_info = get_git_info()
-
-        # Build IngestManifest
-        manifest = IngestManifest(
-            run_id=uuid4(),
-            run_type="official" if official else "test",
-            cli_name="ingest",
-            start_time=start_time,
-            end_time=end_time,
-            notes=notes,
-            git_sha=git_info["git_sha"],
-            git_clean=git_info["git_clean"],
-            git_branch=git_info["git_branch"],
-            io_config_name=io_format,
-            io_config=io_config,
-            limit=limit,
-            config_overrides=config_overrides or {},
-            sample_count=sample_count,
-        )
-
-        # Build NormalizedDataset
-        normalized_dataset = NormalizedDataset(
-            judging_samples=judging_samples,
+        stats = service.ingest_dataset(
+            data_dir=actual_data_dir,
             manifest=manifest,
+            output_path=output_file,
+            limit=limit,
         )
+        sample_count = stats["sample_count"]
+        logger.info("Samples processed", count=sample_count)
 
-        # Instantiate dataset writer via factory
-        dataset_writer = get_dataset_writer(io_config)
-
-        # Write complete dataset (samples + manifest)
-        logger.info("Writing NormalizedDataset to output")
-        dataset_writer.write(normalized_dataset, output_file)
-        logger.info("NormalizedDataset written successfully")
+        # Update manifest with end time
+        manifest.end_time = datetime.now()
 
     except Exception as e:
         logger.error("Ingest failed", error=str(e))

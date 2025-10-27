@@ -14,18 +14,15 @@ from llm_ensemble.infer.config_loaders import load_prompt_template
 from llm_ensemble.infer.adapters.prompts.jinja_prompt_builder import JinjaPromptBuilder
 
 
-def get_prompt_builder(
-    prompt_config: PromptConfig,
-    prompts_dir: Optional[Path] = None,
-) -> PromptBuilder:
+def get_prompt_builder(prompt_config: PromptConfig) -> PromptBuilder:
     """Instantiate a prompt builder adapter based on configuration.
 
     This factory follows explicit configuration principles - no implicit defaults.
     All builder types must be explicitly specified in the prompt config.
+    Template location is determined by the template loader.
 
     Args:
         prompt_config: Prompt configuration specifying builder type
-        prompts_dir: Directory containing prompt templates (defaults to configs/prompts)
 
     Returns:
         Concrete PromptBuilder implementation
@@ -48,8 +45,8 @@ def get_prompt_builder(
             f"Must explicitly specify builder type (e.g., 'jinja')."
         )
 
-    # Load the template
-    template = load_prompt_template(prompt_config.prompt_template, prompts_dir)
+    # Load the template (loader determines location)
+    template = load_prompt_template(prompt_config.prompt_template)
 
     # Map builder type to adapter implementation
     if builder_type == "jinja":

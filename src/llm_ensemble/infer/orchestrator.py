@@ -29,9 +29,6 @@ def run_inference(
     io_format: str = "ndjson",
     run_id: Optional[str] = None,
     limit: Optional[int] = None,
-    config_dir: Optional[Path] = None,
-    io_dir: Optional[Path] = None,
-    prompts_dir: Optional[Path] = None,
     prompt: str = "thomas-et-al-prompt",
     save_logs: bool = False,
     official: bool = False,
@@ -50,6 +47,7 @@ def run_inference(
     The domain service handles the pure business logic of the inference pipeline.
 
     All behavior is explicitly configured - no implicit defaults.
+    Config locations are determined by config loaders (configs/models, configs/io, configs/prompts).
 
     Args:
         model: Model ID for .yaml config file (e.g., 'gpt-oss-20b' for configs/models/gpt-oss-20b.yaml)
@@ -57,9 +55,6 @@ def run_inference(
         io_format: I/O format config name (e.g., 'ndjson' for configs/io/ndjson.yaml)
         run_id: Custom run ID (auto-generates if not provided)
         limit: Process at most N examples
-        config_dir: Path to model configs directory (defaults to configs/models)
-        io_dir: Path to I/O configs directory (defaults to configs/io)
-        prompts_dir: Path to prompt templates directory (defaults to configs/prompts)
         prompt: Prompt template name (without .jinja extension)
         save_logs: Save logs to run.log file in run directory
         official: Mark as official run (saved to official/ subdirectory for git tracking)
@@ -81,10 +76,10 @@ def run_inference(
         ValueError: If config validation fails
         Exception: If inference fails
     """
-    # Load configurations
-    model_config = load_model_config(model, config_dir)
-    io_config = load_io_config(io_format, io_dir)
-    prompt_config = load_prompt_config(prompt, prompts_dir)
+    # Load configurations (config loaders handle directory locations)
+    model_config = load_model_config(model)
+    io_config = load_io_config(io_format)
+    prompt_config = load_prompt_config(prompt)
 
     # Apply overrides if provided by cli
     if config_overrides:
@@ -152,7 +147,7 @@ def run_inference(
     writer = get_judgement_writer(io_config, output_file)
 
     # Instantiate prompt builder and response parser from prompt config
-    prompt_builder = get_prompt_builder(prompt_config, prompts_dir)
+    prompt_builder = get_prompt_builder(prompt_config)
     response_parser = get_response_parser(prompt_config)
 
     # Instantiate provider with injected prompt builder and parser

@@ -14,7 +14,9 @@ class IOConfig(BaseModel):
     io_format: str = Field(description="I/O format identifier (e.g., 'ndjson', 'parquet')")
     description: str = Field(description="Human-readable description of the format")
     reader: str = Field(description="Reader adapter module name")
+    reader_module_path: str = Field(description="Full module path to reader adapter (e.g., 'llm_ensemble.infer.adapters.io.ndjson_example_reader.NdjsonExampleReader')")
     writer: str = Field(description="Writer adapter module name")
+    writer_module_path: str = Field(description="Full module path to writer adapter (e.g., 'llm_ensemble.infer.adapters.io.ndjson_judgement_writer.NdjsonJudgementWriter')")
 
     class Config:
         """Pydantic config."""

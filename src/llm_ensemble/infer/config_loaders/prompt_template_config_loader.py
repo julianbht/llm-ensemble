@@ -22,15 +22,11 @@ def get_default_prompts_dir() -> Path:
     return project_root / "configs" / "prompts"
 
 
-def load_prompt_template(
-    template_name: str,
-    prompts_dir: Optional[Path] = None,
-) -> Template:
+def load_prompt_template(template_name: str) -> Template:
     """Load a Jinja2 prompt template from the prompts directory.
 
     Args:
         template_name: Template filename (with or without .jinja extension)
-        prompts_dir: Directory containing prompt templates (defaults to configs/prompts)
 
     Returns:
         Jinja2 Template object ready for rendering
@@ -42,9 +38,8 @@ def load_prompt_template(
         >>> template = load_prompt_template("thomas-et-al-prompt")
         >>> instruction = template.render(query="python", page_text="...")
     """
-    # Determine prompts directory
-    if prompts_dir is None:
-        prompts_dir = get_default_prompts_dir()
+    # Get standard prompts directory
+    prompts_dir = get_default_prompts_dir()
 
     # Add .jinja extension if not present
     if not template_name.endswith(".jinja"):

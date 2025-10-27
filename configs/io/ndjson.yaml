@@ -6,4 +6,6 @@ description: |
 
 # Adapter module names (loaded dynamically)
 reader: ndjson_example_reader
+reader_module_path: llm_ensemble.infer.adapters.io.ndjson_example_reader.NdjsonExampleReader
 writer: ndjson_judgement_writer
+writer_module_path: llm_ensemble.infer.adapters.io.ndjson_judgement_writer.NdjsonJudgementWriter

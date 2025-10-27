@@ -25,15 +25,11 @@ def get_default_config_dir() -> Path:
     return project_root / "configs" / "models"
 
 
-def load_model_config(
-    model_id: str,
-    config_dir: Optional[Path] = None,
-) -> ModelConfig:
+def load_model_config(model_id: str) -> ModelConfig:
     """Load a model configuration from YAML file.
 
     Args:
         model_id: Model identifier (e.g., "phi3-mini", "gpt-oss-20b")
-        config_dir: Directory containing model configs (defaults to configs/models)
 
     Returns:
         ModelConfig object with all settings loaded from YAML
@@ -49,9 +45,8 @@ def load_model_config(
         >>> config.openrouter_model_id
         'openai/gpt-oss-20b:free'
     """
-    # Determine config directory
-    if config_dir is None:
-        config_dir = get_default_config_dir()
+    # Get standard config directory
+    config_dir = get_default_config_dir()
 
     # Build path to config file
     config_path = config_dir / f"{model_id}.yaml"

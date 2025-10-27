@@ -32,15 +32,6 @@ def infer(
     limit: Optional[int] = typer.Option(
         None, help="Process at most N examples"
     ),
-    config_dir: Optional[Path] = typer.Option(
-        None, "--config-dir", help="Path to model configs directory (defaults to configs/models)"
-    ),
-    io_dir: Optional[Path] = typer.Option(
-        None, "--io-dir", help="Path to I/O configs directory (defaults to configs/io)"
-    ),
-    prompts_dir: Optional[Path] = typer.Option(
-        None, "--prompts-dir", help="Path to prompts directory (defaults to configs/prompts)"
-    ),
     prompt: str = typer.Option(
         "thomas-et-al-prompt", "--prompt", "-p", help="Prompt config name (located in ./configs/prompts)"
     ),
@@ -103,9 +94,6 @@ def infer(
             io_format=io_format,
             run_id=run_id,
             limit=limit,
-            config_dir=config_dir,
-            io_dir=io_dir,
-            prompts_dir=prompts_dir,
             prompt=prompt,
             save_logs=save_logs,
             official=official,

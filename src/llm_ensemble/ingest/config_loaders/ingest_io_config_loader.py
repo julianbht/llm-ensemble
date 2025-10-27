@@ -24,15 +24,11 @@ def get_default_io_dir() -> Path:
     return project_root / "configs" / "io"
 
 
-def load_ingest_io_config(
-    io_format: str,
-    io_dir: Optional[Path] = None,
-) -> IngestIOConfig:
+def load_ingest_io_config(io_format: str) -> IngestIOConfig:
     """Load an ingest I/O configuration from YAML file.
 
     Args:
         io_format: I/O format identifier (e.g., "llm_judge_ingest")
-        io_dir: Directory containing I/O configs (defaults to configs/io)
 
     Returns:
         IngestIOConfig object with reader, writer, dataset_id, and data_dir
@@ -48,9 +44,8 @@ def load_ingest_io_config(
         >>> config.dataset_id
         'llm-judge-2024'
     """
-    # Determine I/O directory
-    if io_dir is None:
-        io_dir = get_default_io_dir()
+    # Get standard I/O config directory
+    io_dir = get_default_io_dir()
 
     # Build path to config file
     config_path = io_dir / f"{io_format}.yaml"

@@ -24,15 +24,11 @@ def get_default_prompts_dir() -> Path:
     return project_root / "configs" / "prompts"
 
 
-def load_prompt_config(
-    prompt_name: str,
-    prompts_dir: Optional[Path] = None,
-) -> PromptConfig:
+def load_prompt_config(prompt_name: str) -> PromptConfig:
     """Load a prompt configuration from YAML file.
 
     Args:
         prompt_name: Prompt identifier (e.g., "thomas-et-al-prompt")
-        prompts_dir: Directory containing prompt configs (defaults to configs/prompts)
 
     Returns:
         PromptConfig object with all settings loaded from YAML
@@ -46,9 +42,8 @@ def load_prompt_config(
         >>> config.variables
         {'role': True, 'aspects': False}
     """
-    # Determine prompts directory
-    if prompts_dir is None:
-        prompts_dir = get_default_prompts_dir()
+    # Get standard prompts directory
+    prompts_dir = get_default_prompts_dir()
 
     # Build path to config file
     config_path = prompts_dir / f"{prompt_name}.yaml"

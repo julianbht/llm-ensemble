@@ -11,4 +11,6 @@ data_dir: data
 
 # Adapter module names (loaded dynamically)
 reader: llm_judge_example_reader
+reader_module_path: llm_ensemble.ingest.adapters.io.llm_judge_example_reader.LlmJudgeExampleReader
 writer: ndjson_example_writer
+writer_module_path: llm_ensemble.ingest.adapters.io.ndjson_example_writer.NdjsonExampleWriter

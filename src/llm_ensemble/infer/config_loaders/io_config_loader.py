@@ -25,15 +25,11 @@ def get_default_io_dir() -> Path:
     return project_root / "configs" / "io"
 
 
-def load_io_config(
-    io_format: str,
-    io_dir: Optional[Path] = None,
-) -> IOConfig:
+def load_io_config(io_format: str) -> IOConfig:
     """Load an I/O configuration from YAML file.
 
     Args:
         io_format: I/O format identifier (e.g., "ndjson", "parquet")
-        io_dir: Directory containing I/O configs (defaults to configs/io)
 
     Returns:
         IOConfig object with reader and writer adapter names
@@ -49,9 +45,8 @@ def load_io_config(
         >>> config.writer
         'ndjson_judgement_writer'
     """
-    # Determine I/O directory
-    if io_dir is None:
-        io_dir = get_default_io_dir()
+    # Get standard I/O config directory
+    io_dir = get_default_io_dir()
 
     # Build path to config file
     config_path = io_dir / f"{io_format}.yaml"

@@ -18,36 +18,38 @@ from llm_ensemble.ingest.adapters import get_example_reader, get_example_writer
 from llm_ensemble.ingest.config_loaders import load_ingest_io_config
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
 from llm_ensemble.libs.logging.logger import get_logger
+from llm_ensemble.libs.utils.config_overrides import apply_overrides
 
 
 def run_ingest(
     io_format: str,
-    data_dir: Optional[Path] = None,
     run_id: Optional[str] = None,
     limit: Optional[int] = None,
     save_logs: bool = False,
     official: bool = False,
     notes: Optional[str] = None,
     log_file: Optional[TextIO] = None,
+    config_overrides: Optional[dict] = None,
 ) -> dict:
-    """Normalize a raw IR dataset into JudgingExample NDJSON records.
+    """Normalize a raw IR dataset into JudgingExample records.
 
     Infrastructure orchestration that coordinates:
-    - Loading dataset configuration
-    - Setting up run directory and logging
+    - Loading I/O configuration
+    - Applying config overrides
+    - Setting up run directories and logging
     - Instantiating adapters via factories
     - Delegating business logic to IngestionService
     - Writing manifests
 
     Args:
-        dataset: Dataset config name (e.g., 'llm_judge_challenge')
-        data_dir: Override data directory from config (defaults to config value)
+        io_format: I/O format config name (e.g., 'llm_judge_ingest')
         run_id: Custom run ID (auto-generates if not provided)
         limit: Process at most N examples
         save_logs: Save logs to run.log file in run directory
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
         log_file: Optional file handle for logging (used when save_logs=True)
+        config_overrides: Optional dict of config overrides (e.g., {"data_dir": "/custom/path"})
 
     Returns:
         Dictionary with run metadata including:
@@ -55,17 +57,21 @@ def run_ingest(
         - run_dir: Path to run directory
         - output_file: Path to output samples file
         - sample_count: Total number of samples processed
-        - dataset_version: Version of the dataset
+        - dataset_id: Dataset identifier
 
     Raises:
-        FileNotFoundError: If dataset config not found or data directory doesn't exist
+        FileNotFoundError: If I/O config not found or data directory doesn't exist
         ValueError: If adapter is not recognized or dataset files are malformed
     """
     # Load I/O config (includes dataset_id and data_dir)
     io_config = load_ingest_io_config(io_format)
 
-    # Use data_dir override if provided, otherwise use config default
-    actual_data_dir = data_dir if data_dir is not None else io_config.data_dir
+    # Apply overrides if provided
+    if config_overrides:
+        io_config = apply_overrides(io_config, config_overrides)
+
+    # Use data directory from config
+    actual_data_dir = io_config.data_dir
 
     # Verify data directory exists
     if not actual_data_dir.exists():

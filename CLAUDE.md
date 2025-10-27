@@ -4,20 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**LLM Ensemble** is a CLI-first LLM relevance labeling system for information retrieval tasks. 
-The project follows a 4-stage pipeline architecture with shared libraries.
-Specifically, its an LLM relevance judging system using Python with OpenRouter / Ollama / Hugginface Inference Endpoints, for my bachelor thesis. 
-It should be able to easily exchange dataset, model and prompt. 
+**LLM Ensemble** is a CLI-first LLM relevance judging system for information retrieval tasks, built with Python for bachelor thesis research. It supports OpenRouter, Ollama, and HuggingFace Inference Endpoints, with easy swapping of datasets, models, and prompts via configuration files.
 
+The project follows a 4-stage pipeline architecture with shared libraries and hexagonal architecture principles.
 
 ### Four Core CLIs
 
-1. **ingest** — Normalize raw IR datasets into `JudgingExample` records (NDJSON/Parquet)
-2. **infer** — Run multiple LLM judges over samples, writing per-model judgements
-3. **aggregate** — Combine judgements using ensemble strategies (e.g., weighted majority vote)
-4. **evaluate** — Compute metrics and generate HTML reports with reproducibility footers
+1. **ingest** — Normalize raw IR datasets into `JudgingExample` records
+2. **infer** — Run LLM judges over samples, writing per-model judgements
+3. **aggregate** — Combine judgements using ensemble strategies (weighted majority vote, etc.)
+4. **evaluate** — Compute metrics and generate HTML reports
 
-All artifacts are managed via the **run manager** (`libs/runtime/run_manager.py`), which handles run directory creation, ID generation, and manifest writing. Artifacts are written to `artifacts/runs/<cli_name>/<run_id>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
+All artifacts are managed by the **run manager** (`libs/runtime/run_manager.py`), which creates run directories, generates IDs, and writes manifests. Outputs are organized under `artifacts/runs/<cli_name>/<run_id>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
 
 ## Architecture: Clean Architecture / Ports & Adapters
 
@@ -64,6 +62,30 @@ Adapters - concrete implementations:
 ```
 
 **Benefits:** Test domain logic without APIs/GPUs, swap providers via config, refactor layers independently.
+
+### Factory Pattern
+
+Adapters are instantiated via factory functions, not directly. This allows configuration-driven adapter selection and makes testing easier.
+
+**Factory locations:**
+- `infer/adapters/provider_factory.py` — `get_provider()` instantiates LLM providers based on `model_config.provider`
+- `infer/adapters/io_factory.py` — `get_example_reader()` and `get_judgement_writer()` based on I/O config
+- `infer/adapters/prompt_builder_factory.py` — `get_prompt_builder()` based on prompt config
+- `infer/adapters/response_parser_factory.py` — `get_response_parser()` based on parser config
+
+**Pattern:**
+```python
+# Orchestrator loads config
+model_config = load_model_config(model_id)
+
+# Factory instantiates the right adapter
+provider = get_provider(model_config)  # Returns OpenRouterAdapter, OllamaAdapter, or HFAdapter
+
+# Domain service uses only the port abstraction
+service = InferenceService(provider=provider, ...)  # provider: LLMProvider (ABC)
+```
+
+**When adding new adapters:** Always update the corresponding factory function to handle the new adapter type.
 
 ## Design Principles
 
@@ -134,6 +156,8 @@ make test-schema       # Run schema validation tests only
 # Using pytest directly
 pytest                 # Run all tests
 pytest tests/ingest/   # Run specific module
+pytest tests/infer/test_inference_service.py  # Run single test file
+pytest tests/infer/test_inference_service.py::test_inference_pipeline  # Run single test
 pytest -v              # Verbose output
 pytest -v -s           # Show print statements
 pytest --cov=llm_ensemble  # Coverage report
@@ -156,6 +180,38 @@ pytest -m requires_api # Run tests requiring API credentials
 - `@pytest.mark.requires_api` — Tests requiring API credentials
 
 **Configuration:** Tests are discovered from `tests/` directory. pytest is configured in `pyproject.toml` with `-q` (quiet mode) by default.
+
+### Schema Generation
+
+The project uses Pydantic models extensively. To generate JSON schemas for documentation and validation:
+
+```bash
+# Generate JSON schemas from Pydantic models
+make schemas
+
+# Or directly:
+python scripts/generate_schemas.py
+```
+
+**Output:** JSON schemas are generated in `src/llm_ensemble/libs/schemas/` organized by category:
+- `data_contracts/` — Pipeline data flow (JudgingExample, ModelJudgement, etc.)
+- `configurations/` — Config file schemas (ModelConfig, PromptConfig, IOConfig)
+- `internal/` — Domain models for documentation
+
+**When to run:** After modifying any Pydantic schema definitions or when setting up the project.
+
+### Environment Variables
+
+The project uses environment variables for sensitive credentials and infrastructure configuration:
+
+```bash
+# Create .env file in project root (gitignored)
+OPENROUTER_API_KEY=your_openrouter_key      # For OpenRouter models
+HF_TOKEN=your_huggingface_token             # For HuggingFace models
+OLLAMA_BASE_URL=http://localhost:11434      # For local Ollama (optional)
+```
+
+The project uses `python-dotenv` to automatically load `.env` files. Never commit credentials to git.
 
 ## Data Contracts
 

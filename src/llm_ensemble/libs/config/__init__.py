@@ -1,5 +1,7 @@
-from __future__ import annotations
+"""Configuration utilities.
 
-from .dataset import DatasetConfig, load_dataset_config
+Note: Dataset config system has been removed. Each CLI now manages
+its own configuration via I/O configs.
+"""
 
-__all__ = ["DatasetConfig", "load_dataset_config"]
+__all__ = []

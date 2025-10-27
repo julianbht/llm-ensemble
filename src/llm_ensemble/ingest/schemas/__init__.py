@@ -3,10 +3,12 @@ from llm_ensemble.ingest.schemas.query import Query
 from llm_ensemble.ingest.schemas.document import Document
 from llm_ensemble.ingest.schemas.relevance import Relevance
 from llm_ensemble.ingest.schemas.judging_example import JudgingExample
+from llm_ensemble.ingest.schemas.ingest_io_config import IngestIOConfig
 
 __all__ = [
     "Query",
-    "Document", 
+    "Document",
     "Relevance",
     "JudgingExample",
+    "IngestIOConfig",
 ]

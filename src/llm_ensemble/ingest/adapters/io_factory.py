@@ -7,7 +7,7 @@ enabling dependency injection and configuration-driven adapter selection.
 from __future__ import annotations
 from pathlib import Path
 
-from llm_ensemble.infer.schemas import IOConfig
+from llm_ensemble.ingest.schemas import IngestIOConfig
 from llm_ensemble.ingest.ports import ExampleReader, ExampleWriter
 from llm_ensemble.ingest.adapters.io import (
     LlmJudgeExampleReader,
@@ -15,15 +15,14 @@ from llm_ensemble.ingest.adapters.io import (
 )
 
 
-def get_example_reader(io_config: IOConfig, dataset_id: str) -> ExampleReader:
+def get_example_reader(io_config: IngestIOConfig) -> ExampleReader:
     """Create and return the appropriate example reader adapter.
 
     Factory function that instantiates the correct reader implementation
     based on the I/O configuration's reader field.
 
     Args:
-        io_config: I/O configuration specifying the reader adapter
-        dataset_id: Dataset identifier to embed in JudgingExample records
+        io_config: Ingest I/O configuration specifying the reader adapter and dataset_id
 
     Returns:
         ExampleReader instance
@@ -32,16 +31,16 @@ def get_example_reader(io_config: IOConfig, dataset_id: str) -> ExampleReader:
         ValueError: If reader adapter is not supported
 
     Example:
-        >>> from llm_ensemble.infer.config_loaders import load_io_config
-        >>> config = load_io_config("llm_judge_ingest")
-        >>> reader = get_example_reader(config, "llm-judge-2024")
+        >>> from llm_ensemble.ingest.config_loaders import load_ingest_io_config
+        >>> config = load_ingest_io_config("llm_judge_ingest")
+        >>> reader = get_example_reader(config)
         >>> isinstance(reader, LlmJudgeExampleReader)
         True
     """
     reader_name = io_config.reader.lower()
 
     if reader_name == "llm_judge_example_reader":
-        return LlmJudgeExampleReader(dataset_id=dataset_id)
+        return LlmJudgeExampleReader(dataset_id=io_config.dataset_id)
     else:
         raise ValueError(
             f"Unsupported example reader: {io_config.reader}. "
@@ -49,7 +48,7 @@ def get_example_reader(io_config: IOConfig, dataset_id: str) -> ExampleReader:
         )
 
 
-def get_example_writer(io_config: IOConfig, output_path: Path) -> ExampleWriter:
+def get_example_writer(io_config: IngestIOConfig, output_path: Path) -> ExampleWriter:
     """Create and return the appropriate example writer adapter.
 
     Factory function that instantiates the correct writer implementation

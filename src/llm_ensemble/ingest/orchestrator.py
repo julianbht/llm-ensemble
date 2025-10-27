@@ -15,14 +15,13 @@ from typing import Optional, TextIO
 
 from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.ingest.adapters import get_example_reader, get_example_writer
-from llm_ensemble.infer.config_loaders import load_io_config
-from llm_ensemble.libs.config import load_dataset_config
+from llm_ensemble.ingest.config_loaders import load_ingest_io_config
 from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
 from llm_ensemble.libs.logging.logger import get_logger
 
 
 def run_ingest(
-    dataset: str,
+    io_format: str,
     data_dir: Optional[Path] = None,
     run_id: Optional[str] = None,
     limit: Optional[int] = None,
@@ -62,12 +61,11 @@ def run_ingest(
         FileNotFoundError: If dataset config not found or data directory doesn't exist
         ValueError: If adapter is not recognized or dataset files are malformed
     """
-    # Load dataset config and I/O config
-    dataset_config = load_dataset_config(dataset)
-    io_config = load_io_config(dataset_config.io_format)
+    # Load I/O config (includes dataset_id and data_dir)
+    io_config = load_ingest_io_config(io_format)
 
     # Use data_dir override if provided, otherwise use config default
-    actual_data_dir = data_dir if data_dir is not None else dataset_config.data_dir
+    actual_data_dir = data_dir if data_dir is not None else io_config.data_dir
 
     # Verify data directory exists
     if not actual_data_dir.exists():
@@ -75,7 +73,7 @@ def run_ingest(
 
     # Create or use provided run ID
     if run_id is None:
-        run_id = create_run_id(dataset_config.dataset_id)
+        run_id = create_run_id(io_config.dataset_id)
 
     # Set up run directory and output file
     run_dir = get_run_dir(run_id, cli_name="ingest", official=official)
@@ -95,8 +93,8 @@ def run_ingest(
 
     logger.info(
         "Starting ingest",
-        dataset_id=dataset_config.dataset_id,
-        io_format=dataset_config.io_format,
+        dataset_id=io_config.dataset_id,
+        io_format=io_config.io_format,
         data_dir=str(actual_data_dir),
         limit=limit,
     )
@@ -104,7 +102,7 @@ def run_ingest(
     logger.info("Output file", path=str(output_file))
 
     # Instantiate adapters via factories
-    example_reader = get_example_reader(io_config, dataset_config.dataset_id)
+    example_reader = get_example_reader(io_config)
     example_writer = get_example_writer(io_config, output_file)
 
     # Create domain service
@@ -133,15 +131,14 @@ def run_ingest(
         run_dir=run_dir,
         cli_name="ingest",
         cli_args={
-            "dataset_id": dataset_config.dataset_id,
-            "io_format": dataset_config.io_format,
+            "dataset_id": io_config.dataset_id,
+            "io_format": io_config.io_format,
             "data_dir": str(actual_data_dir),
             "limit": limit,
         },
         metadata={
             "sample_count": count,
             "output_file": str(output_file),
-            "dataset_version": dataset_config.version,
         },
         official=official,
         notes=notes,
@@ -159,5 +156,5 @@ def run_ingest(
         "run_dir": run_dir,
         "output_file": output_file,
         "sample_count": count,
-        "dataset_version": dataset_config.version,
+        "dataset_id": io_config.dataset_id,
     }

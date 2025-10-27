@@ -15,11 +15,11 @@ app = typer.Typer(add_completion=False, help="LLM Ensemble – data ingest CLI")
 
 @app.command("ingest")
 def ingest(
-    dataset: str = typer.Option(
-        ..., "--dataset", "-d", help="Dataset config name (e.g., 'llm_judge_challenge' for configs/datasets/llm_judge_challenge.yaml)"
+    io_format: str = typer.Option(
+        ..., "--io", help="I/O format config name (e.g., 'llm_judge_ingest' for configs/io/llm_judge_ingest.yaml)"
     ),
     data_dir: Optional[Path] = typer.Option(
-        None, "--data-dir", "-i", exists=True, file_okay=False, readable=True,
+        None, "--data-dir", exists=True, file_okay=False, readable=True,
         help="Override data directory from config (defaults to config value)",
     ),
     run_id: Optional[str] = typer.Option(
@@ -38,15 +38,15 @@ def ingest(
 ):
     """Normalize a raw IR dataset into JudgingExample NDJSON records.
 
-    Writes output to artifacts/runs/<run_id>/samples.ndjson with manifest.
+    Writes output to artifacts/runs/<run_id>/samples.<format> with manifest.
 
     Example:
-        ingest --dataset llm_judge_challenge --limit 100
-        ingest --dataset llm_judge_challenge --data-dir /custom/path
+        ingest --io llm_judge_ingest --limit 100
+        ingest --io llm_judge_ingest --data-dir /custom/path
     """
     try:
         run_ingest(
-            dataset=dataset,
+            io_format=io_format,
             data_dir=data_dir,
             run_id=run_id,
             limit=limit,

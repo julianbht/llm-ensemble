@@ -113,7 +113,7 @@ service = InferenceService(provider=provider, ...)  # provider: LLMProvider (ABC
 
 ```bash
 # Setup
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 
 # Install (use Makefile for convenience)
@@ -138,8 +138,8 @@ ingest --dataset llm_judge_challenge --data-dir /custom/path --limit 100
 infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_id>/samples.ndjson
 
 # Alternative: run via python module
-python -m llm_ensemble.ingest_cli --help
-python -m llm_ensemble.infer_cli --help
+python3 -m llm_ensemble.ingest_cli --help
+python3 -m llm_ensemble.infer_cli --help
 ```
 
 ### Testing
@@ -190,7 +190,7 @@ The project uses Pydantic models extensively. To generate JSON schemas for docum
 make schemas
 
 # Or directly:
-python scripts/generate_schemas.py
+python3 scripts/generate_schemas.py
 ```
 
 **Output:** JSON schemas are generated in `src/llm_ensemble/libs/schemas/` organized by category:

@@ -1,0 +1,14 @@
+io_format: llm_judge_ingest
+description: |
+  LLM Judge Challenge 2024 raw dataset format.
+  Reads from TSV queries, JSONL documents, and TSV qrels files.
+  Writes normalized JudgingExample records to NDJSON format.
+  Used by ingest CLI for dataset normalization.
+
+# Ingest-specific fields
+dataset_id: llm-judge-2024
+data_dir: data
+
+# Adapter module names (loaded dynamically)
+reader: llm_judge_example_reader
+writer: ndjson_example_writer

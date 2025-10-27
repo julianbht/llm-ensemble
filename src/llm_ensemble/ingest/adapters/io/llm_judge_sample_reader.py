@@ -1,7 +1,7 @@
-"""Example reader for LLM Judge Challenge 2024 dataset.
+"""Sample reader for LLM Judge Challenge 2024 dataset.
 
 Reads the LLM Judge Challenge raw dataset format (queries.txt, documents.jsonl, qrels.txt)
-and converts it into normalized JudgingExample records.
+and converts it into normalized JudgingSample records.
 """
 
 from __future__ import annotations
@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
 
-from llm_ensemble.ingest.schemas import Query, Document, Relevance, JudgingExample
-from llm_ensemble.ingest.ports import ExampleReader
+from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore, JudgingSample
+from llm_ensemble.ingest.ports import SampleReader
 
 
 @dataclass(frozen=True)
@@ -33,11 +33,11 @@ class LlmJudgePaths:
         return self.base_dir / "llm4eval_test_qrel_2024.txt"
 
 
-class LlmJudgeExampleReader(ExampleReader):
+class LlmJudgeSampleReader(SampleReader):
     """Reader for LLM Judge Challenge 2024 dataset.
 
     Reads queries (TSV), documents (JSONL), and relevance judgements (TSV)
-    and returns normalized JudgingExample records.
+    and returns normalized JudgingSample records.
 
     File format:
     - queries: TSV with columns (query_id, query_text)
@@ -45,27 +45,19 @@ class LlmJudgeExampleReader(ExampleReader):
     - qrels: TSV with columns (query_id, relevance, docid)
     """
 
-    def __init__(self, dataset_id: str = "llm-judge-2024"):
-        """Initialize LLM Judge reader.
-
-        Args:
-            dataset_id: Dataset identifier for JudgingExample records
-        """
-        self.dataset_id = dataset_id
-
     def read(
         self,
         input_path: Path,
         limit: Optional[int] = None,
-    ) -> list[JudgingExample]:
-        """Read LLM Judge dataset and return JudgingExamples.
+    ) -> list[JudgingSample]:
+        """Read LLM Judge dataset and return JudgingSamples.
 
         Args:
             input_path: Base directory containing dataset files
-            limit: Optional maximum number of examples to return
+            limit: Optional maximum number of samples to return
 
         Returns:
-            List of JudgingExample objects
+            List of JudgingSample objects
 
         Raises:
             FileNotFoundError: If required dataset files are missing
@@ -78,28 +70,34 @@ class LlmJudgeExampleReader(ExampleReader):
         docs = self._read_documents(paths.documents)
 
         # Process qrels and join with queries/documents
-        examples = []
-        for rel in self._read_qrels(paths.qrels):
-            q = queries.get(rel.query_id)
-            d = docs.get(rel.docid)
+        samples = []
+        for qid, docid, relevance in self._read_qrels(paths.qrels):
+            q = queries.get(qid)
+            d = docs.get(docid)
 
             # Crash if query or document is missing
             if q is None:
                 raise ValueError(
-                    f"Query '{rel.query_id}' referenced in qrels but not found in queries file"
+                    f"Query '{qid}' referenced in qrels but not found in queries file"
                 )
             if d is None:
                 raise ValueError(
-                    f"Document '{rel.docid}' referenced in qrels but not found in documents file"
+                    f"Document '{docid}' referenced in qrels but not found in documents file"
                 )
 
-            examples.append(JudgingExample.from_parts(self.dataset_id, q, d, rel))
+            # Create JudgingSample
+            sample = JudgingSample(
+                query=q,
+                document=d,
+                gold_score=RelevanceScore(relevance),
+            )
+            samples.append(sample)
 
             # Stop if limit reached
-            if limit is not None and len(examples) >= limit:
+            if limit is not None and len(samples) >= limit:
                 break
 
-        return examples
+        return samples
 
     def _read_queries(self, path: Path) -> Dict[str, Query]:
         """Read TSV of (query_id, query_text) into a dict.
@@ -125,7 +123,7 @@ class LlmJudgeExampleReader(ExampleReader):
                 if len(parts) != 2:
                     raise ValueError(f"Invalid query line {i}: {line!r}")
                 qid, qtext = parts[0].strip(), parts[1].strip()
-                out[qid] = Query(query_id=qid, query_text=qtext)
+                out[qid] = Query(external_id=qid, query_text=qtext)
         return out
 
     def _read_documents(self, path: Path) -> Dict[str, Document]:
@@ -155,17 +153,17 @@ class LlmJudgeExampleReader(ExampleReader):
                 doc = obj.get("doc")
                 if not (isinstance(docid, str) and isinstance(doc, str)):
                     raise ValueError(f"Missing docid/doc at line {i}")
-                out[docid] = Document(docid=docid, doc=doc)
+                out[docid] = Document(external_id=docid, doc_text=doc)
         return out
 
-    def _read_qrels(self, path: Path) -> list[Relevance]:
-        """Read TSV of qrels and return Relevance objects.
+    def _read_qrels(self, path: Path) -> list[tuple[str, str, int]]:
+        """Read TSV of qrels and return tuples of (query_id, docid, relevance).
 
         Args:
             path: Path to qrels TSV file
 
         Returns:
-            List of Relevance objects
+            List of (query_id, docid, relevance) tuples
 
         Raises:
             FileNotFoundError: If qrels file doesn't exist
@@ -185,5 +183,5 @@ class LlmJudgeExampleReader(ExampleReader):
                     rel_i = int(rel)
                 except ValueError:
                     raise ValueError(f"Invalid relevance at line {i}: {rel!r}")
-                qrels.append(Relevance(query_id=qid, docid=docid, relevance=rel_i))
+                qrels.append((qid, docid, rel_i))
         return qrels

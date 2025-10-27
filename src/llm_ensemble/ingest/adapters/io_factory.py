@@ -5,78 +5,76 @@ enabling dependency injection and configuration-driven adapter selection.
 """
 
 from __future__ import annotations
-from pathlib import Path
 
 from llm_ensemble.ingest.schemas import IngestIOConfig
-from llm_ensemble.ingest.ports import ExampleReader, ExampleWriter
+from llm_ensemble.ingest.ports import SampleReader, DatasetWriter
 from llm_ensemble.ingest.adapters.io import (
-    LlmJudgeExampleReader,
-    NdjsonExampleWriter,
+    LlmJudgeSampleReader,
+    NdjsonDatasetWriter,
 )
 
 
-def get_example_reader(io_config: IngestIOConfig) -> ExampleReader:
-    """Create and return the appropriate example reader adapter.
+def get_sample_reader(io_config: IngestIOConfig) -> SampleReader:
+    """Create and return the appropriate sample reader adapter.
 
     Factory function that instantiates the correct reader implementation
     based on the I/O configuration's reader field.
 
     Args:
-        io_config: Ingest I/O configuration specifying the reader adapter and dataset_id
+        io_config: Ingest I/O configuration specifying the reader adapter
 
     Returns:
-        ExampleReader instance
+        SampleReader instance
 
     Raises:
         ValueError: If reader adapter is not supported
 
     Example:
-        >>> from llm_ensemble.ingest.config_loaders import load_ingest_io_config
+        >>> from llm_ensemble.libs.config import load_ingest_io_config
         >>> config = load_ingest_io_config("llm_judge_ingest")
-        >>> reader = get_example_reader(config)
-        >>> isinstance(reader, LlmJudgeExampleReader)
+        >>> reader = get_sample_reader(config)
+        >>> isinstance(reader, LlmJudgeSampleReader)
         True
     """
     reader_name = io_config.reader.lower()
 
-    if reader_name == "llm_judge_example_reader":
-        return LlmJudgeExampleReader(dataset_id=io_config.dataset_id)
+    if reader_name == "llm_judge_sample_reader":
+        return LlmJudgeSampleReader()
     else:
         raise ValueError(
-            f"Unsupported example reader: {io_config.reader}. "
-            f"Supported readers: llm_judge_example_reader"
+            f"Unsupported sample reader: {io_config.reader}. "
+            f"Supported readers: llm_judge_sample_reader"
         )
 
 
-def get_example_writer(io_config: IngestIOConfig, output_path: Path) -> ExampleWriter:
-    """Create and return the appropriate example writer adapter.
+def get_dataset_writer(io_config: IngestIOConfig) -> DatasetWriter:
+    """Create and return the appropriate dataset writer adapter.
 
     Factory function that instantiates the correct writer implementation
     based on the I/O configuration's writer field.
 
     Args:
         io_config: I/O configuration specifying the writer adapter
-        output_path: Path where examples should be written
 
     Returns:
-        ExampleWriter instance
+        DatasetWriter instance
 
     Raises:
         ValueError: If writer adapter is not supported
 
     Example:
-        >>> from llm_ensemble.infer.config_loaders import load_io_config
-        >>> config = load_io_config("llm_judge_ingest")
-        >>> writer = get_example_writer(config, Path("out.ndjson"))
-        >>> isinstance(writer, NdjsonExampleWriter)
+        >>> from llm_ensemble.libs.config import load_ingest_io_config
+        >>> config = load_ingest_io_config("llm_judge_ingest")
+        >>> writer = get_dataset_writer(config)
+        >>> isinstance(writer, NdjsonDatasetWriter)
         True
     """
     writer_name = io_config.writer.lower()
 
-    if writer_name == "ndjson_example_writer":
-        return NdjsonExampleWriter(output_path)
+    if writer_name == "ndjson_dataset_writer":
+        return NdjsonDatasetWriter()
     else:
         raise ValueError(
-            f"Unsupported example writer: {io_config.writer}. "
-            f"Supported writers: ndjson_example_writer"
+            f"Unsupported dataset writer: {io_config.writer}. "
+            f"Supported writers: ndjson_dataset_writer"
         )

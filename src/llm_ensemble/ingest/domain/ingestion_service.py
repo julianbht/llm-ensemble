@@ -20,18 +20,6 @@ class IngestionService:
     manifest to each sample (Many-to-One relationship), and writing output.
     Depends only on port abstractions, enabling complete independence from
     infrastructure concerns.
-
-    Example:
-        >>> reader = LlmJudgeSampleReader()
-        >>> writer = NdjsonDatasetWriter()
-        >>> service = IngestionService(reader, writer)
-        >>> stats = service.ingest_dataset(
-        ...     data_dir=Path("data"),
-        ...     manifest=manifest,
-        ...     output_path=Path("output.ndjson"),
-        ...     limit=100
-        ... )
-        >>> print(f"Processed {stats['sample_count']} samples")
     """
 
     def __init__(
@@ -105,8 +93,8 @@ class IngestionService:
         # Update manifest with actual sample count
         manifest.sample_count = sample_count
 
-        # Write samples with manifest
-        self.dataset_writer.write(judging_samples, manifest, output_path)
+        # Write samples (each sample contains full manifest)
+        self.dataset_writer.write(judging_samples, output_path)
 
         # Return statistics
         return {

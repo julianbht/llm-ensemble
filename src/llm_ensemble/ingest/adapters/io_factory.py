@@ -10,7 +10,7 @@ from llm_ensemble.ingest.schemas import IngestIOConfig
 from llm_ensemble.ingest.ports import SampleReader, DatasetWriter
 from llm_ensemble.ingest.adapters.io import (
     LlmJudgeSampleReader,
-    NdjsonDatasetWriter,
+    FullyPopulatedNdjsonWriter,
 )
 
 
@@ -66,15 +66,15 @@ def get_dataset_writer(io_config: IngestIOConfig) -> DatasetWriter:
         >>> from llm_ensemble.libs.config import load_ingest_io_config
         >>> config = load_ingest_io_config("llm_judge_ingest")
         >>> writer = get_dataset_writer(config)
-        >>> isinstance(writer, NdjsonDatasetWriter)
+        >>> isinstance(writer, FullyPopulatedNdjsonWriter)
         True
     """
     writer_name = io_config.writer.lower()
 
-    if writer_name == "ndjson_dataset_writer":
-        return NdjsonDatasetWriter()
+    if writer_name == "fully_populated_ndjson_writer":
+        return FullyPopulatedNdjsonWriter()
     else:
         raise ValueError(
             f"Unsupported dataset writer: {io_config.writer}. "
-            f"Supported writers: ndjson_dataset_writer"
+            f"Supported writers: fully_populated_ndjson_writer"
         )

@@ -203,7 +203,7 @@ make schemas
 python3 scripts/generate_schemas.py
 ```
 
-**Output:** JSON schemas are generated in `src/llm_ensemble/libs/schemas/` organized by category:
+**Output:** JSON schemas are generated in `src/llm_ensemble/libs/generated_schemas/` organized by category:
 - `data_contracts/` — Pipeline data flow (JudgingExample, ModelJudgement, etc.)
 - `configurations/` — Config file schemas (ModelConfig, PromptConfig, IOConfig)
 - `internal/` — Domain models for documentation

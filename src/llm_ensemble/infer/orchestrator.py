@@ -25,7 +25,7 @@ from llm_ensemble.libs.runtime.run_manager import (
     write_standalone_manifest,
     get_run_dir,
 )
-from llm_ensemble.libs.schemas.manifest import Manifest
+from llm_ensemble.libs.runtime.manifest import Manifest
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging.logger import get_logger
 from llm_ensemble.libs.utils.config_overrides import apply_overrides

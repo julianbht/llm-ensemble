@@ -3,123 +3,79 @@
 Provides a ManifestBuilder for constructing CLI-specific manifests step-by-step.
 The builder separates manifest construction from the final Pydantic representation.
 Domain services can mutate the built manifest before it is finalized.
+
+Note: This module no longer handles run ID generation or directory creation.
+Use libs/runtime/run_id.py and libs/runtime/path_manager.py instead.
 """
 
 from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 
 
-def create_run_id(name_hint: str) -> str:
-    """Generate a unique run ID.
-
-    Format: YYYYMMDD_HHMMSS_<hint>
-
-    Args:
-        name_hint: Hint for the run (e.g., dataset name, model name)
-
-    Returns:
-        Unique run ID string
-
-    Example:
-        >>> create_run_id("gpt-oss-20b")
-        '20250115_143022_gpt-oss-20b'
-    """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # Sanitize name_hint (remove special chars, limit length)
-    safe_hint = "".join(c for c in name_hint if c.isalnum() or c in "-_")[:30]
-    return f"{timestamp}_{safe_hint}"
-
-
-def get_run_dir(run_id: str, cli_name: str, official: bool = False, base_dir: Optional[Path] = None) -> Path:
-    """Get the directory path for a run.
-
-    Args:
-        run_id: Run identifier
-        cli_name: CLI name (e.g., "ingest", "infer", "aggregate", "evaluate")
-        official: If True, place in official/ subdirectory (for git-tracked runs)
-        base_dir: Base artifacts directory (defaults to ./artifacts)
-
-    Returns:
-        Path to run directory:
-        - Test runs: artifacts/runs/<cli_name>/test/<run_id>/
-        - Official runs: artifacts/runs/<cli_name>/official/<run_id>/
-
-    Example:
-        >>> get_run_dir("20250115_143022_gpt-oss-20b", "infer")
-        PosixPath('artifacts/runs/infer/test/20250115_143022_gpt-oss-20b')
-        >>> get_run_dir("20250115_143022_baseline", "infer", official=True)
-        PosixPath('artifacts/runs/infer/official/20250115_143022_baseline')
-    """
-    if base_dir is None:
-        # Default to artifacts/ in project root (4 levels up from this file)
-        base_dir = Path(__file__).parents[4] / "artifacts"
-
-    run_type = "official" if official else "test"
-    return base_dir / "runs" / cli_name / run_type / run_id
-
-
 class ManifestBuilder:
     """Builder for constructing CLI-specific manifests step-by-step.
 
     This implements the Builder pattern, allowing orchestrators to:
-    1. Initialize with base metadata (run_id, git info, timestamps)
+    1. Initialize with base metadata (run_id, run_dir, git info)
     2. Add CLI-specific fields incrementally
     3. Finalize to create the immutable Pydantic manifest
 
-    The builder keeps orchestration logic in the orchestrator while providing
-    a clean API for manifest construction.
+    The builder is purely focused on manifest construction - it does not
+    create run IDs or directories. Those should be created by the orchestrator
+    using PathManager and generate_run_id().
 
     Example:
+        >>> from llm_ensemble.libs.runtime.run_id import generate_run_id
+        >>> from llm_ensemble.libs.runtime.path_manager import PathManager
+        >>>
+        >>> run_id = generate_run_id("llm-judge")
+        >>> run_dir = PathManager.get_run_dir("ingest", run_id, official=False)
+        >>> run_dir.mkdir(parents=True, exist_ok=True)
+        >>>
         >>> builder = ManifestBuilder(
+        ...     run_id=run_id,
+        ...     run_dir=run_dir,
         ...     cli_name="ingest",
-        ...     name_hint="llm-judge",
         ...     official=False,
         ...     notes="Testing dataset loader"
         ... )
         >>> builder.add("io_config_name", "llm_judge_ingest")
         >>> builder.add("limit", 100)
-        >>> manifest = builder.build(IngestManifest)
-        >>> # Domain service updates sample_count and calls manifest.mark_completed()
+        >>> manifest = builder.finalize(IngestManifest)
     """
 
     def __init__(
         self,
+        run_id: str,
+        run_dir: Path,
         cli_name: str,
-        name_hint: str,
-        run_id: Optional[str] = None,
         official: bool = False,
-        notes: Optional[str] = None,
-        base_dir: Optional[Path] = None,
+        notes: str | None = None,
     ):
         """Initialize manifest builder with base metadata.
 
         Args:
+            run_id: Run identifier (e.g., "20250128_143022_gpt-oss-20b")
+            run_dir: Run directory path (should already exist)
             cli_name: CLI name (e.g., "ingest", "infer", "aggregate", "evaluate")
-            name_hint: Hint for run ID generation (e.g., dataset name, model name)
-            run_id: Optional custom run ID (auto-generates if not provided)
-            official: If True, mark as official run (saved to official/ subdirectory)
+            official: If True, mark as official run
             notes: Optional notes about this run (experiment purpose, hypothesis, etc.)
-            base_dir: Base artifacts directory (defaults to ./artifacts)
         """
-        # Generate or use provided run_id
-        self.run_id = run_id or create_run_id(name_hint)
-
-        # Create run directory
-        self.run_dir = get_run_dir(self.run_id, cli_name, official, base_dir)
-        self.run_dir.mkdir(parents=True, exist_ok=True)
+        self.run_id = run_id
+        self.run_dir = run_dir
 
         # Capture git info for reproducibility
         git_info = get_git_info()
 
         # Initialize fields with base metadata
         self._fields: dict[str, Any] = {
-            "run_id": self.run_id,
+            "run_id": run_id,
             "run_type": "official" if official else "test",
             "cli_name": cli_name,
             "start_time": None,  # Set by domain service when processing begins
@@ -164,48 +120,6 @@ class ManifestBuilder:
 
         # Create and validate Pydantic manifest
         return manifest_class(**self._fields)
-
-
-def initialize_manifest(
-    cli_name: str,
-    name_hint: str,
-    run_id: Optional[str] = None,
-    official: bool = False,
-    notes: Optional[str] = None,
-    base_dir: Optional[Path] = None,
-) -> ManifestBuilder:
-    """Factory function to initialize a ManifestBuilder.
-
-    This is the primary entry point for orchestrators to start building manifests.
-
-    Args:
-        cli_name: CLI name (e.g., "ingest", "infer", "aggregate", "evaluate")
-        name_hint: Hint for run ID generation (e.g., dataset name, model name)
-        run_id: Optional custom run ID (auto-generates if not provided)
-        official: If True, mark as official run (saved to official/ subdirectory)
-        notes: Optional notes about this run (experiment purpose, hypothesis, etc.)
-        base_dir: Base artifacts directory (defaults to ./artifacts)
-
-    Returns:
-        ManifestBuilder instance ready for adding CLI-specific fields
-
-    Example:
-        >>> builder = initialize_manifest(
-        ...     cli_name="ingest",
-        ...     name_hint="llm-judge",
-        ...     official=False,
-        ... )
-        >>> builder.add("io_config_name", "llm_judge_ingest")
-        >>> manifest = builder.finalize(IngestManifest)
-    """
-    return ManifestBuilder(
-        cli_name=cli_name,
-        name_hint=name_hint,
-        run_id=run_id,
-        official=official,
-        notes=notes,
-        base_dir=base_dir,
-    )
 
 
 def write_standalone_manifest(manifest: BaseModel, run_dir: Path) -> Path:

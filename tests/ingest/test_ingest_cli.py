@@ -10,8 +10,7 @@ from typer.testing import CliRunner
 import pytest
 
 from llm_ensemble.ingest_cli import app
-from llm_ensemble.libs.schemas.validator import validate_ndjson_file
-from llm_ensemble.libs.runtime.run_manager import get_run_dir
+from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
 runner = CliRunner()
@@ -61,8 +60,8 @@ class TestIngestCLI:
         assert "total_examples=2" in result.stderr
 
         # Verify output file has exactly 2 examples (uses tmp_artifacts via fixture)
-        run_dir = get_run_dir(test_run_id, cli_name="ingest", official=False)
-        output_file = run_dir / "samples.ndjson"
+        run_dir = PathManager.get_run_dir(cli_name="ingest", run_id=test_run_id, official=False)
+        output_file = run_dir / "normalized_dataset.ndjson"
         assert output_file.exists()
 
         lines = [l for l in output_file.read_text().strip().split("\n") if l]

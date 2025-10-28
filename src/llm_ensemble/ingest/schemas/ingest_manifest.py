@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Optional
 from pydantic import Field
 
-from llm_ensemble.libs.schemas.manifest import Manifest
+from llm_ensemble.libs.runtime.manifest import Manifest
 from llm_ensemble.ingest.schemas.ingest_io_config import IngestIOConfig
 
 

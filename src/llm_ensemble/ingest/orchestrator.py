@@ -17,9 +17,11 @@ from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.ingest.adapters import get_sample_reader, get_dataset_writer
 from llm_ensemble.ingest.config_loaders import load_ingest_io_config
 from llm_ensemble.libs.runtime.manifest_manager import (
-    initialize_manifest,
+    ManifestBuilder,
     write_standalone_manifest,
 )
+from llm_ensemble.libs.runtime.run_id import generate_run_id
+from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.logging.logger import get_logger
 
 
@@ -32,7 +34,7 @@ def run_ingest(
     official: bool = False,
     notes: Optional[str] = None,
     log_file: Optional[TextIO] = None,
-):
+) -> None:
     """Normalize a raw IR dataset into judging samples with full provenance.
 
     Infrastructure orchestration that coordinates:
@@ -52,13 +54,6 @@ def run_ingest(
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
         log_file: Optional file handle for logging (used when save_logs=True)
 
-    Returns:
-        Dictionary with run metadata including:
-        - run_id: The run identifier
-        - run_dir: Path to run directory
-        - sample_count: Total number of samples processed
-        - dataset_id: Dataset identifier
-
     Raises:
         FileNotFoundError: If I/O config not found or input path doesn't exist
         ValueError: If adapter is not recognized or dataset files are malformed
@@ -70,18 +65,25 @@ def run_ingest(
     if not input_path.exists():
         raise FileNotFoundError(f"Input directory does not exist: {input_path}")
 
-    # Initialize manifest builder (creates run_id and directory)
-    manifest_builder = initialize_manifest(
+    # Generate or use provided run_id
+    actual_run_id = run_id or generate_run_id(io_config.dataset_id)
+
+    # Get run directory path and create it
+    run_dir = PathManager.get_run_dir(
         cli_name="ingest",
-        name_hint=io_config.dataset_id,
-        run_id=run_id,  # None = auto-generate, otherwise use provided
+        run_id=actual_run_id,
+        official=official
+    )
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    # Initialize manifest builder (pure manifest construction)
+    manifest_builder = ManifestBuilder(
+        run_id=actual_run_id,
+        run_dir=run_dir,
+        cli_name="ingest",
         official=official,
         notes=notes,
     )
-
-    # Extract run info for logging and paths
-    run_id = manifest_builder.run_id
-    run_dir = manifest_builder.run_dir
 
     # Add ingest-specific fields to manifest builder
     manifest_builder.add("io_config_name", io_format)
@@ -98,7 +100,7 @@ def run_ingest(
         close_log_file = True
 
     # Initialize logger
-    logger = get_logger("ingest", run_id=run_id, log_file=log_file_handle)
+    logger = get_logger("ingest", run_id=actual_run_id, log_file=log_file_handle)
 
     logger.info(
         "Starting ingest",

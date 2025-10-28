@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Generate JSON schemas from Pydantic models and consolidate in libs/schemas/.
+"""Generate JSON schemas from Pydantic models and consolidate in libs/generated_schemas/.
 
 This script:
 1. Finds all Pydantic schema models across the codebase
 2. Generates JSON schemas from them using Pydantic's model_json_schema()
-3. Writes them to src/llm_ensemble/libs/schemas/ with consistent naming
+3. Writes them to src/llm_ensemble/libs/generated_schemas/ with consistent naming
 4. Creates a schema index file for documentation
 
 Usage:
@@ -21,6 +21,7 @@ from typing import Any
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
+from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.ingest.schemas.judging_example import JudgingExample
 from llm_ensemble.ingest.schemas.query import Query
 from llm_ensemble.ingest.schemas.document import Document
@@ -34,7 +35,7 @@ from llm_ensemble.evaluate.schemas.evaluation_metrics import EvaluationMetrics
 
 
 # Schema definitions: (category, model_class, output_filename, description)
-# Categories determine subfolder structure in libs/schemas/
+# Categories determine subfolder structure in libs/generated_schemas/
 SCHEMAS = [
     # Data contract schemas (pipeline boundaries)
     ("data_contracts", JudgingExample, "judging-example.schema.json", "Normalized query-document pair (ingest → infer)"),
@@ -113,8 +114,8 @@ def generate_schema_index(schemas_dir: Path, schemas_by_category: dict) -> None:
 
 def main() -> None:
     """Main entry point."""
-    # Determine schemas directory
-    schemas_dir = project_root / "src" / "llm_ensemble" / "libs" / "schemas"
+    # Get schemas directory from PathManager
+    schemas_dir = PathManager.get_generated_schemas_dir()
 
     print(f"Generating schemas in {schemas_dir.relative_to(project_root)}\n")
 

@@ -4,24 +4,10 @@ Loads ingest-specific I/O YAML configurations from configs/io directory.
 """
 
 from __future__ import annotations
-from pathlib import Path
-from typing import Optional
 import yaml
 
 from llm_ensemble.ingest.schemas import IngestIOConfig
-
-
-def get_default_io_dir() -> Path:
-    """Get the default configs/io directory.
-
-    Returns:
-        Path to configs/io relative to project root
-    """
-    # Navigate from this file to project root, then to configs/io
-    # This file is at: src/llm_ensemble/ingest/config_loaders/ingest_io_config_loader.py
-    # Project root is 4 levels up
-    project_root = Path(__file__).parents[4]
-    return project_root / "configs" / "io"
+from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
 def load_ingest_io_config(io_format: str) -> IngestIOConfig:
@@ -38,14 +24,14 @@ def load_ingest_io_config(io_format: str) -> IngestIOConfig:
         ValueError: If YAML is invalid or missing required fields
 
     Example:
-        >>> config = load_ingest_io_config("llm_judge_ingest")
+        >>> config = load_ingest_io_config("llm_judge_challenge")
         >>> config.reader
-        'llm_judge_example_reader'
+        'llm_judge_sample_reader'
         >>> config.dataset_id
-        'llm-judge-2024'
+        'llm-judge-challenge-2024'
     """
-    # Get standard I/O config directory
-    io_dir = get_default_io_dir()
+    # Get standard I/O config directory using PathManager
+    io_dir = PathManager.get_io_configs_dir()
 
     # Build path to config file
     config_path = io_dir / f"{io_format}.yaml"

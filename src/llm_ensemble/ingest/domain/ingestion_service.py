@@ -43,7 +43,7 @@ class IngestionService:
         self,
         data_dir: Path,
         manifest_builder: ManifestBuilder,
-        output_path: Path,
+        run_dir: Path,
         limit: Optional[int] = None,
         on_sample: Optional[Callable[[JudgingSample], None]] = None,
     ) -> IngestManifest:
@@ -55,12 +55,12 @@ class IngestionService:
         3. Adding sample_count to the manifest builder
         4. Finalizing the manifest (sets end_time)
         5. Attaching manifest to each sample (Many-to-One relationship) to create JudgingSamples
-        6. Writing JudgingSamples via DatasetWriter port
+        6. Writing JudgingSamples via DatasetWriter port (writer determines output structure)
 
         Args:
             data_dir: Directory containing raw dataset files
             manifest_builder: Manifest builder for constructing final manifest
-            output_path: Path where dataset should be written
+            run_dir: Run directory where output should be written (writer determines file structure)
             limit: Optional maximum number of samples to process
             on_sample: Optional callback invoked for each sample (for logging/progress)
 
@@ -102,8 +102,8 @@ class IngestionService:
             for sample in judging_samples:
                 on_sample(sample)
 
-        # Write samples (each sample contains full manifest)
-        self.dataset_writer.write(judging_samples, output_path)
+        # Write samples (writer determines output file structure)
+        self.dataset_writer.write(judging_samples, run_dir)
 
         # Return finalized manifest
         return manifest

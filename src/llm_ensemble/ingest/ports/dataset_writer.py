@@ -14,18 +14,26 @@ from llm_ensemble.ingest.schemas import JudgingSample
 class DatasetWriter(ABC):
     """Abstract base class for writing judging samples.
 
+    Writers are responsible for determining output file structure within the run directory.
+    This allows different adapters to use their own naming conventions and formats.
+
     Example:
         >>> writer = FullyPopulatedNdjsonWriter()
-        >>> writer.write(samples, Path("output.ndjson"))
+        >>> writer.write(samples, Path("artifacts/runs/ingest/test/20250128_123456_dataset"))
     """
 
     @abstractmethod
-    def write(self, samples: List[JudgingSample], output_path: Path) -> None:
-        """Write judging samples to storage.
+    def write(self, samples: List[JudgingSample], run_dir: Path) -> None:
+        """Write judging samples to storage within the run directory.
+
+        The adapter determines the specific output file(s) structure.
+        Common patterns:
+        - Single file: run_dir / "normalized_dataset.ndjson"
+        - Multiple files: run_dir / "samples.ndjson", run_dir / "metadata.json"
 
         Args:
             samples: List of judging samples to write
-            output_path: Path to output file
+            run_dir: Run directory where output should be written
 
         Raises:
             IOError: If writing fails

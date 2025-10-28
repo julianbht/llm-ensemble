@@ -32,7 +32,7 @@ def run_ingest(
     official: bool = False,
     notes: Optional[str] = None,
     log_file: Optional[TextIO] = None,
-) -> dict:
+):
     """Normalize a raw IR dataset into judging samples with full provenance.
 
     Infrastructure orchestration that coordinates:
@@ -56,7 +56,6 @@ def run_ingest(
         Dictionary with run metadata including:
         - run_id: The run identifier
         - run_dir: Path to run directory
-        - output_file: Path to output dataset file
         - sample_count: Total number of samples processed
         - dataset_id: Dataset identifier
 
@@ -90,9 +89,6 @@ def run_ingest(
     manifest_builder.add("input_path", str(input_path))
     manifest_builder.add("limit", limit)
 
-    # Set up output file
-    output_file = run_dir / "normalized_dataset.ndjson"
-
     # Set up log file if requested and not already provided
     log_file_handle = log_file
     close_log_file = False
@@ -112,7 +108,6 @@ def run_ingest(
         limit=limit,
     )
     logger.info("Run directory", path=str(run_dir))
-    logger.info("Output file", path=str(output_file))
 
     # Instantiate adapters via factories
     sample_reader = get_sample_reader(io_config)
@@ -129,7 +124,7 @@ def run_ingest(
         manifest = service.ingest_dataset(
             data_dir=input_path,
             manifest_builder=manifest_builder,
-            output_path=output_file,
+            run_dir=run_dir,
             limit=limit,
         )
         sample_count = manifest.sample_count
@@ -151,11 +146,3 @@ def run_ingest(
     if close_log_file and log_file_handle is not None:
         logger.info("Logs saved", path=str(run_dir / "run.log"))
         log_file_handle.close()
-
-    return {
-        "run_id": run_id,
-        "run_dir": run_dir,
-        "output_file": output_file,
-        "sample_count": sample_count,
-        "dataset_id": io_config.dataset_id,
-    }

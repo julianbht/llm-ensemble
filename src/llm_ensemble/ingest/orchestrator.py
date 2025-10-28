@@ -5,7 +5,7 @@ This module handles infrastructure concerns for the ingestion pipeline:
 - Setting up run directories and logging
 - Building manifests with git info and execution parameters
 - Instantiating adapters via factories
-- Delegating business logic to domain service
+- Delegating business logic to domain service (which attaches manifest to samples)
 
 It is separated from the CLI entry point (ingest_cli.py) for testability.
 """
@@ -35,7 +35,7 @@ def run_ingest(
     log_file: Optional[TextIO] = None,
     config_overrides: Optional[dict] = None,
 ) -> dict:
-    """Normalize a raw IR dataset into a NormalizedDataset with full provenance.
+    """Normalize a raw IR dataset into judging samples with full provenance.
 
     Infrastructure orchestration that coordinates:
     - Loading I/O configuration
@@ -43,7 +43,7 @@ def run_ingest(
     - Setting up run directories and logging
     - Building manifest with git info and execution parameters
     - Instantiating adapters via factories
-    - Reading samples, building NormalizedDataset, and writing output
+    - Reading samples, attaching manifest to each sample, and writing output
 
     Args:
         io_format: I/O format config name (e.g., 'llm_judge_ingest')

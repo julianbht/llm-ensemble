@@ -9,16 +9,17 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Callable
 
-from llm_ensemble.ingest.schemas import JudgingSample, IngestManifest, NormalizedDataset
+from llm_ensemble.ingest.schemas import JudgingSample, IngestManifest
 from llm_ensemble.ingest.ports import SampleReader, DatasetWriter
 
 
 class IngestionService:
     """Domain service for coordinating data ingestion pipeline.
 
-    Pure business logic that orchestrates reading raw datasets, building
-    NormalizedDataset with manifest, and writing output. Depends only on
-    port abstractions, enabling complete independence from infrastructure concerns.
+    Pure business logic that orchestrates reading raw datasets, attaching
+    manifest to each sample (Many-to-One relationship), and writing output.
+    Depends only on port abstractions, enabling complete independence from
+    infrastructure concerns.
 
     Example:
         >>> reader = LlmJudgeSampleReader()
@@ -42,7 +43,7 @@ class IngestionService:
 
         Args:
             sample_reader: Port for reading raw datasets
-            dataset_writer: Port for writing complete NormalizedDataset
+            dataset_writer: Port for writing judging samples with manifest
         """
         self.sample_reader = sample_reader
         self.dataset_writer = dataset_writer
@@ -59,9 +60,9 @@ class IngestionService:
 
         Pure business logic that coordinates:
         1. Reading samples from raw dataset via SampleReader port
-        2. Updating manifest with sample_count
-        3. Building NormalizedDataset (samples + manifest)
-        4. Writing via DatasetWriter port
+        2. Attaching manifest to each sample (Many-to-One relationship)
+        3. Updating manifest with sample_count
+        4. Writing samples via DatasetWriter port
         5. Collecting statistics
 
         Args:
@@ -81,7 +82,19 @@ class IngestionService:
             Exception: If any step in the pipeline fails
         """
         # Read samples from raw dataset (SampleReader handles limit internally)
-        judging_samples = self.sample_reader.read(data_dir, limit=limit)
+        raw_samples = self.sample_reader.read(data_dir, limit=limit)
+
+        # Attach manifest to each sample (Many-to-One relationship)
+        judging_samples = [
+            JudgingSample(
+                query=sample.query,
+                document=sample.document,
+                gold_score=sample.gold_score,
+                manifest=manifest,
+            )
+            for sample in raw_samples
+        ]
+
         sample_count = len(judging_samples)
 
         # Invoke callback for each sample if provided (for logging/progress tracking)
@@ -92,14 +105,8 @@ class IngestionService:
         # Update manifest with actual sample count
         manifest.sample_count = sample_count
 
-        # Build NormalizedDataset (bundle samples with manifest)
-        normalized_dataset = NormalizedDataset(
-            judging_samples=judging_samples,
-            manifest=manifest,
-        )
-
-        # Write complete dataset
-        self.dataset_writer.write(normalized_dataset, output_path)
+        # Write samples with manifest
+        self.dataset_writer.write(judging_samples, manifest, output_path)
 
         # Return statistics
         return {

@@ -6,7 +6,7 @@ description: |
   Used by ingest CLI for dataset normalization.
 
 # Ingest-specific fields
-dataset_id: llm-judge-2024
+dataset_id: llm-judge-challenge-2024
 data_dir: data
 
 # Adapter module names (loaded dynamically)

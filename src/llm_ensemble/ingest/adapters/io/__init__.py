@@ -5,6 +5,6 @@ for different input and output formats.
 """
 
 from llm_ensemble.ingest.adapters.io.llm_judge_sample_reader import LlmJudgeSampleReader
-from llm_ensemble.ingest.adapters.io.ndjson_dataset_writer import FullyPopulatedNdjsonWriter
+from llm_ensemble.ingest.adapters.io.fully_populated_ndjson_writer import FullyPopulatedNdjsonWriter
 
 __all__ = ["LlmJudgeSampleReader", "FullyPopulatedNdjsonWriter"]

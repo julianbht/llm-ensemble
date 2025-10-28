@@ -1,0 +1,146 @@
+{
+  "description": "LLM judge output (infer → aggregate)",
+  "properties": {
+    "model_id": {
+      "description": "Model identifier (e.g., 'phi3-mini')",
+      "title": "Model Id",
+      "type": "string"
+    },
+    "provider": {
+      "description": "Provider name (e.g., 'hf', 'ollama')",
+      "title": "Provider",
+      "type": "string"
+    },
+    "version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Model version if available",
+      "title": "Version"
+    },
+    "query_id": {
+      "description": "Query ID from input",
+      "title": "Query Id",
+      "type": "string"
+    },
+    "docid": {
+      "description": "Document ID from input",
+      "title": "Docid",
+      "type": "string"
+    },
+    "label": {
+      "anyOf": [
+        {
+          "enum": [
+            0,
+            1,
+            2
+          ],
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Relevance label: 2 = highly relevant, very helpful for this query; 1 = relevant, may be partly helpful; 0 = not relevant, should never be shown for this query. None = parsing failed or model did not produce valid output.",
+      "title": "Label"
+    },
+    "score": {
+      "anyOf": [
+        {
+          "maximum": 2.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Relevance score [0-2]",
+      "title": "Score"
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Model self-reported or derived uncertainty",
+      "title": "Confidence"
+    },
+    "rationale": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Model's explanation for its judgement",
+      "title": "Rationale"
+    },
+    "raw_text": {
+      "description": "Unparsed model output for debugging",
+      "title": "Raw Text",
+      "type": "string"
+    },
+    "latency_ms": {
+      "description": "Inference time in milliseconds",
+      "title": "Latency Ms",
+      "type": "number"
+    },
+    "retries": {
+      "default": 0,
+      "description": "Number of retries attempted",
+      "title": "Retries",
+      "type": "integer"
+    },
+    "cost_estimate": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Estimated cost in USD",
+      "title": "Cost Estimate"
+    },
+    "warnings": {
+      "description": "Parser warnings, fallbacks, etc.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "model_id",
+    "provider",
+    "query_id",
+    "docid",
+    "raw_text",
+    "latency_ms"
+  ],
+  "title": "ModelJudgement",
+  "type": "object"
+}

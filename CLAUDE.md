@@ -4,34 +4,108 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**LLM Ensemble** is a CLI-first research system for evaluating LLM-as-judge ensembles on information retrieval tasks. The project follows a 4-stage pipeline architecture with shared libraries. I'm trying to develop an LLM relevance judging system using Python and Ollama / Hugginface Inference Endpoints, for my bachelor thesis. 
-It should be able to read in an easily exchangeable dataset. It should also be able to switch between models. 
-Specifically, I am trying to build an LLM-Ensemble which produces relevance judgements for the LLM Judge Challenge dataset by Rahmani et. al. 
-I am trying to use as many diverse small models as possible and aggregate their judgement with some function which decides on the final judgement.
-Keep in mind that the system will later need to be fully dockerized. Keep in mind 12-factor app design.
+**LLM Ensemble** is a CLI-first LLM relevance judging system for information retrieval tasks, built with Python for bachelor thesis research. It supports OpenRouter, Ollama, and HuggingFace Inference Endpoints, with easy swapping of datasets, models, and prompts via configuration files.
+
+The project follows a 4-stage pipeline architecture with shared libraries and hexagonal architecture principles.
 
 ### Four Core CLIs
 
-1. **ingest** — Normalize raw IR datasets into `JudgingExample` records (NDJSON/Parquet)
-2. **infer** — Run multiple LLM judges over samples, writing per-model judgements
-3. **aggregate** — Combine judgements using ensemble strategies (e.g., weighted majority vote)
-4. **evaluate** — Compute metrics and generate HTML reports with reproducibility footers
+1. **ingest** — Normalize raw IR datasets into `JudgingExample` records
+2. **infer** — Run LLM judges over samples, writing per-model judgements
+3. **aggregate** — Combine judgements using ensemble strategies (weighted majority vote, etc.)
+4. **evaluate** — Compute metrics and generate HTML reports
 
-All artifacts are written to `artifacts/runs/<cli_name>/<run_id>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
+All artifacts are managed by the **run manager** (`libs/runtime/run_manager.py`), which creates run directories, generates IDs, and writes manifests. Outputs are organized under `artifacts/runs/<cli_name>/<run_id>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
 
 ## Architecture: Clean Architecture / Ports & Adapters
 
-The codebase separates **domain logic** from **infrastructure**:
+The codebase follows hexagonal architecture with clear separation of concerns. Using the **infer** CLI as the reference implementation:
 
-- **Domain layer** (`domain/`) — Pure Python logic with no I/O. Works with data structures (dicts, DataFrames, Pydantic models). Easy to test and reason about.
-  - Example: `ingest/domain/models.py` defines `Query`, `Document`, `Relevance`, and `JudgingExample` schemas
+### Layers
 
-- **Adapters layer** (`adapters/`) — Handles I/O, APIs, file formats, retries, HTTP clients
-  - Example: `ingest/adapters/llm_judge.py` reads TSV/JSONL files and yields domain models
+1. **CLI Layer** (e.g., `infer_cli.py`)
+   - Typer-based entrypoints that parse arguments and delegate to orchestrators
+   - No business logic - pure wiring
 
-- **CLI layer** (`cli/`) — Typer-based entrypoints that wire adapters to domain logic
+2. **Orchestrator Layer** (e.g., `infer/orchestrator.py`)
+   - Infrastructure concerns: run management, logging, manifests
+   - Loads configurations, instantiates adapters via factories
+   - Delegates business logic to domain services
 
-**Benefits:** Test logic without APIs/GPUs, swap providers easily, refactor layers independently.
+3. **Domain Layer** (e.g., `infer/domain/inference_service.py`)
+   - Pure business logic with no I/O dependencies
+   - Depends only on port abstractions (ABCs)
+   - Coordinates the core workflow (read → process → write)
+
+4. **Ports Layer** (e.g., `infer/ports/`)
+   - Abstract base classes defining contracts for infrastructure
+   - Examples: `LLMProvider`, `ExampleReader`, `JudgementWriter`, `PromptBuilder`, `ResponseParser`
+
+5. **Adapters Layer** (e.g., `infer/adapters/`)
+   - Concrete implementations of ports
+   - Handle I/O, APIs, file formats, retries, HTTP clients
+   - Organized by concern: `io/`, `providers/`, `prompts/`, `parsers/`
+   - Instantiated via factory functions (e.g., `get_provider()`, `get_example_reader()`)
+
+### Example: Infer CLI Flow
+
+```
+CLI (infer_cli.py)
+  ↓
+Orchestrator (orchestrator.py) - loads configs, creates run dir, sets up logging
+  ↓
+Domain Service (InferenceService) - coordinates: reader.read() → provider.infer() → writer.write()
+  ↓
+Adapters - concrete implementations:
+  • NdjsonExampleReader (io/)
+  • OpenRouterAdapter (providers/)
+```
+
+**Benefits:** Test domain logic without APIs/GPUs, swap providers via config, refactor layers independently.
+
+### Factory Pattern
+
+Adapters are instantiated via factory functions, not directly. This allows configuration-driven adapter selection and makes testing easier.
+
+**Factory locations:**
+- `infer/adapters/provider_factory.py` — `get_provider()` instantiates LLM providers based on `model_config.provider`
+- `infer/adapters/io_factory.py` — `get_example_reader()` and `get_judgement_writer()` based on I/O config
+- `infer/adapters/prompt_builder_factory.py` — `get_prompt_builder()` based on prompt config
+- `infer/adapters/response_parser_factory.py` — `get_response_parser()` based on parser config
+
+**Pattern:**
+```python
+# Orchestrator loads config
+model_config = load_model_config(model_id)
+
+# Factory instantiates the right adapter
+provider = get_provider(model_config)  # Returns OpenRouterAdapter, OllamaAdapter, or HFAdapter
+
+# Domain service uses only the port abstraction
+service = InferenceService(provider=provider, ...)  # provider: LLMProvider (ABC)
+```
+
+**When adding new adapters:** Always update the corresponding factory function to handle the new adapter type.
+
+## Design Principles
+
+### Explicit Configuration Over Implicit Defaults
+
+**Minimize defaults to ensure users are aware of all behavior.**
+
+- **All adapters** must be explicitly specified via configuration files (no hidden fallbacks, "config first")
+- **All CLI behavior** should be visible through flags or configs
+- **Configuration files bundle related concerns** (e.g., prompts bundle builder + parser, I/O configs bundle reader + writer)
+- **Errors over silent fallbacks** - if config is missing or invalid, raise clear errors explaining what's needed
+- **Verbosity confronts users with choices** - this helps them understand how the system works and what they can adjust
+
+**Examples:**
+- ✅ `--model gpt-oss-20b` (loads `configs/models/gpt-oss-20b.yaml` which explicitly specifies `provider: openrouter`)
+- ✅ `--io ndjson` (loads `configs/io/ndjson.yaml` which explicitly specifies reader and writer adapters)
+- ✅ Missing `provider` field in model config → **ValidationError** (not silent default)
+- ❌ Don't silently default to a specific provider or I/O format without user knowledge
+
+**Rationale:** Explicit configuration makes the system's behavior transparent and predictable. Users understand what's happening and can adjust behavior by modifying configs, not by discovering hidden defaults through trial and error.
 
 ## Development Commands
 
@@ -39,11 +113,13 @@ The codebase separates **domain logic** from **infrastructure**:
 
 ```bash
 # Setup
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate  # or .venv\Scripts\activate on Windows
-pip install -e .
 
-# Install development dependencies (pytest, coverage tools)
+# Install (use Makefile for convenience)
+make install-dev
+
+# Or manually:
 pip install -e ".[dev]"
 ```
 
@@ -51,107 +127,159 @@ pip install -e ".[dev]"
 
 ```bash
 # Ingest - Normalize raw datasets into JudgingExamples
-ingest --adapter llm-judge --data-dir ./data --limit 100
-# Output: artifacts/runs/ingest/<run_id>/samples.ndjson
+# Uses config file: configs/io/llm_judge_ingest.yaml
+ingest --io llm_judge_ingest --limit 100
+
+# Override data directory if needed
+ingest --io llm_judge_ingest --override data_dir=/custom/path --limit 100
 
 # Infer - Run LLM judge inference
-infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_id>/samples.ndjson
-# Output: artifacts/runs/infer/<run_id>/judgements.ndjson
+# Uses configs: configs/models/gpt-oss-20b.yaml, configs/prompts/thomas-et-al-prompt.yaml, configs/io/ndjson.yaml
+infer --model gpt-oss-20b --prompt thomas-et-al-prompt --io ndjson --input artifacts/runs/ingest/<run_id>/samples.ndjson
+
+# Aggregate - Combine model judgements using ensemble strategies
+# Uses configs: configs/ensembles/weighted_majority.yaml, configs/io/ndjson.yaml
+aggregate --ensemble weighted_majority --io ndjson --input artifacts/runs/infer/<run_id>/judgements.ndjson
+
+# Evaluate - Compute metrics and generate reports
+# Uses config: configs/io/ndjson.yaml
+evaluate --io ndjson --input artifacts/runs/aggregate/<run_id>/ensemble.ndjson
 
 # Alternative: run via python module
-python -m llm_ensemble.ingest_cli --help
-python -m llm_ensemble.infer_cli --help
+python3 -m llm_ensemble.ingest_cli --help
+python3 -m llm_ensemble.infer_cli --help
+python3 -m llm_ensemble.aggregate_cli --help
+python3 -m llm_ensemble.evaluate_cli --help
 ```
-
-**Note:** It is planned to add a makefile later for convenience. 
 
 ### Testing
 
-The project uses pytest for testing. Tests are organized by CLI module (e.g., `src/llm_ensemble/ingest/tests/`).
+The project uses pytest for testing. Tests are organized in the `tests/` directory, mirroring the CLI structure.
 
 ```bash
-# Run all tests
-pytest
+# Using Makefile (recommended)
+make test              # Run all tests
+make test-ingest       # Run ingest tests only
+make test-infer        # Run infer tests only
+make test-schema       # Run schema validation tests only
 
-# Run tests for a specific CLI module
-pytest src/llm_ensemble/ingest/tests/
+# Using pytest directly
+pytest                 # Run all tests
+pytest tests/ingest/   # Run specific module
+pytest tests/infer/test_inference_service.py  # Run single test file
+pytest tests/infer/test_inference_service.py::test_inference_pipeline  # Run single test
+pytest -v              # Verbose output
+pytest -v -s           # Show print statements
+pytest --cov=llm_ensemble  # Coverage report
 
-# Run a specific test file
-pytest src/llm_ensemble/ingest/tests/test_llm_judge_ingest.py
-
-# Run a specific test class or function
-pytest src/llm_ensemble/ingest/tests/test_ingest_cli.py::TestIngestCLI::test_basic_ingest_to_stdout
-
-# Run with verbose output
-pytest -v
-
-# Show print statements (useful for debugging)
-pytest -v -s
-
-# Run with coverage reporting (requires pytest-cov)
-pip install pytest-cov
-pytest --cov=llm_ensemble
+# Using markers
+pytest -m unit         # Run only unit tests (fast, isolated)
+pytest -m integration  # Run integration tests (file I/O, adapters)
+pytest -m "not slow"   # Skip slow tests
+pytest -m requires_api # Run tests requiring API credentials
 ```
 
 **Test Structure:**
 - **Domain/Adapter tests** — Test pure logic and I/O adapters in isolation (e.g., `test_llm_judge_ingest.py`)
 - **CLI integration tests** — Test end-to-end CLI behavior (e.g., `test_ingest_cli.py`)
 
-**Note:** pytest is configured in `pyproject.toml` with `-q` (quiet mode) by default.
+**Test Markers:**
+- `@pytest.mark.unit` — Fast, isolated tests with no I/O
+- `@pytest.mark.integration` — Tests using files or adapters
+- `@pytest.mark.slow` — Long-running tests or API calls
+- `@pytest.mark.requires_api` — Tests requiring API credentials
+
+**Configuration:** Tests are discovered from `tests/` directory. pytest is configured in `pyproject.toml` with `-q` (quiet mode) by default.
+
+### Schema Generation
+
+The project uses Pydantic models extensively. To generate JSON schemas for documentation and validation:
+
+```bash
+# Generate JSON schemas from Pydantic models
+make schemas
+
+# Or directly:
+python3 scripts/generate_schemas.py
+```
+
+**Output:** JSON schemas are generated in `src/llm_ensemble/libs/generated_schemas/` organized by category:
+- `data_contracts/` — Pipeline data flow (JudgingExample, ModelJudgement, etc.)
+- `configurations/` — Config file schemas (ModelConfig, PromptConfig, IOConfig)
+- `internal/` — Domain models for documentation
+
+**When to run:** After modifying any Pydantic schema definitions or when setting up the project.
+
+### Environment Variables
+
+The project uses environment variables for sensitive credentials and infrastructure configuration:
+
+```bash
+# Create .env file in project root (gitignored)
+OPENROUTER_API_KEY=your_openrouter_key      # For OpenRouter models
+HF_TOKEN=your_huggingface_token             # For HuggingFace models
+OLLAMA_BASE_URL=http://localhost:11434      # For local Ollama (optional)
+```
+
+The project uses `python-dotenv` to automatically load `.env` files. Never commit credentials to git.
 
 ## Data Contracts
 
-### Canonical Dataset Record (JudgingExample)
-- `dataset`: Dataset identifier (e.g., "llm-judge-2024")
-- `query_id`, `query_text`: The information need
-- `docid`, `doc`: Candidate document to judge
-- `gold_relevance`: Ground truth label (for calibration/eval splits)
+The pipeline uses Pydantic models to enforce schemas at CLI boundaries, ensuring type safety and validation across the entire workflow.
 
-### Canonical Model Judgement
-- `model_id`, `provider`, `version`: Model identity
-- `label`: Predicted relevance (0, 1, 2, or null if parsing failed)
-- `score`: Relevance score [0-2 scale]
-- `confidence`: Model self-reported confidence (optional)
-- `rationale`, `raw_text`: Explainability
-- `latency_ms`, `retries`, `cost_estimate`: Observability
-- `warnings`: Parser warnings, fallbacks
+### JudgingExample (ingest → infer)
 
-### Ensemble Output
-- `final_label`, `final_confidence`: Aggregated decision
-- `per_model_votes`: List of individual judgements
-- `aggregation_strategy`: Name + params (e.g., "weighted_majority")
-- `warnings`: Ties, low agreement, parser fallbacks
+Normalized query-document pairs with ground truth labels. Created by `ingest` CLI, consumed by `infer` CLI.
+
+**Schema:** `ingest/schemas/judging_example.py` → `JudgingExample`
+**Key fields:** `dataset`, `query_id`, `query_text`, `docid`, `doc`, `gold_relevance`
+**Purpose:** Standardize diverse IR datasets into a single format for downstream processing
+
+### ModelJudgement (infer → aggregate)
+
+LLM-generated relevance assessments with observability metadata. Created by `infer` CLI, consumed by `aggregate` CLI.
+
+**Schema:** `infer/schemas/model_judgement_schema.py` → `ModelJudgement`
+**Key fields:**
+- **Identity:** `model_id`, `provider`, `version`
+- **Judgement:** `label` (0/1/2 or null), `score`, `confidence`
+- **Explainability:** `rationale`, `raw_text`
+- **Observability:** `latency_ms`, `retries`, `cost_estimate`, `warnings`
+
+**Purpose:** Track both judgements and metadata for analysis, debugging, and cost estimation
+
+### EnsembleOutput (aggregate → evaluate)
+
+Aggregated decisions from multiple models with voting metadata.
+
+**Schema:** TBD in `aggregate/schemas/` (planned)
+**Expected fields:** `final_label`, `final_confidence`, `per_model_votes`, `aggregation_strategy`, `warnings`
+**Purpose:** Combine multiple model judgements into consensus decisions
 
 ## Configuration
 
-### Models (`configs/models/*.yaml`)
-```yaml
-model_id: tinyllama
-provider: ollama
-context_window: 2048
-default_params:
-  temperature: 0.0
-  max_tokens: 256
-```
+All system behavior is controlled via YAML configuration files in `configs/`. CLI flags reference config names (not paths), promoting a "config-first" design.
 
-### Datasets (`configs/datasets/*.yaml`)
-```yaml
-name: llm_judge_challenge
-splits:
-  train: "data/llm_judge_challenge/train.jsonl"
-  test: "data/llm_judge_challenge/test.jsonl"
-label_space: [relevant, partially, irrelevant]
-```
+**Configuration Types:**
 
-### Ensembles (`configs/ensembles/*.yaml`)
-```yaml
-strategy: weighted_majority
-params:
-  default_weight: 1.0
-  per_model_weights:
-    phi3-mini: 1.0
-    tinyllama: 1.0
-```
+- **Models** (`configs/models/*.yaml`) — Provider, context window, default parameters
+  - Example: `--model gpt-oss-20b` loads `configs/models/gpt-oss-20b.yaml`
+  - Schema: `infer/schemas/model_config_schema.py`
+
+- **Prompts** (`configs/prompts/*.yaml`) — Template file, variables, bundled builder + parser
+  - Example: `--prompt thomas-et-al-prompt` loads `configs/prompts/thomas-et-al-prompt.yaml`
+  - Schema: `infer/schemas/prompt_config_schema.py`
+
+- **I/O Formats** (`configs/io/*.yaml`) — Bundled reader + writer adapters, dataset paths
+  - Example: `--io ndjson` loads `configs/io/ndjson.yaml`
+  - For ingest: `--io llm_judge_ingest` loads `configs/io/llm_judge_ingest.yaml` (includes dataset adapter and paths)
+  - Schema: `infer/schemas/io_config_schema.py`
+  - All CLIs now use the `--io` flag for consistent I/O configuration
+
+- **Ensembles** (`configs/ensembles/*.yaml`) — Strategy, model weights
+  - Example: `--ensemble weighted_majority` loads `configs/ensembles/weighted_majority.yaml` (planned)
+
+**Config Overrides:** All configs support runtime overrides via `--override key=value` for experimentation without modifying files.
 
 ## Project Structure
 
@@ -164,32 +292,32 @@ src/llm_ensemble/
 ├── ingest/          # Ingest logic
 │   ├── domain/      # Pure logic: models, validation
 │   ├── adapters/    # I/O: TSV/JSONL/HF loaders
-│   └── tests/       # Unit tests
 ├── infer/           # Infer logic
+│   ├── domain/      # Pure logic: inference service
+│   ├── ports/       # Abstract interfaces (ABCs)
+│   ├── adapters/    # Concrete implementations
+│   │   ├── io/      # NDJSON reader/writer
+│   │   └── providers/ # OpenRouter, Ollama, HF
 ├── aggregate/       # Aggregate logic
 ├── evaluate/        # Evaluate logic
 └── libs/            # Shared utilities
+    ├── config/      # Config loaders (dataset, model, etc.)
     ├── io/          # Parquet readers/writers
     ├── logging/     # JSON logger
     ├── runtime/     # Environment config
     └── utils/       # Chunking, etc.
 ```
 
-## Reproducibility Requirements
-
-All reports and artifacts must include:
-- **Git SHA** — Exact code version
-- **run_id** — Unique run identifier
-- **Dataset checksum** — Data integrity
-- **Model registry snapshot path** — Model versions used
-
-Reports live at `artifacts/runs/evaluate/{run_id}/report.html` for thesis appendices.
-
 ## Important Notes
 
 - **12-factor friendly:** CLIs read from files, write to `artifacts/runs/`, configurable via flags/env
 - **Environment variables:** For secrets (API keys) and infrastructure (endpoints)
-- **CLI flags:** All task parameters (model, input, adapter) are explicit via required flags
+- **CLI flags:** All task parameters (model, input, I/O format) are explicit via required flags
+- **Config files:** I/O configs bundle reader/writer adapters and dataset paths (can be overridden via `--override`)
+- **Unified I/O:** All CLIs use the `--io` flag for consistent I/O configuration across the pipeline
 - **No hidden state:** Everything persisted to disk with manifests tracking git SHA and full metadata
 - **Run management:** All outputs organized by CLI under `artifacts/runs/{ingest,infer,aggregate,evaluate}/`
 - Shared libs in `src/llm_ensemble/libs/` avoid duplication across the four CLIs
+- Keep in mind that the system will later need to be fully dockerized.
+- Keep in mind 12-factor app design.
+- Follow common software design principles, such as seperation of concerns, to produce clean reusable code.

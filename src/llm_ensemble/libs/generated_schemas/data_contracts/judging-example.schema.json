@@ -1,0 +1,40 @@
+{
+  "description": "Normalized query-document pair (ingest → infer)",
+  "properties": {
+    "dataset": {
+      "const": "llm-judge-2024",
+      "title": "Dataset",
+      "type": "string"
+    },
+    "query_id": {
+      "title": "Query Id",
+      "type": "string"
+    },
+    "query_text": {
+      "title": "Query Text",
+      "type": "string"
+    },
+    "docid": {
+      "title": "Docid",
+      "type": "string"
+    },
+    "doc": {
+      "title": "Doc",
+      "type": "string"
+    },
+    "gold_relevance": {
+      "title": "Gold Relevance",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "dataset",
+    "query_id",
+    "query_text",
+    "docid",
+    "doc",
+    "gold_relevance"
+  ],
+  "title": "JudgingExample",
+  "type": "object"
+}

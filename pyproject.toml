@@ -13,13 +13,14 @@ dependencies = [
     "pyyaml>=6.0",
     "jinja2>=3.1",
     "openai>=1.0",
-    "structlog>=24.1",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=4.0",
+    "jsonschema>=4.20",
 ]
 
 [project.scripts]
@@ -32,3 +33,14 @@ exclude = ["**/tests*"]  # optional
 
 [tool.pytest.ini_options]
 addopts = "-q"
+markers = [
+    "unit: Unit tests (fast, isolated, no I/O)",
+    "integration: Integration tests (may use files, adapters)",
+    "slow: Slow tests (API calls, long running)",
+    "requires_api: Tests requiring API credentials",
+]
+# Test discovery
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

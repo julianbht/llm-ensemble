@@ -1,0 +1,46 @@
+{
+  "description": "Prompt configuration (configs/prompts/*.yaml)",
+  "properties": {
+    "name": {
+      "description": "Prompt identifier",
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Human-readable description of the prompt",
+      "title": "Description"
+    },
+    "prompt_template": {
+      "description": "Template filename (without .jinja extension)",
+      "title": "Prompt Template",
+      "type": "string"
+    },
+    "prompt_builder": {
+      "description": "Name of builder module in prompt_builders/",
+      "title": "Prompt Builder",
+      "type": "string"
+    },
+    "response_parser": {
+      "description": "Name of parser module in response_parsers/",
+      "title": "Response Parser",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "prompt_template",
+    "prompt_builder",
+    "response_parser"
+  ],
+  "title": "PromptConfig",
+  "type": "object"
+}

@@ -1,0 +1,155 @@
+{
+  "$defs": {
+    "ClassMetrics": {
+      "description": "Per-class metrics for a single relevance label.",
+      "properties": {
+        "precision": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Precision score",
+          "title": "Precision"
+        },
+        "recall": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Recall score",
+          "title": "Recall"
+        },
+        "f1": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "F1 score",
+          "title": "F1"
+        },
+        "support": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Number of samples in this class",
+          "title": "Support"
+        }
+      },
+      "title": "ClassMetrics",
+      "type": "object"
+    }
+  },
+  "description": "Evaluation metrics output (evaluate → final)",
+  "properties": {
+    "accuracy": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Overall accuracy",
+      "title": "Accuracy"
+    },
+    "macro_f1": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Macro-averaged F1 score",
+      "title": "Macro F1"
+    },
+    "micro_f1": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Micro-averaged F1 score",
+      "title": "Micro F1"
+    },
+    "per_class_metrics": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/ClassMetrics"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Metrics broken down by class (0, 1, 2)",
+      "title": "Per Class Metrics"
+    },
+    "confusion_matrix": {
+      "anyOf": [
+        {
+          "items": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "3x3 confusion matrix for relevance labels [0, 1, 2]",
+      "title": "Confusion Matrix"
+    }
+  },
+  "title": "EvaluationMetrics",
+  "type": "object"
+}

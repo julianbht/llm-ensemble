@@ -18,14 +18,10 @@ from llm_ensemble.ingest.schemas import IngestManifest
 from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.ingest.adapters import get_sample_reader, get_dataset_writer
 from llm_ensemble.ingest.config_loaders import load_ingest_io_config
-from llm_ensemble.libs.runtime.run_manager import (
-    create_run,
-    finalize_manifest,
+from llm_ensemble.libs.runtime.manifest_manager import (
+    initialize_manifest,
     write_standalone_manifest,
-    get_run_dir,
 )
-from llm_ensemble.libs.schemas.manifest import Manifest
-from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging.logger import get_logger
 from llm_ensemble.libs.utils.config_overrides import apply_overrides
 
@@ -86,38 +82,24 @@ def run_ingest(
     if not actual_data_dir.exists():
         raise FileNotFoundError(f"Data directory does not exist: {actual_data_dir}")
 
-    # Create run with base manifest and directory (or use provided run_id)
-    if run_id is None:
-        base_manifest, run_dir = create_run(
-            cli_name="ingest",
-            name_hint=io_config.dataset_id,
-            official=official,
-            notes=notes,
-        )
-        run_id = base_manifest.run_id
-    else:
-        # User provided custom run_id - need to create directory and manifest manually
-        run_dir = get_run_dir(run_id, cli_name="ingest", official=official)
-        run_dir.mkdir(parents=True, exist_ok=True)
-        git_info = get_git_info()
-        base_manifest = Manifest(
-            run_id=run_id,
-            run_type="official" if official else "test",
-            cli_name="ingest",
-            start_time=datetime.now(),
-            notes=notes,
-            **git_info,
-        )
-
-    # Build IngestManifest by extending base manifest with ingest-specific fields
-    manifest = IngestManifest(
-        **base_manifest.model_dump(),
-        io_config_name=io_format,
-        io_config=io_config,
-        limit=limit,
-        config_overrides=config_overrides or {},
-        sample_count=None,  # Will be set by service after reading samples
+    # Initialize manifest builder (creates run_id and directory)
+    manifest_builder = initialize_manifest(
+        cli_name="ingest",
+        name_hint=io_config.dataset_id,
+        run_id=run_id,  # None = auto-generate, otherwise use provided
+        official=official,
+        notes=notes,
     )
+
+    # Extract run info for logging and paths
+    run_id = manifest_builder.run_id
+    run_dir = manifest_builder.run_dir
+
+    # Add ingest-specific fields to manifest
+    manifest_builder.add("io_config_name", io_format)
+    manifest_builder.add("io_config", io_config)
+    manifest_builder.add("limit", limit)
+    manifest_builder.add("config_overrides", config_overrides or {})
 
     # Set up output file
     output_file = run_dir / "normalized_dataset.ndjson"

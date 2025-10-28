@@ -1,7 +1,7 @@
 """IngestManifest schema - extends base Manifest with ingest-specific execution parameters."""
 
 from __future__ import annotations
-from typing import Any, Optional
+from typing import Optional
 from pydantic import Field
 
 from llm_ensemble.libs.schemas.manifest import Manifest
@@ -17,22 +17,22 @@ class IngestManifest(Manifest):
 
     io_config_name: str = Field(
         ...,
-        description="Name of the I/O config used (e.g., 'llm_judge_ingest')"
+        description="Name of the I/O config used (e.g., 'llm_judge_challenge')"
     )
 
     io_config: IngestIOConfig = Field(
         ...,
-        description="Resolved I/O configuration after applying overrides"
+        description="I/O configuration used for this run"
+    )
+
+    input_path: str = Field(
+        ...,
+        description="Path to input directory containing raw dataset files"
     )
 
     limit: Optional[int] = Field(
         default=None,
         description="Maximum number of samples to process (None = no limit)"
-    )
-
-    config_overrides: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Config overrides applied via --override flags"
     )
 
     sample_count: Optional[int] = Field(

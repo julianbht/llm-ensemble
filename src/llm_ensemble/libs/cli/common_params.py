@@ -6,11 +6,22 @@ allowing consistent parameter definitions across ingest, infer, aggregate, and e
 With Annotated pattern, defaults go in function signatures, not in typer.Option().
 """
 
+from pathlib import Path
 from typing import Annotated, Optional
 import typer
 
 # Common parameters shared by all CLIs
 # Note: Defaults are specified in function signatures, not here
+InputPath = Annotated[
+    Path,
+    typer.Option(
+        "--input",
+        "-i",
+        help="Input path (directory for ingest, file for infer/aggregate/evaluate)",
+        exists=True,
+    )
+]
+
 IoFormat = Annotated[
     str,
     typer.Option(

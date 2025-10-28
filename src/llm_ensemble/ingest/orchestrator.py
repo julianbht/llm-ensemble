@@ -21,10 +21,10 @@ from llm_ensemble.libs.runtime.manifest_manager import (
     write_standalone_manifest,
 )
 from llm_ensemble.libs.logging.logger import get_logger
-from llm_ensemble.libs.utils.config_overrides import apply_overrides
 
 
 def run_ingest(
+    input_path: Path,
     io_format: str,
     run_id: Optional[str] = None,
     limit: Optional[int] = None,
@@ -32,27 +32,25 @@ def run_ingest(
     official: bool = False,
     notes: Optional[str] = None,
     log_file: Optional[TextIO] = None,
-    config_overrides: Optional[dict] = None,
 ) -> dict:
     """Normalize a raw IR dataset into judging samples with full provenance.
 
     Infrastructure orchestration that coordinates:
     - Loading I/O configuration
-    - Applying config overrides
     - Setting up run directories and logging
     - Building manifest with git info and execution parameters
     - Instantiating adapters via factories
     - Reading samples, attaching manifest to each sample, and writing output
 
     Args:
-        io_format: I/O format config name (e.g., 'llm_judge_ingest')
+        input_path: Path to input directory containing raw dataset files
+        io_format: I/O format config name (e.g., 'llm_judge_challenge')
         run_id: Custom run ID (auto-generates if not provided)
         limit: Process at most N samples
         save_logs: Save logs to run.log file in run directory
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
         log_file: Optional file handle for logging (used when save_logs=True)
-        config_overrides: Optional dict of config overrides (e.g., {"data_dir": "/custom/path"})
 
     Returns:
         Dictionary with run metadata including:
@@ -63,22 +61,15 @@ def run_ingest(
         - dataset_id: Dataset identifier
 
     Raises:
-        FileNotFoundError: If I/O config not found or data directory doesn't exist
+        FileNotFoundError: If I/O config not found or input path doesn't exist
         ValueError: If adapter is not recognized or dataset files are malformed
     """
-    # Load I/O config (includes dataset_id and data_dir)
+    # Load I/O config (includes dataset_id and adapter specifications)
     io_config = load_ingest_io_config(io_format)
 
-    # Apply overrides if provided
-    if config_overrides:
-        io_config = apply_overrides(io_config, config_overrides)
-
-    # Use data directory from config
-    actual_data_dir = io_config.data_dir
-
-    # Verify data directory exists
-    if not actual_data_dir.exists():
-        raise FileNotFoundError(f"Data directory does not exist: {actual_data_dir}")
+    # Verify input directory exists
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input directory does not exist: {input_path}")
 
     # Initialize manifest builder (creates run_id and directory)
     manifest_builder = initialize_manifest(
@@ -96,8 +87,8 @@ def run_ingest(
     # Add ingest-specific fields to manifest builder
     manifest_builder.add("io_config_name", io_format)
     manifest_builder.add("io_config", io_config)
+    manifest_builder.add("input_path", str(input_path))
     manifest_builder.add("limit", limit)
-    manifest_builder.add("config_overrides", config_overrides or {})
 
     # Set up output file
     output_file = run_dir / "normalized_dataset.ndjson"
@@ -117,7 +108,7 @@ def run_ingest(
         "Starting ingest",
         dataset_id=io_config.dataset_id,
         io_format=io_config.io_format,
-        data_dir=str(actual_data_dir),
+        input_path=str(input_path),
         limit=limit,
     )
     logger.info("Run directory", path=str(run_dir))
@@ -136,7 +127,7 @@ def run_ingest(
     # Run ingestion pipeline (pure business logic)
     try:
         manifest = service.ingest_dataset(
-            data_dir=actual_data_dir,
+            data_dir=input_path,
             manifest_builder=manifest_builder,
             output_path=output_file,
             limit=limit,

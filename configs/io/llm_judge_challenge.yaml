@@ -7,7 +7,6 @@ description: |
 
 # Ingest-specific fields
 dataset_id: llm-judge-challenge-2024
-data_dir: data
 
 # Adapter module names (loaded dynamically)
 reader: llm_judge_sample_reader

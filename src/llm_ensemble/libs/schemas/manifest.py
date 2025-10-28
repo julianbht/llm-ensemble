@@ -3,7 +3,6 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Literal, Optional
-from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
 
@@ -16,9 +15,9 @@ class Manifest(BaseModel):
     Fields in this class are automatically populated by the orchestrator/run manager.
     """
 
-    run_id: UUID = Field(
-        default_factory=uuid4,
-        description="Unique identifier for this run (auto-generated)"
+    run_id: str = Field(
+        ...,
+        description="Unique identifier for this run (timestamp-based, e.g., '20250115_143022_gpt-oss-20b')"
     )
 
     run_type: Literal["official", "test"] = Field(
@@ -66,5 +65,4 @@ class Manifest(BaseModel):
         """Pydantic config."""
         json_encoders = {
             datetime: lambda v: v.isoformat(),
-            UUID: lambda v: str(v),
         }

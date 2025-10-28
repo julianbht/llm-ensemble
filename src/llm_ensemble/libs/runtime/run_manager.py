@@ -9,7 +9,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+from pydantic import BaseModel
+
 from llm_ensemble.libs.runtime.git_utils import get_git_info
+from llm_ensemble.libs.schemas.manifest import Manifest
 
 
 def create_run_id(name_hint: str) -> str:
@@ -31,6 +34,74 @@ def create_run_id(name_hint: str) -> str:
     # Sanitize name_hint (remove special chars, limit length)
     safe_hint = "".join(c for c in name_hint if c.isalnum() or c in "-_")[:30]
     return f"{timestamp}_{safe_hint}"
+
+
+def create_run(
+    cli_name: str,
+    name_hint: str,
+    official: bool = False,
+    notes: Optional[str] = None,
+    base_dir: Optional[Path] = None,
+) -> tuple[Manifest, Path]:
+    """Create a new run with base manifest and directory.
+
+    This is the primary entry point for starting a new CLI run. It handles:
+    - Generating a unique run ID
+    - Creating the run directory
+    - Capturing git metadata for reproducibility
+    - Building the base Manifest object
+
+    The orchestrator should extend the returned Manifest with CLI-specific fields
+    before running business logic and writing the final manifest.
+
+    Args:
+        cli_name: CLI name (e.g., "ingest", "infer", "aggregate", "evaluate")
+        name_hint: Hint for the run ID (e.g., dataset name, model name)
+        official: If True, mark as official run (saved to official/ subdirectory)
+        notes: Optional notes about this run (experiment purpose, hypothesis, etc.)
+        base_dir: Base artifacts directory (defaults to ./artifacts)
+
+    Returns:
+        Tuple of (base_manifest, run_dir):
+        - base_manifest: Manifest object with auto-captured metadata
+        - run_dir: Path to the created run directory
+
+    Example:
+        >>> manifest, run_dir = create_run(
+        ...     cli_name="ingest",
+        ...     name_hint="llm-judge",
+        ...     official=False,
+        ...     notes="Testing new dataset loader"
+        ... )
+        >>> # Extend with CLI-specific fields
+        >>> ingest_manifest = IngestManifest(
+        ...     **manifest.model_dump(),
+        ...     io_config_name="llm_judge_ingest",
+        ...     limit=100,
+        ... )
+    """
+    # Generate run ID and create directory
+    run_id = create_run_id(name_hint)
+    run_dir = get_run_dir(run_id, cli_name, official, base_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    # Capture git info for reproducibility
+    git_info = get_git_info()
+
+    # Build base manifest
+    manifest = Manifest(
+        run_id=run_id,
+        run_type="official" if official else "test",
+        cli_name=cli_name,
+        start_time=datetime.now(),
+        end_time=None,
+        notes=notes,
+        git_sha=git_info["git_sha"],
+        git_clean=git_info["git_clean"],
+        git_branch=git_info["git_branch"],
+    )
+
+    return manifest, run_dir
 
 
 def get_run_dir(run_id: str, cli_name: str, official: bool = False, base_dir: Optional[Path] = None) -> Path:
@@ -61,56 +132,57 @@ def get_run_dir(run_id: str, cli_name: str, official: bool = False, base_dir: Op
     return base_dir / "runs" / cli_name / run_type / run_id
 
 
-def write_manifest(
-    run_dir: Path,
-    cli_name: str,
-    cli_args: dict[str, Any],
-    metadata: dict[str, Any],
-    official: bool = False,
-    notes: Optional[str] = None,
-) -> Path:
-    """Write a manifest.json file for a run.
+def finalize_manifest(manifest: BaseModel) -> BaseModel:
+    """Finalize a manifest by setting completion metadata.
+
+    Updates the manifest with end_time. Call this after business logic completes
+    and before persisting via I/O adapters.
 
     Args:
+        manifest: Pydantic Manifest object (base or CLI-specific subclass)
+
+    Returns:
+        Updated manifest with end_time set
+
+    Example:
+        >>> # After business logic completes
+        >>> manifest = finalize_manifest(manifest)
+        >>> # Now pass to I/O adapter for persistence
+        >>> service.ingest_dataset(..., manifest=manifest)
+    """
+    manifest.end_time = datetime.now()
+    return manifest
+
+
+def write_standalone_manifest(manifest: BaseModel, run_dir: Path) -> Path:
+    """Write a standalone manifest.json for human convenience (optional).
+
+    NOTE: This is for quick inspection only. The source of truth for manifests
+    is embedded in the domain data (e.g., JudgingSamples contain manifest refs).
+    I/O adapters are responsible for persisting manifests with domain data.
+
+    This function is provided as a convenience for:
+    - Quick inspection of run metadata without loading all samples
+    - Debugging and exploration
+    - Compatibility with tools expecting manifest.json files
+
+    Args:
+        manifest: Pydantic Manifest object (base or CLI-specific subclass)
         run_dir: Run directory path
-        cli_name: Name of the CLI (e.g., "ingest", "infer")
-        cli_args: Command-line arguments as dict
-        metadata: Additional metadata (dataset, model, counts, etc.)
-        official: If True, mark as official run (for reproducibility/git tracking)
-        notes: Optional notes about this run (purpose, experiment details, etc.)
 
     Returns:
         Path to the written manifest file
 
     Example:
-        >>> manifest_path = write_manifest(
-        ...     run_dir,
-        ...     "infer",
-        ...     {"model": "gpt-oss-20b", "input": "..."},
-        ...     {"inference_count": 10, "avg_latency_ms": 234.5},
-        ...     official=True,
-        ...     notes="Baseline evaluation for thesis Chapter 4"
-        ... )
+        >>> # Optionally write standalone manifest for convenience
+        >>> manifest_path = write_standalone_manifest(manifest, run_dir)
     """
     # Ensure run directory exists
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    # Build manifest
-    manifest = {
-        "run_id": run_dir.name,
-        "run_type": "official" if official else "test",
-        "cli_name": cli_name,
-        "timestamp": datetime.now().isoformat(),
-        "notes": notes,
-        "cli_args": cli_args,
-        **get_git_info(),
-        **metadata,
-    }
-
-    # Write to file
+    # Write manifest as JSON
     manifest_path = run_dir / "manifest.json"
-    with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2)
+    manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
 
     return manifest_path
 

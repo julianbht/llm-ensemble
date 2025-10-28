@@ -13,13 +13,18 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, TextIO
-from uuid import uuid4
 
 from llm_ensemble.ingest.schemas import IngestManifest
 from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.ingest.adapters import get_sample_reader, get_dataset_writer
 from llm_ensemble.ingest.config_loaders import load_ingest_io_config
-from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir
+from llm_ensemble.libs.runtime.run_manager import (
+    create_run,
+    finalize_manifest,
+    write_standalone_manifest,
+    get_run_dir,
+)
+from llm_ensemble.libs.schemas.manifest import Manifest
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging.logger import get_logger
 from llm_ensemble.libs.utils.config_overrides import apply_overrides
@@ -67,9 +72,6 @@ def run_ingest(
         FileNotFoundError: If I/O config not found or data directory doesn't exist
         ValueError: If adapter is not recognized or dataset files are malformed
     """
-    # Capture start time
-    start_time = datetime.now()
-
     # Load I/O config (includes dataset_id and data_dir)
     io_config = load_ingest_io_config(io_format)
 
@@ -84,13 +86,40 @@ def run_ingest(
     if not actual_data_dir.exists():
         raise FileNotFoundError(f"Data directory does not exist: {actual_data_dir}")
 
-    # Create or use provided run ID
+    # Create run with base manifest and directory (or use provided run_id)
     if run_id is None:
-        run_id = create_run_id(io_config.dataset_id)
+        base_manifest, run_dir = create_run(
+            cli_name="ingest",
+            name_hint=io_config.dataset_id,
+            official=official,
+            notes=notes,
+        )
+        run_id = base_manifest.run_id
+    else:
+        # User provided custom run_id - need to create directory and manifest manually
+        run_dir = get_run_dir(run_id, cli_name="ingest", official=official)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        git_info = get_git_info()
+        base_manifest = Manifest(
+            run_id=run_id,
+            run_type="official" if official else "test",
+            cli_name="ingest",
+            start_time=datetime.now(),
+            notes=notes,
+            **git_info,
+        )
 
-    # Set up run directory and output file
-    run_dir = get_run_dir(run_id, cli_name="ingest", official=official)
-    run_dir.mkdir(parents=True, exist_ok=True)
+    # Build IngestManifest by extending base manifest with ingest-specific fields
+    manifest = IngestManifest(
+        **base_manifest.model_dump(),
+        io_config_name=io_format,
+        io_config=io_config,
+        limit=limit,
+        config_overrides=config_overrides or {},
+        sample_count=None,  # Will be set by service after reading samples
+    )
+
+    # Set up output file
     output_file = run_dir / "normalized_dataset.ndjson"
 
     # Set up log file if requested and not already provided
@@ -114,27 +143,6 @@ def run_ingest(
     logger.info("Run directory", path=str(run_dir))
     logger.info("Output file", path=str(output_file))
 
-    # Capture git info
-    git_info = get_git_info()
-
-    # Build IngestManifest (sample_count will be filled by service)
-    manifest = IngestManifest(
-        run_id=uuid4(),
-        run_type="official" if official else "test",
-        cli_name="ingest",
-        start_time=start_time,
-        end_time=None,  # Will be set after ingestion completes
-        notes=notes,
-        git_sha=git_info["git_sha"],
-        git_clean=git_info["git_clean"],
-        git_branch=git_info["git_branch"],
-        io_config_name=io_format,
-        io_config=io_config,
-        limit=limit,
-        config_overrides=config_overrides or {},
-        sample_count=None,  # Will be set by service after reading samples
-    )
-
     # Instantiate adapters via factories
     sample_reader = get_sample_reader(io_config)
     dataset_writer = get_dataset_writer(io_config)
@@ -156,8 +164,13 @@ def run_ingest(
         sample_count = stats["sample_count"]
         logger.info("Samples processed", count=sample_count)
 
-        # Update manifest with end time
-        manifest.end_time = datetime.now()
+        # Update manifest with completion metadata
+        manifest.sample_count = sample_count
+        manifest = finalize_manifest(manifest)
+
+        # Write standalone manifest.json for convenience (not source of truth)
+        write_standalone_manifest(manifest, run_dir)
+        logger.info("Manifest written", path=str(run_dir / "manifest.json"))
 
     except Exception as e:
         logger.error("Ingest failed", error=str(e))

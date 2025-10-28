@@ -8,6 +8,7 @@ service while handling all infrastructure responsibilities.
 All adapters are instantiated via explicit configuration - no implicit defaults.
 """
 from __future__ import annotations
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, TextIO
 
@@ -18,7 +19,14 @@ from llm_ensemble.infer.adapters.io_factory import get_example_reader, get_judge
 from llm_ensemble.infer.adapters.provider_factory import get_provider
 from llm_ensemble.infer.adapters.prompt_builder_factory import get_prompt_builder
 from llm_ensemble.infer.adapters.response_parser_factory import get_response_parser
-from llm_ensemble.libs.runtime.run_manager import create_run_id, get_run_dir, write_manifest
+from llm_ensemble.libs.runtime.run_manager import (
+    create_run,
+    finalize_manifest,
+    write_standalone_manifest,
+    get_run_dir,
+)
+from llm_ensemble.libs.schemas.manifest import Manifest
+from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging.logger import get_logger
 from llm_ensemble.libs.utils.config_overrides import apply_overrides
 
@@ -111,13 +119,30 @@ def run_inference(
         if prompt_overrides:
             prompt_config = apply_overrides(prompt_config, prompt_overrides)
 
-    # Create or use provided run ID
+    # Create run with base manifest and directory (or use provided run_id)
+    # TODO: Create InferManifest schema (similar to IngestManifest) to capture infer-specific fields
     if run_id is None:
-        run_id = create_run_id(model_config.model_id)
+        base_manifest, run_dir = create_run(
+            cli_name="infer",
+            name_hint=model_config.model_id,
+            official=official,
+            notes=notes,
+        )
+        run_id = base_manifest.run_id
+    else:
+        # User provided custom run_id - need to create directory and manifest manually
+        run_dir = get_run_dir(run_id, cli_name="infer", official=official)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        git_info = get_git_info()
+        base_manifest = Manifest(
+            run_id=run_id,
+            run_type="official" if official else "test",
+            cli_name="infer",
+            start_time=datetime.now(),
+            notes=notes,
+            **git_info,
+        )
 
-    # Set up run directory and output file
-    run_dir = get_run_dir(run_id, cli_name="infer", official=official)
-    run_dir.mkdir(parents=True, exist_ok=True)
     output_file = run_dir / f"judgements.{io_config.io_format}"
 
     # Set up log file if requested and not already provided
@@ -203,37 +228,20 @@ def run_inference(
             log_file_handle.close()
         raise
 
-    # Write manifest
-    manifest_metadata = {
-        "model_config": model_config.model_dump(),
-        "io_config": io_config.model_dump(),
-        "prompt_config": prompt_config.model_dump(),
-        "judgement_count": stats["judgement_count"],
-        "error_count": stats["error_count"],
-        "avg_latency_ms": stats["avg_latency_ms"],
-        "output_file": str(output_file),
-    }
-
-    # Track overrides for full reproducibility
-    if config_overrides:
-        manifest_metadata["config_overrides"] = config_overrides
-
-    write_manifest(
-        run_dir=run_dir,
-        cli_name="infer",
-        cli_args={
-            "model": model,
-            "input_file": str(input_file),
-            "io_format": io_format,
-            "limit": limit,
-            "prompt": prompt,
-        },
-        metadata=manifest_metadata,
-        official=official,
-        notes=notes,
-    )
-
+    # TODO: Create InferManifest schema to properly capture infer-specific fields
+    # For now, finalize base manifest and write standalone manifest.json
+    base_manifest = finalize_manifest(base_manifest)
+    write_standalone_manifest(base_manifest, run_dir)
     logger.info("Manifest written", path=str(run_dir / "manifest.json"))
+
+    # Log additional metadata for reference (will be in InferManifest once created)
+    logger.info(
+        "Run metadata",
+        model_config=model_config.model_id,
+        judgement_count=stats["judgement_count"],
+        error_count=stats["error_count"],
+        avg_latency_ms=f"{stats['avg_latency_ms']:.1f}",
+    )
 
     # Close log file if we opened it
     if close_log_file and log_file_handle is not None:

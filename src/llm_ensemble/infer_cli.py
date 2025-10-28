@@ -7,6 +7,7 @@ import typer
 from llm_ensemble.infer.orchestrator import run_inference
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.utils.config_overrides import parse_overrides
+from llm_ensemble.libs.cli.common_params import IoFormat, RunId, SaveLogs, Official, Notes, Override
 
 # Load runtime configuration early
 load_runtime_config()
@@ -16,6 +17,8 @@ app = typer.Typer(add_completion=False, help="LLM Ensemble – inference CLI")
 
 @app.command("infer")
 def infer(
+    # Required parameters
+    io_format: IoFormat,
     model: str = typer.Option(
         ..., "--model", "-m", help="Model config name (e.g., 'gpt-oss-20b' for configs/models/gpt-oss-20b.yaml)"
     ),
@@ -23,33 +26,18 @@ def infer(
         ..., "--input", "-i", exists=True, file_okay=True, readable=True,
         help="Input file with JudgingExample records (from ingest CLI)"
     ),
-    io_format: str = typer.Option(
-        "ndjson", "--io", help="I/O format config name (e.g., 'ndjson' for configs/io/ndjson.yaml)"
-    ),
-    run_id: Optional[str] = typer.Option(
-        None, "--run-id", help="Custom run ID (auto-generates if not provided)"
+    # Optional parameters
+    prompt: str = typer.Option(
+        "thomas-et-al-prompt", "--prompt", "-p", help="Prompt config name (located in ./configs/prompts)"
     ),
     limit: Optional[int] = typer.Option(
         None, help="Process at most N examples"
     ),
-    prompt: str = typer.Option(
-        "thomas-et-al-prompt", "--prompt", "-p", help="Prompt config name (located in ./configs/prompts)"
-    ),
-    save_logs: bool = typer.Option(
-        False, "--save-logs", help="Save logs to run.log file in run directory"
-    ),
-    official: bool = typer.Option(
-        False, "--official", help="Mark as official run (saved to official/ subdirectory for git tracking)"
-    ),
-    notes: Optional[str] = typer.Option(
-        None, "--notes", help="Notes about this run (experiment purpose, hypothesis, etc.)"
-    ),
-    override: list[str] = typer.Option(
-        [],
-        "--override",
-        "-O",
-        help="Override config values (format: key=value, e.g., 'default_params.temperature=0.7'). Can be specified multiple times."
-    ),
+    run_id: RunId = None,
+    save_logs: SaveLogs = False,
+    official: Official = False,
+    notes: Notes = None,
+    override: Override = [],
 ):
     """Run LLM inference on judging examples and output structured judgements.
 

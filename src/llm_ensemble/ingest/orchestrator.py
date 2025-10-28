@@ -5,16 +5,14 @@ This module handles infrastructure concerns for the ingestion pipeline:
 - Setting up run directories and logging
 - Building manifests with git info and execution parameters
 - Instantiating adapters via factories
-- Delegating business logic to domain service (which attaches manifest to samples)
+- Delegating business logic to domain service (which sets timing and finalizes manifest)
 
 It is separated from the CLI entry point (ingest_cli.py) for testability.
 """
 from __future__ import annotations
-from datetime import datetime
 from pathlib import Path
 from typing import Optional, TextIO
 
-from llm_ensemble.ingest.schemas import IngestManifest
 from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.ingest.adapters import get_sample_reader, get_dataset_writer
 from llm_ensemble.ingest.config_loaders import load_ingest_io_config
@@ -95,7 +93,7 @@ def run_ingest(
     run_id = manifest_builder.run_id
     run_dir = manifest_builder.run_dir
 
-    # Add ingest-specific fields to manifest
+    # Add ingest-specific fields to manifest builder
     manifest_builder.add("io_config_name", io_format)
     manifest_builder.add("io_config", io_config)
     manifest_builder.add("limit", limit)
@@ -137,18 +135,14 @@ def run_ingest(
 
     # Run ingestion pipeline (pure business logic)
     try:
-        stats = service.ingest_dataset(
+        manifest = service.ingest_dataset(
             data_dir=actual_data_dir,
-            manifest=manifest,
+            manifest_builder=manifest_builder,
             output_path=output_file,
             limit=limit,
         )
-        sample_count = stats["sample_count"]
+        sample_count = manifest.sample_count
         logger.info("Samples processed", count=sample_count)
-
-        # Update manifest with completion metadata
-        manifest.sample_count = sample_count
-        manifest = finalize_manifest(manifest)
 
         # Write standalone manifest.json for convenience (not source of truth)
         write_standalone_manifest(manifest, run_dir)

@@ -2,6 +2,7 @@
 
 Provides a ManifestBuilder for constructing CLI-specific manifests step-by-step.
 The builder separates manifest construction from the final Pydantic representation.
+Domain services can mutate the built manifest before it is finalized.
 """
 
 from __future__ import annotations
@@ -83,8 +84,8 @@ class ManifestBuilder:
         ... )
         >>> builder.add("io_config_name", "llm_judge_ingest")
         >>> builder.add("limit", 100)
-        >>> builder.add("sample_count", 1523)
-        >>> manifest = builder.finalize(IngestManifest)
+        >>> manifest = builder.build(IngestManifest)
+        >>> # Domain service updates sample_count and calls manifest.mark_completed()
     """
 
     def __init__(
@@ -121,7 +122,7 @@ class ManifestBuilder:
             "run_id": self.run_id,
             "run_type": "official" if official else "test",
             "cli_name": cli_name,
-            "start_time": datetime.now(),
+            "start_time": None,  # Set by domain service when processing begins
             "end_time": None,  # Set during finalize()
             "notes": notes,
             "git_sha": git_info["git_sha"],
@@ -144,6 +145,7 @@ class ManifestBuilder:
         """
         self._fields[key] = value
         return self
+
 
     def finalize(self, manifest_class: type[BaseModel]) -> BaseModel:
         """Finalize the manifest by setting end_time and creating the Pydantic object.
@@ -239,72 +241,3 @@ def write_standalone_manifest(manifest: BaseModel, run_dir: Path) -> Path:
     return manifest_path
 
 
-def load_manifest(run_id: str, cli_name: str, base_dir: Optional[Path] = None) -> dict[str, Any]:
-    """Load a manifest.json file for a run.
-
-    Args:
-        run_id: Run identifier
-        cli_name: CLI name (e.g., "ingest", "infer")
-        base_dir: Base artifacts directory (defaults to ./artifacts)
-
-    Returns:
-        Manifest dict
-
-    Raises:
-        FileNotFoundError: If manifest doesn't exist
-
-    Example:
-        >>> manifest = load_manifest("20250115_143022_gpt-oss-20b", "infer")
-        >>> manifest["cli_name"]
-        'infer'
-    """
-    import json
-
-    run_dir = get_run_dir(run_id, cli_name, base_dir)
-    manifest_path = run_dir / "manifest.json"
-
-    if not manifest_path.exists():
-        raise FileNotFoundError(f"Manifest not found: {manifest_path}")
-
-    with open(manifest_path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def list_runs(cli_name: Optional[str] = None, base_dir: Optional[Path] = None) -> list[str]:
-    """List all run IDs in the artifacts directory.
-
-    Args:
-        cli_name: Optional CLI name to filter by (e.g., "ingest", "infer")
-        base_dir: Base artifacts directory (defaults to ./artifacts)
-
-    Returns:
-        List of run IDs (sorted by timestamp, newest first)
-
-    Example:
-        >>> list_runs("infer")
-        ['20250115_143055_gpt-oss-20b', '20250115_143022_gpt-oss-20b']
-        >>> list_runs()  # All runs from all CLIs
-        ['20250115_143055_gpt-oss-20b', '20250115_143022_llm-judge', ...]
-    """
-    if base_dir is None:
-        base_dir = Path(__file__).parents[4] / "artifacts"
-
-    runs_dir = base_dir / "runs"
-    if not runs_dir.exists():
-        return []
-
-    run_ids = []
-
-    if cli_name:
-        # List runs for specific CLI
-        cli_dir = runs_dir / cli_name
-        if cli_dir.exists():
-            run_ids = [d.name for d in cli_dir.iterdir() if d.is_dir()]
-    else:
-        # List all runs from all CLIs
-        for cli_dir in runs_dir.iterdir():
-            if cli_dir.is_dir():
-                run_ids.extend([d.name for d in cli_dir.iterdir() if d.is_dir()])
-
-    # Sort by timestamp (newest first)
-    return sorted(run_ids, reverse=True)

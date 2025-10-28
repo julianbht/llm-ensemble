@@ -61,6 +61,10 @@ class Manifest(BaseModel):
         description="Git branch name at time of run (auto-captured)"
     )
 
+    def mark_completed(self) -> None:
+        """Mark the run as completed by recording the current end_time."""
+        self.end_time = datetime.now()
+
     class Config:
         """Pydantic config."""
         json_encoders = {

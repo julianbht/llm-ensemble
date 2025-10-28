@@ -10,8 +10,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
 
-from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore, JudgingSample
+from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore
 from llm_ensemble.ingest.ports import SampleReader
+from llm_ensemble.ingest.ports.sample_reader import RawJudgingSample
 
 
 @dataclass(frozen=True)
@@ -37,7 +38,7 @@ class LlmJudgeSampleReader(SampleReader):
     """Reader for LLM Judge Challenge 2024 dataset.
 
     Reads queries (TSV), documents (JSONL), and relevance judgements (TSV)
-    and returns normalized JudgingSample records.
+    and returns RawJudgingSample DTOs (without manifest).
 
     File format:
     - queries: TSV with columns (query_id, query_text)
@@ -49,15 +50,15 @@ class LlmJudgeSampleReader(SampleReader):
         self,
         input_path: Path,
         limit: Optional[int] = None,
-    ) -> list[JudgingSample]:
-        """Read LLM Judge dataset and return JudgingSamples.
+    ) -> list[RawJudgingSample]:
+        """Read LLM Judge dataset and return RawJudgingSample DTOs.
 
         Args:
             input_path: Base directory containing dataset files
             limit: Optional maximum number of samples to return
 
         Returns:
-            List of JudgingSample objects
+            List of RawJudgingSample DTOs (without manifest)
 
         Raises:
             FileNotFoundError: If required dataset files are missing
@@ -85,8 +86,8 @@ class LlmJudgeSampleReader(SampleReader):
                     f"Document '{docid}' referenced in qrels but not found in documents file"
                 )
 
-            # Create JudgingSample
-            sample = JudgingSample(
+            # Create RawJudgingSample (without manifest)
+            sample = RawJudgingSample(
                 query=q,
                 document=d,
                 gold_score=RelevanceScore(relevance),

@@ -1,28 +1,47 @@
 """Port interface for reading judging samples.
 
 Defines the abstract contract for reading raw IR datasets and converting them
-to JudgingSample objects.
+to RawSample DTOs (query + document + gold score, without manifest).
 """
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from llm_ensemble.ingest.schemas import JudgingSample
+from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore
+
+
+@dataclass(frozen=True)
+class RawJudgingSample:
+    """DTO for transferring data across the SampleReader port boundary.
+
+    This is NOT a persisted schema - it's purely for internal data transfer
+    between adapters and the domain service. The domain service is responsible
+    for attaching the manifest to create the full JudgingSample.
+
+    DO NOT export this from schemas/ - it lives only at the port boundary.
+    """
+    query: Query
+    document: Document
+    gold_score: RelevanceScore
 
 
 class SampleReader(ABC):
     """Abstract base class for reading judging samples from raw datasets.
 
     Implementations read dataset-specific formats (TSV + JSONL, Parquet, etc.)
-    and convert them to normalized JudgingSample objects.
+    and convert them to RawJudgingSample DTOs (without manifest).
+
+    The domain service is responsible for attaching the manifest to create
+    full JudgingSample objects.
 
     Example:
         >>> class LlmJudgeSampleReader(SampleReader):
         ...     def read(self, input_path, limit=None):
         ...         # Read queries, documents, qrels
-        ...         # Convert to JudgingSample objects
+        ...         # Convert to RawJudgingSample DTOs
         ...         return samples[:limit] if limit else samples
     """
 
@@ -31,15 +50,15 @@ class SampleReader(ABC):
         self,
         input_path: Path,
         limit: Optional[int] = None,
-    ) -> list[JudgingSample]:
-        """Read raw dataset and return normalized JudgingSample objects.
+    ) -> list[RawJudgingSample]:
+        """Read raw dataset and return RawJudgingSample DTOs (without manifest).
 
         Args:
             input_path: Path to input dataset (file or directory)
             limit: Optional maximum number of samples to read
 
         Returns:
-            List of JudgingSample objects
+            List of RawJudgingSample DTOs
 
         Raises:
             FileNotFoundError: If input_path doesn't exist

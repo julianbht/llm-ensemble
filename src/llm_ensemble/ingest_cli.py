@@ -43,28 +43,18 @@ def ingest(
         See config files in configs/io/ for available fields.
         Overrides are tracked in manifest for reproducibility.
     """
-    try:
-        # Parse overrides
-        config_overrides = parse_overrides(override) if override else {}
+    # Parse overrides
+    config_overrides = parse_overrides(override) if override else {}
 
-        run_ingest(
-            io_format=io_format,
-            run_id=run_id,
-            limit=limit,
-            save_logs=save_logs,
-            official=official,
-            notes=notes,
-            config_overrides=config_overrides,
-        )
-    except FileNotFoundError as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
-    except (ImportError, AttributeError) as e:
-        typer.echo(f"Error: Failed to load adapter: {e}", err=True)
-        raise typer.Exit(1)
-    except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
+    run_ingest(
+        io_format=io_format,
+        run_id=run_id,
+        limit=limit,
+        save_logs=save_logs,
+        official=official,
+        notes=notes,
+        config_overrides=config_overrides,
+    )
 
 
 if __name__ == "__main__":

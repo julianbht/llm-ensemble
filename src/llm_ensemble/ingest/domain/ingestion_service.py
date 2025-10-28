@@ -11,6 +11,7 @@ from typing import Optional, Callable
 
 from llm_ensemble.ingest.schemas import JudgingSample, IngestManifest
 from llm_ensemble.ingest.ports import SampleReader, DatasetWriter
+from llm_ensemble.ingest.ports.sample_reader import RawJudgingSample
 
 
 class IngestionService:
@@ -47,10 +48,10 @@ class IngestionService:
         """Execute the ingestion pipeline.
 
         Pure business logic that coordinates:
-        1. Reading samples from raw dataset via SampleReader port
-        2. Attaching manifest to each sample (Many-to-One relationship)
+        1. Reading RawJudgingSample DTOs from raw dataset via SampleReader port
+        2. Attaching manifest to each sample (Many-to-One relationship) to create JudgingSamples
         3. Updating manifest with sample_count
-        4. Writing samples via DatasetWriter port
+        4. Writing JudgingSamples via DatasetWriter port
         5. Collecting statistics
 
         Args:
@@ -69,8 +70,8 @@ class IngestionService:
             ValueError: If dataset files are malformed
             Exception: If any step in the pipeline fails
         """
-        # Read samples from raw dataset (SampleReader handles limit internally)
-        raw_samples = self.sample_reader.read(data_dir, limit=limit)
+        # Read RawJudgingSample DTOs from raw dataset (SampleReader handles limit internally)
+        raw_samples: list[RawJudgingSample] = self.sample_reader.read(data_dir, limit=limit)
 
         # Attach manifest to each sample (Many-to-One relationship)
         judging_samples = [

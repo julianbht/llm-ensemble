@@ -1,4 +1,4 @@
-"""Port interface for writing model judgements.
+"""Port interface for writing LLM judgements.
 
 Defines the abstract contract for writing judgements to various sinks
 (NDJSON files, Parquet, databases, etc.). This allows the orchestrator
@@ -7,51 +7,35 @@ to work with any output format without coupling to a specific implementation.
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from pathlib import Path
 
-from llm_ensemble.infer.schemas import ModelJudgement
+from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 
 
 class JudgementWriter(ABC):
-    """Abstract base class for writing model judgements.
+    """Abstract base class for writing LLM judgements.
 
     Implementations can write to different sinks (NDJSON, Parquet, etc.)
-    while providing a consistent interface to the orchestrator.
+    while providing a consistent interface to the domain service.
 
-    The writer should be used as a context manager or with explicit close():
+    Similar to DatasetWriter in the ingest pipeline, this writes a batch
+    of judgements at once (writer determines output file structure).
 
     Example:
-        >>> writer = NdjsonJudgementWriter(output_path)
-        >>> for judgement in judgements:
-        ...     writer.write(judgement)
-        >>> writer.close()
+        >>> writer = NdjsonJudgementWriter(output_file)
+        >>> judgements = [...]  # List of LLMJudgement objects
+        >>> writer.write(judgements, run_dir)
     """
 
     @abstractmethod
-    def write(self, judgement: ModelJudgement) -> None:
-        """Write a single judgement to the output sink.
+    def write(self, judgements: list[LLMJudgement], run_dir: Path) -> None:
+        """Write judgements to output sink.
 
         Args:
-            judgement: ModelJudgement object to write
+            judgements: List of LLMJudgement objects to write
+            run_dir: Run directory where output should be written (writer determines file structure)
 
         Raises:
             IOError: If write operation fails
         """
         pass
-
-    @abstractmethod
-    def close(self) -> None:
-        """Finalize and close the output sink.
-
-        This method should flush any buffered data and release resources.
-        It's safe to call multiple times (idempotent).
-        """
-        pass
-
-    def __enter__(self):
-        """Context manager entry."""
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit - ensure resources are closed."""
-        self.close()
-        return False

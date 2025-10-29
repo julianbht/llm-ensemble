@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Optional, TextIO
 
 from llm_ensemble.infer.config_loaders import load_model_config, load_io_config, load_prompt_config
-from llm_ensemble.infer.schemas import ModelJudgement
+from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain import InferenceService
 from llm_ensemble.infer.adapters.io_factory import get_example_reader, get_judgement_writer
 from llm_ensemble.infer.adapters.provider_factory import get_provider
@@ -138,8 +138,6 @@ def run_inference(
     manifest_builder.add("input_file", str(input_file))
     manifest_builder.add("limit", limit)
 
-    output_file = run_dir / f"judgements.{io_config.io_format}"
-
     # Set up log file if requested and not already provided
     log_file_handle = log_file
     close_log_file = False
@@ -164,7 +162,7 @@ def run_inference(
 
     # Instantiate adapters via factories
     reader = get_example_reader(io_config)
-    writer = get_judgement_writer(io_config, output_file)
+    writer = get_judgement_writer(io_config)
 
     # Instantiate prompt builder and response parser from prompt config
     prompt_builder = get_prompt_builder(prompt_config)
@@ -181,22 +179,23 @@ def run_inference(
     )
 
     # Define logging callback for domain service
-    def log_judgement(judgement: ModelJudgement) -> None:
+    def log_judgement(judgement: LLMJudgement) -> None:
         """Callback to log each judgement (infrastructure concern)."""
-        if judgement.label is None:
+        if judgement.llm_response.llm_score is None:
             logger.warning(
                 "Judgement error",
-                query_id=judgement.query_id,
-                docid=judgement.docid,
-                warnings=judgement.warnings,
+                query_text=judgement.sample.query.query_text,
+                doc_text=judgement.sample.document.text,
+                warnings=judgement.llm_response.warnings,
             )
         else:
             logger.info(
                 "Processed judgement",
-                query_id=judgement.query_id,
-                docid=judgement.docid,
-                label=judgement.label,
-                latency_ms=f"{judgement.latency_ms:.1f}",
+                query_text=judgement.sample.query.query_text,
+                doc_text=judgement.sample.document.text,
+                llm_score=judgement.llm_response.llm_score.value,
+                gold_score=judgement.sample.gold_score.value,
+                latency_ms=f"{judgement.llm_response.latency_ms:.1f}",
             )
 
     # Run inference pipeline (pure business logic)
@@ -205,6 +204,7 @@ def run_inference(
             input_path=input_file,
             model_config=model_config,
             manifest_builder=manifest_builder,
+            run_dir=run_dir,
             limit=limit,
             on_judgement=log_judgement,
         )

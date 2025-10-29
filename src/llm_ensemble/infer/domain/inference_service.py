@@ -11,7 +11,9 @@ from pathlib import Path
 from typing import Optional, Iterator, Callable
 
 from llm_ensemble.ingest.schemas import JudgingSample
-from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig, InferManifest
+from llm_ensemble.infer.schemas.llm_response import LLMResponse
+from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas import ModelConfig, InferManifest
 from llm_ensemble.infer.ports import LLMProvider, ExampleReader, JudgementWriter
 from llm_ensemble.libs.runtime.manifest_manager import ManifestBuilder
 
@@ -59,24 +61,26 @@ class InferenceService:
         input_path: Path,
         model_config: ModelConfig,
         manifest_builder: ManifestBuilder,
+        run_dir: Path,
         limit: Optional[int] = None,
-        on_judgement: Optional[Callable[[ModelJudgement], None]] = None,
+        on_judgement: Optional[Callable[[LLMJudgement], None]] = None,
     ) -> InferManifest:
         """Execute the inference pipeline.
 
         Pure business logic that coordinates:
         1. Setting start_time in the manifest builder
-        2. Reading examples via ExampleReader port
-        3. Running inference via LLMProvider port
-        4. Writing judgements via JudgementWriter port
-        5. Collecting statistics
-        6. Adding statistics to manifest builder
-        7. Finalizing the manifest (sets end_time)
+        2. Reading JudgingSample objects via ExampleReader port
+        3. Running inference via LLMProvider port to get LLMResponse objects (sample + LLM output pairs)
+        4. Calculating statistics and adding to manifest builder
+        5. Finalizing the manifest (sets end_time)
+        6. Attaching manifest to each (sample, LLMResponse) pair to create LLMJudgement objects
+        7. Writing LLMJudgement objects via JudgementWriter port
 
         Args:
             input_path: Path to input examples
             model_config: Model configuration
             manifest_builder: Manifest builder for constructing final manifest
+            run_dir: Run directory where output should be written (writer determines file structure)
             limit: Optional maximum number of examples to process
             on_judgement: Optional callback invoked for each judgement (for logging/progress)
 
@@ -89,33 +93,16 @@ class InferenceService:
         # Set start_time when processing begins
         manifest_builder.add("start_time", datetime.now())
 
-        # Read examples
-        examples = self.example_reader.read(input_path, limit=limit)
+        # Read JudgingSample objects (which include ingest manifest)
+        samples = self.example_reader.read(input_path, limit=limit)
 
-        # Track statistics
-        count = 0
-        error_count = 0
-        total_latency_ms = 0.0
+        # Run inference to get (sample, LLMResponse) pairs
+        sample_response_pairs = list(self._process_samples(samples, model_config))
 
-        # Run inference pipeline
-        for judgement in self._process_examples(examples, model_config):
-            # Write judgement
-            self.judgement_writer.write(judgement)
-
-            # Update statistics
-            count += 1
-            total_latency_ms += judgement.latency_ms
-            if judgement.label is None:
-                error_count += 1
-
-            # Invoke callback if provided (for logging/progress tracking)
-            if on_judgement:
-                on_judgement(judgement)
-
-        # Finalize writer
-        self.judgement_writer.close()
-
-        # Calculate average latency
+        # Calculate statistics from LLMResponses
+        count = len(sample_response_pairs)
+        error_count = sum(1 for _, resp in sample_response_pairs if resp.llm_score is None)
+        total_latency_ms = sum(resp.latency_ms for _, resp in sample_response_pairs)
         avg_latency = total_latency_ms / count if count > 0 else 0.0
 
         # Add statistics to manifest builder
@@ -127,21 +114,40 @@ class InferenceService:
         # Finalize manifest (sets end_time and creates immutable Pydantic object)
         manifest: InferManifest = manifest_builder.finalize(InferManifest)
 
+        # Attach manifest to each (sample, LLMResponse) pair to create LLMJudgement objects
+        llm_judgements = [
+            LLMJudgement(
+                sample=sample,
+                llm_response=response,
+                manifest=manifest,
+            )
+            for sample, response in sample_response_pairs
+        ]
+
+        # Invoke callback for each judgement if provided (for logging/progress tracking)
+        if on_judgement:
+            for judgement in llm_judgements:
+                on_judgement(judgement)
+
+        # Write judgements (writer determines output file structure)
+        self.judgement_writer.write(llm_judgements, run_dir)
+
         # Return finalized manifest
         return manifest
 
-    def _process_examples(
+    def _process_samples(
         self,
-        examples: list[JudgingSample],
+        samples: list[JudgingSample],
         model_config: ModelConfig,
-    ) -> Iterator[ModelJudgement]:
-        """Process examples through LLM provider.
+    ) -> Iterator[tuple[JudgingSample, LLMResponse]]:
+        """Process samples through LLM provider to get responses.
 
         Args:
-            examples: List of judging examples
+            samples: List of judging samples to process
             model_config: Model configuration
 
         Yields:
-            ModelJudgement objects from inference
+            Tuples of (sample, LLMResponse) for each inference
         """
-        yield from self.llm_provider.infer(iter(examples), model_config)
+        # Provider returns LLMResponse objects - we pair them with their input samples
+        yield from self.llm_provider.infer(iter(samples), model_config)

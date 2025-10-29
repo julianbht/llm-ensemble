@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from llm_ensemble.ingest.schemas.query import Query
 from llm_ensemble.ingest.schemas.document import Document
-from llm_ensemble.ingest.schemas.relevance_score import RelevanceScore
+from llm_ensemble.libs.schemas import RelevanceScore  # Shared schema
 from llm_ensemble.ingest.schemas.ingest_manifest import IngestManifest
 
 

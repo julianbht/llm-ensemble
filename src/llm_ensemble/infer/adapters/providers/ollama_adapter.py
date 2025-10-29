@@ -8,15 +8,16 @@ from __future__ import annotations
 from typing import Iterator
 
 from llm_ensemble.ingest.schemas import JudgingSample
-from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig
+from llm_ensemble.infer.schemas.llm_response import LLMResponse
+from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.ports import LLMProvider, PromptBuilder, ResponseParser
 
 
 class OllamaAdapter(LLMProvider):
     """Ollama implementation of the LLMProvider port.
 
-    Sends inference requests to local Ollama server and yields ModelJudgement
-    objects. Uses injected PromptBuilder and ResponseParser ports following
+    Sends inference requests to local Ollama server and yields (sample, LLMResponse)
+    tuples. Uses injected PromptBuilder and ResponseParser ports following
     dependency inversion principles.
 
     Example:
@@ -28,7 +29,7 @@ class OllamaAdapter(LLMProvider):
         >>> builder = get_prompt_builder(prompt_config)
         >>> parser = get_response_parser(prompt_config)
         >>> adapter = OllamaAdapter(builder, parser)
-        >>> judgements = adapter.infer(examples, config)
+        >>> sample_response_pairs = adapter.infer(samples, config)
     """
 
     def __init__(
@@ -53,17 +54,17 @@ class OllamaAdapter(LLMProvider):
 
     def infer(
         self,
-        examples: Iterator[JudgingSample],
+        samples: Iterator[JudgingSample],
         model_config: ModelConfig,
-    ) -> Iterator[ModelJudgement]:
-        """Run inference on examples using Ollama server.
+    ) -> Iterator[tuple[JudgingSample, LLMResponse]]:
+        """Run inference on samples using Ollama server.
 
         Args:
-            examples: Iterator of JudgingSample objects to judge
+            samples: Iterator of JudgingSample objects to judge
             model_config: Model configuration with provider and settings
 
         Yields:
-            ModelJudgement objects with predictions and metadata
+            Tuples of (JudgingSample, LLMResponse) for each inference
 
         Raises:
             NotImplementedError: Ollama adapter not yet implemented

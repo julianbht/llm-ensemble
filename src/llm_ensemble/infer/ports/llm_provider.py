@@ -10,7 +10,8 @@ from abc import ABC, abstractmethod
 from typing import Iterator
 
 from llm_ensemble.ingest.schemas import JudgingSample
-from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig
+from llm_ensemble.infer.schemas.llm_response import LLMResponse
+from llm_ensemble.infer.schemas import ModelConfig
 
 
 class LLMProvider(ABC):
@@ -22,30 +23,34 @@ class LLMProvider(ABC):
     Providers are initialized with injected PromptBuilder and ResponseParser
     ports, following dependency inversion principles.
 
+    Providers yield (sample, LLMResponse) tuples - they do NOT attach manifests.
+    The domain service handles manifest attachment to create final LLMJudgement objects.
+
     Example:
         >>> class OpenRouterAdapter(LLMProvider):
         ...     def __init__(self, prompt_builder, response_parser, ...):
         ...         self.prompt_builder = prompt_builder
         ...         self.response_parser = response_parser
-        ...     def infer(self, examples, model_config):
-        ...         # Implementation using injected ports
-        ...         yield judgement
+        ...     def infer(self, samples, model_config):
+        ...         for sample in samples:
+        ...             response = self._call_llm(sample)
+        ...             yield (sample, response)
     """
 
     @abstractmethod
     def infer(
         self,
-        examples: Iterator[JudgingSample],
+        samples: Iterator[JudgingSample],
         model_config: ModelConfig,
-    ) -> Iterator[ModelJudgement]:
-        """Run inference on examples and yield judgements.
+    ) -> Iterator[tuple[JudgingSample, LLMResponse]]:
+        """Run inference on samples and yield (sample, response) pairs.
 
         Args:
-            examples: Iterator of JudgingSample objects to judge
+            samples: Iterator of JudgingSample objects to judge
             model_config: Model configuration with provider and settings
 
         Yields:
-            ModelJudgement objects with predictions and metadata
+            Tuples of (JudgingSample, LLMResponse) for each inference
 
         Raises:
             ValueError: If configuration is invalid

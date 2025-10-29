@@ -48,7 +48,7 @@ def get_example_reader(io_config: IOConfig) -> ExampleReader:
         )
 
 
-def get_judgement_writer(io_config: IOConfig, output_path: Path) -> JudgementWriter:
+def get_judgement_writer(io_config: IOConfig) -> JudgementWriter:
     """Create and return the appropriate judgement writer adapter.
 
     Factory function that instantiates the correct writer implementation
@@ -56,7 +56,6 @@ def get_judgement_writer(io_config: IOConfig, output_path: Path) -> JudgementWri
 
     Args:
         io_config: I/O configuration specifying the writer adapter
-        output_path: Path where judgements should be written
 
     Returns:
         JudgementWriter instance
@@ -67,14 +66,14 @@ def get_judgement_writer(io_config: IOConfig, output_path: Path) -> JudgementWri
     Example:
         >>> from llm_ensemble.infer.config_loaders import load_io_config
         >>> config = load_io_config("ndjson")
-        >>> writer = get_judgement_writer(config, Path("out.ndjson"))
+        >>> writer = get_judgement_writer(config)
         >>> isinstance(writer, NdjsonJudgementWriter)
         True
     """
     writer_name = io_config.writer.lower()
 
     if writer_name == "ndjson_judgement_writer":
-        return NdjsonJudgementWriter(output_path)
+        return NdjsonJudgementWriter()
     else:
         raise ValueError(
             f"Unsupported judgement writer: {io_config.writer}. "

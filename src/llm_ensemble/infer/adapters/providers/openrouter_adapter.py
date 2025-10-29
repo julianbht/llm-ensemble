@@ -1,7 +1,7 @@
 """OpenRouter adapter for LLM inference.
 
 Handles HTTP communication with OpenRouter API and converts responses
-to ModelJudgement domain objects. Implements the LLMProvider port.
+to LLMResponse objects. Implements the LLMProvider port.
 """
 
 from __future__ import annotations
@@ -11,15 +11,16 @@ from typing import Iterator, Optional
 from openai import OpenAI
 
 from llm_ensemble.ingest.schemas import JudgingSample
-from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig
+from llm_ensemble.infer.schemas.llm_response import LLMResponse
+from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.ports import LLMProvider, PromptBuilder, ResponseParser
 
 
 class OpenRouterAdapter(LLMProvider):
     """OpenRouter implementation of the LLMProvider port.
 
-    Sends inference requests to OpenRouter API and yields ModelJudgement
-    objects. Uses injected PromptBuilder and ResponseParser ports following
+    Sends inference requests to OpenRouter API and yields (sample, LLMResponse)
+    tuples. Uses injected PromptBuilder and ResponseParser ports following
     dependency inversion principles.
 
     Example:
@@ -31,9 +32,9 @@ class OpenRouterAdapter(LLMProvider):
         >>> builder = get_prompt_builder(prompt_config)
         >>> parser = get_response_parser(prompt_config)
         >>> adapter = OpenRouterAdapter(builder, parser)
-        >>> judgements = adapter.infer(examples, config)
-        >>> for judgement in judgements:
-        ...     print(judgement.label)
+        >>> sample_response_pairs = adapter.infer(samples, config)
+        >>> for sample, response in sample_response_pairs:
+        ...     print(response.llm_score)
     """
 
     def __init__(
@@ -64,17 +65,17 @@ class OpenRouterAdapter(LLMProvider):
 
     def infer(
         self,
-        examples: Iterator[JudgingSample],
+        samples: Iterator[JudgingSample],
         model_config: ModelConfig,
-    ) -> Iterator[ModelJudgement]:
-        """Run inference on examples using OpenRouter API.
+    ) -> Iterator[tuple[JudgingSample, LLMResponse]]:
+        """Run inference on samples using OpenRouter API.
 
         Args:
-            examples: Iterator of JudgingSample objects to judge
+            samples: Iterator of JudgingSample objects to judge
             model_config: Model configuration with provider and settings
 
         Yields:
-            ModelJudgement objects with predictions and metadata
+            Tuples of (JudgingSample, LLMResponse) for each inference
 
         Raises:
             ValueError: If openrouter_model_id is not configured
@@ -119,10 +120,10 @@ class OpenRouterAdapter(LLMProvider):
             timeout=self.timeout,
         )
 
-        # Process each example
-        for example in examples:
+        # Process each sample
+        for sample in samples:
             # Build prompt instruction using injected builder
-            instruction = self.prompt_builder.build(example)
+            instruction = self.prompt_builder.build(sample)
 
             # Track timing
             warnings = []
@@ -137,29 +138,23 @@ class OpenRouterAdapter(LLMProvider):
             latency_ms = (time.time() - start_time) * 1000
 
             # Extract response
-            raw_text = response.choices[0].message.content
+            raw_response = response.choices[0].message.content
 
             # Parse the model output using injected parser
-            label, parse_warnings = self.response_parser.parse(raw_text)
+            llm_score, parse_warnings = self.response_parser.parse(raw_response)
             warnings.extend(parse_warnings)
 
-            # Extract model version if available
-            model_version = response.model if hasattr(response, "model") else None
-
-            # Build and yield ModelJudgement
-            yield ModelJudgement(
-                model_id=model_config.openrouter_model_id,
-                provider="openrouter",
-                version=model_version,
-                query_id=example.query_id,
-                docid=example.docid,
-                label=label,  # None if parsing failed
-                score=float(label) if label is not None else None,  # 0, 1, or 2
-                confidence=None,  # Not provided by this template
+            # Build LLMResponse (just the LLM output, no sample or manifest)
+            llm_response = LLMResponse(
+                llm_score=llm_score,  # RelevanceScore or None if parsing failed
                 rationale=None,  # Template doesn't request rationale
-                raw_text=raw_text,
+                confidence=None,  # Not provided by this template
+                raw_response=raw_response,
                 latency_ms=latency_ms,
                 retries=0,
-                cost_estimate=None,  # Could be added later
+                cost_estimate_usd=None,  # Could be added later
                 warnings=warnings,
             )
+
+            # Yield (sample, response) tuple
+            yield (sample, llm_response)

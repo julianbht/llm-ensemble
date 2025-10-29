@@ -9,7 +9,8 @@ import os
 from typing import Iterator, Optional
 
 from llm_ensemble.ingest.schemas import JudgingSample
-from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig
+from llm_ensemble.infer.schemas.llm_response import LLMResponse
+from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.ports import LLMProvider, PromptBuilder, ResponseParser
 
 
@@ -17,7 +18,7 @@ class HuggingFaceAdapter(LLMProvider):
     """HuggingFace implementation of the LLMProvider port.
 
     Sends inference requests to HuggingFace Inference API and yields
-    ModelJudgement objects. Uses injected PromptBuilder and ResponseParser
+    (sample, LLMResponse) tuples. Uses injected PromptBuilder and ResponseParser
     ports following dependency inversion principles.
 
     Example:
@@ -29,7 +30,7 @@ class HuggingFaceAdapter(LLMProvider):
         >>> builder = get_prompt_builder(prompt_config)
         >>> parser = get_response_parser(prompt_config)
         >>> adapter = HuggingFaceAdapter(builder, parser)
-        >>> judgements = adapter.infer(examples, config)
+        >>> sample_response_pairs = adapter.infer(samples, config)
     """
 
     def __init__(
@@ -60,17 +61,17 @@ class HuggingFaceAdapter(LLMProvider):
 
     def infer(
         self,
-        examples: Iterator[JudgingSample],
+        samples: Iterator[JudgingSample],
         model_config: ModelConfig,
-    ) -> Iterator[ModelJudgement]:
-        """Run inference on examples using HuggingFace API.
+    ) -> Iterator[tuple[JudgingSample, LLMResponse]]:
+        """Run inference on samples using HuggingFace API.
 
         Args:
-            examples: Iterator of JudgingSample objects to judge
+            samples: Iterator of JudgingSample objects to judge
             model_config: Model configuration with provider and settings
 
         Yields:
-            ModelJudgement objects with predictions and metadata
+            Tuples of (JudgingSample, LLMResponse) for each inference
 
         Raises:
             NotImplementedError: HuggingFace adapter not yet implemented

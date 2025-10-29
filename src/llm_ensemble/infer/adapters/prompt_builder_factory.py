@@ -34,7 +34,7 @@ def get_prompt_builder(prompt_config: PromptConfig) -> PromptBuilder:
         >>> from llm_ensemble.infer.config_loaders import load_prompt_config
         >>> config = load_prompt_config("thomas-et-al-prompt")
         >>> builder = get_prompt_builder(config)
-        >>> example = JudgingExample(...)
+        >>> example = JudgingSample(...)
         >>> prompt = builder.build(example)
     """
     builder_type = prompt_config.prompt_builder

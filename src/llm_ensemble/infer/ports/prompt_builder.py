@@ -8,7 +8,7 @@ without coupling to specific implementations.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
-from llm_ensemble.ingest.schemas import JudgingExample
+from llm_ensemble.ingest.schemas import JudgingSample
 
 
 class PromptBuilder(ABC):
@@ -27,11 +27,11 @@ class PromptBuilder(ABC):
     """
 
     @abstractmethod
-    def build(self, example: JudgingExample) -> str:
+    def build(self, example: JudgingSample) -> str:
         """Build a prompt from a judging example.
 
         Args:
-            example: JudgingExample object containing query and document
+            example: JudgingSample object containing query and document
 
         Returns:
             Rendered prompt string ready for LLM input

@@ -1,13 +1,13 @@
 """Jinja2-based prompt builder adapter.
 
 Generic implementation that uses Jinja2 templates to build prompts.
-Works with any template format by mapping JudgingExample fields to template variables.
+Works with any template format by mapping JudgingSample fields to template variables.
 """
 
 from __future__ import annotations
 from jinja2 import Template
 
-from llm_ensemble.ingest.schemas import JudgingExample
+from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.ports import PromptBuilder
 
 
@@ -15,14 +15,14 @@ class JinjaPromptBuilder(PromptBuilder):
     """Prompt builder using Jinja2 templates.
 
     This is a generic adapter that can work with any Jinja2 template.
-    It maps JudgingExample fields to template variables based on the
+    It maps JudgingSample fields to template variables based on the
     configured variable mapping.
 
     Example:
         >>> from jinja2 import Template
         >>> template = Template("Query: {{ query }}\\nDocument: {{ page_text }}")
         >>> builder = JinjaPromptBuilder(template)
-        >>> example = JudgingExample(
+        >>> example = JudgingSample(
         ...     dataset="test",
         ...     query_id="q1",
         ...     query_text="python",
@@ -43,7 +43,7 @@ class JinjaPromptBuilder(PromptBuilder):
 
         Args:
             template: Jinja2 Template object to render
-            variable_mapping: Optional mapping from template variables to JudgingExample fields.
+            variable_mapping: Optional mapping from template variables to JudgingSample fields.
                 If not provided, uses default mapping:
                 - query -> query_text
                 - page_text -> doc
@@ -54,11 +54,11 @@ class JinjaPromptBuilder(PromptBuilder):
             "page_text": "doc",
         }
 
-    def build(self, example: JudgingExample) -> str:
+    def build(self, example: JudgingSample) -> str:
         """Build a prompt from a judging example.
 
         Args:
-            example: JudgingExample object containing query and document
+            example: JudgingSample object containing query and document
 
         Returns:
             Rendered prompt string ready for LLM input

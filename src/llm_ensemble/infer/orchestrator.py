@@ -1,14 +1,15 @@
 """Orchestrator for the infer CLI.
 
-This module handles infrastructure concerns (run management, logging, manifests)
-and wires up the domain service with concrete adapter implementations.
-It follows hexagonal architecture by delegating business logic to the domain
-service while handling all infrastructure responsibilities.
+This module handles infrastructure concerns for the inference pipeline:
+- Loading configurations
+- Setting up run directories and logging
+- Building manifests with git info and execution parameters
+- Instantiating adapters via factories
+- Delegating business logic to domain service (which sets timing and finalizes manifest)
 
-All adapters are instantiated via explicit configuration - no implicit defaults.
+It is separated from the CLI entry point (infer_cli.py) for testability.
 """
 from __future__ import annotations
-from datetime import datetime
 from pathlib import Path
 from typing import Optional, TextIO
 
@@ -19,14 +20,12 @@ from llm_ensemble.infer.adapters.io_factory import get_example_reader, get_judge
 from llm_ensemble.infer.adapters.provider_factory import get_provider
 from llm_ensemble.infer.adapters.prompt_builder_factory import get_prompt_builder
 from llm_ensemble.infer.adapters.response_parser_factory import get_response_parser
-from llm_ensemble.libs.runtime.run_manager import (
-    create_run,
-    finalize_manifest,
+from llm_ensemble.libs.runtime.manifest_manager import (
+    ManifestBuilder,
     write_standalone_manifest,
-    get_run_dir,
 )
-from llm_ensemble.libs.runtime.manifest import Manifest
-from llm_ensemble.libs.runtime.git_utils import get_git_info
+from llm_ensemble.libs.runtime.run_id import generate_run_id
+from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.logging.logger import get_logger
 from llm_ensemble.libs.utils.config_overrides import apply_overrides
 
@@ -34,55 +33,41 @@ from llm_ensemble.libs.utils.config_overrides import apply_overrides
 def run_inference(
     model: str,
     input_file: Path,
+    prompt: str,
     io_format: str = "ndjson",
     run_id: Optional[str] = None,
     limit: Optional[int] = None,
-    prompt: str = "thomas-et-al-prompt",
     save_logs: bool = False,
     official: bool = False,
     notes: Optional[str] = None,
     log_file: Optional[TextIO] = None,
     config_overrides: Optional[dict] = None,
-) -> dict:
-    """Run LLM inference on judging examples and output structured judgements.
+) -> None:
+    """Run LLM inference on judging examples with full provenance.
 
-    This orchestrator handles infrastructure concerns:
-    - Run management (directories, IDs, manifests)
-    - Logging setup and output
-    - Adapter instantiation via explicit configuration
-    - Delegating business logic to InferenceService
-
-    The domain service handles the pure business logic of the inference pipeline.
-
-    All behavior is explicitly configured - no implicit defaults.
-    Config locations are determined by config loaders (configs/models, configs/io, configs/prompts).
+    Infrastructure orchestration that coordinates:
+    - Loading configurations
+    - Setting up run directories and logging
+    - Building manifest with git info and execution parameters
+    - Instantiating adapters via factories
+    - Running inference, attaching manifest metadata to each judgement, and writing output
 
     Args:
-        model: Model ID for .yaml config file (e.g., 'gpt-oss-20b' for configs/models/gpt-oss-20b.yaml)
+        model: Model ID for .yaml config file (e.g., 'gpt-oss-20b')
         input_file: Input file with JudgingExample records (from ingest CLI)
-        io_format: I/O format config name (e.g., 'ndjson' for configs/io/ndjson.yaml)
+        prompt: Prompt template name (without .jinja extension)
+        io_format: I/O format config name (e.g., 'ndjson')
         run_id: Custom run ID (auto-generates if not provided)
         limit: Process at most N examples
-        prompt: Prompt template name (without .jinja extension)
         save_logs: Save logs to run.log file in run directory
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
         log_file: Optional file handle for logging (used when save_logs=True)
-        config_overrides: Optional dict of config overrides (e.g., {"default_params": {"temperature": 0.7}})
-
-    Returns:
-        Dictionary with run metadata including:
-        - run_id: The run identifier
-        - run_dir: Path to run directory
-        - output_file: Path to output judgements file
-        - judgement_count: Total number of judgements processed
-        - error_count: Number of failed judgements
-        - avg_latency_ms: Average latency per judgement
+        config_overrides: Optional dict of config overrides
 
     Raises:
-        FileNotFoundError: If model/io config not found
-        ValueError: If config validation fails
-        Exception: If inference fails
+        FileNotFoundError: If config not found or input file doesn't exist
+        ValueError: If adapter is not recognized or config is invalid
     """
     # Load configurations (config loaders handle directory locations)
     model_config = load_model_config(model)
@@ -119,29 +104,39 @@ def run_inference(
         if prompt_overrides:
             prompt_config = apply_overrides(prompt_config, prompt_overrides)
 
-    # Create run with base manifest and directory (or use provided run_id)
-    # TODO: Create InferManifest schema (similar to IngestManifest) to capture infer-specific fields
-    if run_id is None:
-        base_manifest, run_dir = create_run(
-            cli_name="infer",
-            name_hint=model_config.model_id,
-            official=official,
-            notes=notes,
-        )
-        run_id = base_manifest.run_id
-    else:
-        # User provided custom run_id - need to create directory and manifest manually
-        run_dir = get_run_dir(run_id, cli_name="infer", official=official)
-        run_dir.mkdir(parents=True, exist_ok=True)
-        git_info = get_git_info()
-        base_manifest = Manifest(
-            run_id=run_id,
-            run_type="official" if official else "test",
-            cli_name="infer",
-            start_time=datetime.now(),
-            notes=notes,
-            **git_info,
-        )
+    # Verify input file exists
+    if not input_file.exists():
+        raise FileNotFoundError(f"Input file does not exist: {input_file}")
+
+    # Generate or use provided run_id
+    actual_run_id = run_id or generate_run_id(model_config.model_id)
+
+    # Get run directory path and create it
+    run_dir = PathManager.get_run_dir(
+        cli_name="infer",
+        run_id=actual_run_id,
+        official=official
+    )
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    # Initialize manifest builder (pure manifest construction)
+    manifest_builder = ManifestBuilder(
+        run_id=actual_run_id,
+        run_dir=run_dir,
+        cli_name="infer",
+        official=official,
+        notes=notes,
+    )
+
+    # Add infer-specific fields to manifest builder
+    manifest_builder.add("model_config_name", model)
+    manifest_builder.add("prompt_config_name", prompt)
+    manifest_builder.add("io_config_name", io_format)
+    manifest_builder.add("model_cfg", model_config)
+    manifest_builder.add("prompt_config", prompt_config)
+    manifest_builder.add("io_config", io_config)
+    manifest_builder.add("input_file", str(input_file))
+    manifest_builder.add("limit", limit)
 
     output_file = run_dir / f"judgements.{io_config.io_format}"
 
@@ -154,7 +149,7 @@ def run_inference(
         close_log_file = True
 
     # Initialize logger
-    logger = get_logger("infer", run_id=run_id, log_file=log_file_handle)
+    logger = get_logger("infer", run_id=actual_run_id, log_file=log_file_handle)
 
     logger.info(
         "Starting inference",
@@ -162,12 +157,12 @@ def run_inference(
         provider=model_config.provider,
         io_format=io_config.io_format,
         prompt=prompt,
-        overrides=config_overrides if config_overrides else None,
+        input_file=str(input_file),
+        limit=limit,
     )
     logger.info("Run directory", path=str(run_dir))
-    logger.info("Output file", path=str(output_file))
 
-    # Instantiate adapters via explicit configuration (no defaults)
+    # Instantiate adapters via factories
     reader = get_example_reader(io_config)
     writer = get_judgement_writer(io_config, output_file)
 
@@ -178,7 +173,7 @@ def run_inference(
     # Instantiate provider with injected prompt builder and parser
     provider = get_provider(model_config, prompt_builder, response_parser)
 
-    # Create domain service with injected ports
+    # Create domain service
     service = InferenceService(
         example_reader=reader,
         judgement_writer=writer,
@@ -204,23 +199,21 @@ def run_inference(
                 latency_ms=f"{judgement.latency_ms:.1f}",
             )
 
-    # Run inference via domain service
+    # Run inference pipeline (pure business logic)
     try:
-        logger.info("Reading examples", input_file=str(input_file))
-
-        stats = service.run_inference(
+        manifest = service.run_inference(
             input_path=input_file,
             model_config=model_config,
+            manifest_builder=manifest_builder,
             limit=limit,
             on_judgement=log_judgement,
         )
+        judgement_count = manifest.judgement_count
+        logger.info("Judgements processed", count=judgement_count)
 
-        logger.info(
-            "Inference complete",
-            total_judgements=stats["judgement_count"],
-            errors=stats["error_count"],
-            avg_latency_ms=f"{stats['avg_latency_ms']:.1f}",
-        )
+        # Write standalone manifest.json for convenience (not source of truth)
+        write_standalone_manifest(manifest, run_dir)
+        logger.info("Manifest written", path=str(run_dir / "manifest.json"))
 
     except Exception as e:
         logger.error("Inference failed", error=str(e))
@@ -228,30 +221,14 @@ def run_inference(
             log_file_handle.close()
         raise
 
-    # TODO: Create InferManifest schema to properly capture infer-specific fields
-    # For now, finalize base manifest and write standalone manifest.json
-    base_manifest = finalize_manifest(base_manifest)
-    write_standalone_manifest(base_manifest, run_dir)
-    logger.info("Manifest written", path=str(run_dir / "manifest.json"))
-
-    # Log additional metadata for reference (will be in InferManifest once created)
     logger.info(
-        "Run metadata",
-        model_config=model_config.model_id,
-        judgement_count=stats["judgement_count"],
-        error_count=stats["error_count"],
-        avg_latency_ms=f"{stats['avg_latency_ms']:.1f}",
+        "Inference complete",
+        total_judgements=manifest.judgement_count,
+        errors=manifest.error_count,
+        avg_latency_ms=f"{manifest.avg_latency_ms:.1f}",
     )
 
     # Close log file if we opened it
     if close_log_file and log_file_handle is not None:
         logger.info("Logs saved", path=str(run_dir / "run.log"))
         log_file_handle.close()
-
-    # Return combined metadata and statistics
-    return {
-        "run_id": run_id,
-        "run_dir": run_dir,
-        "output_file": output_file,
-        **stats,  # Include judgement_count, error_count, avg_latency_ms
-    }

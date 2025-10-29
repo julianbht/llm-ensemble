@@ -9,7 +9,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Iterator
 
-from llm_ensemble.ingest.schemas import JudgingExample
+from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig
 
 
@@ -35,13 +35,13 @@ class LLMProvider(ABC):
     @abstractmethod
     def infer(
         self,
-        examples: Iterator[JudgingExample],
+        examples: Iterator[JudgingSample],
         model_config: ModelConfig,
     ) -> Iterator[ModelJudgement]:
         """Run inference on examples and yield judgements.
 
         Args:
-            examples: Iterator of JudgingExample objects to judge
+            examples: Iterator of JudgingSample objects to judge
             model_config: Model configuration with provider and settings
 
         Yields:

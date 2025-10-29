@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
 
-from llm_ensemble.ingest.schemas import JudgingExample
+from llm_ensemble.ingest.schemas import JudgingSample
 
 
 class ExampleReader(ABC):
@@ -25,7 +25,7 @@ class ExampleReader(ABC):
         ...         examples = []
         ...         with open(input_path) as f:
         ...             for line in f:
-        ...                 examples.append(JudgingExample(**json.loads(line)))
+        ...                 examples.append(JudgingSample(**json.loads(line)))
         ...         return examples[:limit] if limit else examples
     """
 
@@ -34,7 +34,7 @@ class ExampleReader(ABC):
         self,
         input_path: Path,
         limit: Optional[int] = None,
-    ) -> list[JudgingExample]:
+    ) -> list[JudgingSample]:
         """Read examples from source.
 
         Args:
@@ -42,7 +42,7 @@ class ExampleReader(ABC):
             limit: Optional maximum number of examples to read
 
         Returns:
-            List of JudgingExample objects
+            List of JudgingSample objects
 
         Raises:
             FileNotFoundError: If input_path doesn't exist

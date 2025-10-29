@@ -6,12 +6,14 @@ It depends only on port abstractions, has no knowledge of infrastructure details
 """
 
 from __future__ import annotations
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Iterator, Callable
 
-from llm_ensemble.ingest.schemas import JudgingExample
-from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig
+from llm_ensemble.ingest.schemas import JudgingSample
+from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig, InferManifest
 from llm_ensemble.infer.ports import LLMProvider, ExampleReader, JudgementWriter
+from llm_ensemble.libs.runtime.manifest_manager import ManifestBuilder
 
 
 class InferenceService:
@@ -56,33 +58,37 @@ class InferenceService:
         self,
         input_path: Path,
         model_config: ModelConfig,
+        manifest_builder: ManifestBuilder,
         limit: Optional[int] = None,
         on_judgement: Optional[Callable[[ModelJudgement], None]] = None,
-    ) -> dict:
+    ) -> InferManifest:
         """Execute the inference pipeline.
 
         Pure business logic that coordinates:
-        1. Reading examples via ExampleReader port
-        2. Running inference via LLMProvider port
-        3. Writing judgements via JudgementWriter port
-        4. Collecting statistics
+        1. Setting start_time in the manifest builder
+        2. Reading examples via ExampleReader port
+        3. Running inference via LLMProvider port
+        4. Writing judgements via JudgementWriter port
+        5. Collecting statistics
+        6. Adding statistics to manifest builder
+        7. Finalizing the manifest (sets end_time)
 
         Args:
             input_path: Path to input examples
             model_config: Model configuration
+            manifest_builder: Manifest builder for constructing final manifest
             limit: Optional maximum number of examples to process
             on_judgement: Optional callback invoked for each judgement (for logging/progress)
 
         Returns:
-            Dictionary with statistics:
-            - judgement_count: Total judgements processed
-            - error_count: Number of failed judgements (label=None)
-            - total_latency_ms: Total latency across all judgements
-            - avg_latency_ms: Average latency per judgement
+            Finalized InferManifest with statistics and timing information
 
         Raises:
             Exception: If any step in the pipeline fails
         """
+        # Set start_time when processing begins
+        manifest_builder.add("start_time", datetime.now())
+
         # Read examples
         examples = self.example_reader.read(input_path, limit=limit)
 
@@ -109,19 +115,24 @@ class InferenceService:
         # Finalize writer
         self.judgement_writer.close()
 
-        # Calculate and return statistics
+        # Calculate average latency
         avg_latency = total_latency_ms / count if count > 0 else 0.0
 
-        return {
-            "judgement_count": count,
-            "error_count": error_count,
-            "total_latency_ms": total_latency_ms,
-            "avg_latency_ms": avg_latency,
-        }
+        # Add statistics to manifest builder
+        manifest_builder.add("judgement_count", count)
+        manifest_builder.add("error_count", error_count)
+        manifest_builder.add("total_latency_ms", total_latency_ms)
+        manifest_builder.add("avg_latency_ms", avg_latency)
+
+        # Finalize manifest (sets end_time and creates immutable Pydantic object)
+        manifest: InferManifest = manifest_builder.finalize(InferManifest)
+
+        # Return finalized manifest
+        return manifest
 
     def _process_examples(
         self,
-        examples: list[JudgingExample],
+        examples: list[JudgingSample],
         model_config: ModelConfig,
     ) -> Iterator[ModelJudgement]:
         """Process examples through LLM provider.

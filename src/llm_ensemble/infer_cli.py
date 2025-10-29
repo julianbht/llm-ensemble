@@ -79,10 +79,10 @@ def infer(
         run_inference(
             model=model,
             input_file=input_file,
+            prompt=prompt,
             io_format=io_format,
             run_id=run_id,
             limit=limit,
-            prompt=prompt,
             save_logs=save_logs,
             official=official,
             notes=notes,

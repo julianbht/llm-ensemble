@@ -1,6 +1,6 @@
 """NDJSON adapter for reading judging examples.
 
-Reads newline-delimited JSON files containing JudgingExample records.
+Reads newline-delimited JSON files containing JudgingSample records.
 This is the standard format produced by the ingest CLI.
 """
 
@@ -9,15 +9,15 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from llm_ensemble.ingest.schemas import JudgingExample
+from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.ports import ExampleReader
 
 
 class NdjsonExampleReader(ExampleReader):
-    """Read JudgingExample records from NDJSON files.
+    """Read JudgingSample records from NDJSON files.
 
     This adapter reads the output format produced by the ingest CLI:
-    one JudgingExample JSON object per line.
+    one JudgingSample JSON object per line.
 
     Example:
         >>> reader = NdjsonExampleReader()
@@ -30,15 +30,15 @@ class NdjsonExampleReader(ExampleReader):
         self,
         input_path: Path,
         limit: Optional[int] = None,
-    ) -> list[JudgingExample]:
+    ) -> list[JudgingSample]:
         """Read examples from NDJSON file.
 
         Args:
-            input_path: Path to NDJSON file with JudgingExample records
+            input_path: Path to NDJSON file with JudgingSample records
             limit: Optional maximum number of examples to read
 
         Returns:
-            List of JudgingExample objects
+            List of JudgingSample objects
 
         Raises:
             FileNotFoundError: If input_path doesn't exist
@@ -56,14 +56,14 @@ class NdjsonExampleReader(ExampleReader):
 
                 try:
                     example_dict = json.loads(line)
-                    examples.append(JudgingExample(**example_dict))
+                    examples.append(JudgingSample(**example_dict))
                 except json.JSONDecodeError as e:
                     raise ValueError(
                         f"Invalid JSON on line {line_num} in {input_path}: {e}"
                     )
                 except Exception as e:
                     raise ValueError(
-                        f"Invalid JudgingExample on line {line_num} in {input_path}: {e}"
+                        f"Invalid JudgingSample on line {line_num} in {input_path}: {e}"
                     )
 
                 # Apply limit if specified

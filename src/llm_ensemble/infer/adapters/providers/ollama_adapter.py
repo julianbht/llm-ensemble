@@ -7,7 +7,7 @@ to ModelJudgement domain objects. Implements the LLMProvider port.
 from __future__ import annotations
 from typing import Iterator
 
-from llm_ensemble.ingest.schemas import JudgingExample
+from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.schemas import ModelJudgement, ModelConfig
 from llm_ensemble.infer.ports import LLMProvider, PromptBuilder, ResponseParser
 
@@ -53,13 +53,13 @@ class OllamaAdapter(LLMProvider):
 
     def infer(
         self,
-        examples: Iterator[JudgingExample],
+        examples: Iterator[JudgingSample],
         model_config: ModelConfig,
     ) -> Iterator[ModelJudgement]:
         """Run inference on examples using Ollama server.
 
         Args:
-            examples: Iterator of JudgingExample objects to judge
+            examples: Iterator of JudgingSample objects to judge
             model_config: Model configuration with provider and settings
 
         Yields:

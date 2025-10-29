@@ -138,7 +138,7 @@ class PromptWarning(BaseModel):
 
     Example:
         >>> PromptWarning(
-        ...     code=PromptWarningCode.TEMPLATE_ERROR,
+        ...     code=PromptWarningCode.RENDERING_ERROR,
         ...     message="Variable 'rationale_instructions' not found, using empty string",
         ...     metadata={"variable_name": "rationale_instructions"}
         ... )

@@ -1,51 +1,32 @@
-"""LLMResponse - LLM output from provider (without sample or manifest).
+"""LLMResponse - Raw LLM output from provider (unparsed).
 
 This is the data structure returned by LLM provider adapters.
-The InferenceService will combine this with sample and manifest to create the final LLMJudgement.
+It contains ONLY raw response text and observability metadata.
+The ResponseParser will extract structured LLMScore from the raw_response text.
 """
 
 from __future__ import annotations
 from typing import Optional
 from pydantic import BaseModel, Field
 
-from llm_ensemble.libs.schemas import RelevanceScore
-
 
 class LLMResponse(BaseModel):
-    """LLM response output from provider adapters.
+    """Raw LLM response output from provider adapters.
 
-    This represents just the LLM's output: the predicted score, rationale,
-    and observability metadata. The domain service will combine this with
-    the input sample and infer manifest to create the final LLMJudgement.
+    This represents the raw output from calling an LLM API:
+    - raw_response: The unparsed text returned by the model
+    - Observability metadata: latency, retries, cost, warnings
 
-    This separation allows providers to focus on LLM inference without
-    needing knowledge of the broader pipeline context (manifests, samples, etc.).
+    This schema contains NO parsed/structured data. The ResponseParser
+    is responsible for extracting structured LLMScore from raw_response.
+
+    The domain service coordinates: Provider returns LLMResponse →
+    Parser extracts LLMScore → Service combines into LLMJudgement.
     """
-
-    llm_score: Optional[RelevanceScore] = Field(
-        None,
-        description=(
-            "LLM-predicted relevance score: "
-            "0 = IRRELEVANT, 1 = RELEVANT, 2 = HIGHLY_RELEVANT, 3 = PERFECTLY_RELEVANT. "
-            "None = parsing failed or model did not produce valid output."
-        )
-    )
-
-    rationale: Optional[str] = Field(
-        None,
-        description="LLM's explanation for its relevance judgement"
-    )
-
-    confidence: Optional[float] = Field(
-        None,
-        ge=0.0,
-        le=1.0,
-        description="LLM self-reported or derived confidence score [0-1]"
-    )
 
     raw_response: str = Field(
         ...,
-        description="Unparsed LLM response text for debugging and transparency"
+        description="Unparsed LLM response text (will be parsed by ResponseParser)"
     )
 
     # Observability metadata
@@ -69,5 +50,5 @@ class LLMResponse(BaseModel):
 
     warnings: list[str] = Field(
         default_factory=list,
-        description="Parser warnings, API errors, fallbacks, validation issues, etc."
+        description="Provider-level warnings: API errors, fallbacks, network issues, etc."
     )

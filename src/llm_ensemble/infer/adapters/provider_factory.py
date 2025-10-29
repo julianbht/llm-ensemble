@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Optional
 
 from llm_ensemble.infer.schemas import ModelConfig
-from llm_ensemble.infer.ports import LLMProvider, PromptBuilder, ResponseParser
+from llm_ensemble.infer.ports import LLMProvider, PromptBuilder
 from llm_ensemble.infer.adapters.providers import (
     OpenRouterAdapter,
     OllamaAdapter,
@@ -19,7 +19,6 @@ from llm_ensemble.infer.adapters.providers import (
 def get_provider(
     model_config: ModelConfig,
     prompt_builder: PromptBuilder,
-    response_parser: ResponseParser,
     api_key: Optional[str] = None,
     timeout: int = 30,
 ) -> LLMProvider:
@@ -28,13 +27,12 @@ def get_provider(
     Factory function that instantiates the correct provider implementation
     based on the model configuration's provider field.
 
-    Injects PromptBuilder and ResponseParser dependencies following the
-    dependency inversion principle.
+    Providers return RAW LLMResponse objects (unparsed text + metadata).
+    The InferenceService coordinates parsing via ResponseParser.
 
     Args:
         model_config: Model configuration with provider specification
         prompt_builder: PromptBuilder port for building prompts
-        response_parser: ResponseParser port for parsing responses
         api_key: Optional API key (if not provided, will use env vars)
         timeout: Request timeout in seconds (default: 30)
 
@@ -47,12 +45,10 @@ def get_provider(
     Example:
         >>> from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_config
         >>> from llm_ensemble.infer.adapters.prompt_builder_factory import get_prompt_builder
-        >>> from llm_ensemble.infer.adapters.response_parser_factory import get_response_parser
         >>> model_config = load_model_config("gpt-oss-20b")
         >>> prompt_config = load_prompt_config("thomas-et-al-prompt")
         >>> builder = get_prompt_builder(prompt_config)
-        >>> parser = get_response_parser(prompt_config)
-        >>> provider = get_provider(model_config, builder, parser)
+        >>> provider = get_provider(model_config, builder)
         >>> isinstance(provider, OpenRouterAdapter)
         True
     """
@@ -61,20 +57,17 @@ def get_provider(
     if provider_name == "openrouter":
         return OpenRouterAdapter(
             prompt_builder=prompt_builder,
-            response_parser=response_parser,
             api_key=api_key,
             timeout=timeout,
         )
     elif provider_name == "ollama":
         return OllamaAdapter(
             prompt_builder=prompt_builder,
-            response_parser=response_parser,
             timeout=timeout,
         )
     elif provider_name == "hf" or provider_name == "huggingface":
         return HuggingFaceAdapter(
             prompt_builder=prompt_builder,
-            response_parser=response_parser,
             api_token=api_key,
             timeout=timeout,
         )

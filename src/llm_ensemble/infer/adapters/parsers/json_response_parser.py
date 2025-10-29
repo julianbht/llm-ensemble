@@ -7,9 +7,10 @@ Supports both simple and multi-aspect formats.
 from __future__ import annotations
 import json
 import re
-from typing import Optional
 
 from llm_ensemble.infer.ports import ResponseParser
+from llm_ensemble.infer.schemas.llm_score import LLMScore
+from llm_ensemble.libs.schemas import RelevanceScore
 
 
 class JsonResponseParser(ResponseParser):
@@ -42,15 +43,15 @@ class JsonResponseParser(ResponseParser):
         """
         self.score_field = score_field
 
-    def parse(self, raw_text: str) -> tuple[Optional[int], list[str]]:
+    def parse(self, raw_text: str) -> tuple[LLMScore, list[str]]:
         """Parse JSON response to extract relevance label.
 
         Args:
             raw_text: Raw text response from the LLM
 
         Returns:
-            Tuple of (label, warnings):
-            - label: Extracted score (0, 1, or 2), or None if parsing failed
+            Tuple of (score, warnings):
+            - score: LLMScore with extracted label (confidence/rationale may be None)
             - warnings: List of warning messages for parsing issues
         """
         warnings = []
@@ -62,7 +63,7 @@ class JsonResponseParser(ResponseParser):
 
         if not json_match:
             warnings.append(f"No JSON object with '{self.score_field}' field found in response")
-            return None, warnings
+            return LLMScore(), warnings
 
         json_str = json_match.group(0)
 
@@ -70,18 +71,25 @@ class JsonResponseParser(ResponseParser):
             data = json.loads(json_str)
         except json.JSONDecodeError as e:
             warnings.append(f"Failed to parse JSON: {e}")
-            return None, warnings
+            return LLMScore(), warnings
 
         # Extract the score
         score = data.get(self.score_field)
 
         if score is None:
             warnings.append(f"Missing '{self.score_field}' field in parsed JSON")
-            return None, warnings
+            return LLMScore(), warnings
 
         # Validate the score is 0, 1, or 2
-        if not isinstance(score, int) or score not in [0, 1, 2]:
-            warnings.append(f"Invalid {self.score_field} score: {score} (expected 0, 1, or 2)")
-            return None, warnings
+        if not isinstance(score, int) or score not in [0, 1, 2, 3]:
+            warnings.append(f"Invalid {self.score_field} score: {score} (expected 0, 1, 2, or 3)")
+            return LLMScore(), warnings
 
-        return score, warnings
+        # Convert to RelevanceScore enum
+        try:
+            relevance_label = RelevanceScore(score)
+        except ValueError:
+            warnings.append(f"Invalid score value: {score}")
+            return LLMScore(), warnings
+
+        return LLMScore(label=relevance_label), warnings

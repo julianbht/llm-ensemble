@@ -12,9 +12,10 @@ from typing import Optional, Iterator, Callable
 
 from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.schemas.llm_response import LLMResponse
+from llm_ensemble.infer.schemas.llm_score import LLMScore
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas import ModelConfig, InferManifest
-from llm_ensemble.infer.ports import LLMProvider, ExampleReader, JudgementWriter
+from llm_ensemble.infer.ports import LLMProvider, ExampleReader, JudgementWriter, ResponseParser
 from llm_ensemble.libs.runtime.manifest_manager import ManifestBuilder
 
 
@@ -44,17 +45,20 @@ class InferenceService:
         example_reader: ExampleReader,
         judgement_writer: JudgementWriter,
         llm_provider: LLMProvider,
+        response_parser: ResponseParser,
     ):
         """Initialize inference service with port dependencies.
 
         Args:
             example_reader: Port for reading judging examples
             judgement_writer: Port for writing model judgements
-            llm_provider: Port for LLM inference
+            llm_provider: Port for LLM inference (returns raw responses)
+            response_parser: Port for parsing raw responses into structured scores
         """
         self.example_reader = example_reader
         self.judgement_writer = judgement_writer
         self.llm_provider = llm_provider
+        self.response_parser = response_parser
 
     def run_inference(
         self,
@@ -70,11 +74,12 @@ class InferenceService:
         Pure business logic that coordinates:
         1. Setting start_time in the manifest builder
         2. Reading JudgingSample objects via ExampleReader port
-        3. Running inference via LLMProvider port to get LLMResponse objects (sample + LLM output pairs)
-        4. Calculating statistics and adding to manifest builder
-        5. Finalizing the manifest (sets end_time)
-        6. Attaching manifest to each (sample, LLMResponse) pair to create LLMJudgement objects
-        7. Writing LLMJudgement objects via JudgementWriter port
+        3. Running inference via LLMProvider port to get raw LLMResponse objects
+        4. Parsing each LLMResponse via ResponseParser port to extract LLMScore
+        5. Calculating statistics and adding to manifest builder
+        6. Finalizing the manifest (sets end_time)
+        7. Creating LLMJudgement objects (sample + raw response + parsed score + manifest)
+        8. Writing LLMJudgement objects via JudgementWriter port
 
         Args:
             input_path: Path to input examples
@@ -96,13 +101,24 @@ class InferenceService:
         # Read JudgingSample objects (which include ingest manifest)
         samples = self.example_reader.read(input_path, limit=limit)
 
-        # Run inference to get (sample, LLMResponse) pairs
+        # Run inference to get (sample, LLMResponse) pairs (raw responses)
         sample_response_pairs = list(self._process_samples(samples, model_config))
 
-        # Calculate statistics from LLMResponses
-        count = len(sample_response_pairs)
-        error_count = sum(1 for _, resp in sample_response_pairs if resp.llm_score is None)
-        total_latency_ms = sum(resp.latency_ms for _, resp in sample_response_pairs)
+        # Parse each raw response to extract structured scores
+        sample_response_score_tuples = []
+        for sample, raw_response in sample_response_pairs:
+            score, parse_warnings = self.response_parser.parse(raw_response.raw_response)
+
+            # Merge parse warnings into response warnings
+            if parse_warnings:
+                raw_response.warnings.extend(parse_warnings)
+
+            sample_response_score_tuples.append((sample, raw_response, score))
+
+        # Calculate statistics from parsed scores
+        count = len(sample_response_score_tuples)
+        error_count = sum(1 for _, _, score in sample_response_score_tuples if score.label is None)
+        total_latency_ms = sum(resp.latency_ms for _, resp, _ in sample_response_score_tuples)
         avg_latency = total_latency_ms / count if count > 0 else 0.0
 
         # Add statistics to manifest builder
@@ -114,14 +130,15 @@ class InferenceService:
         # Finalize manifest (sets end_time and creates immutable Pydantic object)
         manifest: InferManifest = manifest_builder.finalize(InferManifest)
 
-        # Attach manifest to each (sample, LLMResponse) pair to create LLMJudgement objects
+        # Create LLMJudgement objects (sample + raw response + parsed score + manifest)
         llm_judgements = [
             LLMJudgement(
                 sample=sample,
                 llm_response=response,
+                llm_score=score,
                 manifest=manifest,
             )
-            for sample, response in sample_response_pairs
+            for sample, response, score in sample_response_score_tuples
         ]
 
         # Invoke callback for each judgement if provided (for logging/progress tracking)

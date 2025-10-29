@@ -13,34 +13,33 @@ from openai import OpenAI
 from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.schemas.llm_response import LLMResponse
 from llm_ensemble.infer.schemas import ModelConfig
-from llm_ensemble.infer.ports import LLMProvider, PromptBuilder, ResponseParser
+from llm_ensemble.infer.ports import LLMProvider, PromptBuilder
 
 
 class OpenRouterAdapter(LLMProvider):
     """OpenRouter implementation of the LLMProvider port.
 
     Sends inference requests to OpenRouter API and yields (sample, LLMResponse)
-    tuples. Uses injected PromptBuilder and ResponseParser ports following
-    dependency inversion principles.
+    tuples with RAW responses only. Uses injected PromptBuilder for prompt construction.
+
+    Providers do NOT parse responses - they return raw text + metadata.
+    The InferenceService coordinates parsing via ResponseParser.
 
     Example:
         >>> from llm_ensemble.infer.config_loaders import load_model_config
         >>> from llm_ensemble.infer.adapters.prompt_builder_factory import get_prompt_builder
-        >>> from llm_ensemble.infer.adapters.response_parser_factory import get_response_parser
         >>> config = load_model_config("gpt-oss-20b")
         >>> prompt_config = load_prompt_config("thomas-et-al-prompt")
         >>> builder = get_prompt_builder(prompt_config)
-        >>> parser = get_response_parser(prompt_config)
-        >>> adapter = OpenRouterAdapter(builder, parser)
+        >>> adapter = OpenRouterAdapter(builder)
         >>> sample_response_pairs = adapter.infer(samples, config)
         >>> for sample, response in sample_response_pairs:
-        ...     print(response.llm_score)
+        ...     print(response.raw_response)  # Unparsed text
     """
 
     def __init__(
         self,
         prompt_builder: PromptBuilder,
-        response_parser: ResponseParser,
         api_key: Optional[str] = None,
         timeout: int = 30,
     ):
@@ -48,12 +47,10 @@ class OpenRouterAdapter(LLMProvider):
 
         Args:
             prompt_builder: PromptBuilder port for building prompts
-            response_parser: ResponseParser port for parsing responses
             api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
             timeout: Request timeout in seconds (default: 30)
         """
         self.prompt_builder = prompt_builder
-        self.response_parser = response_parser
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         self.timeout = timeout
 
@@ -137,18 +134,12 @@ class OpenRouterAdapter(LLMProvider):
 
             latency_ms = (time.time() - start_time) * 1000
 
-            # Extract response
+            # Extract response text
             raw_response = response.choices[0].message.content
 
-            # Parse the model output using injected parser
-            llm_score, parse_warnings = self.response_parser.parse(raw_response)
-            warnings.extend(parse_warnings)
-
-            # Build LLMResponse (just the LLM output, no sample or manifest)
+            # Build LLMResponse with RAW output only (no parsing)
+            # The InferenceService will handle parsing via ResponseParser
             llm_response = LLMResponse(
-                llm_score=llm_score,  # RelevanceScore or None if parsing failed
-                rationale=None,  # Template doesn't request rationale
-                confidence=None,  # Not provided by this template
                 raw_response=raw_response,
                 latency_ms=latency_ms,
                 retries=0,
@@ -156,5 +147,5 @@ class OpenRouterAdapter(LLMProvider):
                 warnings=warnings,
             )
 
-            # Yield (sample, response) tuple
+            # Yield (sample, raw_response) tuple
             yield (sample, llm_response)

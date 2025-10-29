@@ -168,20 +168,21 @@ def run_inference(
     prompt_builder = get_prompt_builder(prompt_config)
     response_parser = get_response_parser(prompt_config)
 
-    # Instantiate provider with injected prompt builder and parser
-    provider = get_provider(model_config, prompt_builder, response_parser)
+    # Instantiate provider with injected prompt builder (provider only handles raw responses)
+    provider = get_provider(model_config, prompt_builder)
 
-    # Create domain service
+    # Create domain service with response parser
     service = InferenceService(
         example_reader=reader,
         judgement_writer=writer,
         llm_provider=provider,
+        response_parser=response_parser,
     )
 
     # Define logging callback for domain service
     def log_judgement(judgement: LLMJudgement) -> None:
         """Callback to log each judgement (infrastructure concern)."""
-        if judgement.llm_response.llm_score is None:
+        if judgement.llm_score is None or judgement.llm_score.label is None:
             logger.warning(
                 "Judgement error",
                 query_text=judgement.sample.query.query_text,
@@ -193,7 +194,7 @@ def run_inference(
                 "Processed judgement",
                 query_text=judgement.sample.query.query_text,
                 doc_text=judgement.sample.document.text,
-                llm_score=judgement.llm_response.llm_score.value,
+                llm_score=judgement.llm_score.label.value,
                 gold_score=judgement.sample.gold_score.value,
                 latency_ms=f"{judgement.llm_response.latency_ms:.1f}",
             )

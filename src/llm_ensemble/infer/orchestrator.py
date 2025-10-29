@@ -168,13 +168,14 @@ def run_inference(
     prompt_builder = get_prompt_builder(prompt_config)
     response_parser = get_response_parser(prompt_config)
 
-    # Instantiate provider with injected prompt builder (provider only handles raw responses)
-    provider = get_provider(model_config, prompt_builder)
+    # Instantiate provider (pure API client - doesn't build prompts)
+    provider = get_provider(model_config)
 
-    # Create domain service with response parser
+    # Create domain service - it orchestrates ALL port interactions
     service = InferenceService(
         example_reader=reader,
         judgement_writer=writer,
+        prompt_builder=prompt_builder,
         llm_provider=provider,
         response_parser=response_parser,
     )

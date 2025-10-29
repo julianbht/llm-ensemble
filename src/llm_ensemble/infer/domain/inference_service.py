@@ -15,7 +15,13 @@ from llm_ensemble.infer.schemas.llm_response import LLMResponse
 from llm_ensemble.infer.schemas.llm_score import LLMScore
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas import ModelConfig, InferManifest
-from llm_ensemble.infer.ports import LLMProvider, ExampleReader, JudgementWriter, ResponseParser
+from llm_ensemble.infer.ports import (
+    LLMProvider,
+    ExampleReader,
+    JudgementWriter,
+    ResponseParser,
+    PromptBuilder,
+)
 from llm_ensemble.libs.runtime.manifest_manager import ManifestBuilder
 
 
@@ -44,6 +50,7 @@ class InferenceService:
         self,
         example_reader: ExampleReader,
         judgement_writer: JudgementWriter,
+        prompt_builder: PromptBuilder,
         llm_provider: LLMProvider,
         response_parser: ResponseParser,
     ):
@@ -52,11 +59,13 @@ class InferenceService:
         Args:
             example_reader: Port for reading judging examples
             judgement_writer: Port for writing model judgements
-            llm_provider: Port for LLM inference (returns raw responses)
+            prompt_builder: Port for building prompts from samples
+            llm_provider: Port for LLM inference (accepts prompts, returns raw responses)
             response_parser: Port for parsing raw responses into structured scores
         """
         self.example_reader = example_reader
         self.judgement_writer = judgement_writer
+        self.prompt_builder = prompt_builder
         self.llm_provider = llm_provider
         self.response_parser = response_parser
 
@@ -74,12 +83,13 @@ class InferenceService:
         Pure business logic that coordinates:
         1. Setting start_time in the manifest builder
         2. Reading JudgingSample objects via ExampleReader port
-        3. Running inference via LLMProvider port to get raw LLMResponse objects
-        4. Parsing each LLMResponse via ResponseParser port to extract LLMScore
-        5. Calculating statistics and adding to manifest builder
-        6. Finalizing the manifest (sets end_time)
-        7. Creating LLMJudgement objects (sample + raw response + parsed score + manifest)
-        8. Writing LLMJudgement objects via JudgementWriter port
+        3. Building prompts via PromptBuilder port for each sample
+        4. Running inference via LLMProvider port to get raw LLMResponse objects
+        5. Parsing each LLMResponse via ResponseParser port to extract LLMScore
+        6. Calculating statistics and adding to manifest builder
+        7. Finalizing the manifest (sets end_time)
+        8. Creating LLMJudgement objects (sample + raw response + parsed score + manifest)
+        9. Writing LLMJudgement objects via JudgementWriter port
 
         Args:
             input_path: Path to input examples
@@ -153,7 +163,12 @@ class InferenceService:
         samples: list[JudgingSample],
         model_config: ModelConfig,
     ) -> Iterator[tuple[JudgingSample, LLMResponse]]:
-        """Process samples through LLM provider to get responses.
+        """Process samples through the full inference pipeline.
+
+        Orchestrates:
+        1. Building prompts for each sample via PromptBuilder
+        2. Sending (sample, prompt) pairs to LLMProvider
+        3. Receiving (sample, LLMResponse) pairs back
 
         Args:
             samples: List of judging samples to process
@@ -162,5 +177,11 @@ class InferenceService:
         Yields:
             Tuples of (sample, LLMResponse) for each inference
         """
-        # Provider returns LLMResponse objects - we pair them with their input samples
-        yield from self.llm_provider.infer(iter(samples), model_config)
+        # Step 1: Build prompts for each sample using PromptBuilder port
+        sample_prompt_pairs = [
+            (sample, self.prompt_builder.build(sample))
+            for sample in samples
+        ]
+
+        # Step 2: Send (sample, prompt) pairs to provider and get (sample, response) back
+        yield from self.llm_provider.infer(iter(sample_prompt_pairs), model_config)

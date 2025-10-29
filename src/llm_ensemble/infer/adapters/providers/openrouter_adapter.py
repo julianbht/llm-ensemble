@@ -2,6 +2,10 @@
 
 Handles HTTP communication with OpenRouter API and converts responses
 to LLMResponse objects. Implements the LLMProvider port.
+
+This is a PURE API client - it accepts pre-built prompts and returns raw responses.
+It does NOT build prompts (that's PromptBuilder's job) or parse responses (that's
+ResponseParser's job). The InferenceService orchestrates all port interactions.
 """
 
 from __future__ import annotations
@@ -13,44 +17,36 @@ from openai import OpenAI
 from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.schemas.llm_response import LLMResponse
 from llm_ensemble.infer.schemas import ModelConfig
-from llm_ensemble.infer.ports import LLMProvider, PromptBuilder
+from llm_ensemble.infer.ports import LLMProvider
 
 
 class OpenRouterAdapter(LLMProvider):
     """OpenRouter implementation of the LLMProvider port.
 
-    Sends inference requests to OpenRouter API and yields (sample, LLMResponse)
-    tuples with RAW responses only. Uses injected PromptBuilder for prompt construction.
-
-    Providers do NOT parse responses - they return raw text + metadata.
-    The InferenceService coordinates parsing via ResponseParser.
+    Pure API client that sends pre-built prompts to OpenRouter and returns raw responses.
+    Does NOT build prompts or parse responses - that's orchestrated by InferenceService.
 
     Example:
         >>> from llm_ensemble.infer.config_loaders import load_model_config
-        >>> from llm_ensemble.infer.adapters.prompt_builder_factory import get_prompt_builder
         >>> config = load_model_config("gpt-oss-20b")
-        >>> prompt_config = load_prompt_config("thomas-et-al-prompt")
-        >>> builder = get_prompt_builder(prompt_config)
-        >>> adapter = OpenRouterAdapter(builder)
-        >>> sample_response_pairs = adapter.infer(samples, config)
+        >>> adapter = OpenRouterAdapter(api_key="...")
+        >>> sample_prompt_pairs = [(sample, "pre-built prompt"), ...]
+        >>> sample_response_pairs = adapter.infer(sample_prompt_pairs, config)
         >>> for sample, response in sample_response_pairs:
         ...     print(response.raw_response)  # Unparsed text
     """
 
     def __init__(
         self,
-        prompt_builder: PromptBuilder,
         api_key: Optional[str] = None,
         timeout: int = 30,
     ):
-        """Initialize OpenRouter adapter with injected dependencies.
+        """Initialize OpenRouter adapter.
 
         Args:
-            prompt_builder: PromptBuilder port for building prompts
             api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
             timeout: Request timeout in seconds (default: 30)
         """
-        self.prompt_builder = prompt_builder
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         self.timeout = timeout
 
@@ -62,13 +58,14 @@ class OpenRouterAdapter(LLMProvider):
 
     def infer(
         self,
-        samples: Iterator[JudgingSample],
+        sample_prompt_pairs: Iterator[tuple[JudgingSample, str]],
         model_config: ModelConfig,
     ) -> Iterator[tuple[JudgingSample, LLMResponse]]:
-        """Run inference on samples using OpenRouter API.
+        """Run inference on pre-built prompts using OpenRouter API.
 
         Args:
-            samples: Iterator of JudgingSample objects to judge
+            sample_prompt_pairs: Iterator of (JudgingSample, prompt_string) tuples
+                                where prompts have been pre-built by PromptBuilder
             model_config: Model configuration with provider and settings
 
         Yields:
@@ -117,18 +114,15 @@ class OpenRouterAdapter(LLMProvider):
             timeout=self.timeout,
         )
 
-        # Process each sample
-        for sample in samples:
-            # Build prompt instruction using injected builder
-            instruction = self.prompt_builder.build(sample)
-
+        # Process each (sample, prompt) pair
+        for sample, prompt in sample_prompt_pairs:
             # Track timing
             warnings: list = []  # Will be populated with ProviderWarning objects if needed
             start_time = time.time()
 
             # Send request with all configured parameters
             response = client.chat.completions.create(
-                messages=[{"role": "user", "content": instruction}],
+                messages=[{"role": "user", "content": prompt}],
                 **api_params
             )
 

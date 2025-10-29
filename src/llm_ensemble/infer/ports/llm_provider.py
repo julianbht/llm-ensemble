@@ -20,33 +20,34 @@ class LLMProvider(ABC):
     All provider adapters (OpenRouter, Ollama, HuggingFace) must inherit
     from this class and implement the infer() method.
 
-    Providers are initialized with injected PromptBuilder and ResponseParser
-    ports, following dependency inversion principles.
+    Providers are PURE API clients - they accept pre-built prompts and return
+    raw responses. They do NOT build prompts or parse responses. The domain
+    service (InferenceService) orchestrates all port interactions.
 
     Providers yield (sample, LLMResponse) tuples - they do NOT attach manifests.
     The domain service handles manifest attachment to create final LLMJudgement objects.
 
     Example:
         >>> class OpenRouterAdapter(LLMProvider):
-        ...     def __init__(self, prompt_builder, response_parser, ...):
-        ...         self.prompt_builder = prompt_builder
-        ...         self.response_parser = response_parser
-        ...     def infer(self, samples, model_config):
-        ...         for sample in samples:
-        ...             response = self._call_llm(sample)
+        ...     def __init__(self, api_key, ...):
+        ...         self.api_key = api_key
+        ...     def infer(self, sample_prompt_pairs, model_config):
+        ...         for sample, prompt in sample_prompt_pairs:
+        ...             response = self._call_api(prompt)  # Just send text to API
         ...             yield (sample, response)
     """
 
     @abstractmethod
     def infer(
         self,
-        samples: Iterator[JudgingSample],
+        sample_prompt_pairs: Iterator[tuple[JudgingSample, str]],
         model_config: ModelConfig,
     ) -> Iterator[tuple[JudgingSample, LLMResponse]]:
-        """Run inference on samples and yield (sample, response) pairs.
+        """Run inference on pre-built prompts and yield (sample, response) pairs.
 
         Args:
-            samples: Iterator of JudgingSample objects to judge
+            sample_prompt_pairs: Iterator of (JudgingSample, prompt_string) tuples
+                                where prompts have been pre-built by PromptBuilder
             model_config: Model configuration with provider and settings
 
         Yields:

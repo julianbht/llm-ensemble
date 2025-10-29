@@ -123,7 +123,7 @@ class OpenRouterAdapter(LLMProvider):
             instruction = self.prompt_builder.build(sample)
 
             # Track timing
-            warnings = []
+            warnings: list = []  # Will be populated with ProviderWarning objects if needed
             start_time = time.time()
 
             # Send request with all configured parameters

@@ -10,6 +10,7 @@ import re
 
 from llm_ensemble.infer.ports import ResponseParser
 from llm_ensemble.infer.schemas.llm_score import LLMScore
+from llm_ensemble.infer.schemas.warnings import ParserWarning, ParserWarningCode
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
@@ -27,11 +28,11 @@ class JsonResponseParser(ResponseParser):
 
     Example:
         >>> parser = JsonResponseParser()
-        >>> label, warnings = parser.parse('{"O": 2}')
-        >>> label
+        >>> score = parser.parse('{"O": 2}')
+        >>> score.label
         2
-        >>> label, warnings = parser.parse('The answer is {"O": 1} based on...')
-        >>> label
+        >>> score = parser.parse('The answer is {"O": 1} based on...')
+        >>> score.label
         1
     """
 
@@ -43,18 +44,16 @@ class JsonResponseParser(ResponseParser):
         """
         self.score_field = score_field
 
-    def parse(self, raw_text: str) -> tuple[LLMScore, list[str]]:
+    def parse(self, raw_text: str) -> LLMScore:
         """Parse JSON response to extract relevance label.
 
         Args:
             raw_text: Raw text response from the LLM
 
         Returns:
-            Tuple of (score, warnings):
-            - score: LLMScore with extracted label (confidence/rationale may be None)
-            - warnings: List of warning messages for parsing issues
+            LLMScore with extracted label and any parsing warnings
         """
-        warnings = []
+        warnings: list[ParserWarning] = []
 
         # Try to find JSON object in the response
         # Look for patterns like {"O": N} or {"M": N, "T": N, "O": N}
@@ -62,34 +61,54 @@ class JsonResponseParser(ResponseParser):
         json_match = re.search(json_pattern, raw_text)
 
         if not json_match:
-            warnings.append(f"No JSON object with '{self.score_field}' field found in response")
-            return LLMScore(), warnings
+            warnings.append(ParserWarning(
+                code=ParserWarningCode.PARSE_ERROR,
+                message=f"No JSON object with '{self.score_field}' field found in response",
+                metadata={"score_field": self.score_field}
+            ))
+            return LLMScore(warnings=warnings)
 
         json_str = json_match.group(0)
 
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError as e:
-            warnings.append(f"Failed to parse JSON: {e}")
-            return LLMScore(), warnings
+            warnings.append(ParserWarning(
+                code=ParserWarningCode.PARSE_ERROR,
+                message=f"Failed to parse JSON: {e}",
+                metadata={"error_type": type(e).__name__}
+            ))
+            return LLMScore(warnings=warnings)
 
         # Extract the score
         score = data.get(self.score_field)
 
         if score is None:
-            warnings.append(f"Missing '{self.score_field}' field in parsed JSON")
-            return LLMScore(), warnings
+            warnings.append(ParserWarning(
+                code=ParserWarningCode.FIELD_ERROR,
+                message=f"Missing '{self.score_field}' field in parsed JSON",
+                metadata={"field_name": self.score_field}
+            ))
+            return LLMScore(warnings=warnings)
 
-        # Validate the score is 0, 1, or 2
+        # Validate the score is 0, 1, 2, or 3
         if not isinstance(score, int) or score not in [0, 1, 2, 3]:
-            warnings.append(f"Invalid {self.score_field} score: {score} (expected 0, 1, 2, or 3)")
-            return LLMScore(), warnings
+            warnings.append(ParserWarning(
+                code=ParserWarningCode.VALIDATION_ERROR,
+                message=f"Invalid {self.score_field} score: {score} (expected 0, 1, 2, or 3)",
+                metadata={"field_name": self.score_field, "actual_value": str(score)}
+            ))
+            return LLMScore(warnings=warnings)
 
         # Convert to RelevanceScore enum
         try:
             relevance_label = RelevanceScore(score)
         except ValueError:
-            warnings.append(f"Invalid score value: {score}")
-            return LLMScore(), warnings
+            warnings.append(ParserWarning(
+                code=ParserWarningCode.VALIDATION_ERROR,
+                message=f"Invalid score value: {score}",
+                metadata={"value": score}
+            ))
+            return LLMScore(warnings=warnings)
 
-        return LLMScore(label=relevance_label), warnings
+        return LLMScore(label=relevance_label, warnings=warnings)

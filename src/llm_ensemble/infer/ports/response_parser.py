@@ -28,23 +28,24 @@ class ResponseParser(ABC):
         ...             return LLMScore(
         ...                 label=data.get("label"),
         ...                 confidence=data.get("confidence"),
-        ...                 rationale=data.get("rationale")
+        ...                 rationale=data.get("rationale"),
+        ...                 warnings=[]
         ...             )
         ...         except Exception as e:
-        ...             return LLMScore()  # All fields None = parse failure
+        ...             return LLMScore(warnings=[ParserWarning(...)])  # Parse failure with warning
     """
 
     @abstractmethod
-    def parse(self, raw_text: str) -> tuple[LLMScore, list[str]]:
+    def parse(self, raw_text: str) -> LLMScore:
         """Parse LLM response to extract structured relevance score.
 
         Args:
             raw_text: Raw text response from the LLM
 
         Returns:
-            Tuple of (score, warnings):
-            - score: LLMScore with extracted label/confidence/rationale (fields may be None if parsing failed)
-            - warnings: List of warning messages for parsing issues
+            LLMScore with extracted label/confidence/rationale and warnings.
+            Fields may be None if parsing failed. Warnings are included in the
+            LLMScore.warnings field for any parsing issues encountered.
 
         Note:
             If parsing completely fails, return LLMScore() with all None fields

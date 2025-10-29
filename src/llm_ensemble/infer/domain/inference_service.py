@@ -107,12 +107,8 @@ class InferenceService:
         # Parse each raw response to extract structured scores
         sample_response_score_tuples = []
         for sample, raw_response in sample_response_pairs:
-            score, parse_warnings = self.response_parser.parse(raw_response.raw_response)
-
-            # Merge parse warnings into response warnings
-            if parse_warnings:
-                raw_response.warnings.extend(parse_warnings)
-
+            # Parser now returns LLMScore with warnings included
+            score = self.response_parser.parse(raw_response.raw_response)
             sample_response_score_tuples.append((sample, raw_response, score))
 
         # Calculate statistics from parsed scores

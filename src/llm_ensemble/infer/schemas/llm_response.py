@@ -9,6 +9,8 @@ from __future__ import annotations
 from typing import Optional
 from pydantic import BaseModel, Field
 
+from llm_ensemble.infer.schemas.warnings import ProviderWarning
+
 
 class LLMResponse(BaseModel):
     """Raw LLM response output from provider adapters.
@@ -48,7 +50,7 @@ class LLMResponse(BaseModel):
         description="Estimated cost in USD for this inference call"
     )
 
-    warnings: list[str] = Field(
+    warnings: list[ProviderWarning] = Field(
         default_factory=list,
         description="Provider-level warnings: API errors, fallbacks, network issues, etc."
     )

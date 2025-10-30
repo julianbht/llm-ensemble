@@ -7,7 +7,7 @@ enabling dependency injection and loose coupling.
 from __future__ import annotations
 from pathlib import Path
 
-from llm_ensemble.infer.schemas import IOConfig
+from llm_ensemble.infer.schemas import InferIOConfig
 from llm_ensemble.infer.ports import ExampleReader, JudgementWriter
 from llm_ensemble.infer.adapters.io import (
     NdjsonExampleReader,
@@ -15,7 +15,7 @@ from llm_ensemble.infer.adapters.io import (
 )
 
 
-def get_example_reader(io_config: IOConfig) -> ExampleReader:
+def get_example_reader(io_config: InferIOConfig) -> ExampleReader:
     """Create and return the appropriate example reader adapter.
 
     Factory function that instantiates the correct reader implementation
@@ -48,7 +48,7 @@ def get_example_reader(io_config: IOConfig) -> ExampleReader:
         )
 
 
-def get_judgement_writer(io_config: IOConfig) -> JudgementWriter:
+def get_judgement_writer(io_config: InferIOConfig) -> JudgementWriter:
     """Create and return the appropriate judgement writer adapter.
 
     Factory function that instantiates the correct writer implementation

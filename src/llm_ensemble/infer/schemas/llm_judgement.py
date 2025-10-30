@@ -34,7 +34,7 @@ class LLMJudgement(BaseModel):
     to be serialized immediately without waiting for aggregate statistics.
     """
 
-    sample: JudgingSample = Field(
+    judging_sample: JudgingSample = Field(
         ...,
         description="The input sample that was judged (includes ingest manifest)"
     )

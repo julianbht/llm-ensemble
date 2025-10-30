@@ -13,7 +13,7 @@ from pydantic import Field
 from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
-from llm_ensemble.infer.schemas.io_config_schema import IOConfig
+from llm_ensemble.infer.schemas.io_config_schema import InferIOConfig
 
 
 class InferRunInfo(RunInfo):
@@ -60,7 +60,7 @@ class InferRunInfo(RunInfo):
         description="Prompt configuration used for this run"
     )
 
-    io_config: IOConfig = Field(
+    io_config: InferIOConfig = Field(
         ...,
         description="I/O configuration used for this run"
     )
@@ -76,6 +76,7 @@ class InferRunInfo(RunInfo):
         description="Maximum number of examples to process (None = no limit)"
     )
 
+    # Pydantic-specific pattern to make this class immutable
     class Config:
         """Pydantic config."""
         frozen = True  # Make immutable to emphasize this is runtime context

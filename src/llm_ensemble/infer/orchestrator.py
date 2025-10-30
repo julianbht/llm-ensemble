@@ -189,17 +189,17 @@ def run_inference(
             # Log as INFO (not WARNING) since this is analytics, not an error
             logger.info(
                 "Judgement with parsing issues",
-                query_text=judgement.sample.query.query_text,
-                doc_text=judgement.sample.document.text,
+                query_text=judgement.judging_sample.query.query_text,
+                doc_text=judgement.judging_sample.document.text,
                 warnings=judgement.llm_response.warnings,
             )
         else:
             logger.info(
                 "Processed judgement",
-                query_text=judgement.sample.query.query_text,
-                doc_text=judgement.sample.document.text,
+                query_text=judgement.judging_sample.query.query_text,
+                doc_text=judgement.judging_sample.document.text,
                 llm_score=judgement.llm_score.label.value,
-                gold_score=judgement.sample.gold_score.value,
+                gold_score=judgement.judging_sample.gold_score.value,
                 latency_ms=f"{judgement.llm_response.latency_ms:.1f}",
             )
 

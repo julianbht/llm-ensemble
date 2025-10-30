@@ -65,6 +65,7 @@ class RunInfo(BaseModel):
         description="Git branch name at time of run (auto-captured)"
     )
 
+    # Pydantic-specific pattern to make this class immutable
     class Config:
         """Pydantic config."""
         frozen = True  # Make immutable to emphasize this is runtime context

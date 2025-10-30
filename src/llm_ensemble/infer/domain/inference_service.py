@@ -128,7 +128,7 @@ class InferenceService:
 
                 # 4. Create judgement immediately
                 judgement = LLMJudgement(
-                    sample=sample,
+                    judging_sample=sample,
                     llm_request=request,
                     llm_response=response,
                     llm_score=score,

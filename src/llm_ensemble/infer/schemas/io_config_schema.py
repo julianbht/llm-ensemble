@@ -8,7 +8,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
-class IOConfig(BaseModel):
+class InferIOConfig(BaseModel):
     """Domain model for I/O format configuration (mirrors configs/io/*.yaml)."""
 
     io_format: str = Field(description="I/O format identifier (e.g., 'ndjson', 'parquet')")

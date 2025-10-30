@@ -29,7 +29,7 @@ from llm_ensemble.ingest.schemas.relevance import Relevance
 from llm_ensemble.infer.schemas.model_judgement_schema import ModelJudgement
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
-from llm_ensemble.infer.schemas.io_config_schema import IOConfig
+from llm_ensemble.infer.schemas.io_config_schema import InferIOConfig
 from llm_ensemble.aggregate.schemas.ensemble_result import EnsembleResult
 from llm_ensemble.evaluate.schemas.evaluation_metrics import EvaluationMetrics
 
@@ -46,7 +46,7 @@ SCHEMAS = [
     # Configuration schemas (YAML configs)
     ("configurations", ModelConfig, "model-config.schema.json", "Model configuration (configs/models/*.yaml)"),
     ("configurations", PromptConfig, "prompt-config.schema.json", "Prompt configuration (configs/prompts/*.yaml)"),
-    ("configurations", IOConfig, "io-config.schema.json", "I/O format configuration (configs/io/*.yaml)"),
+    ("configurations", InferIOConfig, "io-config.schema.json", "I/O format configuration (configs/io/*.yaml)"),
 
     # Internal domain models (CLI-specific, for documentation)
     ("internal", Query, "query.schema.json", "Query component (ingest-internal)"),

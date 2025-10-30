@@ -6,10 +6,10 @@ Extends the base IOConfig with ingest-specific fields like dataset_id.
 from __future__ import annotations
 from pydantic import Field
 
-from llm_ensemble.infer.schemas.io_config_schema import IOConfig
+from llm_ensemble.infer.schemas.io_config_schema import InferIOConfig
 
 
-class IngestIOConfig(IOConfig):
+class IngestIOConfig(InferIOConfig):
     """I/O configuration for ingest CLI.
 
     Extends IOConfig with ingest-specific fields:

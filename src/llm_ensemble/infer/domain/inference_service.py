@@ -9,10 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Callable
 
-from llm_ensemble.ingest.schemas import JudgingSample
-from llm_ensemble.infer.schemas.llm_request import LLMRequest
-from llm_ensemble.infer.schemas.llm_response import LLMResponse
-from llm_ensemble.infer.schemas.llm_score import LLMScore
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
@@ -80,16 +76,18 @@ class InferenceService:
         limit: Optional[int] = None,
         on_judgement: Optional[Callable[[LLMJudgement], None]] = None,
     ) -> InferRunSummary:
-        """Execute the inference pipeline.
+        """Execute the inference pipeline with streaming and immediate persistence.
 
         Pure business logic that coordinates:
         1. Reading JudgingSample objects via ExampleReader port
-        2. Building prompts via PromptBuilder port → LLMRequest (prompt + prompt warnings)
-        3. Running inference via LLMProvider port → LLMResponse (raw response + provider warnings)
-        4. Parsing responses via ResponseParser port → LLMScore (parsed score + parser warnings)
-        5. Creating LLMJudgement objects (sample + request + response + score + run_info)
-        6. Writing LLMJudgement objects via JudgementWriter port
-        7. Calculating statistics including warnings summary from all stages
+        2. For each sample (streaming loop):
+           a. Building prompt via PromptBuilder port → LLMRequest (prompt + prompt warnings)
+           b. Running inference via LLMProvider port → LLMResponse (raw response + provider warnings)
+           c. Parsing response via ResponseParser port → LLMScore (parsed score + parser warnings)
+           d. Creating LLMJudgement object (sample + request + response + score + run_info)
+           e. Invoking callback for live progress logging
+           f. Writing judgement immediately to disk (fault tolerance)
+        3. Calculating statistics including warnings summary from all stages
 
         Args:
             input_path: Path to input examples
@@ -112,54 +110,40 @@ class InferenceService:
         # Read JudgingSample objects (which include ingest manifest)
         samples = self.example_reader.read(input_path, limit=limit)
 
-        # Build prompts for each sample (returns LLMRequest with prompt + warnings)
-        sample_request_pairs = [
-            (sample, self.prompt_builder.build(sample))
-            for sample in samples
-        ]
+        # Collect judgements for summary statistics (persisted immediately to disk as well)
+        llm_judgements: list[LLMJudgement] = []
 
-        # Extract prompt strings for provider (provider doesn't need to know about LLMRequest)
-        sample_prompt_pairs = [
-            (sample, request.prompt)
-            for sample, request in sample_request_pairs
-        ]
+        # Open writer for streaming (context manager ensures proper cleanup)
+        with self.judgement_writer.open(run_dir) as writer:
+            # Process each sample individually (streaming loop)
+            for sample in samples:
+                # 1. Build prompt for this sample
+                request = self.prompt_builder.build(sample)
 
-        # Run inference to get raw responses
-        sample_response_pairs = list(self.llm_provider.infer(iter(sample_prompt_pairs), model_config))
+                # 2. Run inference for this sample (simple, synchronous call)
+                response = self.llm_provider.infer(request.prompt, model_config)
 
-        # Match requests back with responses (provider maintains sample order)
-        sample_request_response_triples = [
-            (sample, request, response)
-            for (sample, request), (_, response) in zip(sample_request_pairs, sample_response_pairs)
-        ]
+                # 3. Parse response to extract structured score
+                score = self.response_parser.parse(response.raw_response)
 
-        # Parse each raw response to extract structured scores
-        sample_request_response_score_tuples = []
-        for sample, request, raw_response in sample_request_response_triples:
-            # Parser returns LLMScore with warnings included
-            score = self.response_parser.parse(raw_response.raw_response)
-            sample_request_response_score_tuples.append((sample, request, raw_response, score))
+                # 4. Create judgement immediately
+                judgement = LLMJudgement(
+                    sample=sample,
+                    llm_request=request,
+                    llm_response=response,
+                    llm_score=score,
+                    run_info=run_info,
+                )
 
-        # Create LLMJudgement objects immediately with run_info (enables streaming in future)
-        # Note: We can now attach run_info to each judgement immediately since it's immutable
-        llm_judgements = [
-            LLMJudgement(
-                sample=sample,
-                llm_request=request,
-                llm_response=response,
-                llm_score=score,
-                run_info=run_info,
-            )
-            for sample, request, response, score in sample_request_response_score_tuples
-        ]
+                # 5. Invoke callback for live progress logging
+                if on_judgement:
+                    on_judgement(judgement)
 
-        # Invoke callback for each judgement if provided (for logging/progress tracking)
-        if on_judgement:
-            for judgement in llm_judgements:
-                on_judgement(judgement)
+                # 6. Write judgement immediately to disk (fault tolerance!)
+                writer.write_one(judgement)
 
-        # Write judgements (writer determines output file structure)
-        self.judgement_writer.write(llm_judgements, run_dir)
+                # 7. Collect for summary statistics
+                llm_judgements.append(judgement)
 
         # Calculate aggregate statistics from judgements (for summary)
         count = len(llm_judgements)

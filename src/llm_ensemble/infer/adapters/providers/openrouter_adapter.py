@@ -11,10 +11,9 @@ ResponseParser's job). The InferenceService orchestrates all port interactions.
 from __future__ import annotations
 import os
 import time
-from typing import Iterator, Optional
+from typing import Optional
 from openai import OpenAI
 
-from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.schemas.llm_response import LLMResponse
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.ports import LLMProvider
@@ -30,10 +29,8 @@ class OpenRouterAdapter(LLMProvider):
         >>> from llm_ensemble.infer.config_loaders import load_model_config
         >>> config = load_model_config("gpt-oss-20b")
         >>> adapter = OpenRouterAdapter(api_key="...")
-        >>> sample_prompt_pairs = [(sample, "pre-built prompt"), ...]
-        >>> sample_response_pairs = adapter.infer(sample_prompt_pairs, config)
-        >>> for sample, response in sample_response_pairs:
-        ...     print(response.raw_response)  # Unparsed text
+        >>> response = adapter.infer("pre-built prompt", config)
+        >>> print(response.raw_response)  # Unparsed text
     """
 
     def __init__(
@@ -58,18 +55,17 @@ class OpenRouterAdapter(LLMProvider):
 
     def infer(
         self,
-        sample_prompt_pairs: Iterator[tuple[JudgingSample, str]],
+        prompt: str,
         model_config: ModelConfig,
-    ) -> Iterator[tuple[JudgingSample, LLMResponse]]:
-        """Run inference on pre-built prompts using OpenRouter API.
+    ) -> LLMResponse:
+        """Run inference on a single pre-built prompt using OpenRouter API.
 
         Args:
-            sample_prompt_pairs: Iterator of (JudgingSample, prompt_string) tuples
-                                where prompts have been pre-built by PromptBuilder
+            prompt: Pre-built prompt string (from PromptBuilder)
             model_config: Model configuration with provider and settings
 
-        Yields:
-            Tuples of (JudgingSample, LLMResponse) for each inference
+        Returns:
+            LLMResponse with raw response text and metadata
 
         Raises:
             ValueError: If openrouter_model_id is not configured
@@ -114,32 +110,29 @@ class OpenRouterAdapter(LLMProvider):
             timeout=self.timeout,
         )
 
-        # Process each (sample, prompt) pair
-        for sample, prompt in sample_prompt_pairs:
-            # Track timing
-            warnings: list = []  # Will be populated with ProviderWarning objects if needed
-            start_time = time.time()
+        # Track timing
+        warnings: list = []  # Will be populated with ProviderWarning objects if needed
+        start_time = time.time()
 
-            # Send request with all configured parameters
-            response = client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                **api_params
-            )
+        # Send request with all configured parameters
+        response = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            **api_params
+        )
 
-            latency_ms = (time.time() - start_time) * 1000
+        latency_ms = (time.time() - start_time) * 1000
 
-            # Extract response text
-            raw_response = response.choices[0].message.content
+        # Extract response text
+        raw_response = response.choices[0].message.content
 
-            # Build LLMResponse with RAW output only (no parsing)
-            # The InferenceService will handle parsing via ResponseParser
-            llm_response = LLMResponse(
-                raw_response=raw_response,
-                latency_ms=latency_ms,
-                retries=0,
-                cost_estimate_usd=None,  # Could be added later
-                warnings=warnings,
-            )
+        # Build LLMResponse with RAW output only (no parsing)
+        # The InferenceService will handle parsing via ResponseParser
+        llm_response = LLMResponse(
+            raw_response=raw_response,
+            latency_ms=latency_ms,
+            retries=0,
+            cost_estimate_usd=None,  # Could be added later
+            warnings=warnings,
+        )
 
-            # Yield (sample, raw_response) tuple
-            yield (sample, llm_response)
+        return llm_response

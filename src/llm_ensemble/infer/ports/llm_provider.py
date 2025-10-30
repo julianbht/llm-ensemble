@@ -7,9 +7,7 @@ provider implementations (OpenRouter, Ollama, HuggingFace, etc.).
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Iterator
 
-from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.schemas.llm_response import LLMResponse
 from llm_ensemble.infer.schemas import ModelConfig
 
@@ -24,34 +22,32 @@ class LLMProvider(ABC):
     raw responses. They do NOT build prompts or parse responses. The domain
     service (InferenceService) orchestrates all port interactions.
 
-    Providers yield (sample, LLMResponse) tuples - they do NOT attach manifests.
-    The domain service handles manifest attachment to create final LLMJudgement objects.
+    Providers handle single inference requests. If a provider's API supports
+    batching, the adapter can implement internal buffering transparently.
 
     Example:
         >>> class OpenRouterAdapter(LLMProvider):
         ...     def __init__(self, api_key, ...):
         ...         self.api_key = api_key
-        ...     def infer(self, sample_prompt_pairs, model_config):
-        ...         for sample, prompt in sample_prompt_pairs:
-        ...             response = self._call_api(prompt)  # Just send text to API
-        ...             yield (sample, response)
+        ...     def infer(self, prompt, model_config):
+        ...         response = self._call_api(prompt)  # Just send text to API
+        ...         return response
     """
 
     @abstractmethod
     def infer(
         self,
-        sample_prompt_pairs: Iterator[tuple[JudgingSample, str]],
+        prompt: str,
         model_config: ModelConfig,
-    ) -> Iterator[tuple[JudgingSample, LLMResponse]]:
-        """Run inference on pre-built prompts and yield (sample, response) pairs.
+    ) -> LLMResponse:
+        """Run inference on a single pre-built prompt.
 
         Args:
-            sample_prompt_pairs: Iterator of (JudgingSample, prompt_string) tuples
-                                where prompts have been pre-built by PromptBuilder
+            prompt: Pre-built prompt string (from PromptBuilder)
             model_config: Model configuration with provider and settings
 
-        Yields:
-            Tuples of (JudgingSample, LLMResponse) for each inference
+        Returns:
+            LLMResponse with raw response text and metadata
 
         Raises:
             ValueError: If configuration is invalid

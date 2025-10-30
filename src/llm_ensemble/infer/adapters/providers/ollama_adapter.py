@@ -9,9 +9,7 @@ ResponseParser's job). The InferenceService orchestrates all port interactions.
 """
 
 from __future__ import annotations
-from typing import Iterator
 
-from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.schemas.llm_response import LLMResponse
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.ports import LLMProvider
@@ -27,8 +25,8 @@ class OllamaAdapter(LLMProvider):
         >>> from llm_ensemble.infer.config_loaders import load_model_config
         >>> config = load_model_config("tinyllama")
         >>> adapter = OllamaAdapter(base_url="http://localhost:11434")
-        >>> sample_prompt_pairs = [(sample, "pre-built prompt"), ...]
-        >>> sample_response_pairs = adapter.infer(sample_prompt_pairs, config)
+        >>> response = adapter.infer("pre-built prompt", config)
+        >>> print(response.raw_response)
     """
 
     def __init__(
@@ -47,18 +45,17 @@ class OllamaAdapter(LLMProvider):
 
     def infer(
         self,
-        sample_prompt_pairs: Iterator[tuple[JudgingSample, str]],
+        prompt: str,
         model_config: ModelConfig,
-    ) -> Iterator[tuple[JudgingSample, LLMResponse]]:
-        """Run inference on pre-built prompts using Ollama server.
+    ) -> LLMResponse:
+        """Run inference on a single pre-built prompt using Ollama server.
 
         Args:
-            sample_prompt_pairs: Iterator of (JudgingSample, prompt_string) tuples
-                                where prompts have been pre-built by PromptBuilder
+            prompt: Pre-built prompt string (from PromptBuilder)
             model_config: Model configuration with provider and settings
 
-        Yields:
-            Tuples of (JudgingSample, LLMResponse) for each inference
+        Returns:
+            LLMResponse with raw response text and metadata
 
         Raises:
             NotImplementedError: Ollama adapter not yet implemented

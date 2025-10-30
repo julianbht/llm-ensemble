@@ -9,14 +9,12 @@ Centralizes all data structure definitions.
 
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
-from llm_ensemble.infer.schemas.io_config_schema import InferIOConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
 
 __all__ = [
     "ModelConfig",
     "PromptConfig",
-    "InferIOConfig",
     "InferRunInfo",
     "InferRunSummary",
 ]

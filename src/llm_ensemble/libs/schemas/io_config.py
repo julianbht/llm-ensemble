@@ -2,14 +2,20 @@
 
 Defines the Pydantic schema for I/O format configurations that bundle
 reader and writer adapters together (e.g., ndjson, parquet).
+
+This is a shared schema used across all CLIs.
 """
 
 from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
-class InferIOConfig(BaseModel):
-    """Domain model for I/O format configuration (mirrors configs/io/*.yaml)."""
+class IOConfig(BaseModel):
+    """Domain model for I/O format configuration (mirrors configs/io/*.yaml).
+
+    This is the base I/O configuration schema shared across all CLIs.
+    CLI-specific I/O configs can extend this class to add additional fields.
+    """
 
     io_format: str = Field(description="I/O format identifier (e.g., 'ndjson', 'parquet')")
     description: str = Field(description="Human-readable description of the format")

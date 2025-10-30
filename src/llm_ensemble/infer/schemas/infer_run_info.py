@@ -11,9 +11,9 @@ from typing import Optional
 from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
+from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
-from llm_ensemble.infer.schemas.io_config_schema import InferIOConfig
 
 
 class InferRunInfo(RunInfo):
@@ -60,7 +60,7 @@ class InferRunInfo(RunInfo):
         description="Prompt configuration used for this run"
     )
 
-    io_config: InferIOConfig = Field(
+    io_config: IOConfig = Field(
         ...,
         description="I/O configuration used for this run"
     )

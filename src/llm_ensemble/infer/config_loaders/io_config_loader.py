@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional
 import yaml
 
-from llm_ensemble.infer.schemas.io_config_schema import InferIOConfig
+from llm_ensemble.libs.schemas import IOConfig
 
 
 def get_default_io_dir() -> Path:
@@ -25,7 +25,7 @@ def get_default_io_dir() -> Path:
     return project_root / "configs" / "io"
 
 
-def load_io_config(io_format: str) -> InferIOConfig:
+def load_io_config(io_format: str) -> IOConfig:
     """Load an I/O configuration from YAML file.
 
     Args:
@@ -68,6 +68,6 @@ def load_io_config(io_format: str) -> InferIOConfig:
 
     # Validate and parse into IOConfig
     try:
-        return InferIOConfig(**data)
+        return IOConfig(**data)
     except Exception as e:
         raise ValueError(f"Failed to parse I/O config {config_path}: {e}") from e

@@ -59,32 +59,6 @@ CLI Layer → Orchestrator Layer → Domain Layer → Ports Layer → Adapters L
 
 **Pattern: Context Manager + Streaming Loop**
 
-```python
-# InferenceService.run_inference()
-with self.judgement_writer.open(run_dir) as writer:
-    for sample in samples:
-        # 1. Build prompt
-        request = self.prompt_builder.build(sample)
-
-        # 2. Infer (simple synchronous call)
-        response = self.llm_provider.infer(request.prompt, model_config)
-
-        # 3. Parse response
-        score = self.response_parser.parse(response.raw_response)
-
-        # 4. Create judgement
-        judgement = LLMJudgement(sample, request, response, score, run_info)
-
-        # 5. Log immediately (live progress!)
-        if on_judgement:
-            on_judgement(judgement)
-
-        # 6. Persist immediately (fault tolerance!)
-        writer.write_one(judgement)
-
-        # If error occurs here ↑, all previous judgements are already saved
-```
-
 **Benefits:**
 - ✅ **Fault tolerance** - partial progress preserved on errors
 - ✅ **Live progress** - see results as they complete (logging callback invoked immediately)
@@ -114,92 +88,11 @@ class JudgementWriter(ABC):
         self.close()
 ```
 
-**NDJSON implementation:**
-- Opens file once (`open()`)
-- Writes + flushes each line immediately (`write_one()`)
-- Auto-closes on context exit (`close()`)
-
-**For formats requiring batching (e.g., Parquet):**
-Adapter can buffer internally transparently to caller - the interface remains streaming.
-
-### 3. Simple, Synchronous Interfaces (Avoid Premature Abstraction)
-
-**Anti-pattern:** Iterator-based provider interface for "future batching support"
-
-```python
-# ❌ Old: Complex iterator interface
-def infer(
-    sample_prompt_pairs: Iterator[tuple[Sample, str]],
-    config: ModelConfig
-) -> Iterator[tuple[Sample, LLMResponse]]:
-    for sample, prompt in sample_prompt_pairs:
-        yield (sample, self._call_api(prompt))
-
-# Usage in service required wrapping/unwrapping:
-sample_prompt_pair = iter([(sample, prompt)])  # Wrap single item
-for _, response in provider.infer(sample_prompt_pair, config):  # Unwrap
-    # ... only ever get ONE response anyway
-```
-
-**Pattern:** YAGNI - start simple, complexify only when needed
-
-```python
-# ✅ New: Simple synchronous interface
-def infer(self, prompt: str, model_config: ModelConfig) -> LLMResponse:
-    """Run inference on a single prompt."""
-    response = self._call_api(prompt)
-    return response
-
-# Usage in service is direct:
-response = self.llm_provider.infer(request.prompt, model_config)  # Clean!
-```
-
-**Benefits:**
-- ✅ **Easier to understand** - no iterator ceremony
-- ✅ **Easier to debug** - straightforward call/return
-- ✅ **Easier to test** - mock returns a value, not a generator
-
-**If batching is needed later:**
-- Keep the simple interface for callers
-- Implement batching **inside the adapter** transparently (internal buffering)
-- Or create a separate `BatchLLMProvider` port if truly needed
-
-**Principle:** Interface complexity should match actual use cases, not imagined future needs.
-
-### 4. Factory Pattern for Configuration-Driven Adapter Selection
+### 3. Factory Pattern for Configuration-Driven Adapter Selection
 
 **Problem:** How to instantiate the right adapter based on configuration?
 
 **Solution:** Factory functions that read config and return concrete implementations.
-
-**Pattern:**
-
-```python
-# adapters/provider_factory.py
-def get_provider(model_config: ModelConfig) -> LLMProvider:
-    """Instantiate provider based on config.provider field."""
-    if model_config.provider == "openrouter":
-        return OpenRouterAdapter(api_key=os.getenv("OPENROUTER_API_KEY"))
-    elif model_config.provider == "ollama":
-        return OllamaAdapter(base_url=os.getenv("OLLAMA_BASE_URL"))
-    elif model_config.provider == "huggingface":
-        return HuggingFaceAdapter(token=os.getenv("HF_TOKEN"))
-    else:
-        raise ValueError(f"Unknown provider: {model_config.provider}")
-```
-
-**Usage in orchestrator:**
-
-```python
-# Load config
-model_config = load_model_config(model_id)  # Reads configs/models/{model_id}.yaml
-
-# Factory instantiates the right adapter
-provider = get_provider(model_config)
-
-# Domain service uses only the port abstraction
-service = InferenceService(provider=provider, ...)  # provider: LLMProvider (ABC)
-```
 
 **Factories in this CLI:**
 - `provider_factory.py` - LLM providers (OpenRouter, Ollama, HF)
@@ -214,7 +107,7 @@ service = InferenceService(provider=provider, ...)  # provider: LLMProvider (ABC
 
 **Rule:** When adding new adapters, ALWAYS update the corresponding factory.
 
-### 5. Explicit Configuration Over Implicit Defaults
+### 4. Explicit Configuration Over Implicit Defaults
 
 **Principle:** Make all behavior visible and configurable. Errors over silent fallbacks.
 
@@ -298,21 +191,6 @@ def close(self) -> None:
 2. Create parser in `adapters/parsers/` implementing `ResponseParser` port
 3. Update factories
 4. Add config to `configs/prompts/` bundling builder + parser
-
-## Testing Strategy
-
-**Unit tests** (domain layer):
-- Mock all ports (simple test doubles)
-- Test domain logic in complete isolation
-- Fast, deterministic
-
-**Integration tests** (adapters):
-- Test concrete adapters with real file I/O or API mocking
-- Verify port contracts are satisfied
-
-**CLI integration tests:**
-- End-to-end with test fixtures
-- Verify CLI flags → orchestrator → domain → adapters → output files
 
 ## Key Takeaways
 

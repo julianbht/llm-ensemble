@@ -6,14 +6,15 @@ It depends only on port abstractions, has no knowledge of infrastructure details
 """
 
 from __future__ import annotations
-from datetime import datetime
 from pathlib import Path
 from typing import Optional, Callable
 
-from llm_ensemble.ingest.schemas import JudgingSample, IngestManifest
+from llm_ensemble.ingest.schemas import JudgingSample
+from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
 from llm_ensemble.ingest.ports import SampleReader, DatasetWriter
 from llm_ensemble.ingest.ports.sample_reader import RawJudgingSample
-from llm_ensemble.libs.runtime.manifest_manager import ManifestBuilder
+from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 
 
 class IngestionService:
@@ -42,57 +43,51 @@ class IngestionService:
     def ingest_dataset(
         self,
         data_dir: Path,
-        manifest_builder: ManifestBuilder,
+        run_info: IngestRunInfo,
         run_dir: Path,
         limit: Optional[int] = None,
         on_sample: Optional[Callable[[JudgingSample], None]] = None,
-    ) -> IngestManifest:
+    ) -> IngestRunSummary:
         """Execute the ingestion pipeline.
 
         Pure business logic that coordinates:
-        1. Setting start_time in the manifest builder
+        1. Creating run summary builder with timing
         2. Reading RawJudgingSample DTOs from raw dataset via SampleReader port
-        3. Adding sample_count to the manifest builder
-        4. Finalizing the manifest (sets end_time)
-        5. Attaching manifest to each sample (Many-to-One relationship) to create JudgingSamples
-        6. Writing JudgingSamples via DatasetWriter port (writer determines output structure)
+        3. Attaching run_info to each sample (Many-to-One relationship) to create JudgingSamples
+        4. Writing JudgingSamples via DatasetWriter port (writer determines output structure)
+        5. Calculating summary statistics and finalizing
 
         Args:
             data_dir: Directory containing raw dataset files
-            manifest_builder: Manifest builder for constructing final manifest
+            run_info: Immutable runtime context (created by orchestrator, attached to each sample)
             run_dir: Run directory where output should be written (writer determines file structure)
             limit: Optional maximum number of samples to process
             on_sample: Optional callback invoked for each sample (for logging/progress)
 
         Returns:
-            Finalized IngestManifest with sample_count and timing information
+            Finalized IngestRunSummary with sample_count and timing information
 
         Raises:
             FileNotFoundError: If dataset files are missing
             ValueError: If dataset files are malformed
             Exception: If any step in the pipeline fails
         """
-        # Set start_time when processing begins
-        manifest_builder.add("start_time", datetime.now())
+        # Create run summary builder (for timing and collection of metrics)
+        summary_builder = RunSummaryBuilder(run_info)
+        summary_builder.set_start_time()
 
         # Read RawJudgingSample DTOs from raw dataset (SampleReader handles limit internally)
         raw_samples: list[RawJudgingSample] = self.sample_reader.read(data_dir, limit=limit)
 
         sample_count = len(raw_samples)
 
-        # Add sample_count to builder
-        manifest_builder.add("sample_count", sample_count)
-
-        # Finalize manifest (sets end_time and creates immutable Pydantic object)
-        manifest: IngestManifest = manifest_builder.finalize(IngestManifest)
-
-        # Attach manifest to each sample (Many-to-One relationship)
+        # Attach run_info to each sample (Many-to-One relationship)
         judging_samples = [
             JudgingSample(
                 query=sample.query,
                 document=sample.document,
                 gold_score=sample.gold_score,
-                manifest=manifest,
+                run_info=run_info,
             )
             for sample in raw_samples
         ]
@@ -105,5 +100,11 @@ class IngestionService:
         # Write samples (writer determines output file structure)
         self.dataset_writer.write(judging_samples, run_dir)
 
-        # Return finalized manifest
-        return manifest
+        # Add statistics to summary builder
+        summary_builder.add("sample_count", sample_count)
+
+        # Finalize summary (sets end_time and creates immutable Pydantic object)
+        summary: IngestRunSummary = summary_builder.finalize(IngestRunSummary)
+
+        # Return finalized summary
+        return summary

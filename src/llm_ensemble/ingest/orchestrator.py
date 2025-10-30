@@ -16,12 +16,11 @@ from typing import Optional, TextIO
 from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.ingest.adapters import get_sample_reader, get_dataset_writer
 from llm_ensemble.ingest.config_loaders import load_ingest_io_config
-from llm_ensemble.libs.runtime.manifest_manager import (
-    ManifestBuilder,
-    write_standalone_manifest,
-)
+from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
+from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_id import generate_run_id
 from llm_ensemble.libs.runtime.path_manager import PathManager
+from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging.logger import get_logger
 
 
@@ -76,20 +75,22 @@ def run_ingest(
     )
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    # Initialize manifest builder (pure manifest construction)
-    manifest_builder = ManifestBuilder(
-        run_id=actual_run_id,
-        run_dir=run_dir,
-        cli_name="ingest",
-        official=official,
-        notes=notes,
-    )
+    # Get git info for reproducibility
+    git_info = get_git_info()
 
-    # Add ingest-specific fields to manifest builder
-    manifest_builder.add("io_config_name", io_format)
-    manifest_builder.add("io_config", io_config)
-    manifest_builder.add("input_path", str(input_path))
-    manifest_builder.add("limit", limit)
+    # Create immutable run info (runtime context known before run starts)
+    run_info = IngestRunInfo(
+        run_id=actual_run_id,
+        run_type="official" if official else "test",
+        notes=notes,
+        git_sha=git_info["git_sha"],
+        git_clean=git_info["git_clean"],
+        git_branch=git_info["git_branch"],
+        io_config_name=io_format,
+        io_config=io_config,
+        input_path=str(input_path),
+        limit=limit,
+    )
 
     # Set up log file if requested and not already provided
     log_file_handle = log_file
@@ -123,18 +124,18 @@ def run_ingest(
 
     # Run ingestion pipeline (pure business logic)
     try:
-        manifest = service.ingest_dataset(
+        summary = service.ingest_dataset(
             data_dir=input_path,
-            manifest_builder=manifest_builder,
+            run_info=run_info,
             run_dir=run_dir,
             limit=limit,
         )
-        sample_count = manifest.sample_count
+        sample_count = summary.sample_count
         logger.info("Samples processed", count=sample_count)
 
-        # Write standalone manifest.json for convenience (not source of truth)
-        write_standalone_manifest(manifest, run_dir)
-        logger.info("Manifest written", path=str(run_dir / "manifest.json"))
+        # Write standalone summary.json for convenience (not source of truth)
+        write_standalone_summary(summary, run_dir)
+        logger.info("Summary written", path=str(run_dir / "summary.json"))
 
     except Exception as e:
         logger.error("Ingest failed", error=str(e))

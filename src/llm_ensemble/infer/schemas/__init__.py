@@ -4,7 +4,7 @@ Centralizes all data structure definitions.
 """
 
 # NOTE: LLMResponse and LLMJudgement not imported here to avoid circular imports
-# (they depend on JudgingSample which depends on IngestManifest which depends on IngestIOConfig which depends on IOConfig)
+# (they depend on JudgingSample which has complex dependencies)
 # Import them directly: from llm_ensemble.infer.schemas.llm_response import LLMResponse
 
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig

@@ -15,7 +15,7 @@ from typing import Optional, TextIO
 
 from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.ingest.adapters import get_sample_reader, get_dataset_writer
-from llm_ensemble.ingest.config_loaders import load_ingest_io_config
+from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_id import generate_run_id
@@ -57,15 +57,15 @@ def run_ingest(
         FileNotFoundError: If I/O config not found or input path doesn't exist
         ValueError: If adapter is not recognized or dataset files are malformed
     """
-    # Load I/O config (includes dataset_id and adapter specifications)
-    io_config = load_ingest_io_config(io_format)
+    # Load I/O config (includes adapter specifications)
+    io_config = load_io_config(io_format)
 
     # Verify input directory exists
     if not input_path.exists():
         raise FileNotFoundError(f"Input directory does not exist: {input_path}")
 
-    # Generate or use provided run_id
-    actual_run_id = run_id or generate_run_id(io_config.dataset_id)
+    # Generate or use provided run_id (using io_format as dataset identifier)
+    actual_run_id = run_id or generate_run_id(io_format)
 
     # Get run directory path and create it
     run_dir = PathManager.get_run_dir(
@@ -105,7 +105,7 @@ def run_ingest(
 
     logger.info(
         "Starting ingest",
-        dataset_id=io_config.dataset_id,
+        dataset=io_format,
         io_format=io_config.io_format,
         input_path=str(input_path),
         limit=limit,

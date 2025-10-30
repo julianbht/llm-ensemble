@@ -6,7 +6,7 @@ enabling dependency injection and configuration-driven adapter selection.
 
 from __future__ import annotations
 
-from llm_ensemble.ingest.schemas import IngestIOConfig
+from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.ingest.ports import SampleReader, DatasetWriter
 from llm_ensemble.ingest.adapters.io import (
     LlmJudgeSampleReader,
@@ -14,7 +14,7 @@ from llm_ensemble.ingest.adapters.io import (
 )
 
 
-def get_sample_reader(io_config: IngestIOConfig) -> SampleReader:
+def get_sample_reader(io_config: IOConfig) -> SampleReader:
     """Create and return the appropriate sample reader adapter.
 
     Factory function that instantiates the correct reader implementation
@@ -47,7 +47,7 @@ def get_sample_reader(io_config: IngestIOConfig) -> SampleReader:
         )
 
 
-def get_dataset_writer(io_config: IngestIOConfig) -> DatasetWriter:
+def get_dataset_writer(io_config: IOConfig) -> DatasetWriter:
     """Create and return the appropriate dataset writer adapter.
 
     Factory function that instantiates the correct writer implementation

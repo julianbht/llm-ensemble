@@ -11,7 +11,7 @@ from typing import Optional
 from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
-from llm_ensemble.ingest.schemas.ingest_io_config import IngestIOConfig
+from llm_ensemble.libs.schemas import IOConfig
 
 
 class IngestRunInfo(RunInfo):
@@ -43,7 +43,7 @@ class IngestRunInfo(RunInfo):
     )
 
     # Full configuration object (for reproducibility)
-    io_config: IngestIOConfig = Field(
+    io_config: IOConfig = Field(
         ...,
         description="I/O configuration used for this run"
     )

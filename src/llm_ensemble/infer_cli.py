@@ -5,6 +5,7 @@ from llm_ensemble.infer.orchestrator import run_inference
 from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_config
 from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
+from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
 from llm_ensemble.libs.cli.common_params import InputPath, IoCfg, RunId, SaveLogs, Official, Notes, Override, Limit
 
@@ -20,11 +21,15 @@ def infer(
     input_path: InputPath,
     io_cfg: IoCfg,
     model_cfg: str = typer.Option(
-        ..., "--model-cfg", help="Model config name (e.g., 'gpt-oss-20b')"
+        ...,
+        "--model-cfg",
+        help=f"Model config name (e.g., 'gpt-oss-20b'). Configs in {PathManager.get_model_configs_dir().relative_to(PathManager.get_project_root())}"
     ),
     # Optional parameters
     prompt_cfg: str = typer.Option(
-        "thomas-et-al-prompt", "--prompt-cfg", help="Prompt config name (e.g., 'thomas-et-al-prompt')"
+        "thomas-et-al-prompt",
+        "--prompt-cfg",
+        help=f"Prompt config name (e.g., 'thomas-et-al-prompt'). Configs in {PathManager.get_prompts_dir().relative_to(PathManager.get_project_root())}"
     ),
     limit: Limit = None,
     run_id: RunId = None,

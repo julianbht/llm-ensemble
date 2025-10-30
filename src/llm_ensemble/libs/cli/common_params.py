@@ -9,6 +9,7 @@ With Annotated pattern, defaults go in function signatures, not in typer.Option(
 from pathlib import Path
 from typing import Annotated, Optional
 import typer
+from llm_ensemble.libs.runtime.path_manager import PathManager
 
 # Common parameters shared by all CLIs
 # Note: Defaults are specified in function signatures, not here
@@ -26,7 +27,7 @@ IoCfg = Annotated[
     str,
     typer.Option(
         "--io-cfg",
-        help="I/O config name (e.g., 'ndjson')"
+        help=f"I/O config name (e.g., 'ndjson'). Configs located in {PathManager.get_io_configs_dir().relative_to(PathManager.get_project_root())}"
     )
 ]
 

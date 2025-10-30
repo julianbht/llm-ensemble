@@ -9,4 +9,4 @@ description: |
 reader: llm_judge_sample_reader
 reader_module_path: llm_ensemble.ingest.adapters.io.llm_judge_sample_reader.LlmJudgeSampleReader
 writer: fully_populated_ndjson_writer
-writer_module_path: llm_ensemble.ingest.adapters.io.ndjson_dataset_writer.FullyPopulatedNdjsonWriter
+writer_module_path: llm_ensemble.ingest.adapters.io.FullyPopulatedNdjsonWriter

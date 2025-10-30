@@ -32,6 +32,12 @@ class InferRunInfo(RunInfo):
     judgement counts, timing statistics, and warnings summary.
     """
 
+    # Override cli_name from base RunInfo to automatically set it to "infer"
+    cli_name: str = Field(
+        default="infer",
+        description="Name of the CLI that generated this run (always 'infer' for InferRunInfo)"
+    )
+
     # Configuration names (what user requested)
     model_config_name: str = Field(
         ...,

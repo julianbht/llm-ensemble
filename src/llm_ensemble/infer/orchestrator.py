@@ -125,7 +125,6 @@ def run_inference(
     run_info = InferRunInfo(
         run_id=actual_run_id,
         run_type="official" if official else "test",
-        cli_name="infer",
         notes=notes,
         git_sha=git_info["git_sha"],
         git_clean=git_info["git_clean"],

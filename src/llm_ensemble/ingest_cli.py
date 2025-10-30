@@ -47,31 +47,28 @@ def ingest(
 
         Prefix must be: io
     """
-    try:
-        # Load I/O configuration
-        io_config = load_io_config(io_cfg)
+    
+    # Load I/O configuration
+    io_config = load_io_config(io_cfg)
 
-        # Parse and route overrides if provided
-        if override:
-            routed_overrides = parse_and_route_overrides(override, valid_prefixes=['io'])
+    # Parse and route overrides if provided
+    if override:
+        routed_overrides = parse_and_route_overrides(override, valid_prefixes=['io'])
 
-            # Apply overrides to I/O config
-            if routed_overrides['io']:
-                io_config = apply_overrides(io_config, routed_overrides['io'])
+        # Apply overrides to I/O config
+        if routed_overrides['io']:
+            io_config = apply_overrides(io_config, routed_overrides['io'])
 
-        # Run ingest with final config
-        run_ingest(
-            io_config=io_config,
-            input_path=input_path,
-            run_id=run_id,
-            limit=limit,
-            save_logs=save_logs,
-            official=official,
-            notes=notes,
-        )
-    except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
+    # Run ingest with final config
+    run_ingest(
+        io_config=io_config,
+        input_path=input_path,
+        run_id=run_id,
+        limit=limit,
+        save_logs=save_logs,
+        official=official,
+        notes=notes,
+    )
 
 
 if __name__ == "__main__":

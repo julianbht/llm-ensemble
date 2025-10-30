@@ -105,7 +105,7 @@ class InferenceService:
         Raises:
             Exception: If any step in the pipeline fails
         """
-        # Create run summary builder (starts timing and collects metrics)
+        # Create run summary builder (for timing and collection of metrics)
         summary_builder = RunSummaryBuilder(run_info)
         summary_builder.set_start_time()
 

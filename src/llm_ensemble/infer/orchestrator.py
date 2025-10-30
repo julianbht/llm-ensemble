@@ -35,6 +35,9 @@ def run_inference(
     prompt_config: PromptConfig,
     io_config: IOConfig,
     input_file: Path,
+    model_config_name: str,
+    prompt_config_name: str,
+    io_config_name: str,
     run_id: Optional[str] = None,
     limit: Optional[int] = None,
     save_logs: bool = False,
@@ -57,6 +60,9 @@ def run_inference(
         prompt_config: Prompt configuration (already loaded and validated with overrides applied)
         io_config: I/O configuration (already loaded and validated with overrides applied)
         input_file: Input file with JudgingExample records (from ingest CLI)
+        model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
+        prompt_config_name: Name of the prompt config file (e.g., "thomas-et-al-prompt")
+        io_config_name: Name of the I/O config file (e.g., "ndjson")
         run_id: Custom run ID (auto-generates if not provided)
         limit: Process at most N examples
         save_logs: Save logs to run.log file in run directory
@@ -100,9 +106,9 @@ def run_inference(
         git_sha=git_info["git_sha"],
         git_clean=git_info["git_clean"],
         git_branch=git_info["git_branch"],
-        model_config_name=model_config.model_id,
-        prompt_config_name=prompt_config.name,
-        io_config_name=io_config.io_format,
+        model_config_name=model_config_name,
+        prompt_config_name=prompt_config_name,
+        io_config_name=io_config_name,
         model_cfg=model_config,
         prompt_config=prompt_config,
         io_config=io_config,
@@ -123,10 +129,10 @@ def run_inference(
 
     logger.info(
         "Starting inference",
-        model=model_config.model_id,
+        model=model_config_name,
         provider=model_config.provider,
-        io_format=io_config.io_format,
-        prompt=prompt,
+        io_format=io_config_name,
+        prompt=prompt_config_name,
         input_file=str(input_file),
         limit=limit,
     )

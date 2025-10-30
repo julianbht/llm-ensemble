@@ -22,7 +22,6 @@ class PromptConfig(BaseConfig):
     from their module paths, enforcing the dynamic import pattern.
     """
 
-    name: str = Field(..., description="Prompt identifier")
     description: Optional[str] = Field(None, description="Human-readable description of the prompt")
     prompt_template: str = Field(..., description="Template filename (without .jinja extension)")
     prompt_builder: str = Field(..., description="Builder adapter module name")

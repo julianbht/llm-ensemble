@@ -1,9 +1,8 @@
-io_format: ndjson
+name_hint: ndjson
 description: |
   NDJSON (newline-delimited JSON) format for infer CLI.
   Reads JudgingExample records (output from ingest CLI).
   Writes ModelJudgement records (output from infer CLI).
-name_hint: ndjson
 
 # Adapter module paths (loaded dynamically)
 reader: ndjson_example_reader

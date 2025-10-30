@@ -62,6 +62,7 @@ def ingest(
     # Run ingest with final config
     run_ingest(
         io_config=io_config,
+        io_config_name=io_cfg,
         input_path=input_path,
         run_id=run_id,
         limit=limit,

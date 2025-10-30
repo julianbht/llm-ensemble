@@ -26,6 +26,7 @@ from llm_ensemble.libs.logging.logger import get_logger
 
 def run_ingest(
     io_config: IOConfig,
+    io_config_name: str,
     input_path: Path,
     run_id: Optional[str] = None,
     limit: Optional[int] = None,
@@ -46,6 +47,7 @@ def run_ingest(
 
     Args:
         io_config: I/O configuration (already loaded and validated with overrides applied)
+        io_config_name: Name of the I/O config file (e.g., "llm_judge_challenge", "ndjson")
         input_path: Path to input directory containing raw dataset files
         run_id: Custom run ID (auto-generates if not provided)
         limit: Process at most N samples
@@ -86,7 +88,7 @@ def run_ingest(
         git_sha=git_info["git_sha"],
         git_clean=git_info["git_clean"],
         git_branch=git_info["git_branch"],
-        io_config_name=io_config.io_format,
+        io_config_name=io_config_name,
         io_config=io_config,
         input_path=str(input_path),
         limit=limit,
@@ -105,8 +107,8 @@ def run_ingest(
 
     logger.info(
         "Starting ingest",
-        dataset=io_config.io_format,
-        io_format=io_config.io_format,
+        dataset=io_config_name,
+        io_format=io_config_name,
         input_path=str(input_path),
         limit=limit,
     )

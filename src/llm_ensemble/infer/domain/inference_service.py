@@ -86,10 +86,11 @@ class InferenceService:
         3. Building prompts via PromptBuilder port for each sample
         4. Running inference via LLMProvider port to get raw LLMResponse objects
         5. Parsing each LLMResponse via ResponseParser port to extract LLMScore
-        6. Calculating statistics and adding to manifest builder
-        7. Finalizing the manifest (sets end_time)
-        8. Creating LLMJudgement objects (sample + raw response + parsed score + manifest)
-        9. Writing LLMJudgement objects via JudgementWriter port
+        6. Creating LLMJudgement objects (sample + raw response + parsed score)
+        7. Calculating statistics including warnings summary from judgements
+        8. Adding statistics to manifest builder
+        9. Finalizing the manifest (sets end_time)
+        10. Writing LLMJudgement objects via JudgementWriter port
 
         Args:
             input_path: Path to input examples
@@ -100,7 +101,7 @@ class InferenceService:
             on_judgement: Optional callback invoked for each judgement (for logging/progress)
 
         Returns:
-            Finalized InferManifest with statistics and timing information
+            Finalized InferManifest with statistics, timing, and warnings summary
 
         Raises:
             Exception: If any step in the pipeline fails
@@ -127,11 +128,27 @@ class InferenceService:
         total_latency_ms = sum(resp.latency_ms for _, resp, _ in sample_response_score_tuples)
         avg_latency = total_latency_ms / count if count > 0 else 0.0
 
+        # Build warnings summary from responses and scores
+        warnings_summary: dict[str, int] = {}
+        for _, response, score in sample_response_score_tuples:
+            # Count provider warnings from response
+            for warning in response.warnings:
+                warning_type = warning.__class__.__name__
+                warnings_summary[warning_type] = warnings_summary.get(warning_type, 0) + 1
+            # Count parser warnings from score
+            for warning in score.warnings:
+                warning_type = warning.__class__.__name__
+                warnings_summary[warning_type] = warnings_summary.get(warning_type, 0) + 1
+
         # Add statistics to manifest builder
         manifest_builder.add("judgement_count", count)
         manifest_builder.add("error_count", error_count)
         manifest_builder.add("total_latency_ms", total_latency_ms)
         manifest_builder.add("avg_latency_ms", avg_latency)
+
+        # Add warnings summary to manifest (only if there are warnings)
+        if warnings_summary:
+            manifest_builder.add("warnings_summary", warnings_summary)
 
         # Finalize manifest (sets end_time and creates immutable Pydantic object)
         manifest: InferManifest = manifest_builder.finalize(InferManifest)

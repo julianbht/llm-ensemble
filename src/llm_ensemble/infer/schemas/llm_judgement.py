@@ -12,6 +12,7 @@ from llm_ensemble.ingest.schemas.judging_sample import JudgingSample
 from llm_ensemble.infer.schemas.llm_response import LLMResponse
 from llm_ensemble.infer.schemas.llm_score import LLMScore
 from llm_ensemble.infer.schemas.infer_manifest import InferManifest
+from llm_ensemble.infer.schemas.warnings import BaseWarning
 
 
 class LLMJudgement(BaseModel):
@@ -51,3 +52,29 @@ class LLMJudgement(BaseModel):
         ...,
         description="Inference run manifest (Many-to-One: many judgements share one manifest)"
     )
+
+    def get_all_warnings(self) -> list[BaseWarning]:
+        """Aggregate all warnings from response and score.
+
+        Combines warnings from both the provider (in llm_response) and
+        parser (in llm_score) into a single list for collector aggregation.
+
+        Returns:
+            List of all warnings from this judgement (provider + parser)
+
+        Example:
+            >>> judgement = LLMJudgement(...)
+            >>> all_warnings = judgement.get_all_warnings()
+            >>> len(all_warnings)  # Total warnings from provider + parser
+            3
+        """
+        warnings = []
+
+        # Provider warnings from llm_response
+        warnings.extend(self.llm_response.warnings)
+
+        # Parser warnings from llm_score (if score exists)
+        if self.llm_score is not None:
+            warnings.extend(self.llm_score.warnings)
+
+        return warnings

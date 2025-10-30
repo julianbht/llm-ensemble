@@ -9,7 +9,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.schemas import RelevanceScore
-from llm_ensemble.infer.schemas.warnings import ParserWarning
+from llm_ensemble.infer.schemas.warnings import BaseWarning
 
 
 class LLMScore(BaseModel):
@@ -43,7 +43,7 @@ class LLMScore(BaseModel):
         description="LLM's explanation for its relevance judgement. None if not parseable."
     )
 
-    warnings: list[ParserWarning] = Field(
+    warnings: list[BaseWarning] = Field(
         default_factory=list,
         description="Parser-level warnings: parse errors, missing fields, validation issues, etc."
     )

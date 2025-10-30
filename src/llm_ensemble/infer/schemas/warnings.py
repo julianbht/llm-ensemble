@@ -8,15 +8,58 @@ should be captured in the message and metadata fields, not as separate codes.
 
 Design principles:
 - Reader port: Excluded (failures should crash before inference starts)
-- Writer port: Minimal warnings (rare failure cases only)
+- Writer port: Excluded (failures should raise exceptions)
 - Provider/Parser/Prompt: Full warning coverage for observability
 - Codes enable grouping, filtering, and analytics in downstream analysis
 - Keep codes GENERAL - use metadata for specifics
 """
 
 from __future__ import annotations
+from abc import ABC
 from enum import Enum
+from typing import Any
 from pydantic import BaseModel, Field
+
+
+# ============================================================================
+# Base Warning (Abstract)
+# ============================================================================
+
+
+class BaseWarning(BaseModel, ABC):
+    """Abstract base class for all warning types.
+
+    All port-specific warnings inherit from this base to enable:
+    - Polymorphic collections (list[BaseWarning])
+    - Shared helper functions (warning_to_dict, warnings_summary)
+    - Consistent structure across all warning types
+
+    Each concrete warning class pairs a code enum with structured metadata.
+    """
+
+    code: str | Enum = Field(
+        ...,
+        description="Structured warning code for grouping/filtering"
+    )
+
+    message: str = Field(
+        ...,
+        description="Human-readable warning message with context"
+    )
+
+    metadata: dict[str, str | int | float] = Field(
+        default_factory=dict,
+        description="Optional metadata for analytics (e.g., retry_count, field_name)"
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert warning to dict for serialization."""
+        return {
+            "type": self.__class__.__name__,
+            "code": self.code.value if isinstance(self.code, Enum) else self.code,
+            "message": self.message,
+            "metadata": self.metadata,
+        }
 
 
 # ============================================================================
@@ -39,7 +82,7 @@ class ProviderWarningCode(str, Enum):
     OTHER = "other"
 
 
-class ProviderWarning(BaseModel):
+class ProviderWarning(BaseWarning):
     """Warning from LLM provider adapter.
 
     Tracks issues during API communication, retries, and response generation.
@@ -52,20 +95,7 @@ class ProviderWarning(BaseModel):
         ... )
     """
 
-    code: ProviderWarningCode = Field(
-        ...,
-        description="Structured warning code for grouping/filtering"
-    )
-
-    message: str = Field(
-        ...,
-        description="Human-readable warning message with context"
-    )
-
-    metadata: dict[str, str | int | float] = Field(
-        default_factory=dict,
-        description="Optional metadata for analytics (e.g., retry_count, error_type)"
-    )
+    code: ProviderWarningCode  # Override base type with specific enum
 
 
 # ============================================================================
@@ -86,7 +116,7 @@ class ParserWarningCode(str, Enum):
     OTHER = "other"
 
 
-class ParserWarning(BaseModel):
+class ParserWarning(BaseWarning):
     """Warning from response parser adapter.
 
     Tracks issues during parsing of raw LLM responses into structured LLMScore.
@@ -99,20 +129,7 @@ class ParserWarning(BaseModel):
         ... )
     """
 
-    code: ParserWarningCode = Field(
-        ...,
-        description="Structured warning code for grouping/filtering"
-    )
-
-    message: str = Field(
-        ...,
-        description="Human-readable warning message with context"
-    )
-
-    metadata: dict[str, str | int | float] = Field(
-        default_factory=dict,
-        description="Optional metadata for analytics (e.g., field_name, expected_type)"
-    )
+    code: ParserWarningCode  # Override base type with specific enum
 
 
 # ============================================================================
@@ -131,7 +148,7 @@ class PromptWarningCode(str, Enum):
     OTHER = "other"
 
 
-class PromptWarning(BaseModel):
+class PromptWarning(BaseWarning):
     """Warning from prompt builder adapter.
 
     Tracks issues during prompt construction from templates and samples.
@@ -144,64 +161,7 @@ class PromptWarning(BaseModel):
         ... )
     """
 
-    code: PromptWarningCode = Field(
-        ...,
-        description="Structured warning code for grouping/filtering"
-    )
-
-    message: str = Field(
-        ...,
-        description="Human-readable warning message with context"
-    )
-
-    metadata: dict[str, str | int | float] = Field(
-        default_factory=dict,
-        description="Optional metadata for analytics (e.g., variable_name, content_length)"
-    )
-
-
-# ============================================================================
-# Writer Warnings (JudgementWriter port) - MINIMAL
-# ============================================================================
-
-
-class WriterWarningCode(str, Enum):
-    """Warning codes for judgement writer issues.
-
-    Kept minimal - most writer issues should raise exceptions.
-    """
-
-    SERIALIZATION_ERROR = "serialization_error"  # Issues converting to output format
-    OTHER = "other"
-
-
-class WriterWarning(BaseModel):
-    """Warning from judgement writer adapter.
-
-    Kept minimal - writer issues usually crash. Only for recoverable edge cases.
-
-    Example:
-        >>> WriterWarning(
-        ...     code=WriterWarningCode.SERIALIZATION_ERROR,
-        ...     message="NaN value replaced with null during JSON serialization",
-        ...     metadata={"field": "confidence", "original_value": "NaN"}
-        ... )
-    """
-
-    code: WriterWarningCode = Field(
-        ...,
-        description="Structured warning code for grouping/filtering"
-    )
-
-    message: str = Field(
-        ...,
-        description="Human-readable warning message with context"
-    )
-
-    metadata: dict[str, str | int | float] = Field(
-        default_factory=dict,
-        description="Optional metadata for analytics"
-    )
+    code: PromptWarningCode  # Override base type with specific enum
 
 
 # ============================================================================
@@ -209,21 +169,66 @@ class WriterWarning(BaseModel):
 # ============================================================================
 
 
-def warning_to_string(warning: ProviderWarning | ParserWarning | PromptWarning | WriterWarning) -> str:
-    """Convert structured warning to legacy string format.
+def warning_to_string(warning: BaseWarning) -> str:
+    """Convert structured warning to string format.
 
-    This is a temporary bridge for existing code that expects string warnings.
-    Format: "[CODE] message"
+    Format: "[TYPE:CODE] message"
 
     Args:
         warning: Structured warning object
 
     Returns:
-        String representation for backward compatibility
+        String representation for logging and display
 
     Example:
         >>> w = ParserWarning(code=ParserWarningCode.FIELD_ERROR, message="No label field")
         >>> warning_to_string(w)
-        '[field_error] No label field'
+        '[ParserWarning:field_error] No label field'
     """
-    return f"[{warning.code.value}] {warning.message}"
+    code_value = warning.code.value if isinstance(warning.code, Enum) else warning.code
+    return f"[{warning.__class__.__name__}:{code_value}] {warning.message}"
+
+
+def warnings_to_dict_list(warnings: list[BaseWarning]) -> list[dict[str, Any]]:
+    """Convert list of warnings to list of dicts for serialization.
+
+    Args:
+        warnings: List of warning objects
+
+    Returns:
+        List of dictionaries suitable for JSON serialization
+
+    Example:
+        >>> warnings = [
+        ...     ParserWarning(code=ParserWarningCode.FIELD_ERROR, message="Missing field"),
+        ...     ProviderWarning(code=ProviderWarningCode.API_ERROR, message="Timeout")
+        ... ]
+        >>> warnings_to_dict_list(warnings)
+        [{'type': 'ParserWarning', 'code': 'field_error', ...}, ...]
+    """
+    return [w.to_dict() for w in warnings]
+
+
+def warnings_summary(warnings: list[BaseWarning]) -> dict[str, int]:
+    """Generate summary statistics of warnings by type.
+
+    Args:
+        warnings: List of warning objects
+
+    Returns:
+        Dictionary mapping warning class name to count
+
+    Example:
+        >>> warnings = [
+        ...     ParserWarning(code=ParserWarningCode.FIELD_ERROR, message="Missing field"),
+        ...     ParserWarning(code=ParserWarningCode.PARSE_ERROR, message="Bad JSON"),
+        ...     ProviderWarning(code=ProviderWarningCode.API_ERROR, message="Timeout")
+        ... ]
+        >>> warnings_summary(warnings)
+        {'ParserWarning': 2, 'ProviderWarning': 1}
+    """
+    summary: dict[str, int] = {}
+    for warning in warnings:
+        warning_type = warning.__class__.__name__
+        summary[warning_type] = summary.get(warning_type, 0) + 1
+    return summary

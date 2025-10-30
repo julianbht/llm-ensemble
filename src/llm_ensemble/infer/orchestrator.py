@@ -184,8 +184,9 @@ def run_inference(
     def log_judgement(judgement: LLMJudgement) -> None:
         """Callback to log each judgement (infrastructure concern)."""
         if judgement.llm_score is None or judgement.llm_score.label is None:
-            logger.warning(
-                "Judgement error",
+            # Log as INFO (not WARNING) since this is analytics, not an error
+            logger.info(
+                "Judgement with parsing issues",
                 query_text=judgement.sample.query.query_text,
                 doc_text=judgement.sample.document.text,
                 warnings=judgement.llm_response.warnings,
@@ -226,9 +227,17 @@ def run_inference(
     logger.info(
         "Inference complete",
         total_judgements=manifest.judgement_count,
-        errors=manifest.error_count,
+        parsing_failures=manifest.error_count,
         avg_latency_ms=f"{manifest.avg_latency_ms:.1f}",
     )
+
+    # Log warnings summary if any warnings were collected
+    if manifest.warnings_summary and sum(manifest.warnings_summary.values()) > 0:
+        total_warnings = sum(manifest.warnings_summary.values())
+        logger.info(
+            f"⚠ Warnings collected: {total_warnings} total",
+            **manifest.warnings_summary
+        )
 
     # Close log file if we opened it
     if close_log_file and log_file_handle is not None:

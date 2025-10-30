@@ -13,10 +13,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, TextIO
 
-from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_config
-from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
+from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
+from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
+from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.infer.domain import InferenceService
 from llm_ensemble.infer.adapters.io_factory import get_example_reader, get_judgement_writer
 from llm_ensemble.infer.adapters.provider_factory import get_provider
@@ -27,94 +28,58 @@ from llm_ensemble.libs.runtime.run_id import generate_run_id
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging.logger import get_logger
-from llm_ensemble.libs.utils.config_overrides import apply_overrides
 
 
 def run_inference(
-    model: str,
+    model_config: ModelConfig,
+    prompt_config: PromptConfig,
+    io_config: IOConfig,
     input_file: Path,
-    prompt: str,
-    io_format: str = "ndjson",
     run_id: Optional[str] = None,
     limit: Optional[int] = None,
     save_logs: bool = False,
     official: bool = False,
     notes: Optional[str] = None,
     log_file: Optional[TextIO] = None,
-    config_overrides: Optional[dict] = None,
 ) -> None:
     """Run LLM inference on judging examples with full provenance.
 
     Infrastructure orchestration that coordinates:
-    - Loading configurations
     - Setting up run directories and logging
     - Building manifest with git info and execution parameters
     - Instantiating adapters via factories
     - Running inference, attaching manifest metadata to each judgement, and writing output
 
+    Configs are provided as final, validated objects (CLI handles loading and overrides).
+
     Args:
-        model: Model ID for .yaml config file (e.g., 'gpt-oss-20b')
+        model_config: Model configuration (already loaded and validated with overrides applied)
+        prompt_config: Prompt configuration (already loaded and validated with overrides applied)
+        io_config: I/O configuration (already loaded and validated with overrides applied)
         input_file: Input file with JudgingExample records (from ingest CLI)
-        prompt: Prompt template name (without .jinja extension)
-        io_format: I/O format config name (e.g., 'ndjson')
         run_id: Custom run ID (auto-generates if not provided)
         limit: Process at most N examples
         save_logs: Save logs to run.log file in run directory
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
         log_file: Optional file handle for logging (used when save_logs=True)
-        config_overrides: Optional dict of config overrides
 
     Raises:
-        FileNotFoundError: If config not found or input file doesn't exist
+        FileNotFoundError: If input file doesn't exist
         ValueError: If adapter is not recognized or config is invalid
     """
-    # Load configurations (config loaders handle directory locations)
-    model_config = load_model_config(model)
-    io_config = load_io_config(io_format)
-    prompt_config = load_prompt_config(prompt)
-
-    # Apply overrides if provided by cli
-    if config_overrides:
-        # Separate overrides by config type based on keys
-        model_overrides = {}
-        io_overrides = {}
-        prompt_overrides = {}
-
-        for key, value in config_overrides.items():
-            # Model config fields: provider, default_params, context_window, etc.
-            if key in ["provider", "context_window", "default_params", "capabilities",
-                       "hf_endpoint_url", "hf_model_name", "openrouter_model_id"]:
-                model_overrides[key] = value
-            # I/O config fields: reader, writer
-            elif key in ["reader", "writer"]:
-                io_overrides[key] = value
-            # Prompt config fields: variables, prompt_builder, response_parser, etc.
-            elif key in ["variables", "prompt_builder", "response_parser", "template_file"]:
-                prompt_overrides[key] = value
-            else:
-                # Try model first (most common), will fail with validation error if wrong
-                model_overrides[key] = value
-
-        # Apply overrides to each config
-        if model_overrides:
-            model_config = apply_overrides(model_config, model_overrides)
-        if io_overrides:
-            io_config = apply_overrides(io_config, io_overrides)
-        if prompt_overrides:
-            prompt_config = apply_overrides(prompt_config, prompt_overrides)
 
     # Verify input file exists
     if not input_file.exists():
         raise FileNotFoundError(f"Input file does not exist: {input_file}")
 
     # Generate or use provided run_id
-    actual_run_id = run_id or generate_run_id(model_config.model_id)
+    run_id = run_id or generate_run_id(model_config.model_id)
 
     # Get run directory path and create it
     run_dir = PathManager.get_run_dir(
         cli_name="infer",
-        run_id=actual_run_id,
+        run_id=run_id,
         official=official
     )
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -124,15 +89,15 @@ def run_inference(
 
     # Create immutable run info (runtime context known before run starts)
     run_info = InferRunInfo(
-        run_id=actual_run_id,
+        run_id=run_id,
         run_type="official" if official else "test",
         notes=notes,
         git_sha=git_info["git_sha"],
         git_clean=git_info["git_clean"],
         git_branch=git_info["git_branch"],
-        model_config_name=model,
-        prompt_config_name=prompt,
-        io_config_name=io_format,
+        model_config_name=model_config.model_id,
+        prompt_config_name=prompt_config.name,
+        io_config_name=io_config.io_format,
         model_cfg=model_config,
         prompt_config=prompt_config,
         io_config=io_config,
@@ -149,7 +114,7 @@ def run_inference(
         close_log_file = True
 
     # Initialize logger
-    logger = get_logger("infer", run_id=actual_run_id, log_file=log_file_handle)
+    logger = get_logger("infer", run_id=run_id, log_file=log_file_handle)
 
     logger.info(
         "Starting inference",

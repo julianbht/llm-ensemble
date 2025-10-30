@@ -15,7 +15,7 @@ from typing import Optional, TextIO
 
 from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.ingest.adapters import get_sample_reader, get_dataset_writer
-from llm_ensemble.libs.config import load_io_config
+from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_id import generate_run_id
@@ -25,8 +25,8 @@ from llm_ensemble.libs.logging.logger import get_logger
 
 
 def run_ingest(
+    io_config: IOConfig,
     input_path: Path,
-    io_format: str,
     run_id: Optional[str] = None,
     limit: Optional[int] = None,
     save_logs: bool = False,
@@ -37,15 +37,16 @@ def run_ingest(
     """Normalize a raw IR dataset into judging samples with full provenance.
 
     Infrastructure orchestration that coordinates:
-    - Loading I/O configuration
     - Setting up run directories and logging
     - Building manifest with git info and execution parameters
     - Instantiating adapters via factories
     - Reading samples, attaching manifest to each sample, and writing output
 
+    Config is provided as a final, validated object (CLI handles loading and overrides).
+
     Args:
+        io_config: I/O configuration (already loaded and validated with overrides applied)
         input_path: Path to input directory containing raw dataset files
-        io_format: I/O format config name (e.g., 'llm_judge_challenge')
         run_id: Custom run ID (auto-generates if not provided)
         limit: Process at most N samples
         save_logs: Save logs to run.log file in run directory
@@ -54,23 +55,21 @@ def run_ingest(
         log_file: Optional file handle for logging (used when save_logs=True)
 
     Raises:
-        FileNotFoundError: If I/O config not found or input path doesn't exist
+        FileNotFoundError: If input path doesn't exist
         ValueError: If adapter is not recognized or dataset files are malformed
     """
-    # Load I/O config (includes adapter specifications)
-    io_config = load_io_config(io_format)
 
     # Verify input directory exists
     if not input_path.exists():
         raise FileNotFoundError(f"Input directory does not exist: {input_path}")
 
     # Generate or use provided run_id (using io_format as dataset identifier)
-    actual_run_id = run_id or generate_run_id(io_format)
+    run_id = run_id or generate_run_id(io_config.io_format)
 
     # Get run directory path and create it
     run_dir = PathManager.get_run_dir(
         cli_name="ingest",
-        run_id=actual_run_id,
+        run_id=run_id,
         official=official
     )
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -80,13 +79,13 @@ def run_ingest(
 
     # Create immutable run info (runtime context known before run starts)
     run_info = IngestRunInfo(
-        run_id=actual_run_id,
+        run_id=run_id,
         run_type="official" if official else "test",
         notes=notes,
         git_sha=git_info["git_sha"],
         git_clean=git_info["git_clean"],
         git_branch=git_info["git_branch"],
-        io_config_name=io_format,
+        io_config_name=io_config.io_format,
         io_config=io_config,
         input_path=str(input_path),
         limit=limit,
@@ -101,11 +100,11 @@ def run_ingest(
         close_log_file = True
 
     # Initialize logger
-    logger = get_logger("ingest", run_id=actual_run_id, log_file=log_file_handle)
+    logger = get_logger("ingest", run_id=run_id, log_file=log_file_handle)
 
     logger.info(
         "Starting ingest",
-        dataset=io_format,
+        dataset=io_config.io_format,
         io_format=io_config.io_format,
         input_path=str(input_path),
         limit=limit,

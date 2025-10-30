@@ -2,8 +2,10 @@ from __future__ import annotations
 import typer
 
 from llm_ensemble.ingest.orchestrator import run_ingest
+from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
-from llm_ensemble.libs.cli.common_params import InputPath, IoFormat, RunId, SaveLogs, Official, Notes, Limit
+from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
+from llm_ensemble.libs.cli.common_params import InputPath, IoFormat, RunId, SaveLogs, Official, Notes, Limit, Override
 
 # Load runtime configuration early
 load_runtime_config()
@@ -20,6 +22,7 @@ def ingest(
     save_logs: SaveLogs = False,
     official: Official = False,
     notes: Notes = None,
+    override: Override = [],
 ):
     """Normalize a raw IR dataset into JudgingExample records.
 
@@ -33,16 +36,43 @@ def ingest(
 
         # Official run with notes
         ingest -i data/llm-judge-2024 --io llm_judge_challenge --official --notes "Baseline dataset"
+
+        # Override I/O config (note: prefix-based routing)
+        ingest --input data/llm-judge-2024 --io llm_judge_challenge \\
+               --override io.reader=custom_reader
+
+    Override format (prefix-based routing):
+        I/O adapters:    --override io.reader=custom_reader
+        Dataset paths:   --override io.data_dir=/custom/path
+
+        Prefix must be: io
+        See config files in configs/io/ for available fields.
     """
-    run_ingest(
-        input_path=input_path,
-        io_format=io_format,
-        run_id=run_id,
-        limit=limit,
-        save_logs=save_logs,
-        official=official,
-        notes=notes,
-    )
+    try:
+        # Load I/O configuration
+        io_config = load_io_config(io_format)
+
+        # Parse and route overrides if provided
+        if override:
+            routed_overrides = parse_and_route_overrides(override, valid_prefixes=['io'])
+
+            # Apply overrides to I/O config
+            if routed_overrides['io']:
+                io_config = apply_overrides(io_config, routed_overrides['io'])
+
+        # Run ingest with final config
+        run_ingest(
+            io_config=io_config,
+            input_path=input_path,
+            run_id=run_id,
+            limit=limit,
+            save_logs=save_logs,
+            official=official,
+            notes=notes,
+        )
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

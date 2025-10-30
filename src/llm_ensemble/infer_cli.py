@@ -2,8 +2,10 @@ from __future__ import annotations
 import typer
 
 from llm_ensemble.infer.orchestrator import run_inference
+from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_config
+from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
-from llm_ensemble.libs.utils.config_overrides import parse_overrides
+from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
 from llm_ensemble.libs.cli.common_params import InputPath, IoFormat, RunId, SaveLogs, Official, Notes, Override, Limit
 
 # Load runtime configuration early
@@ -40,45 +42,63 @@ def infer(
 
     Examples:
         # Basic usage
-        infer --model gpt-oss-20b --input data.ndjson
+        infer --model gpt-oss-20b --input data.ndjson --io ndjson
 
-        # Override model parameters
-        infer --model gpt-oss-20b --input data.ndjson \\
-              --override default_params.temperature=0.7 \\
-              --override default_params.max_tokens=512
+        # Override model parameters (note: prefix-based routing)
+        infer --model gpt-oss-20b --input data.ndjson --io ndjson \\
+              --override model.default_params.temperature=0.7 \\
+              --override model.default_params.max_tokens=512
 
         # Override prompt variables
-        infer --model gpt-oss-20b --input data.ndjson \\
+        infer --model gpt-oss-20b --input data.ndjson --io ndjson \\
               --prompt thomas-et-al-prompt \\
-              --override variables.role=false
+              --override prompt.variables.role=false
 
-    Override format:
-        Model params:    --override default_params.temperature=0.7
-        Prompt vars:     --override variables.role=false
-        I/O adapters:    --override reader=custom_reader
+        # Override I/O adapters
+        infer --model gpt-oss-20b --input data.ndjson --io ndjson \\
+              --override io.reader=custom_reader
 
+    Override format (prefix-based routing):
+        Model params:    --override model.default_params.temperature=0.7
+        Prompt vars:     --override prompt.variables.role=false
+        I/O adapters:    --override io.reader=custom_reader
+
+        Prefix must be one of: model, prompt, io
         See config files in configs/ for available fields.
-        Overrides are tracked in manifest for reproducibility.
 
     Environment variables:
         OPENROUTER_API_KEY: OpenRouter API key (required for OpenRouter models)
         HF_TOKEN: HuggingFace API token (required for HF models)
     """
     try:
-        # Parse overrides
-        config_overrides = parse_overrides(override) if override else {}
+        # Load configurations
+        model_config = load_model_config(model)
+        prompt_config = load_prompt_config(prompt)
+        io_config = load_io_config(io_format)
 
+        # Parse and route overrides if provided
+        if override:
+            routed_overrides = parse_and_route_overrides(override)
+
+            # Apply routed overrides to each config
+            if routed_overrides['model']:
+                model_config = apply_overrides(model_config, routed_overrides['model'])
+            if routed_overrides['prompt']:
+                prompt_config = apply_overrides(prompt_config, routed_overrides['prompt'])
+            if routed_overrides['io']:
+                io_config = apply_overrides(io_config, routed_overrides['io'])
+
+        # Run inference with final configs
         run_inference(
-            model=model,
+            model_config=model_config,
+            prompt_config=prompt_config,
+            io_config=io_config,
             input_file=input_path,
-            prompt=prompt,
-            io_format=io_format,
             run_id=run_id,
             limit=limit,
             save_logs=save_logs,
             official=official,
             notes=notes,
-            config_overrides=config_overrides,
         )
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)

@@ -3,10 +3,15 @@
 Provides utilities for parsing and applying CLI overrides to configuration objects.
 This enables users to override specific config values without creating new config files,
 while maintaining full reproducibility by tracking all overrides in manifests.
+
+Supports prefix-based routing for multi-config CLIs:
+    --override model.temperature=0.7
+    --override prompt.variables.role=false
+    --override io.reader=custom_reader
 """
 
 from __future__ import annotations
-from typing import Any
+from typing import Any, Literal
 from pydantic import BaseModel
 
 
@@ -75,7 +80,7 @@ def apply_overrides(config: BaseModel, overrides: dict[str, Any]) -> BaseModel:
     Returns:
         New config instance with overrides applied and validated
 
-    Raises:
+Raises:
         ValidationError: If overrides result in invalid config
 
     Example:
@@ -156,3 +161,74 @@ def _deep_update(base: dict, updates: dict) -> None:
             _deep_update(base[key], value)
         else:
             base[key] = value
+
+
+def parse_and_route_overrides(
+    override_list: list[str],
+    valid_prefixes: list[str] | None = None
+) -> dict[str, dict]:
+    """Parse overrides with config prefixes and route to appropriate configs.
+
+    Uses prefix-based routing to explicitly target different configuration types.
+    This eliminates ambiguity and hardcoded field lists.
+
+    Args:
+        override_list: List of "prefix.key=value" strings from CLI
+        valid_prefixes: Optional list of valid prefixes (defaults to ['model', 'prompt', 'io'])
+
+    Returns:
+        Dict mapping config types to their overrides
+        Example: {'model': {'temperature': 0.7}, 'prompt': {'variables': {'role': False}}}
+
+    Raises:
+        ValueError: If override format is invalid or uses unknown prefix
+
+    Examples:
+        >>> parse_and_route_overrides(["model.temperature=0.7", "prompt.variables.role=false"])
+        {'model': {'temperature': 0.7}, 'prompt': {'variables': {'role': False}}, 'io': {}}
+
+        >>> parse_and_route_overrides(["model.default_params.temperature=0.7"])
+        {'model': {'default_params': {'temperature': 0.7}}, 'prompt': {}, 'io': {}}
+    """
+    if valid_prefixes is None:
+        valid_prefixes = ['model', 'prompt', 'io']
+
+    # Initialize result dict with all valid prefixes
+    routed = {prefix: {} for prefix in valid_prefixes}
+
+    for override in override_list:
+        if "=" not in override:
+            raise ValueError(
+                f"Invalid override format: '{override}'. Expected 'config.key=value'"
+            )
+
+        key_path, value = override.split("=", 1)
+        parts = key_path.split(".", 1)
+
+        if len(parts) < 2:
+            raise ValueError(
+                f"Override must specify config prefix: '{override}'\n"
+                f"Expected format: '<config>.key=value'\n"
+                f"Valid prefixes: {', '.join(valid_prefixes)}\n"
+                f"Examples:\n"
+                f"  --override model.temperature=0.7\n"
+                f"  --override prompt.variables.role=false\n"
+                f"  --override io.reader=custom_reader"
+            )
+
+        config_type, rest = parts
+
+        if config_type not in routed:
+            raise ValueError(
+                f"Unknown config type: '{config_type}'\n"
+                f"Valid prefixes: {', '.join(valid_prefixes)}\n"
+                f"Did you mean one of: {', '.join(valid_prefixes)}?"
+            )
+
+        # Parse the rest as nested overrides (e.g., "variables.role" → {"variables": {"role": ...}})
+        nested_override = parse_overrides([f"{rest}={value}"])
+
+        # Merge into the config bucket
+        _deep_update(routed[config_type], nested_override)
+
+    return routed

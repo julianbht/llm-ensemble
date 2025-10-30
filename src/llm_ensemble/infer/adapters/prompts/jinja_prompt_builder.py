@@ -9,6 +9,8 @@ from jinja2 import Template
 
 from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.ports import PromptBuilder
+from llm_ensemble.infer.schemas.llm_request import LLMRequest
+from llm_ensemble.infer.schemas.warnings import PromptWarning, PromptWarningCode
 
 
 class JinjaPromptBuilder(PromptBuilder):
@@ -29,9 +31,11 @@ class JinjaPromptBuilder(PromptBuilder):
         ...     docid="d1",
         ...     doc="Python is a programming language"
         ... )
-        >>> prompt = builder.build(example)
-        >>> "Query: python" in prompt
+        >>> request = builder.build(example)
+        >>> "Query: python" in request.prompt
         True
+        >>> len(request.warnings)
+        0
     """
 
     def __init__(
@@ -54,20 +58,22 @@ class JinjaPromptBuilder(PromptBuilder):
             "page_text": "doc",
         }
 
-    def build(self, example: JudgingSample) -> str:
+    def build(self, example: JudgingSample) -> LLMRequest:
         """Build a prompt from a judging example.
 
         Args:
             example: JudgingSample object containing query and document
 
         Returns:
-            Rendered prompt string ready for LLM input
+            LLMRequest containing rendered prompt and any warnings from building
 
         Raises:
-            ValueError: If example is missing required fields
+            ValueError: If example is missing required fields (unrecoverable)
         """
         # Convert example to dict
         example_dict = example.model_dump()
+
+        warnings = []
 
         # Build template variables from example using mapping
         template_vars = {}
@@ -79,5 +85,19 @@ class JinjaPromptBuilder(PromptBuilder):
                 )
             template_vars[template_var] = example_dict[example_field]
 
-        # Render and return
-        return self.template.render(**template_vars)
+        # Render template (catch rendering errors and convert to warnings)
+        try:
+            prompt = self.template.render(**template_vars)
+        except Exception as e:
+            # Template rendering failed - this is recoverable, return warning
+            warnings.append(
+                PromptWarning(
+                    code=PromptWarningCode.RENDERING_ERROR,
+                    message=f"Template rendering failed: {str(e)}",
+                    metadata={"error_type": type(e).__name__}
+                )
+            )
+            # Return empty prompt on render failure
+            prompt = ""
+
+        return LLMRequest(prompt=prompt, warnings=warnings)

@@ -15,17 +15,16 @@ from typing import Optional, TextIO
 
 from llm_ensemble.infer.config_loaders import load_model_config, load_io_config, load_prompt_config
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain import InferenceService
 from llm_ensemble.infer.adapters.io_factory import get_example_reader, get_judgement_writer
 from llm_ensemble.infer.adapters.provider_factory import get_provider
 from llm_ensemble.infer.adapters.prompt_builder_factory import get_prompt_builder
 from llm_ensemble.infer.adapters.response_parser_factory import get_response_parser
-from llm_ensemble.libs.runtime.manifest_manager import (
-    ManifestBuilder,
-    write_standalone_manifest,
-)
+from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_id import generate_run_id
 from llm_ensemble.libs.runtime.path_manager import PathManager
+from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging.logger import get_logger
 from llm_ensemble.libs.utils.config_overrides import apply_overrides
 
@@ -119,24 +118,27 @@ def run_inference(
     )
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    # Initialize manifest builder (pure manifest construction)
-    manifest_builder = ManifestBuilder(
-        run_id=actual_run_id,
-        run_dir=run_dir,
-        cli_name="infer",
-        official=official,
-        notes=notes,
-    )
+    # Get git info for reproducibility
+    git_info = get_git_info()
 
-    # Add infer-specific fields to manifest builder
-    manifest_builder.add("model_config_name", model)
-    manifest_builder.add("prompt_config_name", prompt)
-    manifest_builder.add("io_config_name", io_format)
-    manifest_builder.add("model_cfg", model_config)
-    manifest_builder.add("prompt_config", prompt_config)
-    manifest_builder.add("io_config", io_config)
-    manifest_builder.add("input_file", str(input_file))
-    manifest_builder.add("limit", limit)
+    # Create immutable run info (runtime context known before run starts)
+    run_info = InferRunInfo(
+        run_id=actual_run_id,
+        run_type="official" if official else "test",
+        cli_name="infer",
+        notes=notes,
+        git_sha=git_info["git_sha"],
+        git_clean=git_info["git_clean"],
+        git_branch=git_info["git_branch"],
+        model_config_name=model,
+        prompt_config_name=prompt,
+        io_config_name=io_format,
+        model_cfg=model_config,
+        prompt_config=prompt_config,
+        io_config=io_config,
+        input_file=str(input_file),
+        limit=limit,
+    )
 
     # Set up log file if requested and not already provided
     log_file_handle = log_file
@@ -203,20 +205,20 @@ def run_inference(
 
     # Run inference pipeline (pure business logic)
     try:
-        manifest = service.run_inference(
+        summary = service.run_inference(
             input_path=input_file,
             model_config=model_config,
-            manifest_builder=manifest_builder,
+            run_info=run_info,
             run_dir=run_dir,
             limit=limit,
             on_judgement=log_judgement,
         )
-        judgement_count = manifest.judgement_count
+        judgement_count = summary.judgement_count
         logger.info("Judgements processed", count=judgement_count)
 
-        # Write standalone manifest.json for convenience (not source of truth)
-        write_standalone_manifest(manifest, run_dir)
-        logger.info("Manifest written", path=str(run_dir / "manifest.json"))
+        # Write standalone summary.json for convenience (not source of truth)
+        write_standalone_summary(summary, run_dir)
+        logger.info("Summary written", path=str(run_dir / "summary.json"))
 
     except Exception as e:
         logger.error("Inference failed", error=str(e))
@@ -226,17 +228,17 @@ def run_inference(
 
     logger.info(
         "Inference complete",
-        total_judgements=manifest.judgement_count,
-        parsing_failures=manifest.error_count,
-        avg_latency_ms=f"{manifest.avg_latency_ms:.1f}",
+        total_judgements=summary.judgement_count,
+        parsing_failures=summary.error_count,
+        avg_latency_ms=f"{summary.avg_latency_ms:.1f}",
     )
 
     # Log warnings summary if any warnings were collected
-    if manifest.warnings_summary and sum(manifest.warnings_summary.values()) > 0:
-        total_warnings = sum(manifest.warnings_summary.values())
+    if summary.warnings_summary and sum(summary.warnings_summary.values()) > 0:
+        total_warnings = sum(summary.warnings_summary.values())
         logger.info(
             f"⚠ Warnings collected: {total_warnings} total",
-            **manifest.warnings_summary
+            **summary.warnings_summary
         )
 
     # Close log file if we opened it

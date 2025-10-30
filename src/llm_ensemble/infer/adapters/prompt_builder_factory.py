@@ -1,34 +1,34 @@
 """Factory for instantiating prompt builder adapters.
 
 Creates concrete PromptBuilder implementations based on explicit configuration.
-Follows the same pattern as io_factory and provider_factory.
+Delegates to PromptConfig's built-in instantiation methods, making the config
+the single source of truth for adapter selection.
 """
 
 from __future__ import annotations
-from pathlib import Path
-from typing import Optional
 
 from llm_ensemble.infer.ports import PromptBuilder
 from llm_ensemble.infer.schemas import PromptConfig
 from llm_ensemble.infer.config_loaders import load_prompt_template
-from llm_ensemble.infer.adapters.prompts.jinja_prompt_builder import JinjaPromptBuilder
 
 
 def get_prompt_builder(prompt_config: PromptConfig) -> PromptBuilder:
     """Instantiate a prompt builder adapter based on configuration.
 
+    Factory function that delegates to PromptConfig's get_prompt_builder() method,
+    which dynamically instantiates the builder from the module path.
+
     This factory follows explicit configuration principles - no implicit defaults.
-    All builder types must be explicitly specified in the prompt config.
     Template location is determined by the template loader.
 
     Args:
-        prompt_config: Prompt configuration specifying builder type
+        prompt_config: Prompt configuration specifying builder module path
 
     Returns:
         Concrete PromptBuilder implementation
 
     Raises:
-        ValueError: If prompt_builder type is not recognized or missing
+        ImportError: If the builder module path cannot be imported
 
     Example:
         >>> from llm_ensemble.infer.config_loaders import load_prompt_config
@@ -37,24 +37,8 @@ def get_prompt_builder(prompt_config: PromptConfig) -> PromptBuilder:
         >>> example = JudgingSample(...)
         >>> prompt = builder.build(example)
     """
-    builder_type = prompt_config.prompt_builder
-
-    if not builder_type:
-        raise ValueError(
-            f"Prompt config '{prompt_config.name}' missing required field 'prompt_builder'. "
-            f"Must explicitly specify builder type (e.g., 'jinja')."
-        )
-
     # Load the template (loader determines location)
     template = load_prompt_template(prompt_config.prompt_template)
 
-    # Map builder type to adapter implementation
-    if builder_type == "jinja":
-        # Use default variable mapping for now
-        # TODO: Could be extended to support custom mappings from config
-        return JinjaPromptBuilder(template)
-    else:
-        raise ValueError(
-            f"Unknown prompt_builder type '{builder_type}' in prompt config '{prompt_config.name}'. "
-            f"Supported types: 'jinja'"
-        )
+    # Delegate to config's instantiation method
+    return prompt_config.get_prompt_builder(template)

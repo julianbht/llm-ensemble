@@ -2,80 +2,62 @@
 
 Maps I/O config specifications to concrete reader and writer implementations,
 enabling dependency injection and loose coupling.
+
+Delegates to IOConfig's built-in instantiation methods, making the config
+the single source of truth for adapter selection.
 """
 
 from __future__ import annotations
-from pathlib import Path
 
 from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.infer.ports import ExampleReader, JudgementWriter
-from llm_ensemble.infer.adapters.io import (
-    NdjsonExampleReader,
-    NdjsonJudgementWriter,
-)
 
 
 def get_example_reader(io_config: IOConfig) -> ExampleReader:
     """Create and return the appropriate example reader adapter.
 
-    Factory function that instantiates the correct reader implementation
-    based on the I/O configuration's reader field.
+    Factory function that delegates to IOConfig's get_reader() method,
+    which dynamically instantiates the reader from the module path.
 
     Args:
-        io_config: I/O configuration specifying the reader adapter
+        io_config: I/O configuration specifying the reader adapter module path
 
     Returns:
         ExampleReader instance
 
     Raises:
-        ValueError: If reader adapter is not supported
+        ImportError: If the module path cannot be imported
 
     Example:
         >>> from llm_ensemble.infer.config_loaders import load_io_config
         >>> config = load_io_config("ndjson")
         >>> reader = get_example_reader(config)
-        >>> isinstance(reader, NdjsonExampleReader)
+        >>> isinstance(reader, ExampleReader)
         True
     """
-    reader_name = io_config.reader.lower()
-
-    if reader_name == "ndjson_example_reader":
-        return NdjsonExampleReader()
-    else:
-        raise ValueError(
-            f"Unsupported example reader: {io_config.reader}. "
-            f"Supported readers: ndjson_example_reader"
-        )
+    return io_config.get_reader()
 
 
 def get_judgement_writer(io_config: IOConfig) -> JudgementWriter:
     """Create and return the appropriate judgement writer adapter.
 
-    Factory function that instantiates the correct writer implementation
-    based on the I/O configuration's writer field.
+    Factory function that delegates to IOConfig's get_writer() method,
+    which dynamically instantiates the writer from the module path.
 
     Args:
-        io_config: I/O configuration specifying the writer adapter
+        io_config: I/O configuration specifying the writer adapter module path
 
     Returns:
         JudgementWriter instance
 
     Raises:
-        ValueError: If writer adapter is not supported
+        ImportError: If the module path cannot be imported
 
     Example:
         >>> from llm_ensemble.infer.config_loaders import load_io_config
         >>> config = load_io_config("ndjson")
         >>> writer = get_judgement_writer(config)
-        >>> isinstance(writer, NdjsonJudgementWriter)
+        >>> isinstance(writer, JudgementWriter)
         True
     """
-    writer_name = io_config.writer.lower()
-
-    if writer_name == "ndjson_judgement_writer":
-        return NdjsonJudgementWriter()
-    else:
-        raise ValueError(
-            f"Unsupported judgement writer: {io_config.writer}. "
-            f"Supported writers: ndjson_judgement_writer"
-        )
+    return io_config.get_writer()

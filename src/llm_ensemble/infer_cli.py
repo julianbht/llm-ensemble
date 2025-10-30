@@ -88,9 +88,6 @@ def infer(
             notes=notes,
             config_overrides=config_overrides,
         )
-    except FileNotFoundError as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)

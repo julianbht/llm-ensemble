@@ -6,7 +6,7 @@ from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_con
 from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
-from llm_ensemble.libs.cli.common_params import InputPath, IoFormat, RunId, SaveLogs, Official, Notes, Override, Limit
+from llm_ensemble.libs.cli.common_params import InputPath, IoCfg, RunId, SaveLogs, Official, Notes, Override, Limit
 
 # Load runtime configuration early
 load_runtime_config()
@@ -18,13 +18,13 @@ app = typer.Typer(add_completion=False, help="LLM Ensemble – inference CLI")
 def infer(
     # Required parameters
     input_path: InputPath,
-    io_format: IoFormat,
-    model: str = typer.Option(
-        ..., "--model", "-m", help="Model config name (e.g., 'gpt-oss-20b' for configs/models/gpt-oss-20b.yaml)"
+    io_cfg: IoCfg,
+    model_cfg: str = typer.Option(
+        ..., "--model-cfg", help="Model config name (e.g., 'gpt-oss-20b')"
     ),
     # Optional parameters
-    prompt: str = typer.Option(
-        "thomas-et-al-prompt", "--prompt", "-p", help="Prompt config name (located in ./configs/prompts)"
+    prompt_cfg: str = typer.Option(
+        "thomas-et-al-prompt", "--prompt-cfg", help="Prompt config name (e.g., 'thomas-et-al-prompt')"
     ),
     limit: Limit = None,
     run_id: RunId = None,
@@ -36,26 +36,26 @@ def infer(
     """Run LLM inference on judging examples and output structured judgements.
 
     Reads JudgingExample records, runs inference, and writes ModelJudgement records
-    to artifacts/runs/<run_id>/judgements.<format> with manifest.
+    with full provenance metadata.
 
     All behavior is explicitly configured via config files - no implicit defaults.
 
     Examples:
         # Basic usage
-        infer --model gpt-oss-20b --input data.ndjson --io ndjson
+        infer --model-cfg gpt-oss-20b --input data.ndjson --io-cfg ndjson
 
         # Override model parameters (note: prefix-based routing)
-        infer --model gpt-oss-20b --input data.ndjson --io ndjson \\
+        infer --model-cfg gpt-oss-20b --input data.ndjson --io-cfg ndjson \\
               --override model.default_params.temperature=0.7 \\
               --override model.default_params.max_tokens=512
 
         # Override prompt variables
-        infer --model gpt-oss-20b --input data.ndjson --io ndjson \\
-              --prompt thomas-et-al-prompt \\
+        infer --model-cfg gpt-oss-20b --input data.ndjson --io-cfg ndjson \\
+              --prompt-cfg thomas-et-al-prompt \\
               --override prompt.variables.role=false
 
         # Override I/O adapters
-        infer --model gpt-oss-20b --input data.ndjson --io ndjson \\
+        infer --model-cfg gpt-oss-20b --input data.ndjson --io-cfg ndjson \\
               --override io.reader=custom_reader
 
     Override format (prefix-based routing):
@@ -64,7 +64,6 @@ def infer(
         I/O adapters:    --override io.reader=custom_reader
 
         Prefix must be one of: model, prompt, io
-        See config files in configs/ for available fields.
 
     Environment variables:
         OPENROUTER_API_KEY: OpenRouter API key (required for OpenRouter models)
@@ -72,9 +71,9 @@ def infer(
     """
     try:
         # Load configurations
-        model_config = load_model_config(model)
-        prompt_config = load_prompt_config(prompt)
-        io_config = load_io_config(io_format)
+        model_config = load_model_config(model_cfg)
+        prompt_config = load_prompt_config(prompt_cfg)
+        io_config = load_io_config(io_cfg)
 
         # Parse and route overrides if provided
         if override:

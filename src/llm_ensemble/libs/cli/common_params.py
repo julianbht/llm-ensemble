@@ -22,11 +22,11 @@ InputPath = Annotated[
     )
 ]
 
-IoFormat = Annotated[
+IoCfg = Annotated[
     str,
     typer.Option(
-        "--io",
-        help="I/O format config name (e.g., 'ndjson' for configs/io/ndjson.yaml)"
+        "--io-cfg",
+        help="I/O config name (e.g., 'ndjson')"
     )
 ]
 

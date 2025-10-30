@@ -5,7 +5,7 @@ from llm_ensemble.ingest.orchestrator import run_ingest
 from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
-from llm_ensemble.libs.cli.common_params import InputPath, IoFormat, RunId, SaveLogs, Official, Notes, Limit, Override
+from llm_ensemble.libs.cli.common_params import InputPath, IoCfg, RunId, SaveLogs, Official, Notes, Limit, Override
 
 # Load runtime configuration early
 load_runtime_config()
@@ -16,7 +16,7 @@ app = typer.Typer(add_completion=False, help="LLM Ensemble – data ingest CLI")
 @app.command("ingest")
 def ingest(
     input_path: InputPath,
-    io_format: IoFormat,
+    io_cfg: IoCfg,
     limit: Limit = None,
     run_id: RunId = None,
     save_logs: SaveLogs = False,
@@ -26,19 +26,19 @@ def ingest(
 ):
     """Normalize a raw IR dataset into JudgingExample records.
 
-    Writes output to artifacts/runs/<run_id>/normalized_dataset.ndjson with manifest.
+    Writes output with full provenance metadata.
 
     All behavior is explicitly configured via I/O config files - no implicit defaults.
 
     Examples:
         # Basic usage
-        ingest --input data/llm-judge-2024 --io llm_judge_challenge --limit 100
+        ingest --input data/llm-judge-2024 --io-cfg llm_judge_challenge --limit 100
 
         # Official run with notes
-        ingest -i data/llm-judge-2024 --io llm_judge_challenge --official --notes "Baseline dataset"
+        ingest -i data/llm-judge-2024 --io-cfg llm_judge_challenge --official --notes "Baseline dataset"
 
         # Override I/O config (note: prefix-based routing)
-        ingest --input data/llm-judge-2024 --io llm_judge_challenge \\
+        ingest --input data/llm-judge-2024 --io-cfg llm_judge_challenge \\
                --override io.reader=custom_reader
 
     Override format (prefix-based routing):
@@ -46,11 +46,10 @@ def ingest(
         Dataset paths:   --override io.data_dir=/custom/path
 
         Prefix must be: io
-        See config files in configs/io/ for available fields.
     """
     try:
         # Load I/O configuration
-        io_config = load_io_config(io_format)
+        io_config = load_io_config(io_cfg)
 
         # Parse and route overrides if provided
         if override:

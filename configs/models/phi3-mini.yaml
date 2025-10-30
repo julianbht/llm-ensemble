@@ -1,5 +1,6 @@
 model_id: phi3-mini
 provider: hf
+name_hint: phi3
 context_window: 4096
 
 # Core inference parameters

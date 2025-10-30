@@ -1,5 +1,6 @@
 model_id: tinyllama
 provider: ollama
+name_hint: tinyllama
 context_window: 2048
 
 # Core inference parameters

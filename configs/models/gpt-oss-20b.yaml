@@ -1,5 +1,6 @@
 model_id: gpt-oss-20b
 provider: openrouter
+name_hint: gpt20b
 context_window: 8192
 
 # Core inference parameters (explicit for discoverability)

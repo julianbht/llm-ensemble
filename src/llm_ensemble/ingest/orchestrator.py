@@ -63,8 +63,9 @@ def run_ingest(
     if not input_path.exists():
         raise FileNotFoundError(f"Input directory does not exist: {input_path}")
 
-    # Generate or use provided run_id (using io_format as dataset identifier)
-    run_id = run_id or generate_run_id(io_config.io_format)
+    # Generate or use provided run_id (collect name hints from config)
+    if run_id is None:
+        run_id = generate_run_id([io_config.name_hint])
 
     # Get run directory path and create it
     run_dir = PathManager.get_run_dir(

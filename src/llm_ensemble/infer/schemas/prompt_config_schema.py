@@ -5,10 +5,12 @@ Defines the Pydantic schema for prompt template configurations.
 
 from __future__ import annotations
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from llm_ensemble.libs.schemas.base_config import BaseConfig
 
 
-class PromptConfig(BaseModel):
+class PromptConfig(BaseConfig):
     """Configuration for a prompt template.
 
     Specifies the template file, builder module, and parser module to use.

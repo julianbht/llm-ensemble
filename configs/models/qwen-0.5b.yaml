@@ -1,5 +1,6 @@
 model_id: qwen-0.5b
 provider: openrouter
+name_hint: qwen
 context_window: 8192
 
 # Core inference parameters

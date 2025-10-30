@@ -4,6 +4,7 @@ description: |
   Reads from TSV queries, JSONL documents, and TSV qrels files.
   Writes judging samples (each with manifest reference) to NDJSON format.
   Used by ingest CLI for dataset normalization.
+name_hint: llmjudge
 
 # Adapter module names (loaded dynamically)
 reader: llm_judge_sample_reader

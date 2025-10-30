@@ -7,10 +7,12 @@ This is a shared schema used across all CLIs.
 """
 
 from __future__ import annotations
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from llm_ensemble.libs.schemas.base_config import BaseConfig
 
 
-class IOConfig(BaseModel):
+class IOConfig(BaseConfig):
     """Domain model for I/O format configuration (mirrors configs/io/*.yaml).
 
     This is the base I/O configuration schema shared across all CLIs.

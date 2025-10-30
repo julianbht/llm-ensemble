@@ -6,10 +6,12 @@ Based on OpenRouter API specification for maximum compatibility.
 
 from __future__ import annotations
 from typing import Optional, Literal, Any, Union
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from llm_ensemble.libs.schemas.base_config import BaseConfig
 
 
-class ModelConfig(BaseModel):
+class ModelConfig(BaseConfig):
     """Domain model for model configuration (mirrors configs/models/*.yaml).
 
     Explicit parameters are based on OpenRouter API common parameters.

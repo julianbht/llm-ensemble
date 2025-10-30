@@ -73,8 +73,13 @@ def run_inference(
     if not input_file.exists():
         raise FileNotFoundError(f"Input file does not exist: {input_file}")
 
-    # Generate or use provided run_id
-    run_id = run_id or generate_run_id(model_config.model_id)
+    # Generate or use provided run_id (collect name hints from all configs)
+    if run_id is None:
+        run_id = generate_run_id([
+            model_config.name_hint,
+            prompt_config.name_hint,
+            io_config.name_hint,
+        ])
 
     # Get run directory path and create it
     run_dir = PathManager.get_run_dir(

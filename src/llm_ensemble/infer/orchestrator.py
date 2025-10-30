@@ -13,7 +13,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, TextIO
 
-from llm_ensemble.infer.config_loaders import load_model_config, load_io_config, load_prompt_config
+from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_config
+from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain import InferenceService

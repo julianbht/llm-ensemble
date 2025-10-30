@@ -1,13 +1,10 @@
 from __future__ import annotations
-from pathlib import Path
-from typing import Optional
-
 import typer
 
 from llm_ensemble.infer.orchestrator import run_inference
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.utils.config_overrides import parse_overrides
-from llm_ensemble.libs.cli.common_params import IoFormat, RunId, SaveLogs, Official, Notes, Override
+from llm_ensemble.libs.cli.common_params import InputPath, IoFormat, RunId, SaveLogs, Official, Notes, Override, Limit
 
 # Load runtime configuration early
 load_runtime_config()
@@ -18,21 +15,16 @@ app = typer.Typer(add_completion=False, help="LLM Ensemble – inference CLI")
 @app.command("infer")
 def infer(
     # Required parameters
+    input_path: InputPath,
     io_format: IoFormat,
     model: str = typer.Option(
         ..., "--model", "-m", help="Model config name (e.g., 'gpt-oss-20b' for configs/models/gpt-oss-20b.yaml)"
-    ),
-    input_file: Path = typer.Option(
-        ..., "--input", "-i", exists=True, file_okay=True, readable=True,
-        help="Input file with JudgingExample records (from ingest CLI)"
     ),
     # Optional parameters
     prompt: str = typer.Option(
         "thomas-et-al-prompt", "--prompt", "-p", help="Prompt config name (located in ./configs/prompts)"
     ),
-    limit: Optional[int] = typer.Option(
-        None, help="Process at most N examples"
-    ),
+    limit: Limit = None,
     run_id: RunId = None,
     save_logs: SaveLogs = False,
     official: Official = False,
@@ -78,7 +70,7 @@ def infer(
 
         run_inference(
             model=model,
-            input_file=input_file,
+            input_file=input_path,
             prompt=prompt,
             io_format=io_format,
             run_id=run_id,

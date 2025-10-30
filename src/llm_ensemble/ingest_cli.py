@@ -1,11 +1,9 @@
 from __future__ import annotations
-from typing import Optional
-
 import typer
 
 from llm_ensemble.ingest.orchestrator import run_ingest
 from llm_ensemble.libs.runtime.env import load_runtime_config
-from llm_ensemble.libs.cli.common_params import InputPath, IoFormat, RunId, SaveLogs, Official, Notes
+from llm_ensemble.libs.cli.common_params import InputPath, IoFormat, RunId, SaveLogs, Official, Notes, Limit
 
 # Load runtime configuration early
 load_runtime_config()
@@ -17,7 +15,7 @@ app = typer.Typer(add_completion=False, help="LLM Ensemble – data ingest CLI")
 def ingest(
     input_path: InputPath,
     io_format: IoFormat,
-    limit: Optional[int] = typer.Option(None, help="Process at most N examples"),
+    limit: Limit = None,
     run_id: RunId = None,
     save_logs: SaveLogs = False,
     official: Official = False,

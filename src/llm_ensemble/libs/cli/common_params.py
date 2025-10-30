@@ -70,3 +70,11 @@ Override = Annotated[
         help="Override config values (format: key=value, e.g., 'data_dir=/custom/path'). Can be specified multiple times."
     )
 ]
+
+Limit = Annotated[
+    Optional[int],
+    typer.Option(
+        "--limit",
+        help="Process at most N examples (None = no limit)"
+    )
+]

@@ -5,24 +5,10 @@ Loads YAML model configuration files and returns ModelConfig domain objects.
 
 from __future__ import annotations
 import os
-from pathlib import Path
-from typing import Optional
-import yaml
 
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
-
-
-def get_default_config_dir() -> Path:
-    """Get the default configs/models directory.
-
-    Returns:
-        Path to configs/models relative to project root
-    """
-    # Navigate from this file to project root, then to configs/models
-    # This file is at: src/llm_ensemble/infer/config/loader.py
-    # Project root is 4 levels up
-    project_root = Path(__file__).parents[4]
-    return project_root / "configs" / "models"
+from llm_ensemble.libs.config import load_yaml_config
+from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
 def load_model_config(model_id: str) -> ModelConfig:
@@ -45,31 +31,12 @@ def load_model_config(model_id: str) -> ModelConfig:
         >>> config.openrouter_model_id
         'openai/gpt-oss-20b:free'
     """
-    # Get standard config directory
-    config_dir = get_default_config_dir()
-
-    # Build path to config file
-    config_path = config_dir / f"{model_id}.yaml"
-
-    if not config_path.exists():
-        raise FileNotFoundError(
-            f"Model config not found: {config_path}\n"
-            f"Available configs in {config_dir}:\n"
-            + "\n".join(f"  - {p.stem}" for p in config_dir.glob("*.yaml"))
-        )
-
-    # Load YAML
-    with open(config_path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-
-    if not isinstance(data, dict):
-        raise ValueError(f"Invalid config file {config_path}: expected YAML object")
-
-    # Validate and parse into ModelConfig
-    try:
-        return ModelConfig(**data)
-    except Exception as e:
-        raise ValueError(f"Failed to parse config {config_path}: {e}") from e
+    return load_yaml_config(
+        config_name=model_id,
+        config_dir=PathManager.get_model_configs_dir(),
+        schema=ModelConfig,
+        config_type="model",
+    )
 
 
 def get_endpoint_url(model_config: ModelConfig) -> str:

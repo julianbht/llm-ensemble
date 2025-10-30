@@ -4,24 +4,10 @@ Loads prompt YAML configurations from the centralized configs/prompts directory.
 """
 
 from __future__ import annotations
-from pathlib import Path
-from typing import Optional
-import yaml
 
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
-
-
-def get_default_prompts_dir() -> Path:
-    """Get the default configs/prompts directory.
-
-    Returns:
-        Path to configs/prompts relative to project root
-    """
-    # Navigate from this file to project root, then to configs/prompts
-    # This file is at: src/llm_ensemble/infer/config/prompts.py
-    # Project root is 4 levels up
-    project_root = Path(__file__).parents[4]
-    return project_root / "configs" / "prompts"
+from llm_ensemble.libs.config import load_yaml_config
+from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
 def load_prompt_config(prompt_name: str) -> PromptConfig:
@@ -42,28 +28,9 @@ def load_prompt_config(prompt_name: str) -> PromptConfig:
         >>> config.variables
         {'role': True, 'aspects': False}
     """
-    # Get standard prompts directory
-    prompts_dir = get_default_prompts_dir()
-
-    # Build path to config file
-    config_path = prompts_dir / f"{prompt_name}.yaml"
-
-    if not config_path.exists():
-        raise FileNotFoundError(
-            f"Prompt config not found: {config_path}\n"
-            f"Available prompts in {prompts_dir}:\n"
-            + "\n".join(f"  - {p.stem}" for p in prompts_dir.glob("*.yaml"))
-        )
-
-    # Load YAML
-    with open(config_path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-
-    if not isinstance(data, dict):
-        raise ValueError(f"Invalid config file {config_path}: expected YAML object")
-
-    # Validate and parse into PromptConfig
-    try:
-        return PromptConfig(**data)
-    except Exception as e:
-        raise ValueError(f"Failed to parse prompt config {config_path}: {e}") from e
+    return load_yaml_config(
+        config_name=prompt_name,
+        config_dir=PathManager.get_prompts_dir(),
+        schema=PromptConfig,
+        config_type="prompt",
+    )

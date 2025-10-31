@@ -12,6 +12,17 @@ from typing import Optional, Any
 import structlog
 
 
+def _drop_console_context(_, __, event_dict):
+    """Remove unwanted fields from console output only."""
+    # Remove context fields we don't want in console
+    event_dict.pop("cli", None)
+    event_dict.pop("run_id", None)
+    # Remove stdlib integration fields
+    event_dict.pop("_from_structlog", None)
+    event_dict.pop("_record", None)
+    return event_dict
+
+
 def configure_logger(
     cli_name: str,
     run_id: Optional[str] = None,
@@ -53,6 +64,12 @@ def configure_logger(
     if save_logs and log_file_path is None:
         raise ValueError("log_file_path must be provided when save_logs=True")
 
+    # Suppress noisy third-party library logging
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("openai").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
     # Shared processors for all outputs
     shared_processors = [
         structlog.contextvars.merge_contextvars,
@@ -62,13 +79,21 @@ def configure_logger(
         structlog.processors.StackInfoRenderer(),
     ]
 
-    # Console renderer (pretty or JSON)
+    # Console renderer - always human-readable one-line format
+    console_renderer = structlog.dev.ConsoleRenderer(
+        colors=sys.stderr.isatty(),
+        exception_formatter=structlog.dev.plain_traceback,
+    )
+    # Add processor to drop unwanted fields before rendering
+    console_processors = shared_processors + [_drop_console_context, console_renderer]
+
+    # File renderer - JSON format (pretty or compact based on pretty_print setting)
     if pretty_print:
-        console_renderer = structlog.dev.ConsoleRenderer(
-            colors=sys.stderr.isatty(),  # Only use colors if outputting to terminal
-        )
+        # Pretty-printed JSON with indentation for readability
+        file_renderer = structlog.processors.JSONRenderer(indent=2, sort_keys=True)
     else:
-        console_renderer = structlog.processors.JSONRenderer()
+        # Compact JSON (one line per log entry)
+        file_renderer = structlog.processors.JSONRenderer()
 
     # Configure structlog
     structlog.configure(
@@ -90,7 +115,7 @@ def configure_logger(
     stderr_handler.setFormatter(
         structlog.stdlib.ProcessorFormatter(
             foreign_pre_chain=shared_processors,
-            processor=console_renderer,
+            processors=console_processors,
         )
     )
     handlers.append(stderr_handler)
@@ -100,11 +125,11 @@ def configure_logger(
         log_file_path.parent.mkdir(parents=True, exist_ok=True)
         file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
         file_handler.setLevel(file_level.upper())
-        # Always use JSON for file output for structured logs
+        # Use JSON for file output (pretty or compact based on setting)
         file_handler.setFormatter(
             structlog.stdlib.ProcessorFormatter(
                 foreign_pre_chain=shared_processors,
-                processor=structlog.processors.JSONRenderer(),
+                processor=file_renderer,
             )
         )
         handlers.append(file_handler)

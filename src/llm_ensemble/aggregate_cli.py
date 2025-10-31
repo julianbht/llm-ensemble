@@ -26,7 +26,7 @@ def aggregate(
     ensemble_cfg: str = typer.Option(
         ...,
         "--ensemble-cfg",
-        help=f"Ensemble config name. Configs in {PathManager.get_configs_dir/ 'ensembles'}"
+        help=f"Ensemble config name. Configs in {PathManager.get_model_configs_dir().relative_to(PathManager.get_project_root())}"
     ),
     input_paths: list[Path] = typer.Argument(
         ...,

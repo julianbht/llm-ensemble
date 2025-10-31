@@ -27,6 +27,8 @@ dev = [
 [project.scripts]
 ingest = "llm_ensemble.ingest_cli:app"
 infer = "llm_ensemble.infer_cli:app"
+aggregate = "llm_ensemble.aggregate_cli:app"
+evaluate = "llm_ensemble.evaluate_cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]          # only ships code from src/

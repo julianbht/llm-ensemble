@@ -74,43 +74,39 @@ def infer(
         OPENROUTER_API_KEY: OpenRouter API key (required for OpenRouter models)
         HF_TOKEN: HuggingFace API token (required for HF models)
     """
-    try:
-        # Load configurations
-        model_config = load_model_config(model_cfg)
-        prompt_config = load_prompt_config(prompt_cfg)
-        io_config = load_io_config(io_cfg, cli_name="infer")
+    # Load configurations
+    model_config = load_model_config(model_cfg)
+    prompt_config = load_prompt_config(prompt_cfg)
+    io_config = load_io_config(io_cfg, cli_name="infer")
 
-        # Parse and route overrides if provided
-        if override:
-            overrides = parse_and_route_overrides(override)
+    # Parse and route overrides if provided
+    if override:
+        overrides = parse_and_route_overrides(override)
 
-            # Apply routed overrides to each config
-            if overrides['model']:
-                model_config = apply_overrides(model_config, overrides['model'])
-            if overrides['prompt']:
-                prompt_config = apply_overrides(prompt_config, overrides['prompt'])
-            if overrides['io']:
-                io_config = apply_overrides(io_config, overrides['io'])
+        # Apply routed overrides to each config
+        if overrides['model']:
+            model_config = apply_overrides(model_config, overrides['model'])
+        if overrides['prompt']:
+            prompt_config = apply_overrides(prompt_config, overrides['prompt'])
+        if overrides['io']:
+            io_config = apply_overrides(io_config, overrides['io'])
 
-        # Run inference with final configs
-        run_inference(
-            model_config=model_config,
-            prompt_config=prompt_config,
-            io_config=io_config,
-            input_file=input_path,
-            model_config_name=model_cfg,
-            prompt_config_name=prompt_cfg,
-            io_config_name=io_cfg,
-            run_id=run_id,
-            limit=limit,
-            save_logs=save_logs,
-            official=official,
-            notes=notes,
-        )
-    except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
+    # Run inference with final configs
+    run_inference(
+        model_config=model_config,
+        prompt_config=prompt_config,
+        io_config=io_config,
+        input_file=input_path,
+        model_config_name=model_cfg,
+        prompt_config_name=prompt_cfg,
+        io_config_name=io_cfg,
+        run_id=run_id,
+        limit=limit,
+        save_logs=save_logs,
+        official=official,
+        notes=notes,
+    )
 
-
+    
 if __name__ == "__main__":
     app()

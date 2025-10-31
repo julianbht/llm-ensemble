@@ -1,6 +1,5 @@
 model_id: gpt-oss-20b
 provider: openrouter
-name_hint: gpt20b
 context_window: 8192
 
 # Adapter specifications (loaded dynamically)
@@ -8,21 +7,28 @@ context_window: 8192
 provider_module: llm_ensemble.infer.adapters.providers.openrouter_adapter
 provider_class: OpenRouterAdapter
 
-# Core inference parameters (explicit for discoverability)
-temperature: 0.0
-max_tokens: 256
-seed: 42  # For reproducibility
+# Core inference parameters (all set to null - configure via CLI overrides if needed)
+temperature: null
+max_tokens: null
+top_p: null
+frequency_penalty: null
+presence_penalty: null
+seed: null
+stop: null
 
 # Output control
-response_format:
-  type: json_object  # Force structured JSON output
+response_format: null
 
-# Advanced parameters (if needed)
+# Advanced parameters
 additional_params: {}
 
 # Model capabilities
-capabilities:
-  multilingual: true
+capabilities: {}
 
-# OpenRouter configuration
+# Provider-specific fields
+# HuggingFace (not used for this model)
+hf_endpoint_url: null
+hf_model_name: null
+
+# OpenRouter configuration (required for OpenRouter provider)
 openrouter_model_id: openai/gpt-oss-20b:free

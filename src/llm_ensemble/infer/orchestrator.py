@@ -4,7 +4,7 @@ This module handles infrastructure concerns for the inference pipeline:
 - Loading configurations
 - Setting up run directories and logging
 - Building manifests with git info and execution parameters
-- Instantiating adapters via factories
+- Instantiating adapters dynamically from config specifications
 - Delegating business logic to domain service (which sets timing and finalizes manifest)
 
 It is separated from the CLI entry point (infer_cli.py) for testability.
@@ -19,10 +19,7 @@ from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
 from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.infer.domain import InferenceService
-from llm_ensemble.infer.adapters.io_factory import get_example_reader, get_judgement_writer
-from llm_ensemble.infer.adapters.provider_factory import get_provider
-from llm_ensemble.infer.adapters.prompt_builder_factory import get_prompt_builder
-from llm_ensemble.infer.adapters.response_parser_factory import get_response_parser
+from llm_ensemble.infer.config_loaders import load_prompt_template
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_id import generate_run_id
 from llm_ensemble.libs.runtime.path_manager import PathManager
@@ -50,7 +47,7 @@ def run_inference(
     Infrastructure orchestration that coordinates:
     - Setting up run directories and logging
     - Building manifest with git info and execution parameters
-    - Instantiating adapters via factories
+    - Instantiating adapters dynamically from config specifications
     - Running inference, attaching manifest metadata to each judgement, and writing output
 
     Configs are provided as final, validated objects (CLI handles loading and overrides).
@@ -138,16 +135,17 @@ def run_inference(
     )
     logger.info("Run directory", path=str(run_dir))
 
-    # Instantiate adapters via factories
-    reader = get_example_reader(io_config)
-    writer = get_judgement_writer(io_config)
+    # Instantiate I/O adapters directly from config
+    reader = io_config.get_reader()
+    writer = io_config.get_writer()
 
-    # Instantiate prompt builder and response parser from prompt config
-    prompt_builder = get_prompt_builder(prompt_config)
-    response_parser = get_response_parser(prompt_config)
+    # Instantiate prompt builder and response parser directly from config
+    template = load_prompt_template(prompt_config.prompt_template)
+    prompt_builder = prompt_config.get_prompt_builder(template)
+    response_parser = prompt_config.get_response_parser(score_field="O")
 
-    # Instantiate provider (pure API client - doesn't build prompts)
-    provider = get_provider(model_config)
+    # Instantiate provider directly from config
+    provider = model_config.get_provider()
 
     # Create domain service - it orchestrates ALL port interactions
     service = InferenceService(

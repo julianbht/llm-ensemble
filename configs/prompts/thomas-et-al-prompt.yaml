@@ -3,7 +3,10 @@ description: |
   Thomas et al. search quality rater prompt with structured JSON output.
   Uses simple O-only format for relevance scoring (0, 1, or 2).
 prompt_template: thomas-et-al-prompt  # Loads thomas-et-al-prompt.jinja
-prompt_builder: jinja
-prompt_builder_module_path: llm_ensemble.infer.adapters.prompts.jinja_prompt_builder.JinjaPromptBuilder
-response_parser: json
-response_parser_module_path: llm_ensemble.infer.adapters.parsers.json_response_parser.JsonResponseParser
+
+# Adapter specifications (loaded dynamically)
+# Format: module paths are snake_case, class names are UpperCamelCase
+builder_module: llm_ensemble.infer.adapters.prompts.jinja_prompt_builder
+builder_class: JinjaPromptBuilder
+parser_module: llm_ensemble.infer.adapters.parsers.json_response_parser
+parser_class: JsonResponseParser

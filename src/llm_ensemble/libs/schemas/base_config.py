@@ -34,32 +34,41 @@ class BaseConfig(BaseModel):
         ),
     )
 
-    def instantiate_from_module_path(self, module_path: str) -> Any:
-        """Dynamically instantiate a class from a module path.
+    def _instantiate_adapter(self, module_path: str, class_name: str, **kwargs) -> Any:
+        """Dynamically instantiate an adapter class from separate module path and class name.
 
         This method provides a standardized way to instantiate adapter classes
-        from fully qualified module paths (e.g., 'pkg.module.ClassName').
+        with clear separation between module path (snake_case) and class name (UpperCamelCase).
 
         Args:
-            module_path: Full module path including class name
-                        (e.g., 'llm_ensemble.infer.adapters.io.ndjson_example_reader.NdjsonExampleReader')
+            module_path: Full Python module path in snake_case
+                        (e.g., 'llm_ensemble.infer.adapters.io.ndjson_example_reader')
+            class_name: Class name in UpperCamelCase (e.g., 'NdjsonExampleReader')
+            **kwargs: Additional arguments to pass to the class constructor
 
         Returns:
-            Instance of the class specified by module_path
+            Instance of the adapter class
 
         Raises:
-            ImportError: If the module path cannot be imported or class cannot be found
+            ImportError: If the module cannot be imported
+            AttributeError: If the class doesn't exist in the module
 
         Example:
             >>> config = IOConfig(...)
-            >>> reader = config.instantiate_from_module_path(config.reader_module_path)
+            >>> reader = config._instantiate_adapter(
+            ...     'llm_ensemble.infer.adapters.io.ndjson_example_reader',
+            ...     'NdjsonExampleReader'
+            ... )
         """
         try:
-            module_path_str, class_name = module_path.rsplit(".", 1)
-            module = import_module(module_path_str)
+            module = import_module(module_path)
             adapter_class = getattr(module, class_name)
-            return adapter_class()
-        except (ValueError, ImportError, AttributeError) as e:
+            return adapter_class(**kwargs) if kwargs else adapter_class()
+        except ImportError as e:
             raise ImportError(
-                f"Failed to instantiate class from '{module_path}': {e}"
+                f"Failed to import module '{module_path}': {e}"
+            ) from e
+        except AttributeError as e:
+            raise AttributeError(
+                f"Class '{class_name}' not found in module '{module_path}': {e}"
             ) from e

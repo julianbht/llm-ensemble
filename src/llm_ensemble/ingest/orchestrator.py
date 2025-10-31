@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Optional, TextIO
 
 from llm_ensemble.ingest.domain import IngestionService
-from llm_ensemble.ingest.adapters import get_sample_reader, get_dataset_writer
 from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
@@ -114,9 +113,9 @@ def run_ingest(
     )
     logger.info("Run directory", path=str(run_dir))
 
-    # Instantiate adapters via factories
-    sample_reader = get_sample_reader(io_config)
-    dataset_writer = get_dataset_writer(io_config)
+    # Instantiate adapters directly from config
+    sample_reader = io_config.get_reader()
+    dataset_writer = io_config.get_writer()
 
     # Create domain service
     service = IngestionService(

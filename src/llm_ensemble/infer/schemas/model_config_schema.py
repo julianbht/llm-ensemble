@@ -22,6 +22,10 @@ class ModelConfig(BaseConfig):
     model_id: str = Field(..., description="Model identifier")
     provider: Literal["hf", "ollama", "openrouter"] = Field(..., description="Provider name")
 
+    # Dynamic adapter loading
+    provider_module: str = Field(..., description="Full Python module path to provider adapter (e.g., 'llm_ensemble.infer.adapters.providers.openrouter_adapter')")
+    provider_class: str = Field(..., description="Provider adapter class name in UpperCamelCase (e.g., 'OpenRouterAdapter')")
+
     # Capacity
     context_window: int = Field(..., gt=0, description="Maximum context window size in tokens")
 
@@ -97,3 +101,30 @@ class ModelConfig(BaseConfig):
         None,
         description="OpenRouter model ID (e.g., 'openai/gpt-4')"
     )
+
+    def get_provider(self, api_key: Optional[str] = None, timeout: int = 30) -> Any:
+        """Instantiate and return the provider adapter.
+
+        Dynamically imports the provider module and instantiates the provider class.
+
+        Args:
+            api_key: Optional API key (if not provided, adapter will use env vars)
+            timeout: Request timeout in seconds (default: 30)
+
+        Returns:
+            Instance of the provider adapter (LLMProvider)
+
+        Raises:
+            ImportError: If the provider module cannot be imported
+            AttributeError: If the provider class doesn't exist in the module
+
+        Example:
+            >>> config = ModelConfig(...)
+            >>> provider = config.get_provider(api_key="...", timeout=30)
+        """
+        # Build kwargs based on what the provider needs
+        kwargs = {"timeout": timeout}
+        if api_key is not None:
+            kwargs["api_key"] = api_key
+        
+        return self._instantiate_adapter(self.provider_module, self.provider_class, **kwargs)

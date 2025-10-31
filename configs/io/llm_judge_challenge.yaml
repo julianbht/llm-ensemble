@@ -5,8 +5,9 @@ description: |
   Writes judging samples (each with manifest reference) to NDJSON format.
   Used by ingest CLI for dataset normalization.
 
-# Adapter module names (loaded dynamically)
-reader: llm_judge_sample_reader
-reader_module_path: llm_ensemble.ingest.adapters.io.llm_judge_sample_reader.LlmJudgeSampleReader
-writer: fully_populated_ndjson_writer
-writer_module_path: llm_ensemble.ingest.adapters.io.FullyPopulatedNdjsonWriter
+# Adapter specifications (loaded dynamically)
+# Format: module paths are snake_case, class names are UpperCamelCase
+reader_module: llm_ensemble.ingest.adapters.io.llm_judge_sample_reader
+reader_class: LlmJudgeSampleReader
+writer_module: llm_ensemble.ingest.adapters.io.fully_populated_ndjson_writer
+writer_class: FullyPopulatedNdjsonWriter

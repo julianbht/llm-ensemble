@@ -3,6 +3,11 @@ provider: openrouter
 name_hint: gpt20b
 context_window: 8192
 
+# Adapter specifications (loaded dynamically)
+# Format: module paths are snake_case, class names are UpperCamelCase
+provider_module: llm_ensemble.infer.adapters.providers.openrouter_adapter
+provider_class: OpenRouterAdapter
+
 # Core inference parameters (explicit for discoverability)
 temperature: 0.0
 max_tokens: 256

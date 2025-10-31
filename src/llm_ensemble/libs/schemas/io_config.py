@@ -26,10 +26,10 @@ class IOConfig(BaseConfig):
     """
 
     description: str = Field(description="Human-readable description of the format")
-    reader: str = Field(description="Reader adapter module name")
-    reader_module_path: str = Field(description="Full module path to reader adapter (e.g., 'llm_ensemble.infer.adapters.io.ndjson_example_reader.NdjsonExampleReader')")
-    writer: str = Field(description="Writer adapter module name")
-    writer_module_path: str = Field(description="Full module path to writer adapter (e.g., 'llm_ensemble.infer.adapters.io.ndjson_judgement_writer.NdjsonJudgementWriter')")
+    reader_module: str = Field(description="Full Python module path to reader (e.g., 'llm_ensemble.infer.adapters.io.ndjson_example_reader')")
+    reader_class: str = Field(description="Reader class name in UpperCamelCase (e.g., 'NdjsonExampleReader')")
+    writer_module: str = Field(description="Full Python module path to writer (e.g., 'llm_ensemble.infer.adapters.io.ndjson_judgement_writer')")
+    writer_class: str = Field(description="Writer class name in UpperCamelCase (e.g., 'NdjsonJudgementWriter')")
 
     class Config:
         """Pydantic config."""
@@ -39,35 +39,35 @@ class IOConfig(BaseConfig):
     def get_reader(self) -> Any:
         """Instantiate and return the reader adapter.
 
-        Dynamically imports and instantiates the reader class specified
-        by reader_module_path.
+        Dynamically imports the reader module and instantiates the reader class.
 
         Returns:
             Instance of the reader adapter
 
         Raises:
-            ImportError: If the reader module path cannot be imported
+            ImportError: If the reader module cannot be imported
+            AttributeError: If the reader class doesn't exist in the module
 
         Example:
             >>> config = IOConfig(...)
             >>> reader = config.get_reader()
         """
-        return self.instantiate_from_module_path(self.reader_module_path)
+        return self._instantiate_adapter(self.reader_module, self.reader_class)
 
     def get_writer(self) -> Any:
         """Instantiate and return the writer adapter.
 
-        Dynamically imports and instantiates the writer class specified
-        by writer_module_path.
+        Dynamically imports the writer module and instantiates the writer class.
 
         Returns:
             Instance of the writer adapter
 
         Raises:
-            ImportError: If the writer module path cannot be imported
+            ImportError: If the writer module cannot be imported
+            AttributeError: If the writer class doesn't exist in the module
 
         Example:
             >>> config = IOConfig(...)
             >>> writer = config.get_writer()
         """
-        return self.instantiate_from_module_path(self.writer_module_path)
+        return self._instantiate_adapter(self.writer_module, self.writer_class)

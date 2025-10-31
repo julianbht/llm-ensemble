@@ -39,11 +39,11 @@ RunId = Annotated[
     )
 ]
 
-SaveLogs = Annotated[
-    bool,
+LogCfg = Annotated[
+    Optional[str],
     typer.Option(
-        "--save-logs",
-        help="Save logs to run.log file in run directory"
+        "--log-cfg",
+        help=f"Logging config name. Configs located in {(PathManager.get_configs_dir() / 'logging').relative_to(PathManager.get_project_root())}. Defaults to 'default' (pretty printing + log saving enabled)."
     )
 ]
 

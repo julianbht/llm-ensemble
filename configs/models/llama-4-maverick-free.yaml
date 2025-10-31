@@ -1,0 +1,34 @@
+model_id: llama-4-maverick:free
+provider: openrouter
+context_window: 8192
+
+# Adapter specifications (loaded dynamically)
+# Format: module paths are snake_case, class names are UpperCamelCase
+provider_module: llm_ensemble.infer.adapters.providers.openrouter_adapter
+provider_class: OpenRouterAdapter
+
+# Core inference parameters (all set to null - configure via CLI overrides if needed)
+temperature: null
+max_tokens: null
+top_p: null
+frequency_penalty: null
+presence_penalty: null
+seed: null
+stop: null
+
+# Output control
+response_format: null
+
+# Advanced parameters
+additional_params: {}
+
+# Model capabilities
+capabilities: {}
+
+# Provider-specific fields
+# HuggingFace (not used for this model)
+hf_endpoint_url: null
+hf_model_name: null
+
+# OpenRouter configuration (required for OpenRouter provider)
+openrouter_model_id: meta-llama/llama-4-maverick:free

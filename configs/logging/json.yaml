@@ -1,0 +1,8 @@
+# JSON logging configuration
+# Structured JSON output to console with log file saving enabled
+
+pretty_print: false
+save_logs: true
+console_level: INFO
+file_level: DEBUG
+name_hint: json

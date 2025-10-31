@@ -31,6 +31,10 @@ class LlmJudgePaths:
 
     @property
     def qrels(self) -> Path:
+        """Prefer qrels file that actually includes relevance labels."""
+        dev_path = self.base_dir / "llm4eval_dev_qrel_2024.txt"
+        if dev_path.exists():
+            return dev_path
         return self.base_dir / "llm4eval_test_qrel_2024.txt"
 
 
@@ -43,7 +47,7 @@ class LlmJudgeSampleReader(SampleReader):
     File format:
     - queries: TSV with columns (query_id, query_text)
     - documents: JSONL with fields {docid, doc}
-    - qrels: TSV with columns (query_id, relevance, docid)
+    - qrels: TSV with columns (query_id, relevance, docid) or (query_id, iteration, docid, relevance)
     """
 
     def read(
@@ -177,9 +181,12 @@ class LlmJudgeSampleReader(SampleReader):
                 if not line:
                     continue
                 parts = line.split()
-                if len(parts) != 3:
+                if len(parts) == 3:
+                    qid, rel, docid = parts
+                elif len(parts) == 4:
+                    qid, _, docid, rel = parts
+                else:
                     raise ValueError(f"Invalid qrel line {i}: {line!r}")
-                qid, rel, docid = parts
                 try:
                     rel_i = int(rel)
                 except ValueError:

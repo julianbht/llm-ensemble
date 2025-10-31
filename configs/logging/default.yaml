@@ -1,0 +1,8 @@
+# Default logging configuration
+# Human-readable console output with log file saving enabled
+
+pretty_print: true
+save_logs: true
+console_level: INFO
+file_level: DEBUG
+name_hint: default

@@ -1,5 +1,5 @@
-"""Structured JSON logging for LLM Ensemble CLIs."""
+"""Structlog-based logging for LLM Ensemble CLIs."""
 
-from llm_ensemble.libs.logging.json_logger import configure_logging
+from llm_ensemble.libs.logging.structlog_logger import configure_logger
 
-__all__ = ["configure_logging"]
+__all__ = ["configure_logger"]

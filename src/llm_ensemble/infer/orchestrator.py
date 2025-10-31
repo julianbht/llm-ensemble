@@ -13,6 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, TextIO
 
+from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
@@ -152,8 +153,38 @@ def run_inference(
         prompt_builder=prompt_builder,
         llm_provider=provider,
         response_parser=response_parser,
-        logger=logger,
     )
+
+    # Define logging callbacks (infrastructure concern)
+    def on_request_start() -> None:
+        """Log when request is being sent."""
+        logger.info("Sending Request...")
+
+    def on_response_received() -> None:
+        """Log when response is received."""
+        logger.info("Received Response")
+
+    def on_judgement(judgement: LLMJudgement) -> None:
+        """Log each completed judgement."""
+        extracted_score = judgement.llm_score.label.value if judgement.llm_score.label else "null"
+        gold_score = judgement.judging_sample.gold_score.value
+        latency_s = f"{judgement.llm_response.latency_ms / 1000:.1f}s"
+
+        # Simple info to console
+        logger.info(f"Processed Sample | Extracted Score: {extracted_score} | Gold Score: {gold_score} | {latency_s}")
+
+        # Full details to file (DEBUG)
+        logger.debug(
+            "Judgement details",
+            query=judgement.judging_sample.query.query_text,
+            doc=judgement.judging_sample.document.doc_text,
+            prompt=judgement.llm_request.prompt,
+            raw_response=judgement.llm_response.raw_response,
+            extracted_score=extracted_score,
+            gold_score=gold_score,
+            latency_ms=judgement.llm_response.latency_ms,
+            warnings=[str(w) for w in judgement.get_all_warnings()],
+        )
 
     # Run inference pipeline (pure business logic)
     try:
@@ -163,6 +194,9 @@ def run_inference(
             run_info=run_info,
             run_dir=run_dir,
             limit=limit,
+            on_request_start=on_request_start,
+            on_response_received=on_response_received,
+            on_judgement=on_judgement,
         )
         judgement_count = summary.judgement_count
         logger.info("Judgements processed", count=judgement_count)

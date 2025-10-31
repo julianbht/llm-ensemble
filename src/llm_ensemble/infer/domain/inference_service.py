@@ -7,7 +7,7 @@ It depends only on port abstractions, has no knowledge of infrastructure details
 
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Callable, Any
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas import ModelConfig
@@ -51,7 +51,6 @@ class InferenceService:
         prompt_builder: PromptBuilder,
         llm_provider: LLMProvider,
         response_parser: ResponseParser,
-        logger: Optional[Any] = None,
     ):
         """Initialize inference service with port dependencies.
 
@@ -61,14 +60,12 @@ class InferenceService:
             prompt_builder: Port for building prompts from samples
             llm_provider: Port for LLM inference (accepts prompts, returns raw responses)
             response_parser: Port for parsing raw responses into structured scores
-            logger: Optional logger for progress tracking
         """
         self.example_reader = example_reader
         self.judgement_writer = judgement_writer
         self.prompt_builder = prompt_builder
         self.llm_provider = llm_provider
         self.response_parser = response_parser
-        self.logger = logger
 
     def run_inference(
         self,
@@ -77,6 +74,9 @@ class InferenceService:
         run_info: InferRunInfo,
         run_dir: Path,
         limit: Optional[int] = None,
+        on_request_start: Optional[Callable[[], None]] = None,
+        on_response_received: Optional[Callable[[], None]] = None,
+        on_judgement: Optional[Callable[[LLMJudgement], None]] = None,
     ) -> InferRunSummary:
         """Execute the inference pipeline with streaming and immediate persistence.
 
@@ -87,7 +87,8 @@ class InferenceService:
            b. Running inference via LLMProvider port → LLMResponse (raw response + provider warnings)
            c. Parsing response via ResponseParser port → LLMScore (parsed score + parser warnings)
            d. Creating LLMJudgement object (sample + request + response + score + run_info)
-           e. Writing judgement immediately to disk (fault tolerance)
+           e. Invoking callback for progress tracking
+           f. Writing judgement immediately to disk (fault tolerance)
         3. Calculating statistics including warnings summary from all stages
 
         Args:
@@ -96,6 +97,9 @@ class InferenceService:
             run_info: Immutable runtime context (created by orchestrator, attached to each judgement)
             run_dir: Run directory where output should be written (writer determines file structure)
             limit: Optional maximum number of examples to process
+            on_request_start: Optional callback invoked before sending request
+            on_response_received: Optional callback invoked after receiving response
+            on_judgement: Optional callback for each completed judgement (for logging/progress)
 
         Returns:
             Finalized InferRunSummary with statistics, timing, and warnings summary
@@ -120,26 +124,21 @@ class InferenceService:
                 # 1. Build prompt for this sample
                 request = self.prompt_builder.build(sample)
 
-                # Log full request details to file (DEBUG)
-                if self.logger:
-                    self.logger.debug(
-                        "Request built",
-                        query=sample.query.query_text,
-                        doc=sample.document.doc_text,
-                        prompt=request.prompt,
-                    )
-                    self.logger.info("Sending Request...")
+                # 2. Invoke callback before sending request
+                if on_request_start:
+                    on_request_start()
 
-                # 2. Run inference for this sample (simple, synchronous call)
+                # 3. Run inference for this sample (simple, synchronous call)
                 response = self.llm_provider.infer(request.prompt, model_config)
 
-                if self.logger:
-                    self.logger.info("Received Response")
+                # 4. Invoke callback after receiving response
+                if on_response_received:
+                    on_response_received()
 
-                # 3. Parse response to extract structured score
+                # 5. Parse response to extract structured score
                 score = self.response_parser.parse(response.raw_response)
 
-                # 4. Create judgement immediately
+                # 6. Create judgement immediately
                 judgement = LLMJudgement(
                     judging_sample=sample,
                     llm_request=request,
@@ -148,29 +147,14 @@ class InferenceService:
                     run_info=run_info,
                 )
 
-                # Log processing result
-                if self.logger:
-                    extracted_score = score.label.value if score.label else "null"
-                    gold_score = sample.gold_score.value
-                    latency_s = f"{response.latency_ms / 1000:.1f}s"
+                # 7. Invoke callback for progress tracking
+                if on_judgement:
+                    on_judgement(judgement)
 
-                    # Simple info to console
-                    self.logger.info(f"Processed Sample | Extracted Score: {extracted_score} | Gold Score: {gold_score} | {latency_s}")
-
-                    # Full details to file (DEBUG)
-                    self.logger.debug(
-                        "Response parsed",
-                        raw_response=response.raw_response,
-                        extracted_score=extracted_score,
-                        gold_score=gold_score,
-                        latency_ms=response.latency_ms,
-                        warnings=[str(w) for w in judgement.get_all_warnings()],
-                    )
-
-                # 5. Write judgement immediately to disk (fault tolerance!)
+                # 8. Write judgement immediately to disk (fault tolerance!)
                 writer.write_one(judgement)
 
-                # 6. Collect for summary statistics
+                # 9. Collect for summary statistics
                 llm_judgements.append(judgement)
 
         # Calculate aggregate statistics from judgements (for summary)
@@ -198,7 +182,7 @@ class InferenceService:
             summary_builder.add("warnings_summary", warnings_summary)
 
         # Finalize summary (sets end_time and creates immutable Pydantic object)
-        summary: InferRunSummary = summary_builder.finalize(InferRunSummary)d
+        summary: InferRunSummary = summary_builder.finalize(InferRunSummary)
 
         # Return finalized summary
         return summary

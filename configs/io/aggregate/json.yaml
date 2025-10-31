@@ -1,10 +1,11 @@
-# JSON I/O configuration for aggregate CLI
-# Reads LLMJudgement records, writes AggregatedJudgement records as JSON arrays
+name_hint: json
+description: |
+  JSON format for aggregate CLI.
+  Reads LLMJudgement records (output from infer CLI).
+  Writes AggregatedJudgement records (output from aggregate CLI).
 
-reader:
-  module: llm_ensemble.aggregate.adapters.io.json_judgement_reader
-  class: JsonJudgementReader
-
-writer:
-  module: llm_ensemble.aggregate.adapters.io.json_aggregated_judgement_writer
-  class: JsonAggregatedJudgementWriter
+# Adapter specifications (loaded dynamically)
+reader_module: llm_ensemble.aggregate.adapters.io.json_judgement_reader
+reader_class: JsonJudgementReader
+writer_module: llm_ensemble.aggregate.adapters.io.json_aggregated_judgement_writer
+writer_class: JsonAggregatedJudgementWriter

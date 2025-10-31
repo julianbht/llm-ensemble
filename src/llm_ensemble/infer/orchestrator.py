@@ -13,7 +13,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, TextIO
 
-from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
@@ -153,28 +152,8 @@ def run_inference(
         prompt_builder=prompt_builder,
         llm_provider=provider,
         response_parser=response_parser,
+        logger=logger,
     )
-
-    # Define logging callback for domain service
-    def log_judgement(judgement: LLMJudgement) -> None:
-        """Callback to log each judgement (infrastructure concern)."""
-        if judgement.llm_score is None or judgement.llm_score.label is None:
-            # Log as INFO (not WARNING) since this is analytics, not an error
-            logger.info(
-                "Judgement with parsing issues",
-                query_text=judgement.judging_sample.query.query_text,
-                doc_text=judgement.judging_sample.document.doc_text,
-                warnings=judgement.llm_response.warnings,
-            )
-        else:
-            logger.info(
-                "Processed judgement",
-                query_text=judgement.judging_sample.query.query_text,
-                doc_text=judgement.judging_sample.document.doc_text,
-                llm_score=judgement.llm_score.label.value,
-                gold_score=judgement.judging_sample.gold_score.value,
-                latency_ms=f"{judgement.llm_response.latency_ms:.1f}",
-            )
 
     # Run inference pipeline (pure business logic)
     try:
@@ -184,7 +163,6 @@ def run_inference(
             run_info=run_info,
             run_dir=run_dir,
             limit=limit,
-            on_judgement=log_judgement,
         )
         judgement_count = summary.judgement_count
         logger.info("Judgements processed", count=judgement_count)

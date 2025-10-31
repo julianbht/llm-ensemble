@@ -51,8 +51,9 @@ class Logger:
         cli_name: str,
         run_id: Optional[str] = None,
         use_json: Optional[bool] = None,
-        min_level: LogLevel = LogLevel.INFO,
         log_file: Optional[Any] = None,
+        console_level: LogLevel = LogLevel.INFO,
+        file_level: LogLevel = LogLevel.DEBUG,
     ):
         """Initialize logger.
 
@@ -60,13 +61,15 @@ class Logger:
             cli_name: Name of the CLI (e.g., "ingest", "infer")
             run_id: Optional run ID for context
             use_json: Force JSON output (defaults to LOG_FORMAT env var)
-            min_level: Minimum log level to output (defaults to INFO)
             log_file: Optional file handle to write logs to (in addition to stderr)
+            console_level: Minimum log level for console output (default: INFO)
+            file_level: Minimum log level for file output (default: DEBUG)
         """
         self.cli_name = cli_name
         self.run_id = run_id
-        self.min_level = min_level
         self.log_file = log_file
+        self.console_level = console_level
+        self.file_level = file_level
 
         # Determine output format
         if use_json is None:
@@ -78,10 +81,15 @@ class Logger:
         # Detect if stderr is a TTY for color support
         self.use_color = sys.stderr.isatty() and not self.use_json
 
-    def _should_log(self, level: LogLevel) -> bool:
-        """Check if this log level should be output."""
+    def _should_log_console(self, level: LogLevel) -> bool:
+        """Check if this log level should be output to console."""
         levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARNING, LogLevel.ERROR]
-        return levels.index(level) >= levels.index(self.min_level)
+        return levels.index(level) >= levels.index(self.console_level)
+
+    def _should_log_file(self, level: LogLevel) -> bool:
+        """Check if this log level should be output to file."""
+        levels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARNING, LogLevel.ERROR]
+        return levels.index(level) >= levels.index(self.file_level)
 
     def _format_human(self, level: LogLevel, message: str, use_color: bool = None, **kwargs: Any) -> str:
         """Format log message for human-readable output.
@@ -134,23 +142,27 @@ class Logger:
 
     def _log(self, level: LogLevel, message: str, **kwargs: Any) -> None:
         """Internal logging method."""
-        if not self._should_log(level):
+        should_log_console = self._should_log_console(level)
+        should_log_file = self.log_file is not None and self._should_log_file(level)
+
+        if not should_log_console and not should_log_file:
             return
 
+        # Format messages
         if self.use_json:
-            output = self._format_json(level, message, **kwargs)
-            file_output = output  # JSON is the same for both
+            formatted_message = self._format_json(level, message, **kwargs)
+            console_output = formatted_message
+            file_output = formatted_message
         else:
-            # Colored output for stderr (terminal)
-            output = self._format_human(level, message, use_color=self.use_color, **kwargs)
-            # Plain output for file (no ANSI codes)
+            console_output = self._format_human(level, message, use_color=self.use_color, **kwargs)
             file_output = self._format_human(level, message, use_color=False, **kwargs)
 
-        # Always write to stderr
-        print(output, file=sys.stderr, flush=True)
+        # Write to console if level qualifies
+        if should_log_console:
+            print(console_output, file=sys.stderr, flush=True)
 
-        # Write to log file without colors if configured
-        if self.log_file is not None:
+        # Write to file if level qualifies
+        if should_log_file:
             print(file_output, file=self.log_file, flush=True)
 
     def debug(self, message: str, **kwargs: Any) -> None:
@@ -173,17 +185,18 @@ class Logger:
 def get_logger(
     cli_name: str,
     run_id: Optional[str] = None,
-    min_level: Optional[str] = None,
     log_file: Optional[Any] = None,
+    console_level: LogLevel = LogLevel.INFO,
+    file_level: LogLevel = LogLevel.DEBUG,
 ) -> Logger:
     """Get a logger instance for a CLI.
 
     Args:
         cli_name: Name of the CLI (e.g., "ingest", "infer")
         run_id: Optional run ID for context
-        min_level: Minimum log level (DEBUG, INFO, WARNING, ERROR)
-                   Defaults to LOG_LEVEL env var or INFO
         log_file: Optional file handle to write logs to (in addition to stderr)
+        console_level: Minimum log level for console (default: INFO)
+        file_level: Minimum log level for file (default: DEBUG)
 
     Returns:
         Logger instance
@@ -192,18 +205,16 @@ def get_logger(
         >>> logger = get_logger("ingest", run_id="20250115_143022_llm-judge")
         >>> logger.info("Starting ingest")
 
-        >>> # With file logging
+        >>> # With file logging (DEBUG logs only go to file)
         >>> with open("run.log", "w") as f:
-        >>>     logger = get_logger("ingest", run_id="20250115_143022_llm-judge", log_file=f)
-        >>>     logger.info("Starting ingest")
+        >>>     logger = get_logger("infer", run_id="abc123", log_file=f)
+        >>>     logger.debug("Detailed info")  # Only in file
+        >>>     logger.info("Processing...")   # Console + file
     """
-    # Determine minimum log level
-    if min_level is None:
-        min_level = os.getenv("LOG_LEVEL", "INFO").upper()
-
-    try:
-        level_enum = LogLevel(min_level)
-    except ValueError:
-        level_enum = LogLevel.INFO
-
-    return Logger(cli_name=cli_name, run_id=run_id, min_level=level_enum, log_file=log_file)
+    return Logger(
+        cli_name=cli_name,
+        run_id=run_id,
+        log_file=log_file,
+        console_level=console_level,
+        file_level=file_level,
+    )

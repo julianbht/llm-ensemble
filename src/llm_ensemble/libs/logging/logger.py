@@ -54,32 +54,35 @@ class Logger:
         log_file: Optional[Any] = None,
         console_level: LogLevel = LogLevel.INFO,
         file_level: LogLevel = LogLevel.DEBUG,
+        file_json: bool = True,
     ):
         """Initialize logger.
 
         Args:
             cli_name: Name of the CLI (e.g., "ingest", "infer")
             run_id: Optional run ID for context
-            use_json: Force JSON output (defaults to LOG_FORMAT env var)
+            use_json: Force JSON output for console (defaults to LOG_FORMAT env var)
             log_file: Optional file handle to write logs to (in addition to stderr)
             console_level: Minimum log level for console output (default: INFO)
             file_level: Minimum log level for file output (default: DEBUG)
+            file_json: Use JSON format for file output (default: True for structured logs)
         """
         self.cli_name = cli_name
         self.run_id = run_id
         self.log_file = log_file
         self.console_level = console_level
         self.file_level = file_level
+        self.file_json = file_json
 
-        # Determine output format
+        # Determine console output format
         if use_json is None:
             log_format = os.getenv("LOG_FORMAT", "human").lower()
-            self.use_json = log_format == "json"
+            self.console_json = log_format == "json"
         else:
-            self.use_json = use_json
+            self.console_json = use_json
 
         # Detect if stderr is a TTY for color support
-        self.use_color = sys.stderr.isatty() and not self.use_json
+        self.use_color = sys.stderr.isatty() and not self.console_json
 
     def _should_log_console(self, level: LogLevel) -> bool:
         """Check if this log level should be output to console."""
@@ -163,21 +166,20 @@ class Logger:
         if not should_log_console and not should_log_file:
             return
 
-        # Format messages
-        if self.use_json:
-            formatted_message = self._format_json(level, message, **kwargs)
-            console_output = formatted_message
-            file_output = formatted_message
-        else:
-            console_output = self._format_human(level, message, use_color=self.use_color, **kwargs)
-            file_output = self._format_human(level, message, use_color=False, **kwargs)
-
-        # Write to console if level qualifies
+        # Format console output
         if should_log_console:
+            if self.console_json:
+                console_output = self._format_json(level, message, **kwargs)
+            else:
+                console_output = self._format_human(level, message, use_color=self.use_color, **kwargs)
             print(console_output, file=sys.stderr, flush=True)
 
-        # Write to file if level qualifies
+        # Format file output (independent of console format)
         if should_log_file:
+            if self.file_json:
+                file_output = self._format_json(level, message, **kwargs)
+            else:
+                file_output = self._format_human(level, message, use_color=False, **kwargs)
             print(file_output, file=self.log_file, flush=True)
 
     def debug(self, message: str, **kwargs: Any) -> None:
@@ -203,6 +205,7 @@ def get_logger(
     log_file: Optional[Any] = None,
     console_level: LogLevel = LogLevel.INFO,
     file_level: LogLevel = LogLevel.DEBUG,
+    file_json: bool = True,
 ) -> Logger:
     """Get a logger instance for a CLI.
 
@@ -212,6 +215,7 @@ def get_logger(
         log_file: Optional file handle to write logs to (in addition to stderr)
         console_level: Minimum log level for console (default: INFO)
         file_level: Minimum log level for file (default: DEBUG)
+        file_json: Use JSON format for file output (default: True)
 
     Returns:
         Logger instance
@@ -220,11 +224,11 @@ def get_logger(
         >>> logger = get_logger("ingest", run_id="20250115_143022_llm-judge")
         >>> logger.info("Starting ingest")
 
-        >>> # With file logging (DEBUG logs only go to file)
+        >>> # With structured JSON file logging
         >>> with open("run.log", "w") as f:
-        >>>     logger = get_logger("infer", run_id="abc123", log_file=f)
-        >>>     logger.debug("Detailed info")  # Only in file
-        >>>     logger.info("Processing...")   # Console + file
+        >>>     logger = get_logger("infer", run_id="abc123", log_file=f, file_json=True)
+        >>>     logger.debug("Detailed info")  # Only in file as JSON
+        >>>     logger.info("Processing...")   # Console (human) + file (JSON)
     """
     return Logger(
         cli_name=cli_name,
@@ -232,4 +236,5 @@ def get_logger(
         log_file=log_file,
         console_level=console_level,
         file_level=file_level,
+        file_json=file_json,
     )

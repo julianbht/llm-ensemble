@@ -40,44 +40,7 @@ def infer(
     notes: Notes = None,
     override: Override = [],
 ):
-    """Run LLM inference on judging examples and output structured judgements.
-
-    Reads JudgingExample records, runs inference, and writes ModelJudgement records
-    with full provenance metadata.
-
-    All behavior is explicitly configured via config files - no implicit defaults.
-
-    Examples:
-        # Basic usage
-        infer --model-cfg gpt-oss-20b --prompt-cfg thomas-et-al-prompt --input data.ndjson --io-cfg ndjson
-
-        # With JSON logging and no file saving
-        infer --model-cfg gpt-oss-20b --prompt-cfg thomas-et-al-prompt --input data.ndjson --io-cfg ndjson --log-cfg json
-
-        # With console-only logging (no file saving)
-        infer --model-cfg gpt-oss-20b --prompt-cfg thomas-et-al-prompt --input data.ndjson --io-cfg ndjson --log-cfg console-only
-
-        # Override model parameters (note: prefix-based routing)
-        infer --model-cfg gpt-oss-20b --prompt-cfg thomas-et-al-prompt --input data.ndjson --io-cfg ndjson \\
-              --override model.default_params.temperature=0.7 \\
-              --override model.default_params.max_tokens=512
-
-        # Override prompt variables
-        infer --model-cfg gpt-oss-20b --prompt-cfg thomas-et-al-prompt --input data.ndjson --io-cfg ndjson \\
-              --override prompt.variables.role=false
-
-        # Override I/O adapters
-        infer --model-cfg gpt-oss-20b --prompt-cfg thomas-et-al-prompt --input data.ndjson --io-cfg ndjson \\
-              --override io.reader=custom_reader
-
-    Override format (prefix-based routing):
-        Model params:    --override model.default_params.temperature=0.7
-        Prompt vars:     --override prompt.variables.role=false
-        I/O adapters:    --override io.reader=custom_reader
-
-        Prefix must be one of: model, prompt, io
-
-    Environment variables:
+    """Run LLM inference on judging samples and output structured judgements."""
         OPENROUTER_API_KEY: OpenRouter API key (required for OpenRouter models)
         HF_TOKEN: HuggingFace API token (required for HF models)
     """

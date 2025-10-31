@@ -25,32 +25,7 @@ def ingest(
     notes: Notes = None,
     override: Override = [],
 ):
-    """Normalize a raw IR dataset into JudgingExample records.
-
-    Writes output with full provenance metadata.
-
-    All behavior is explicitly configured via I/O config files - no implicit defaults.
-
-    Examples:
-        # Basic usage
-        ingest --input data/llm-judge-2024 --io-cfg llm_judge_challenge --limit 100
-
-        # With JSON logging
-        ingest --input data/llm-judge-2024 --io-cfg llm_judge_challenge --log-cfg json
-
-        # Official run with notes
-        ingest -i data/llm-judge-2024 --io-cfg llm_judge_challenge --official --notes "Baseline dataset"
-
-        # Override I/O config (note: prefix-based routing)
-        ingest --input data/llm-judge-2024 --io-cfg llm_judge_challenge \\
-               --override io.reader=custom_reader
-
-    Override format (prefix-based routing):
-        I/O adapters:    --override io.reader=custom_reader
-        Dataset paths:   --override io.data_dir=/custom/path
-
-        Prefix must be: io
-    """
+    """Normalize raw IR datasets into JudgingSample records."""
     
     # Load configurations
     io_config = load_io_config(io_cfg, cli_name="ingest")

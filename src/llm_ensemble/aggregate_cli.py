@@ -43,35 +43,7 @@ def aggregate(
     notes: Notes = None,
     override: Override = [],
 ):
-    """Aggregate multiple model judgements using ensemble strategies.
-    
-    Reads LLMJudgement records from multiple infer runs, groups by (query_id, docid),
-    and applies aggregation strategy (e.g., majority vote) to produce consensus decisions.
-    
-    All behavior is explicitly configured via config files - no implicit defaults.
-    
-    Examples:
-        # Basic usage - aggregate two infer runs with majority vote
-        aggregate --ensemble-cfg majority_vote --io-cfg ndjson \\
-                  artifacts/runs/infer/run1/judgements.json \\
-                  artifacts/runs/infer/run2/judgements.json
-        
-        # With custom run ID
-        aggregate --ensemble-cfg majority_vote --io-cfg ndjson \\
-                  --run-id my-ensemble-run \\
-                  run1/judgements.json run2/judgements.json
-        
-        # Override I/O adapters
-        aggregate --ensemble-cfg majority_vote --io-cfg ndjson \\
-                  --override io.reader=custom_reader \\
-                  run1/judgements.json run2/judgements.json
-    
-    Override format (prefix-based routing):
-        Ensemble params: --override ensemble.strategy=weighted_vote
-        I/O adapters:    --override io.reader=custom_reader
-        
-        Prefix must be one of: ensemble, io
-    """
+    """Combine model judgements using ensemble strategies (e.g., majority vote)."""
     # Load configurations
     ensemble_config = load_ensemble_config(ensemble_cfg)
     io_config = load_io_config(io_cfg, cli_name="aggregate")

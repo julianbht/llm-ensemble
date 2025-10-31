@@ -25,12 +25,13 @@ def infer(
         "--model-cfg",
         help=f"Model config name. Configs in {PathManager.get_model_configs_dir().relative_to(PathManager.get_project_root())}"
     ),
-    # Optional parameters
+    # Required parameters (continued)
     prompt_cfg: str = typer.Option(
-        "thomas-et-al-prompt",
+        ...,
         "--prompt-cfg",
         help=f"Prompt config name. Configs in {PathManager.get_prompts_dir().relative_to(PathManager.get_project_root())}"
     ),
+    # Optional parameters
     limit: Limit = None,
     run_id: RunId = None,
     save_logs: SaveLogs = False,
@@ -47,20 +48,19 @@ def infer(
 
     Examples:
         # Basic usage
-        infer --model-cfg gpt-oss-20b --input data.ndjson --io-cfg ndjson
+        infer --model-cfg gpt-oss-20b --prompt-cfg thomas-et-al-prompt --input data.ndjson --io-cfg ndjson
 
         # Override model parameters (note: prefix-based routing)
-        infer --model-cfg gpt-oss-20b --input data.ndjson --io-cfg ndjson \\
+        infer --model-cfg gpt-oss-20b --prompt-cfg thomas-et-al-prompt --input data.ndjson --io-cfg ndjson \\
               --override model.default_params.temperature=0.7 \\
               --override model.default_params.max_tokens=512
 
         # Override prompt variables
-        infer --model-cfg gpt-oss-20b --input data.ndjson --io-cfg ndjson \\
-              --prompt-cfg thomas-et-al-prompt \\
+        infer --model-cfg gpt-oss-20b --prompt-cfg thomas-et-al-prompt --input data.ndjson --io-cfg ndjson \\
               --override prompt.variables.role=false
 
         # Override I/O adapters
-        infer --model-cfg gpt-oss-20b --input data.ndjson --io-cfg ndjson \\
+        infer --model-cfg gpt-oss-20b --prompt-cfg thomas-et-al-prompt --input data.ndjson --io-cfg ndjson \\
               --override io.reader=custom_reader
 
     Override format (prefix-based routing):

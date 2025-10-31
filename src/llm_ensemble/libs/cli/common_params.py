@@ -18,7 +18,7 @@ InputPath = Annotated[
     typer.Option(
         "--input",
         "-i",
-        help="Input path (directory for ingest, file for infer/aggregate/evaluate)",
+        help="Input path",
         exists=True,
     )
 ]

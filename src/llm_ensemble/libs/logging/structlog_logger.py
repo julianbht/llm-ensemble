@@ -81,7 +81,7 @@ def configure_logger(
 
     # Console renderer - always human-readable one-line format
     console_renderer = structlog.dev.ConsoleRenderer(
-        colors=sys.stderr.isatty(),
+        colors=False,
         exception_formatter=structlog.dev.plain_traceback,
     )
     # Add processor to drop unwanted fields before rendering

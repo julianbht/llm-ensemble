@@ -8,7 +8,6 @@ description: |
 
 # Adapter specifications (loaded dynamically)
 # Format: module paths are snake_case, class names are UpperCamelCase
-# The builder locates its own template (thomas-et-al-prompt.jinja)
 builder_module: llm_ensemble.infer.adapters.prompts.thomas_builder_advanced
 builder_class: ThomasBuilderAdvanced
 parser_module: llm_ensemble.infer.adapters.parsers.json_response_parser

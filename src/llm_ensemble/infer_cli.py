@@ -23,13 +23,13 @@ def infer(
     model_cfg: str = typer.Option(
         ...,
         "--model-cfg",
-        help=f"Model config name (e.g., 'gpt-oss-20b'). Configs in {PathManager.get_model_configs_dir().relative_to(PathManager.get_project_root())}"
+        help=f"Model config name. Configs in {PathManager.get_model_configs_dir().relative_to(PathManager.get_project_root())}"
     ),
     # Optional parameters
     prompt_cfg: str = typer.Option(
         "thomas-et-al-prompt",
         "--prompt-cfg",
-        help=f"Prompt config name (e.g., 'thomas-et-al-prompt'). Configs in {PathManager.get_prompts_dir().relative_to(PathManager.get_project_root())}"
+        help=f"Prompt config name. Configs in {PathManager.get_prompts_dir().relative_to(PathManager.get_project_root())}"
     ),
     limit: Limit = None,
     run_id: RunId = None,

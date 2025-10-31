@@ -27,7 +27,7 @@ IoCfg = Annotated[
     str,
     typer.Option(
         "--io-cfg",
-        help=f"I/O config name (e.g., 'ndjson'). Configs located in {PathManager.get_io_configs_dir().relative_to(PathManager.get_project_root())}"
+        help=f"I/O config name. Configs located in {PathManager.get_io_configs_dir().relative_to(PathManager.get_project_root())}"
     )
 ]
 

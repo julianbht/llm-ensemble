@@ -26,13 +26,23 @@ class AggregationService:
     
     Pure business logic that orchestrates:
     - Reading judgements via JudgementReader port
-    - Grouping judgements by (query_id, docid)
+    - Grouping judgements by natural composite key (dataset, query external_id, doc external_id)
     - Applying aggregation strategy to each group
     - Writing aggregated judgements via AggregatedJudgementWriter port
     - Tracking statistics (ties, no-votes)
     
     Depends only on port abstractions, enabling complete independence from
     infrastructure concerns.
+    
+    Identity Strategy:
+        Uses namespaced natural keys for grouping judgements of the same sample.
+        A sample's identity is defined by:
+        - dataset (from judging_sample.run_info.io_config_name)
+        - query external_id (from judging_sample.query.external_id)
+        - document external_id (from judging_sample.document.external_id)
+        
+        This avoids artificial ID generation while handling multi-dataset scenarios
+        correctly. Defers database surrogate keys until persistence layer is needed.
     
     Example:
         >>> reader = JsonJudgementReader()
@@ -63,6 +73,36 @@ class AggregationService:
         self.aggregated_judgement_writer = aggregated_judgement_writer
         self.strategy = strategy
     
+    @staticmethod
+    def _get_sample_identity(judgement: LLMJudgement) -> tuple[str, str, str]:
+        """Extract natural composite key for grouping judgements of the same sample.
+        
+        Uses namespaced natural keys to identify unique query-document pairs:
+        - dataset: Identifies which dataset the sample came from (io_config_name)
+        - query_id: External query identifier from the original dataset
+        - doc_id: External document identifier from the original dataset
+        
+        This approach:
+        - Handles multiple datasets with overlapping IDs correctly
+        - Avoids artificial ID generation
+        - Is deterministic and reproducible
+        - Defers database surrogate keys to persistence layer
+        
+        Args:
+            judgement: LLM judgement to extract identity from
+            
+        Returns:
+            Tuple of (dataset, query_id, doc_id) serving as natural composite key
+            
+        Example:
+            >>> key = AggregationService._get_sample_identity(judgement)
+            >>> # key = ('llm_judge_ingest', 'q123', 'd456')
+        """
+        dataset = judgement.judging_sample.run_info.io_config_name
+        query_id = judgement.judging_sample.query.external_id
+        doc_id = judgement.judging_sample.document.external_id
+        return (dataset, query_id, doc_id)
+    
     def run_aggregation(
         self,
         input_paths: list,
@@ -74,7 +114,7 @@ class AggregationService:
         
         Pure business logic that:
         1. Reads all judgements via reader port
-        2. Groups judgements by (query_id, docid)
+        2. Groups judgements by natural composite key (dataset, query_id, doc_id)
         3. For each group, applies strategy to get aggregated score
         4. Creates AggregatedJudgement with full judgements + aggregated score
         5. Writes via writer port (streaming)
@@ -96,12 +136,10 @@ class AggregationService:
         # Read all judgements via reader port
         judgements = self.judgement_reader.read(input_paths)
         
-        # Group judgements by (query_id, docid)
-        grouped: dict[tuple[str, str], list[LLMJudgement]] = defaultdict(list)
+        # Group judgements by natural composite key (dataset, query_id, doc_id)
+        grouped: dict[tuple[str, str, str], list[LLMJudgement]] = defaultdict(list)
         for judgement in judgements:
-            query_id = judgement.judging_sample.query.query_id
-            docid = judgement.judging_sample.document.docid
-            key = (query_id, docid)
+            key = self._get_sample_identity(judgement)
             grouped[key].append(judgement)
         
         # Track statistics
@@ -112,7 +150,7 @@ class AggregationService:
         # Open writer for streaming writes
         with self.aggregated_judgement_writer.open(run_dir) as writer:
             # Process each group
-            for (query_id, docid), group_judgements in grouped.items():
+            for (dataset, query_id, doc_id), group_judgements in grouped.items():
                 # Apply strategy to get aggregated score
                 aggregated_score = self.strategy.aggregate(group_judgements)
                 

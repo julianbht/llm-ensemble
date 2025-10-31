@@ -31,4 +31,4 @@ hf_endpoint_url: null
 hf_model_name: null
 
 # OpenRouter configuration (required for OpenRouter provider)
-openrouter_model_id: google/gemma-3n-e2b-it:free
+openrouter_model_id: nvidia/nemotron-nano-9b-v2:free

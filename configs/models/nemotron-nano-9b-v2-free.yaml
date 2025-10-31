@@ -1,4 +1,4 @@
-model_id: gpt-oss-20b
+model_id: nvidia/nemotron-nano-9b-v2:free
 provider: openrouter
 context_window: 8192
 
@@ -31,4 +31,4 @@ hf_endpoint_url: null
 hf_model_name: null
 
 # OpenRouter configuration (required for OpenRouter provider)
-openrouter_model_id: openai/gpt-oss-20b:free
+openrouter_model_id: nvidia/nemotron-nano-9b-v2:free

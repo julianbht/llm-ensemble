@@ -15,7 +15,6 @@ from typing import Optional
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.ensemble_config_schema import EnsembleConfig
 from llm_ensemble.aggregate.domain import AggregationService
-from llm_ensemble.aggregate.adapters.io import JsonJudgementReader, JsonAggregatedJudgementWriter
 from llm_ensemble.aggregate.schemas import AggregatedJudgement
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
@@ -120,12 +119,10 @@ def run_aggregation(
     )
     logger.info("run_directory", path=str(run_dir))
     
-    # Instantiate strategy adapter via dynamic loading
+    # Instantiate adapters via dynamic loading from configs
     strategy = ensemble_config.get_strategy()
-    
-    # Instantiate I/O adapters (for now, hardcoded to JSON - config integration later)
-    reader = JsonJudgementReader()
-    writer = JsonAggregatedJudgementWriter()
+    reader = io_config.get_reader()
+    writer = io_config.get_writer()
     
     # Create domain service
     service = AggregationService(

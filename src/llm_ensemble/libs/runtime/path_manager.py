@@ -91,6 +91,15 @@ class PathManager:
         return PathManager.get_project_root() / "src" / "llm_ensemble" / "libs" / "generated_schemas"
 
     @staticmethod
+    def get_prompt_templates_dir() -> Path:
+        """Get the infer/adapters/prompts/templates/ directory.
+
+        Returns:
+            Path to prompt templates directory where Jinja2 templates are stored
+        """
+        return PathManager.get_project_root() / "src" / "llm_ensemble" / "infer" / "adapters" / "prompts" / "templates"
+
+    @staticmethod
     def get_artifacts_dir() -> Path:
         """Get the artifacts/ directory.
 

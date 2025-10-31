@@ -19,7 +19,6 @@ from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
 from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.infer.domain import InferenceService
-from llm_ensemble.infer.config_loaders import load_prompt_template
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_id import generate_run_id
 from llm_ensemble.libs.runtime.path_manager import PathManager
@@ -140,8 +139,8 @@ def run_inference(
     writer = io_config.get_writer()
 
     # Instantiate prompt builder and response parser directly from config
-    template = load_prompt_template(prompt_config.prompt_template)
-    prompt_builder = prompt_config.get_prompt_builder(template)
+    # Builder is responsible for loading its own template
+    prompt_builder = prompt_config.get_prompt_builder()
     response_parser = prompt_config.get_response_parser(score_field="O")
 
     # Instantiate provider directly from config

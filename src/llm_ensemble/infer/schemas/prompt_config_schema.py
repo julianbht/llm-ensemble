@@ -16,26 +16,24 @@ from llm_ensemble.libs.schemas.base_config import BaseConfig
 class PromptConfig(BaseConfig):
     """Configuration for a prompt template.
 
-    Specifies the template file, builder module, and parser module to use.
+    Specifies the builder module and parser module to use. The builder is
+    responsible for locating its own template (templates are colocated with builders).
 
     Provides convenience methods for instantiating prompt builders and response parsers
     from their module paths, enforcing the dynamic import pattern.
     """
 
     description: Optional[str] = Field(None, description="Human-readable description of the prompt")
-    prompt_template: str = Field(..., description="Template filename (without .jinja extension)")
     builder_module: str = Field(..., description="Full Python module path to prompt builder (e.g., 'llm_ensemble.infer.adapters.prompts.jinja_prompt_builder')")
     builder_class: str = Field(..., description="Prompt builder class name in UpperCamelCase (e.g., 'JinjaPromptBuilder')")
     parser_module: str = Field(..., description="Full Python module path to response parser (e.g., 'llm_ensemble.infer.adapters.parsers.json_response_parser')")
     parser_class: str = Field(..., description="Response parser class name in UpperCamelCase (e.g., 'JsonResponseParser')")
 
-    def get_prompt_builder(self, template: str) -> Any:
+    def get_prompt_builder(self) -> Any:
         """Instantiate and return the prompt builder adapter.
 
         Dynamically imports the builder module and instantiates the builder class.
-
-        Args:
-            template: The prompt template string to pass to the builder
+        The builder is responsible for locating and loading its own template.
 
         Returns:
             Instance of the prompt builder adapter
@@ -45,11 +43,14 @@ class PromptConfig(BaseConfig):
             AttributeError: If the builder class doesn't exist in the module
 
         Example:
-            >>> config = PromptConfig(...)
-            >>> template = load_prompt_template(config.prompt_template)
-            >>> builder = config.get_prompt_builder(template)
+            >>> config = PromptConfig(
+            ...     builder_module="llm_ensemble.infer.adapters.prompts.jinja_prompt_builder",
+            ...     builder_class="JinjaPromptBuilder",
+            ...     ...
+            ... )
+            >>> builder = config.get_prompt_builder()
         """
-        return self._instantiate_adapter(self.builder_module, self.builder_class, template=template)
+        return self._instantiate_adapter(self.builder_module, self.builder_class)
 
     def get_response_parser(self, score_field: str = "O") -> Any:
         """Instantiate and return the response parser adapter.

@@ -26,7 +26,7 @@ is primarily about the topic, or contains vital information
 about the topic, mark it 2. Otherwise, mark it 0.
 
 Query
-A person has typed [{{ query }}] into a search engine.
+A person has typed [{{ query.query_text }}] into a search engine.
 {% if description or narrative %}
 They were looking for:{% if description %} {{ description }}{% endif %}{% if narrative %} {{ narrative }}{% endif %}
 {% endif %}
@@ -34,7 +34,7 @@ They were looking for:{% if description %} {{ description }}{% endif %}{% if nar
 Result
 Consider the following web page.
 —BEGIN WEB PAGE CONTENT—
-{{ page_text }}
+{{ document.doc_text }}
 —END WEB PAGE CONTENT—
 
 Instructions

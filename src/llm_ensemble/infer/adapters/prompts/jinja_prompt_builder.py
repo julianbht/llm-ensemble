@@ -1,7 +1,7 @@
 """Jinja2-based prompt builder adapter.
 
-Generic implementation that uses Jinja2 templates to build prompts.
-Works with any template format by mapping JudgingSample fields to template variables.
+Prompt builder that uses the Thomas et al. template for relevance judging.
+The template is colocated with this adapter in the templates/ subdirectory.
 """
 
 from __future__ import annotations
@@ -11,79 +11,76 @@ from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.ports import PromptBuilder
 from llm_ensemble.infer.schemas.llm_request import LLMRequest
 from llm_ensemble.infer.schemas.warnings import PromptWarning, PromptWarningCode
+from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
 class JinjaPromptBuilder(PromptBuilder):
     """Prompt builder using Jinja2 templates.
 
-    This is a generic adapter that can work with any Jinja2 template.
-    It maps JudgingSample fields to template variables based on the
-    configured variable mapping.
+    Loads the thomas-et-al-prompt.jinja template from the templates/ directory.
+    Passes JudgingSample Pydantic model attributes directly to the template:
+    - {{ query.query_text }} - The query text
+    - {{ query.external_id }} - The query ID
+    - {{ document.doc_text }} - The document text
+    - {{ document.external_id }} - The document ID
+
+    If you need a different template or mapping, create a new prompt builder
+    adapter with its own template.
 
     Example:
-        >>> from jinja2 import Template
-        >>> template = Template("Query: {{ query }}\\nDocument: {{ page_text }}")
-        >>> builder = JinjaPromptBuilder(template)
+        >>> builder = JinjaPromptBuilder()
+        >>> from llm_ensemble.ingest.schemas import Query, Document, JudgingSample
+        >>> from llm_ensemble.libs.schemas import RelevanceScore
+        >>> query = Query(external_id="q1", query_text="python")
+        >>> doc = Document(external_id="d1", doc_text="Python is a programming language")
         >>> example = JudgingSample(
-        ...     dataset="test",
-        ...     query_id="q1",
-        ...     query_text="python",
-        ...     docid="d1",
-        ...     doc="Python is a programming language"
+        ...     query=query,
+        ...     document=doc,
+        ...     gold_score=RelevanceScore.HIGHLY_RELEVANT,
+        ...     run_info=...
         ... )
         >>> request = builder.build(example)
         >>> "Query: python" in request.prompt
         True
-        >>> len(request.warnings)
-        0
     """
 
-    def __init__(
-        self,
-        template: Template,
-        variable_mapping: dict[str, str] | None = None,
-    ):
+    def __init__(self):
         """Initialize Jinja prompt builder.
 
-        Args:
-            template: Jinja2 Template object to render
-            variable_mapping: Optional mapping from template variables to JudgingSample fields.
-                If not provided, uses default mapping:
-                - query -> query_text
-                - page_text -> doc
+        Loads the template from templates/thomas-et-al-prompt.jinja using PathManager.
         """
-        self.template = template
-        self.variable_mapping = variable_mapping or {
-            "query": "query_text",
-            "page_text": "doc",
-        }
+        # Load template using PathManager
+        template_path = PathManager.get_prompt_templates_dir() / "thomas-et-al-prompt.jinja"
+
+        if not template_path.exists():
+            raise FileNotFoundError(
+                f"Template not found: {template_path}\n"
+                f"Expected template to be at: {template_path}"
+            )
+
+        with open(template_path, "r", encoding="utf-8") as f:
+            self.template = Template(f.read())
 
     def build(self, example: JudgingSample) -> LLMRequest:
-        """Build a prompt from a judging example.
+        """Build a prompt from a judging sample.
+
+        Passes JudgingSample model attributes to the template:
+        - query: Query Pydantic object (with .query_text, .external_id)
+        - document: Document Pydantic object (with .doc_text, .external_id)
 
         Args:
             example: JudgingSample object containing query and document
 
         Returns:
-            LLMRequest containing rendered prompt and any warnings from building
-
-        Raises:
-            ValueError: If example is missing required fields (unrecoverable)
+            LLMRequest containing rendered prompt and any warnings
         """
-        # Convert example to dict
-        example_dict = example.model_dump()
-
         warnings = []
 
-        # Build template variables from example using mapping
-        template_vars = {}
-        for template_var, example_field in self.variable_mapping.items():
-            if example_field not in example_dict:
-                raise ValueError(
-                    f"Example missing required field '{example_field}' "
-                    f"for template variable '{template_var}'"
-                )
-            template_vars[template_var] = example_dict[example_field]
+        # Pass JudgingSample Pydantic model attributes directly to template
+        template_vars = {
+            "query": example.query,
+            "document": example.document,
+        }
 
         # Render template (catch rendering errors and convert to warnings)
         try:

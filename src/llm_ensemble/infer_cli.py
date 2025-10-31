@@ -78,7 +78,7 @@ def infer(
         # Load configurations
         model_config = load_model_config(model_cfg)
         prompt_config = load_prompt_config(prompt_cfg)
-        io_config = load_io_config(io_cfg)
+        io_config = load_io_config(io_cfg, cli_name="infer")
 
         # Parse and route overrides if provided
         if override:

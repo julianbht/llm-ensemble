@@ -46,13 +46,20 @@ class PathManager:
         return PathManager.get_project_root() / "configs"
 
     @staticmethod
-    def get_io_configs_dir() -> Path:
-        """Get the configs/io/ directory.
+    def get_io_configs_dir(cli_name: str) -> Path:
+        """Get the configs/io/{cli_name}/ directory.
+
+        Args:
+            cli_name: CLI name (e.g., "ingest", "infer", "aggregate", "evaluate")
 
         Returns:
-            Path to I/O configs directory
+            Path to CLI-specific I/O configs directory
+
+        Example:
+            >>> PathManager.get_io_configs_dir("ingest")
+            PosixPath('/home/user/llm-ensemble/configs/io/ingest')
         """
-        return PathManager.get_configs_dir() / "io"
+        return PathManager.get_configs_dir() / "io" / cli_name
 
     @staticmethod
     def get_model_configs_dir() -> Path:

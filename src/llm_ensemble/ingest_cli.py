@@ -49,7 +49,7 @@ def ingest(
     """
     
     # Load I/O configuration
-    io_config = load_io_config(io_cfg)
+    io_config = load_io_config(io_cfg, cli_name="ingest")
 
     # Parse and route overrides if provided
     if override:

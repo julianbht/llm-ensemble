@@ -78,8 +78,8 @@ class JinjaPromptBuilder(PromptBuilder):
 
         # Pass JudgingSample Pydantic model attributes directly to template
         template_vars = {
-            "query": example.query,
-            "document": example.document,
+            "query": example.query.query_text,
+            "document": example.document.doc_text,
         }
 
         # Render template (catch rendering errors and convert to warnings)

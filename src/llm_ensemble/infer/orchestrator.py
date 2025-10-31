@@ -120,8 +120,8 @@ def run_inference(
         log_file_handle = open(log_file_path, "w", encoding="utf-8")
         close_log_file = True
 
-    # Initialize logger
-    logger = get_logger("infer", run_id=run_id, log_file=log_file_handle)
+    # Initialize logger (run_id is in file path, no need to repeat in every log line)
+    logger = get_logger("infer", log_file=log_file_handle)
 
     logger.info(
         "Starting inference",

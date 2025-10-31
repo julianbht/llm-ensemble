@@ -102,17 +102,8 @@ class Logger:
         """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Build context
-        context_parts = [self.cli_name]
-        if self.run_id:
-            context_parts.append(self.run_id)
-        context = ":".join(context_parts)
-
-        # Build kwargs string
-        kwargs_str = ""
-        if kwargs:
-            kwargs_parts = [f"{k}={v}" for k, v in kwargs.items()]
-            kwargs_str = " " + " ".join(kwargs_parts)
+        # Build context (just cli_name, skip run_id to save space)
+        context = self.cli_name
 
         # Apply color if requested
         should_use_color = use_color if use_color is not None else self.use_color
@@ -123,6 +114,30 @@ class Logger:
         else:
             level_str = level.value
             context_str = f"[{context}]"
+
+        # Build kwargs string with smart formatting
+        kwargs_str = ""
+        if kwargs:
+            # Separate short and long fields for better readability
+            short_fields = []
+            long_fields = []
+
+            for k, v in kwargs.items():
+                v_str = str(v)
+                # Fields like query, doc, prompt, raw_response are typically long
+                if k in ['query', 'doc', 'prompt', 'raw_response'] or len(v_str) > 100:
+                    long_fields.append((k, v_str))
+                else:
+                    short_fields.append(f"{k}={v_str}")
+
+            # Short fields on same line
+            if short_fields:
+                kwargs_str = " " + " ".join(short_fields)
+
+            # Long fields on separate lines with indentation
+            if long_fields:
+                for k, v in long_fields:
+                    kwargs_str += f"\n  {k}: {v}"
 
         return f"[{timestamp}] {level_str} {context_str} {message}{kwargs_str}"
 

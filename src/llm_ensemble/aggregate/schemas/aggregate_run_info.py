@@ -9,6 +9,7 @@ from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.libs.schemas import IOConfig
+from llm_ensemble.aggregate.schemas.ensemble_config_schema import EnsembleConfig
 
 
 class AggregateRunInfo(RunInfo):
@@ -45,7 +46,7 @@ class AggregateRunInfo(RunInfo):
     )
     
     # Full configuration objects (for reproducibility)
-    ensemble_config: dict = Field(
+    ensemble_config: EnsembleConfig = Field(
         ...,
         description="Ensemble configuration used for this run (strategy and parameters)"
     )

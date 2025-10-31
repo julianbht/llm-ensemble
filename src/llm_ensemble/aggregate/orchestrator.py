@@ -15,7 +15,6 @@ from typing import Optional
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.ensemble_config_schema import EnsembleConfig
 from llm_ensemble.aggregate.domain import AggregationService
-from llm_ensemble.aggregate.adapters.strategies import MajorityVoteAdapter
 from llm_ensemble.aggregate.adapters.io import JsonJudgementReader, JsonAggregatedJudgementWriter
 from llm_ensemble.aggregate.schemas import AggregatedJudgement
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
@@ -94,7 +93,7 @@ def run_aggregation(
         git_branch=git_info["git_branch"],
         ensemble_config_name=ensemble_config_name,
         io_config_name=io_config_name,
-        ensemble_config=ensemble_config.model_dump(),
+        ensemble_config=ensemble_config,
         io_config=io_config,
         input_files=[str(f) for f in input_files],
     )
@@ -121,11 +120,8 @@ def run_aggregation(
     )
     logger.info("run_directory", path=str(run_dir))
     
-    # Instantiate strategy adapter based on config
-    if ensemble_config.strategy == "majority_vote":
-        strategy = MajorityVoteAdapter()
-    else:
-        raise ValueError(f"Unknown strategy: {ensemble_config.strategy}")
+    # Instantiate strategy adapter via dynamic loading
+    strategy = ensemble_config.get_strategy()
     
     # Instantiate I/O adapters (for now, hardcoded to JSON - config integration later)
     reader = JsonJudgementReader()

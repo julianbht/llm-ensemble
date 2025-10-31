@@ -29,7 +29,7 @@ The codebase follows hexagonal architecture with clear separation of concerns. U
 
 2. **Orchestrator Layer** (e.g., `infer/orchestrator.py`)
    - Infrastructure concerns: run management, logging, manifests
-   - Loads configurations, instantiates adapters via factories
+   - Loads configurations, instantiates adapters dynamically from config
    - Delegates business logic to domain services
 
 3. **Domain Layer** (e.g., `infer/domain/inference_service.py`)
@@ -45,7 +45,7 @@ The codebase follows hexagonal architecture with clear separation of concerns. U
    - Concrete implementations of ports
    - Handle I/O, APIs, file formats, retries, HTTP clients
    - Organized by concern: `io/`, `providers/`, `prompts/`, `parsers/`
-   - Instantiated via factory functions (e.g., `get_provider()`, `get_example_reader()`)
+   - Instantiated dynamically via config-driven methods (e.g., `model_config.get_provider()`)
 
 ### Example: Infer CLI Flow
 
@@ -63,29 +63,9 @@ Adapters - concrete implementations:
 
 **Benefits:** Test domain logic without APIs/GPUs, swap providers via config, refactor layers independently.
 
-### Factory Pattern
+### Dynamic Adapter Instantiation
 
-Adapters are instantiated via factory functions, not directly. This allows configuration-driven adapter selection and makes testing easier.
-
-**Factory locations:**
-- `infer/adapters/provider_factory.py` — `get_provider()` instantiates LLM providers based on `model_config.provider`
-- `infer/adapters/io_factory.py` — `get_example_reader()` and `get_judgement_writer()` based on I/O config
-- `infer/adapters/prompt_builder_factory.py` — `get_prompt_builder()` based on prompt config
-- `infer/adapters/response_parser_factory.py` — `get_response_parser()` based on parser config
-
-**Pattern:**
-```python
-# Orchestrator loads config
-model_config = load_model_config(model_id)
-
-# Factory instantiates the right adapter
-provider = get_provider(model_config)  # Returns OpenRouterAdapter, OllamaAdapter, or HFAdapter
-
-# Domain service uses only the port abstraction
-service = InferenceService(provider=provider, ...)  # provider: LLMProvider (ABC)
-```
-
-**When adding new adapters:** Always update the corresponding factory function to handle the new adapter type.
+Adapters are instantiated dynamically from configuration, not via separate factory modules. Config files specify module paths and class names, and config objects provide methods to instantiate adapters.
 
 ## Design Principles
 

@@ -29,7 +29,7 @@ CLI Layer → Orchestrator Layer → Domain Layer → Ports Layer → Adapters L
 2. **Orchestrator Layer** (`orchestrator.py`)
    - Infrastructure coordination: run management, logging, manifests
    - Loads YAML configurations
-   - Instantiates adapters via factories (configuration-driven)
+   - Instantiates adapters dynamically from config (configuration-driven)
    - Delegates to domain service
    - Pattern: Orchestrator pattern
 
@@ -88,24 +88,13 @@ class JudgementWriter(ABC):
         self.close()
 ```
 
-### 3. Factory Pattern for Configuration-Driven Adapter Selection
+### 3. Dynamic Adapter Instantiation
 
 **Problem:** How to instantiate the right adapter based on configuration?
 
-**Solution:** Factory functions that read config and return concrete implementations.
+**Solution:** Config objects dynamically load adapters using module/class paths specified in YAML files.
 
-**Factories in this CLI:**
-- `provider_factory.py` - LLM providers (OpenRouter, Ollama, HF)
-- `io_factory.py` - Readers and writers (NDJSON, Parquet)
-- `prompt_builder_factory.py` - Prompt builders (Jinja2)
-- `response_parser_factory.py` - Response parsers (JSON, regex)
-
-**Benefits:**
-- ✅ **Configuration-driven** - behavior changes via YAML, not code
-- ✅ **Testable** - factories can return test doubles
-- ✅ **Extensible** - add new adapters by updating factory + config
-
-**Rule:** When adding new adapters, ALWAYS update the corresponding factory.
+**Rule:** When adding new adapters, create the adapter class and specify its module/class path in config files.
 
 ### 4. Explicit Configuration Over Implicit Defaults
 
@@ -144,61 +133,13 @@ class JudgementWriter(ABC):
 - Callback invoked immediately (live progress visibility)
 - Simple error handling - exception at any point preserves previous work
 
-## Extending the Infer CLI
-
-### Adding a New Provider
-
-1. Create `adapters/providers/my_provider_adapter.py` implementing `LLMProvider` port
-2. Update `adapters/provider_factory.py` to handle `provider: my_provider`
-3. Add model configs to `configs/models/` with `provider: my_provider`
-
-**LLMProvider contract:**
-```python
-@abstractmethod
-def infer(self, prompt: str, model_config: ModelConfig) -> LLMResponse:
-    """Single prompt → single response (simple synchronous call)."""
-    pass
-```
-
-### Adding a New I/O Format
-
-1. Create reader implementing `ExampleReader` port
-2. Create writer implementing `JudgementWriter` port (with context manager support)
-3. Update `adapters/io_factory.py`
-4. Add config to `configs/io/my_format.yaml`
-
-**JudgementWriter contract:**
-```python
-@abstractmethod
-def open(self, run_dir: Path) -> "JudgementWriter":
-    """Initialize for streaming."""
-    pass
-
-@abstractmethod
-def write_one(self, judgement: LLMJudgement) -> None:
-    """Write single judgement immediately (called in context)."""
-    pass
-
-@abstractmethod
-def close(self) -> None:
-    """Clean up (called automatically by context manager)."""
-    pass
-```
-
-### Adding a New Prompt Format
-
-1. Create builder in `adapters/prompts/` implementing `PromptBuilder` port
-2. Create parser in `adapters/parsers/` implementing `ResponseParser` port
-3. Update factories
-4. Add config to `configs/prompts/` bundling builder + parser
-
 ## Key Takeaways
 
 1. **Hexagonal architecture** enables testable, swappable components
 2. **Streaming with immediate persistence** provides fault tolerance and live progress
 3. **Context managers** handle resource lifecycle cleanly (files, connections)
 4. **Simple interfaces** (avoid iterators/async unless needed) reduce complexity
-5. **Factory pattern** enables configuration-driven behavior
+5. **Dynamic adapter instantiation** enables configuration-driven behavior
 6. **Explicit configuration** makes system transparent and predictable
 7. **Domain service** coordinates pure business logic using only port abstractions
 

@@ -12,12 +12,9 @@ from typing import Optional, Any
 import structlog
 
 
-def _drop_console_context(_, __, event_dict):
-    """Remove unwanted fields from console output only."""
-    # Remove context fields we don't want in console
-    event_dict.pop("cli", None)
-    event_dict.pop("run_id", None)
-    # Remove stdlib integration fields
+def _drop_stdlib_fields(_, __, event_dict):
+    """Remove stdlib integration fields from output."""
+    # Remove stdlib integration fields that leak into output
     event_dict.pop("_from_structlog", None)
     event_dict.pop("_record", None)
     return event_dict
@@ -84,8 +81,8 @@ def configure_logger(
         colors=False,
         exception_formatter=structlog.dev.plain_traceback,
     )
-    # Add processor to drop unwanted fields before rendering
-    console_processors = shared_processors + [_drop_console_context, console_renderer]
+    # Add processor to drop stdlib fields before rendering
+    console_processors = shared_processors + [_drop_stdlib_fields, console_renderer]
 
     # File renderer - JSON format (pretty or compact based on pretty_print setting)
     if pretty_print:
@@ -94,6 +91,9 @@ def configure_logger(
     else:
         # Compact JSON (one line per log entry)
         file_renderer = structlog.processors.JSONRenderer()
+
+    # File processors also need to drop stdlib fields
+    file_processors = shared_processors + [_drop_stdlib_fields, file_renderer]
 
     # Configure structlog
     structlog.configure(
@@ -129,7 +129,7 @@ def configure_logger(
         file_handler.setFormatter(
             structlog.stdlib.ProcessorFormatter(
                 foreign_pre_chain=shared_processors,
-                processor=file_renderer,
+                processors=file_processors,
             )
         )
         handlers.append(file_handler)
@@ -145,12 +145,7 @@ def configure_logger(
         force=True,  # Override any existing config
     )
 
-    # Create logger with bound context
-    logger = structlog.get_logger(cli_name)
+    # Create logger without binding context (cli_name and run_id are not needed)
+    logger = structlog.get_logger()
 
-    # Bind shared context to all log records
-    context: dict[str, Any] = {"cli": cli_name}
-    if run_id:
-        context["run_id"] = run_id
-
-    return logger.bind(**context)
+    return logger

@@ -11,28 +11,27 @@ It is separated from the CLI entry point (ingest_cli.py) for testability.
 """
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional, TextIO
+from typing import Optional
 
 from llm_ensemble.ingest.domain import IngestionService
-from llm_ensemble.libs.schemas import IOConfig
+from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_id import generate_run_id
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
-from llm_ensemble.libs.logging.logger import get_logger
+from llm_ensemble.libs.logging import configure_logger
 
 
 def run_ingest(
     io_config: IOConfig,
+    logging_config: LoggingConfig,
     io_config_name: str,
     input_path: Path,
     run_id: Optional[str] = None,
     limit: Optional[int] = None,
-    save_logs: bool = False,
     official: bool = False,
     notes: Optional[str] = None,
-    log_file: Optional[TextIO] = None,
 ) -> None:
     """Normalize a raw IR dataset into judging samples with full provenance.
 
@@ -46,14 +45,13 @@ def run_ingest(
 
     Args:
         io_config: I/O configuration (already loaded and validated with overrides applied)
+        logging_config: Logging configuration (controls pretty printing and log saving)
         io_config_name: Name of the I/O config file (e.g., "llm_judge_challenge", "ndjson")
         input_path: Path to input directory containing raw dataset files
         run_id: Custom run ID (auto-generates if not provided)
         limit: Process at most N samples
-        save_logs: Save logs to run.log file in run directory
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
-        log_file: Optional file handle for logging (used when save_logs=True)
 
     Raises:
         FileNotFoundError: If input path doesn't exist
@@ -93,25 +91,28 @@ def run_ingest(
         limit=limit,
     )
 
-    # Set up log file if requested and not already provided
-    log_file_handle = log_file
-    close_log_file = False
-    if save_logs and log_file_handle is None:
-        log_file_path = run_dir / "run.log"
-        log_file_handle = open(log_file_path, "w", encoding="utf-8")
-        close_log_file = True
+    # Set up log file path if saving logs
+    log_file_path = run_dir / "run.log" if logging_config.save_logs else None
 
-    # Initialize logger
-    logger = get_logger("ingest", run_id=run_id, log_file=log_file_handle)
+    # Initialize structlog logger with config
+    logger = configure_logger(
+        cli_name="ingest",
+        run_id=run_id,
+        pretty_print=logging_config.pretty_print,
+        save_logs=logging_config.save_logs,
+        log_file_path=log_file_path,
+        console_level=logging_config.console_level,
+        file_level=logging_config.file_level,
+    )
 
     logger.info(
-        "Starting ingest",
+        "starting_ingest",
         dataset=io_config_name,
         io_format=io_config_name,
         input_path=str(input_path),
         limit=limit,
     )
-    logger.info("Run directory", path=str(run_dir))
+    logger.info("run_directory", path=str(run_dir))
 
     # Instantiate adapters directly from config
     sample_reader = io_config.get_reader()
@@ -132,21 +133,18 @@ def run_ingest(
             limit=limit,
         )
         sample_count = summary.sample_count
-        logger.info("Samples processed", count=sample_count)
+        logger.info("samples_processed", count=sample_count)
 
         # Write standalone summary.json for convenience (not source of truth)
         write_standalone_summary(summary, run_dir)
-        logger.info("Summary written", path=str(run_dir / "summary.json"))
+        logger.info("summary_written", path=str(run_dir / "summary.json"))
 
     except Exception as e:
-        logger.error("Ingest failed", error=str(e))
-        if close_log_file and log_file_handle is not None:
-            log_file_handle.close()
+        logger.error("ingest_failed", error=str(e))
         raise
 
-    logger.info("Ingest complete", total_samples=sample_count)
+    logger.info("ingest_complete", total_samples=sample_count)
 
-    # Close log file if we opened it
-    if close_log_file and log_file_handle is not None:
-        logger.info("Logs saved", path=str(run_dir / "run.log"))
-        log_file_handle.close()
+    # Log where logs were saved if enabled
+    if logging_config.save_logs:
+        logger.info("logs_saved", path=str(run_dir / "run.log"))

@@ -90,8 +90,8 @@ class AggregationService:
             AggregateRunSummary with statistics
         """
         # Initialize summary builder with run_info
-        builder = RunSummaryBuilder(run_info)
-        builder.set_start_time()
+        summary_builder = RunSummaryBuilder(run_info)
+        summary_builder.set_start_time()
         
         # Read all judgements via reader port
         judgements = self.judgement_reader.read(input_paths)
@@ -138,11 +138,11 @@ class AggregationService:
                 output_count += 1
         
         # Build and finalize summary
-        builder.add("input_judgement_count", len(judgements))
-        builder.add("unique_pair_count", len(grouped))
-        builder.add("output_aggregated_count", output_count)
-        builder.add("tie_count", tie_count)
-        builder.add("no_valid_votes_count", no_valid_votes_count)
+        summary_builder.add("input_judgement_count", len(judgements))
+        summary_builder.add("unique_pair_count", len(grouped))
+        summary_builder.add("output_aggregated_count", output_count)
+        summary_builder.add("tie_count", tie_count)
+        summary_builder.add("no_valid_votes_count", no_valid_votes_count)
         
         # Optional: add warnings summary
         warnings_summary = {}
@@ -151,6 +151,6 @@ class AggregationService:
         if no_valid_votes_count > 0:
             warnings_summary["no_valid_votes"] = no_valid_votes_count
         if warnings_summary:
-            builder.add("warnings_summary", warnings_summary)
+            summary_builder.add("warnings_summary", warnings_summary)
         
-        return builder.finalize(AggregateRunSummary)
+        return summary_builder.finalize(AggregateRunSummary)

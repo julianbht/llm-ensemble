@@ -82,15 +82,15 @@ def infer(
 
         # Parse and route overrides if provided
         if override:
-            routed_overrides = parse_and_route_overrides(override)
+            overrides = parse_and_route_overrides(override)
 
             # Apply routed overrides to each config
-            if routed_overrides['model']:
-                model_config = apply_overrides(model_config, routed_overrides['model'])
-            if routed_overrides['prompt']:
-                prompt_config = apply_overrides(prompt_config, routed_overrides['prompt'])
-            if routed_overrides['io']:
-                io_config = apply_overrides(io_config, routed_overrides['io'])
+            if overrides['model']:
+                model_config = apply_overrides(model_config, overrides['model'])
+            if overrides['prompt']:
+                prompt_config = apply_overrides(prompt_config, overrides['prompt'])
+            if overrides['io']:
+                io_config = apply_overrides(io_config, overrides['io'])
 
         # Run inference with final configs
         run_inference(

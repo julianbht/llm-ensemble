@@ -53,11 +53,11 @@ def ingest(
 
     # Parse and route overrides if provided
     if override:
-        routed_overrides = parse_and_route_overrides(override, valid_prefixes=['io'])
+        overrides = parse_and_route_overrides(override, valid_prefixes=['io'])
 
         # Apply overrides to I/O config
-        if routed_overrides['io']:
-            io_config = apply_overrides(io_config, routed_overrides['io'])
+        if overrides['io']:
+            io_config = apply_overrides(io_config, overrides['io'])
 
     # Run ingest with final config
     run_ingest(

@@ -160,10 +160,6 @@ def run_inference(
         """Log when request is being sent."""
         logger.info("Sending Request...")
 
-    def on_response_received() -> None:
-        """Log when response is received."""
-        logger.info("Received Response")
-
     def on_judgement(judgement: LLMJudgement) -> None:
         """Log each completed judgement."""
         extracted_score = judgement.llm_score.label.value if judgement.llm_score.label else "null"
@@ -195,7 +191,6 @@ def run_inference(
             run_dir=run_dir,
             limit=limit,
             on_request_start=on_request_start,
-            on_response_received=on_response_received,
             on_judgement=on_judgement,
         )
         judgement_count = summary.judgement_count

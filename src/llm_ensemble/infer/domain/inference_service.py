@@ -75,7 +75,6 @@ class InferenceService:
         run_dir: Path,
         limit: Optional[int] = None,
         on_request_start: Optional[Callable[[], None]] = None,
-        on_response_received: Optional[Callable[[], None]] = None,
         on_judgement: Optional[Callable[[LLMJudgement], None]] = None,
     ) -> InferRunSummary:
         """Execute the inference pipeline with streaming and immediate persistence.
@@ -121,24 +120,20 @@ class InferenceService:
         with self.judgement_writer.open(run_dir) as writer:
             # Process each sample individually (streaming loop)
             for sample in samples:
-                # 1. Build prompt for this sample
+                # Build prompt for this sample
                 request = self.prompt_builder.build(sample)
 
-                # 2. Invoke callback before sending request
+                # Invoke callback before sending request
                 if on_request_start:
                     on_request_start()
 
-                # 3. Run inference for this sample (simple, synchronous call)
+                # Run inference for this sample (simple, synchronous call)
                 response = self.llm_provider.infer(request.prompt, model_config)
 
-                # 4. Invoke callback after receiving response
-                if on_response_received:
-                    on_response_received()
-
-                # 5. Parse response to extract structured score
+                # Parse response to extract structured score
                 score = self.response_parser.parse(response.raw_response)
-
-                # 6. Create judgement immediately
+                
+                # Create judgement immediately
                 judgement = LLMJudgement(
                     judging_sample=sample,
                     llm_request=request,
@@ -147,14 +142,14 @@ class InferenceService:
                     run_info=run_info,
                 )
 
-                # 7. Invoke callback for progress tracking
+                # Invoke callback for progress tracking
                 if on_judgement:
                     on_judgement(judgement)
 
-                # 8. Write judgement immediately to disk (fault tolerance!)
+                # Write judgement immediately to disk (fault tolerance!)
                 writer.write_one(judgement)
 
-                # 9. Collect for summary statistics
+                # Collect for summary statistics
                 llm_judgements.append(judgement)
 
         # Calculate aggregate statistics from judgements (for summary)

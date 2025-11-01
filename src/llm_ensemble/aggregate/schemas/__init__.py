@@ -2,7 +2,6 @@
 
 from llm_ensemble.aggregate.schemas.aggregated_score import (
     AggregatedScore,
-    PerModelVote,
 )
 from llm_ensemble.aggregate.schemas.aggregated_judgement import (
     AggregatedJudgement,
@@ -10,6 +9,5 @@ from llm_ensemble.aggregate.schemas.aggregated_judgement import (
 
 __all__ = [
     "AggregatedScore",
-    "PerModelVote",
     "AggregatedJudgement",
 ]

@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections import Counter
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
-from llm_ensemble.aggregate.schemas.aggregated_score import AggregatedScore, PerModelVote
+from llm_ensemble.aggregate.schemas.aggregated_score import AggregatedScore
 from llm_ensemble.aggregate.ports import AggregationStrategy
 from llm_ensemble.libs.schemas import RelevanceScore
 
@@ -36,27 +36,18 @@ class MajorityVoteAdapter(AggregationStrategy):
         Returns:
             AggregatedScore with majority vote result and metadata
         """
-        # Extract per-model votes (track model_id and label)
-        per_model_votes: list[PerModelVote] = []
+        # Extract labels for voting and debugging
+        per_model_votes: list[int | None] = []
         valid_labels: list[RelevanceScore] = []
         
         for judgement in judgements:
-            # Get model ID from run_info
-            model_id = judgement.run_info.model_config_name
-            
-            # Get label and confidence from llm_score (if available)
+            # Get label from llm_score (if available)
             label = None
-            confidence = None
             if judgement.llm_score is not None:
                 label = judgement.llm_score.label
-                confidence = judgement.llm_score.confidence
             
-            # Record vote
-            per_model_votes.append(PerModelVote(
-                model_id=model_id,
-                label=label,
-                confidence=confidence,
-            ))
+            # Record vote as int (or None if parsing failed)
+            per_model_votes.append(label.value if label is not None else None)
             
             # Track valid labels for voting
             if label is not None:

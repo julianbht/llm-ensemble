@@ -11,43 +11,22 @@ from pydantic import BaseModel, Field
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
-class PerModelVote(BaseModel):
-    """A single model's vote in the ensemble.
-    
-    Tracks which model contributed which prediction, enabling explainability
-    and debugging of aggregation decisions.
-    """
-    
-    model_id: str = Field(
-        ...,
-        description="Model identifier from the infer run (e.g., 'gpt-oss-20b')"
-    )
-    
-    label: Optional[RelevanceScore] = Field(
-        None,
-        description="Model's predicted relevance label (None if model failed to parse)"
-    )
-    
-    confidence: Optional[float] = Field(
-        None,
-        ge=0.0,
-        le=1.0,
-        description="Model's self-reported confidence [0-1]"
-    )
-
-
 class AggregatedScore(BaseModel):
     """Result from applying a single ensemble strategy to multiple model predictions.
     
     Contains:
     - strategy: Which aggregation method was used
-    - per_model_votes: All individual model predictions
+    - per_model_votes: Individual model label values for debugging (matches order of judgements in AggregatedJudgement)
     - final_relevance_score: Consensus label chosen by the strategy
     - final_confidence: Strategy's confidence in the decision
     - final_reasoning: Human-readable explanation of how consensus was reached
     
     Multiple strategies can be applied to the same input, producing multiple
     AggregatedScore objects per query-document pair.
+    
+    Note: per_model_votes only stores label values for quick debugging inspection.
+    Full model information (model_id, confidence, rationale, etc.) is available
+    in the parent AggregatedJudgement.judgements list.
     """
     
     strategy: str = Field(
@@ -55,9 +34,13 @@ class AggregatedScore(BaseModel):
         description="Name of the aggregation strategy used (e.g., 'majority_vote', 'weighted_majority')"
     )
     
-    per_model_votes: list[PerModelVote] = Field(
+    per_model_votes: list[Optional[int]] = Field(
         ...,
-        description="All individual model votes that were aggregated"
+        description=(
+            "Individual model label values in same order as AggregatedJudgement.judgements. "
+            "Values are 0-3 for RelevanceScore, None if model failed to parse. "
+            "For full model details (model_id, confidence, rationale), see parent judgements list."
+        )
     )
     
     final_relevance_score: Optional[RelevanceScore] = Field(

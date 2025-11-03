@@ -7,8 +7,18 @@ for aggregate metrics to be computed at the end.
 """
 
 from __future__ import annotations
+from enum import Enum
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
+
+class RunType(str, Enum):
+    """Enumeration of run types for reproducibility tracking."""
+    
+    OFFICIAL = "official"
+    """Official run: git-tracked, reproducible, for research results."""
+    
+    TEST = "test"
+    """Test run: experimental, may have uncommitted changes."""
 
 
 class RunInfo(BaseModel):
@@ -34,7 +44,7 @@ class RunInfo(BaseModel):
         description="Unique identifier for this run (timestamp-based, e.g., '20250115_143022_gpt-oss-20b')"
     )
 
-    run_type: Literal["official", "test"] = Field(
+    run_type: RunType = Field(
         default="test",
         description="Run type: 'official' for reproducible/git-tracked runs, 'test' for experiments"
     )

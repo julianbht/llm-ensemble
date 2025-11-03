@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.ingest.domain import IngestionService
-from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
+from llm_ensemble.ingest.schemas import IngestIOConfig
+from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_id import generate_run_id
@@ -24,7 +25,7 @@ from llm_ensemble.libs.logging import configure_logger
 
 
 def run_ingest(
-    io_config: IOConfig,
+    io_config: IngestIOConfig,
     logging_config: LoggingConfig,
     io_config_name: str,
     input_path: Path,
@@ -44,9 +45,9 @@ def run_ingest(
     Config is provided as a final, validated object (CLI handles loading and overrides).
 
     Args:
-        io_config: I/O configuration (already loaded and validated with overrides applied)
+        io_config: Ingest-specific I/O configuration (already loaded and validated with overrides applied)
         logging_config: Logging configuration (controls pretty printing and log saving)
-        io_config_name: Name of the I/O config file (e.g., "llm_judge_challenge", "ndjson")
+        io_config_name: Name of the I/O config file (e.g., "llm_judge_challenge_ndjson")
         input_path: Path to input directory containing raw dataset files
         run_id: Custom run ID (auto-generates if not provided)
         limit: Process at most N samples
@@ -77,18 +78,18 @@ def run_ingest(
     # Get git info for reproducibility
     git_info = get_git_info()
 
-    # Create immutable run info (runtime context known before run starts)
-    run_info = IngestRunInfo(
+    # Create immutable run info using create() method (runtime context known before run starts)
+    run_info = IngestRunInfo.create(
         run_id=run_id,
+        io_config_name=io_config_name,
+        io_config=io_config,
+        input_path=str(input_path),
+        limit=limit,
         run_type="official" if official else "test",
         notes=notes,
         git_sha=git_info["git_sha"],
         git_clean=git_info["git_clean"],
         git_branch=git_info["git_branch"],
-        io_config_name=io_config_name,
-        io_config=io_config,
-        input_path=str(input_path),
-        limit=limit,
     )
 
     # Set up log file path if saving logs
@@ -107,7 +108,7 @@ def run_ingest(
 
     logger.info(
         "starting_ingest",
-        dataset=io_config_name,
+        dataset=io_config.dataset_name,
         io_format=io_config_name,
         input_path=str(input_path),
         limit=limit,

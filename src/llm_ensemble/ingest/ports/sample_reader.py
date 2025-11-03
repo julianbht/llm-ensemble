@@ -49,16 +49,18 @@ class SampleReader(ABC):
     def read(
         self,
         input_path: Path,
+        dataset_name: str,
         limit: Optional[int] = None,
     ) -> list[RawJudgingSample]:
         """Read raw dataset and return RawJudgingSample DTOs (without manifest).
 
         Args:
             input_path: Path to input dataset (file or directory)
+            dataset_name: Dataset identifier for computing deterministic UUIDs
             limit: Optional maximum number of samples to read
 
         Returns:
-            List of RawJudgingSample DTOs
+            List of RawJudgingSample DTOs (with IDs computed from dataset_name)
 
         Raises:
             FileNotFoundError: If input_path doesn't exist

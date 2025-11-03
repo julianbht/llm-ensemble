@@ -13,11 +13,16 @@ class Query(BaseModel):
     not an internal system ID.
     
     The id field is a mandatory deterministic UUID computed from dataset + external_id.
+    The dataset field identifies which dataset this query belongs to.
     """
 
     id: UUID = Field(
         ...,
         description="Deterministic UUID computed from dataset + external_id"
+    )
+    dataset: str = Field(
+        ...,
+        description="Dataset name (e.g., 'msmarco', 'llmjudge')"
     )
     external_id: str = Field(
         ...,
@@ -35,7 +40,7 @@ class Query(BaseModel):
             query_text: Query text
         
         Returns:
-            Query instance with computed id
+            Query instance with computed id and dataset set
         
         Example:
             >>> query = Query.create("msmarco", "q123", "what is python?")
@@ -43,6 +48,7 @@ class Query(BaseModel):
         query_id = compute_query_uuid(dataset, external_id)
         return cls(
             id=query_id,
+            dataset=dataset,
             external_id=external_id,
             query_text=query_text
         )

@@ -13,11 +13,16 @@ class Document(BaseModel):
     not an internal system ID.
     
     The id field is a mandatory deterministic UUID computed from dataset + external_id.
+    The dataset field identifies which dataset this document belongs to.
     """
 
     id: UUID = Field(
         ...,
         description="Deterministic UUID computed from dataset + external_id"
+    )
+    dataset: str = Field(
+        ...,
+        description="Dataset name (e.g., 'msmarco', 'llmjudge')"
     )
     external_id: str = Field(
         ...,
@@ -35,7 +40,7 @@ class Document(BaseModel):
             doc_text: Document text
         
         Returns:
-            Document instance with computed id
+            Document instance with computed id and dataset set
         
         Example:
             >>> doc = Document.create("msmarco", "d456", "Python is a programming language.")
@@ -43,6 +48,7 @@ class Document(BaseModel):
         doc_id = compute_document_uuid(dataset, external_id)
         return cls(
             id=doc_id,
+            dataset=dataset,
             external_id=external_id,
             doc_text=doc_text
         )

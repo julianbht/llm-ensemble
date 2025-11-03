@@ -8,9 +8,20 @@ This is a shared loader used by all CLIs.
 
 from __future__ import annotations
 
+from typing import Type
+
 from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.libs.config.yaml_config_loader import load_yaml_config
 from llm_ensemble.libs.runtime.path_manager import PathManager
+
+def _get_schema_for_cli(cli_name: str) -> Type[IOConfig]:
+    """Return the appropriate Pydantic schema for the CLI."""
+    if cli_name == "ingest":
+        from llm_ensemble.ingest.schemas import IngestIOConfig
+
+        return IngestIOConfig
+
+    return IOConfig
 
 
 def load_io_config(io_format: str, cli_name: str) -> IOConfig:
@@ -32,9 +43,10 @@ def load_io_config(io_format: str, cli_name: str) -> IOConfig:
         >>> config.reader_module
         'llm_ensemble.infer.adapters.io.ndjson_example_reader'
     """
+    schema_cls = _get_schema_for_cli(cli_name)
     return load_yaml_config(
         config_name=io_format,
         config_dir=PathManager.get_io_configs_dir(cli_name),
-        schema=IOConfig,
+        schema=schema_cls,
         config_type="I/O",
     )

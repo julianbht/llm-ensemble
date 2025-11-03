@@ -104,7 +104,7 @@ class SqlWriter(DatasetWriter):
                 limit=run_info.limit,
                 git_sha=run_info.git_sha,
                 git_branch=run_info.git_branch,
-                git_is_dirty=str(run_info.git_is_dirty) if run_info.git_is_dirty is not None else None,
+                git_is_dirty="true" if not run_info.git_clean else "false",
             )
             session.add(ingest_run_model)
             

@@ -8,6 +8,9 @@ description: |
 # Dataset identifier for UUID computation
 dataset_name: llmjudge
 
+# Optional human-readable description of the dataset
+dataset_description: LLM Judge Challenge 2024 - Information Retrieval Benchmark
+
 # Adapter specifications (loaded dynamically)
 # Format: module paths are snake_case, class names are UpperCamelCase
 reader_module: llm_ensemble.ingest.adapters.io.llm_judge_sample_reader

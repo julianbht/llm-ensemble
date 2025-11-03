@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.db import compute_document_uuid
+from llm_ensemble.ingest.schemas.dataset import Dataset
 
 
 class Document(BaseModel):
@@ -13,16 +14,16 @@ class Document(BaseModel):
     not an internal system ID.
     
     The id field is a mandatory deterministic UUID computed from dataset + external_id.
-    The dataset field identifies which dataset this document belongs to.
+    The dataset field is a full Dataset entity reference.
     """
 
     id: UUID = Field(
         ...,
         description="Deterministic UUID computed from dataset + external_id"
     )
-    dataset: str = Field(
+    dataset: Dataset = Field(
         ...,
-        description="Dataset name (e.g., 'msmarco', 'llmjudge')"
+        description="Dataset entity this document belongs to"
     )
     external_id: str = Field(
         ...,
@@ -31,11 +32,11 @@ class Document(BaseModel):
     doc_text: str = Field(..., description="The document text content")
     
     @classmethod
-    def create(cls, dataset: str, external_id: str, doc_text: str) -> "Document":
+    def create(cls, dataset: Dataset, external_id: str, doc_text: str) -> "Document":
         """Create a Document with computed deterministic UUID.
         
         Args:
-            dataset: Dataset name (e.g., 'msmarco', 'llmjudge')
+            dataset: Dataset entity
             external_id: Document's external identifier
             doc_text: Document text
         
@@ -43,9 +44,10 @@ class Document(BaseModel):
             Document instance with computed id and dataset set
         
         Example:
-            >>> doc = Document.create("msmarco", "d456", "Python is a programming language.")
+            >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
+            >>> doc = Document.create(dataset, "d456", "Python is a programming language.")
         """
-        doc_id = compute_document_uuid(dataset, external_id)
+        doc_id = compute_document_uuid(dataset.name, external_id)
         return cls(
             id=doc_id,
             dataset=dataset,

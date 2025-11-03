@@ -50,6 +50,7 @@ class SampleReader(ABC):
         self,
         input_path: Path,
         dataset_name: str,
+        dataset_description: Optional[str] = None,
         limit: Optional[int] = None,
     ) -> list[RawJudgingSample]:
         """Read raw dataset and return RawJudgingSample DTOs (without manifest).
@@ -57,6 +58,7 @@ class SampleReader(ABC):
         Args:
             input_path: Path to input dataset (file or directory)
             dataset_name: Dataset identifier for computing deterministic UUIDs
+            dataset_description: Optional dataset description
             limit: Optional maximum number of samples to read
 
         Returns:

@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.db import compute_query_uuid
+from llm_ensemble.ingest.schemas.dataset import Dataset
 
 
 class Query(BaseModel):
@@ -13,16 +14,16 @@ class Query(BaseModel):
     not an internal system ID.
     
     The id field is a mandatory deterministic UUID computed from dataset + external_id.
-    The dataset field identifies which dataset this query belongs to.
+    The dataset field is a full Dataset entity reference.
     """
 
     id: UUID = Field(
         ...,
         description="Deterministic UUID computed from dataset + external_id"
     )
-    dataset: str = Field(
+    dataset: Dataset = Field(
         ...,
-        description="Dataset name (e.g., 'msmarco', 'llmjudge')"
+        description="Dataset entity this query belongs to"
     )
     external_id: str = Field(
         ...,
@@ -31,11 +32,11 @@ class Query(BaseModel):
     query_text: str = Field(..., description="The natural language query text")
     
     @classmethod
-    def create(cls, dataset: str, external_id: str, query_text: str) -> "Query":
+    def create(cls, dataset: Dataset, external_id: str, query_text: str) -> "Query":
         """Create a Query with computed deterministic UUID.
         
         Args:
-            dataset: Dataset name (e.g., 'msmarco', 'llmjudge')
+            dataset: Dataset entity
             external_id: Query's external identifier
             query_text: Query text
         
@@ -43,9 +44,10 @@ class Query(BaseModel):
             Query instance with computed id and dataset set
         
         Example:
-            >>> query = Query.create("msmarco", "q123", "what is python?")
+            >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
+            >>> query = Query.create(dataset, "q123", "what is python?")
         """
-        query_id = compute_query_uuid(dataset, external_id)
+        query_id = compute_query_uuid(dataset.name, external_id)
         return cls(
             id=query_id,
             dataset=dataset,

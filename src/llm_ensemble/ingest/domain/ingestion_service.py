@@ -76,14 +76,16 @@ class IngestionService:
         summary_builder = RunSummaryBuilder(run_info)
         summary_builder.set_start_time()
 
-        # Extract dataset name from IngestIOConfig
+        # Extract dataset name and description from IngestIOConfig
         dataset_name = run_info.io_config.dataset_name
+        dataset_description = run_info.io_config.dataset_description
 
         # Read RawJudgingSample DTOs from raw dataset (SampleReader handles limit internally)
-        # Pass dataset_name so reader can compute deterministic UUIDs
+        # Pass dataset_name and dataset_description so reader can create Dataset entity
         raw_samples: list[RawJudgingSample] = self.sample_reader.read(
             data_dir, 
             dataset_name=dataset_name,
+            dataset_description=dataset_description,
             limit=limit
         )
 

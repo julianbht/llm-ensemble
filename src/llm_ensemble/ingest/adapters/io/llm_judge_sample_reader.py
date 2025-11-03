@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
 
-from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore
+from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore, Dataset
 from llm_ensemble.ingest.ports import SampleReader
 from llm_ensemble.ingest.ports.sample_reader import RawJudgingSample
 
@@ -54,6 +54,7 @@ class LlmJudgeSampleReader(SampleReader):
         self,
         input_path: Path,
         dataset_name: str,
+        dataset_description: Optional[str] = None,
         limit: Optional[int] = None,
     ) -> list[RawJudgingSample]:
         """Read LLM Judge dataset and return RawJudgingSample DTOs.
@@ -61,6 +62,7 @@ class LlmJudgeSampleReader(SampleReader):
         Args:
             input_path: Base directory containing dataset files
             dataset_name: Dataset identifier for computing deterministic UUIDs
+            dataset_description: Optional dataset description
             limit: Optional maximum number of samples to return
 
         Returns:
@@ -72,9 +74,12 @@ class LlmJudgeSampleReader(SampleReader):
         """
         paths = LlmJudgePaths(input_path)
 
-        # Load queries and documents into memory (with IDs computed from dataset_name)
-        queries = self._read_queries(paths.queries, dataset_name)
-        docs = self._read_documents(paths.documents, dataset_name)
+        # Create Dataset entity
+        dataset = Dataset.create(dataset_name, description=dataset_description)
+
+        # Load queries and documents into memory (with IDs computed from dataset)
+        queries = self._read_queries(paths.queries, dataset)
+        docs = self._read_documents(paths.documents, dataset)
 
         # Process qrels and join with queries/documents
         samples = []
@@ -106,12 +111,12 @@ class LlmJudgeSampleReader(SampleReader):
 
         return samples
 
-    def _read_queries(self, path: Path, dataset_name: str) -> Dict[str, Query]:
+    def _read_queries(self, path: Path, dataset: Dataset) -> Dict[str, Query]:
         """Read TSV of (query_id, query_text) into a dict.
 
         Args:
             path: Path to queries TSV file
-            dataset_name: Dataset identifier for computing UUIDs
+            dataset: Dataset entity
 
         Returns:
             Dictionary mapping query_id to Query objects (with IDs computed)
@@ -131,15 +136,15 @@ class LlmJudgeSampleReader(SampleReader):
                 if len(parts) != 2:
                     raise ValueError(f"Invalid query line {i}: {line!r}")
                 qid, qtext = parts[0].strip(), parts[1].strip()
-                out[qid] = Query.create(dataset_name, qid, qtext)
+                out[qid] = Query.create(dataset, qid, qtext)
         return out
 
-    def _read_documents(self, path: Path, dataset_name: str) -> Dict[str, Document]:
+    def _read_documents(self, path: Path, dataset: Dataset) -> Dict[str, Document]:
         """Read JSONL of documents into a dict.
 
         Args:
             path: Path to documents JSONL file
-            dataset_name: Dataset identifier for computing UUIDs
+            dataset: Dataset entity
 
         Returns:
             Dictionary mapping docid to Document objects (with IDs computed)
@@ -162,7 +167,7 @@ class LlmJudgeSampleReader(SampleReader):
                 doc = obj.get("doc")
                 if not (isinstance(docid, str) and isinstance(doc, str)):
                     raise ValueError(f"Missing docid/doc at line {i}")
-                out[docid] = Document.create(dataset_name, docid, doc)
+                out[docid] = Document.create(dataset, docid, doc)
         return out
 
     def _read_qrels(self, path: Path) -> list[tuple[str, str, int]]:

@@ -17,6 +17,7 @@ from llm_ensemble.aggregate.schemas.ensemble_config_schema import EnsembleConfig
 from llm_ensemble.aggregate.domain import AggregationService
 from llm_ensemble.aggregate.schemas import AggregatedJudgement
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
+from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_id import generate_run_id
 from llm_ensemble.libs.runtime.path_manager import PathManager
@@ -85,7 +86,7 @@ def run_aggregation(
     # Create immutable run info
     run_info = AggregateRunInfo(
         run_id=run_id,
-        run_type="official" if official else "test",
+        run_type=RunType.OFFICIAL if official else RunType.TEST,
         notes=notes,
         git_sha=git_info["git_sha"],
         git_clean=git_info["git_clean"],

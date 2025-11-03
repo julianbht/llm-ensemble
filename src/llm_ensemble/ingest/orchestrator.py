@@ -17,6 +17,7 @@ from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.ingest.schemas import IngestIOConfig
 from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
+from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_id import generate_run_id
 from llm_ensemble.libs.runtime.path_manager import PathManager
@@ -85,7 +86,7 @@ def run_ingest(
         io_config=io_config,
         input_path=str(input_path),
         limit=limit,
-        run_type="official" if official else "test",
+        run_type=RunType.OFFICIAL if official else RunType.TEST,
         notes=notes,
         git_sha=git_info["git_sha"],
         git_clean=git_info["git_clean"],

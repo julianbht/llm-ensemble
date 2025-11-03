@@ -33,7 +33,7 @@ class SqlWriter(DatasetWriter):
     Features:
     - Auto-creates tables on first write
     - Deterministic UUIDs for all entities (already in Pydantic schemas)
-    - Fail-fast on duplicates (raises explicit error)
+    - Idempotent writes (ignores duplicates, does not raise errors)
     - Uses session_context() for transaction management
     
     Database URL is read from DATABASE_URL environment variable.
@@ -52,12 +52,13 @@ class SqlWriter(DatasetWriter):
     def write(self, samples: List[JudgingSample], run_dir: Path) -> None:
         """Write judging samples to SQL database.
         
+        Idempotent operation - silently skips entities that already exist.
+        
         Args:
             samples: List of judging samples (Pydantic schemas with id fields set)
             run_dir: Run directory (not used for SQL, but required by interface)
         
         Raises:
-            ValueError: If duplicate entities are found
             IOError: If database write fails
         """
         if not samples:
@@ -72,94 +73,62 @@ class SqlWriter(DatasetWriter):
             dataset_name = samples[0].query.dataset  # All samples from same dataset
             run_info = samples[0].run_info
             
-            # 1. Check for duplicate dataset
+            # 1. Get or skip dataset (ignore if exists)
             dataset_uuid = compute_dataset_uuid(dataset_name)
-            existing_dataset = session.get(DatasetModel, dataset_uuid)
-            if existing_dataset:
-                raise ValueError(
-                    f"Duplicate dataset found: name={dataset_name}, id={dataset_uuid}"
+            dataset_model = session.get(DatasetModel, dataset_uuid)
+            if not dataset_model:
+                dataset_model = DatasetModel(
+                    id=dataset_uuid,
+                    name=dataset_name,
+                    description=f"Dataset from config: {run_info.io_config_name}",
                 )
+                session.add(dataset_model)
             
-            # Create dataset
-            dataset_model = DatasetModel(
-                id=dataset_uuid,
-                name=dataset_name,
-                description=f"Dataset from config: {run_info.io_config_name}",
-            )
-            session.add(dataset_model)
-            
-            # 2. Check for duplicate ingest run
-            existing_run = session.get(IngestRunModel, run_info.id)
-            if existing_run:
-                raise ValueError(
-                    f"Duplicate ingest run found: run_id={run_info.run_id}, id={run_info.id}"
+            # 2. Get or skip ingest run (ignore if exists)
+            ingest_run_model = session.get(IngestRunModel, run_info.id)
+            if not ingest_run_model:
+                ingest_run_model = IngestRunModel(
+                    id=run_info.id,
+                    run_id=run_info.run_id,
+                    io_config_name=run_info.io_config_name,
+                    input_path=run_info.input_path,
+                    limit=run_info.limit,
+                    git_sha=run_info.git_sha,
+                    git_branch=run_info.git_branch,
+                    git_is_dirty="true" if not run_info.git_clean else "false",
                 )
+                session.add(ingest_run_model)
             
-            # Create ingest run
-            ingest_run_model = IngestRunModel(
-                id=run_info.id,
-                run_id=run_info.run_id,
-                io_config_name=run_info.io_config_name,
-                input_path=run_info.input_path,
-                limit=run_info.limit,
-                git_sha=run_info.git_sha,
-                git_branch=run_info.git_branch,
-                git_is_dirty="true" if not run_info.git_clean else "false",
-            )
-            session.add(ingest_run_model)
-            
-            # 3. Process each sample
+            # 3. Process each sample (skip if exists)
             for sample in samples:
-                # Check for existing query
-                existing_query = session.get(QueryModel, sample.query.id)
-                if existing_query:
-                    raise ValueError(
-                        f"Duplicate query found: dataset={sample.query.dataset}, "
-                        f"external_id={sample.query.external_id}, id={sample.query.id}"
+                # Skip if query already exists
+                if not session.get(QueryModel, sample.query.id):
+                    query_model = QueryModel(
+                        id=sample.query.id,
+                        dataset_id=dataset_model.id,
+                        external_id=sample.query.external_id,
+                        query_text=sample.query.query_text,
                     )
+                    session.add(query_model)
                 
-                # Check for existing document
-                existing_doc = session.get(DocumentModel, sample.document.id)
-                if existing_doc:
-                    raise ValueError(
-                        f"Duplicate document found: dataset={sample.document.dataset}, "
-                        f"external_id={sample.document.external_id}, id={sample.document.id}"
+                # Skip if document already exists
+                if not session.get(DocumentModel, sample.document.id):
+                    doc_model = DocumentModel(
+                        id=sample.document.id,
+                        dataset_id=dataset_model.id,
+                        external_id=sample.document.external_id,
+                        doc_text=sample.document.doc_text,
                     )
+                    session.add(doc_model)
                 
-                # Check for existing sample
-                existing_sample = session.get(JudgingSampleModel, sample.id)
-                if existing_sample:
-                    raise ValueError(
-                        f"Duplicate judging sample found: dataset={sample.query.dataset}, "
-                        f"query={sample.query.external_id}, doc={sample.document.external_id}, "
-                        f"id={sample.id}"
+                # Skip if sample already exists
+                if not session.get(JudgingSampleModel, sample.id):
+                    sample_model = JudgingSampleModel(
+                        id=sample.id,
+                        dataset_id=dataset_model.id,
+                        query_id=sample.query.id,
+                        document_id=sample.document.id,
+                        ingest_run_id=ingest_run_model.id,
+                        gold_score=sample.gold_score,
                     )
-                
-                # Create query ORM model
-                query_model = QueryModel(
-                    id=sample.query.id,
-                    dataset_id=dataset_model.id,
-                    external_id=sample.query.external_id,
-                    query_text=sample.query.query_text,
-                )
-                session.add(query_model)
-                
-                # Create document ORM model
-                doc_model = DocumentModel(
-                    id=sample.document.id,
-                    dataset_id=dataset_model.id,
-                    external_id=sample.document.external_id,
-                    doc_text=sample.document.doc_text,
-                )
-                session.add(doc_model)
-                
-                # Create judging sample ORM model
-                sample_model = JudgingSampleModel(
-                    id=sample.id,
-                    dataset_id=dataset_model.id,
-                    query_id=sample.query.id,
-                    document_id=sample.document.id,
-                    ingest_run_id=ingest_run_model.id,
-                    gold_score=sample.gold_score,
-                )
-                session.add(sample_model)
+                    session.add(sample_model)

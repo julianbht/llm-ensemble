@@ -9,14 +9,14 @@ from pathlib import Path
 from typing import List
 
 from llm_ensemble.ingest.schemas import JudgingSample
-from llm_ensemble.ingest.ports import DatasetWriter
-from llm_ensemble.ingest.models import (
+from llm_ensemble.ingest.schemas.orms import (
     DatasetModel,
     QueryModel,
     DocumentModel,
     IngestRunModel,
     JudgingSampleModel,
 )
+from llm_ensemble.ingest.ports import DatasetWriter
 from llm_ensemble.libs.db import (
     get_engine,
     create_all_tables,
@@ -90,6 +90,7 @@ class SqlWriter(DatasetWriter):
                 ingest_run_model = IngestRunModel(
                     id=run_info.id,
                     run_id=run_info.run_id,
+                    run_type=run_info.run_type,
                     io_config_name=run_info.io_config_name,
                     input_path=run_info.input_path,
                     limit=run_info.limit,

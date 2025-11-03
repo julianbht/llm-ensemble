@@ -8,10 +8,12 @@ waiting for the run to complete.
 
 from __future__ import annotations
 from typing import Optional
+from uuid import UUID
 from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
-from llm_ensemble.libs.schemas import IOConfig
+from llm_ensemble.ingest.schemas.ingest_io_config import IngestIOConfig
+from llm_ensemble.libs.db import compute_ingest_run_uuid
 
 
 class IngestRunInfo(RunInfo):
@@ -28,7 +30,15 @@ class IngestRunInfo(RunInfo):
 
     This is separate from IngestRunSummary which contains post-run metrics like
     sample counts and timing statistics.
+    
+    The id field is a mandatory deterministic UUID computed from run_id.
     """
+
+    # Deterministic UUID
+    id: UUID = Field(
+        ...,
+        description="Deterministic UUID computed from run_id"
+    )
 
     # Override cli_name from base RunInfo to automatically set it to "ingest"
     cli_name: str = Field(
@@ -39,13 +49,13 @@ class IngestRunInfo(RunInfo):
     # Configuration name (what user requested)
     io_config_name: str = Field(
         ...,
-        description="Name of the I/O config used (e.g., 'llm_judge_ingest')"
+        description="Name of the I/O config used (e.g., 'llm_judge_challenge_ndjson')"
     )
 
-    # Full configuration object (for reproducibility)
-    io_config: IOConfig = Field(
+    # Full configuration object (for reproducibility) - now uses IngestIOConfig
+    io_config: IngestIOConfig = Field(
         ...,
-        description="I/O configuration used for this run"
+        description="Ingest-specific I/O configuration used for this run"
     )
 
     # Input parameters
@@ -63,3 +73,45 @@ class IngestRunInfo(RunInfo):
     class Config:
         """Pydantic config."""
         frozen = True  # Make immutable to emphasize this is runtime context
+    
+    @classmethod
+    def create(
+        cls,
+        run_id: str,
+        io_config_name: str,
+        io_config: IngestIOConfig,
+        input_path: str,
+        limit: Optional[int] = None,
+        **kwargs
+    ) -> "IngestRunInfo":
+        """Create an IngestRunInfo with computed deterministic UUID.
+        
+        Args:
+            run_id: Run identifier (timestamp-based)
+            io_config_name: I/O config name
+            io_config: Full I/O configuration
+            input_path: Input directory path
+            limit: Optional sample limit
+            **kwargs: Additional fields from base RunInfo (git_sha, etc.)
+        
+        Returns:
+            IngestRunInfo instance with computed id
+        
+        Example:
+            >>> run_info = IngestRunInfo.create(
+            ...     run_id="20250128_120000_abc123",
+            ...     io_config_name="llm_judge_challenge_ndjson",
+            ...     io_config=config,
+            ...     input_path="/data/llmjudge"
+            ... )
+        """
+        run_info_id = compute_ingest_run_uuid(run_id)
+        return cls(
+            id=run_info_id,
+            run_id=run_id,
+            io_config_name=io_config_name,
+            io_config=io_config,
+            input_path=input_path,
+            limit=limit,
+            **kwargs
+        )

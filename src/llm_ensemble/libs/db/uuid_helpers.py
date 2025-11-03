@@ -9,6 +9,7 @@ This ensures:
 
 import uuid
 from llm_ensemble.libs.db.base import (
+    NAMESPACE_DATASET,
     NAMESPACE_QUERY,
     NAMESPACE_DOCUMENT,
     NAMESPACE_JUDGING_SAMPLE,
@@ -27,6 +28,22 @@ from llm_ensemble.libs.db.base import (
 # ========================================================================
 # Core Entity UUIDs (from ingest)
 # ========================================================================
+
+def compute_dataset_uuid(name: str) -> uuid.UUID:
+    """Compute deterministic UUID for a Dataset.
+    
+    Args:
+        name: Dataset name (e.g., 'msmarco', 'trec-covid', 'llmjudge')
+    
+    Returns:
+        Deterministic UUID for this dataset
+    
+    Example:
+        >>> compute_dataset_uuid("msmarco")
+        UUID('...')
+    """
+    return uuid.uuid5(NAMESPACE_DATASET, name)
+
 
 def compute_query_uuid(dataset: str, external_id: str) -> uuid.UUID:
     """Compute deterministic UUID for a Query.

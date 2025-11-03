@@ -5,6 +5,7 @@ from llm_ensemble.libs.schemas import RelevanceScore  # Shared schema
 from llm_ensemble.ingest.schemas.judging_sample import JudgingSample
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
+from llm_ensemble.ingest.schemas.ingest_io_config import IngestIOConfig
 
 __all__ = [
     "Query",
@@ -13,4 +14,5 @@ __all__ = [
     "JudgingSample",
     "IngestRunInfo",
     "IngestRunSummary",
+    "IngestIOConfig",
 ]

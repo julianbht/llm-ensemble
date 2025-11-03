@@ -1,10 +1,13 @@
-"""SQLModel metadata, engine factory, and namespace UUIDs for deterministic ID generation."""
+"""SQLAlchemy metadata, engine factory, and namespace UUIDs for deterministic ID generation."""
 
 import uuid
 import os
 from typing import Optional
 from sqlalchemy import create_engine, Engine
-from sqlmodel import SQLModel
+from sqlalchemy.orm import declarative_base
+
+# SQLAlchemy declarative base for ORM models
+Base = declarative_base()
 
 
 # ========================================================================
@@ -12,6 +15,9 @@ from sqlmodel import SQLModel
 # ========================================================================
 # Each entity type has its own namespace UUID to ensure no collisions
 # between different entity types even if they have the same natural key.
+
+NAMESPACE_DATASET = uuid.UUID('f0e1d2c3-b4a5-9687-7654-321fedcba098')
+"""Namespace UUID for Dataset entities (based on name)."""
 
 NAMESPACE_QUERY = uuid.UUID('a1b2c3d4-e5f6-7890-abcd-ef1234567890')
 """Namespace UUID for Query entities (based on dataset + external_id)."""
@@ -89,9 +95,9 @@ def get_engine(database_url: Optional[str] = None, echo: bool = False) -> Engine
 
 
 def create_all_tables(engine: Engine) -> None:
-    """Create all database tables from SQLModel metadata.
+    """Create all database tables from SQLAlchemy metadata.
     
-    This creates tables for all SQLModel classes with table=True.
+    This creates tables for all SQLAlchemy ORM models that inherit from Base.
     Safe to call multiple times (idempotent).
     
     Args:
@@ -101,4 +107,4 @@ def create_all_tables(engine: Engine) -> None:
         >>> engine = get_engine()
         >>> create_all_tables(engine)
     """
-    SQLModel.metadata.create_all(engine)
+    Base.metadata.create_all(engine)

@@ -14,8 +14,7 @@ class IngestIOConfig(IOConfig):
     
     Extends base IOConfig with dataset_name field to explicitly identify
     which dataset is being ingested (e.g., 'msmarco', 'trec-covid', 'llmjudge').
-    
-    This avoids awkward extraction logic and makes the dataset identity explicit.
+    Used to create the UUID of queries, documents, and JudgingSamples.
     
     Example YAML:
         name_hint: llmjudge

@@ -41,8 +41,8 @@ class FullyPopulatedJsonWriter(DatasetWriter):
         output_path = run_dir / "normalized_dataset.json"
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Convert all samples to dicts
-        samples_data = [sample.model_dump() for sample in samples]
+        # Convert all samples to JSON-friendly dicts (ensures UUIDs become strings)
+        samples_data = [sample.model_dump(mode="json") for sample in samples]
 
         # Write as a single JSON array
         with output_path.open("w", encoding="utf-8") as f:

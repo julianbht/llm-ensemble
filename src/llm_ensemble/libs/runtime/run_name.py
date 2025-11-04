@@ -41,7 +41,7 @@ def generate_run_name(name_hints: Optional[list[str]] = None) -> str:
     if not name_hints:
         return timestamp
 
-    # Sanitize each hint (remove special chars, limit length)
+    # Sanitize each hint (remove special chars, limit lengnth)
     safe_hints = [
         "".join(c for c in hint if c.isalnum() or c in "-_")[:30]
         for hint in name_hints

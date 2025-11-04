@@ -16,7 +16,6 @@ class LLMRequest(BaseModel):
     This represents what was sent to the LLM:
     - prompt: The rendered prompt text after template substitution
     - warnings: Issues encountered during prompt building (missing variables, rendering errors, etc.)
-
     The PromptBuilder adapter creates this by rendering templates with sample data.
     """
 

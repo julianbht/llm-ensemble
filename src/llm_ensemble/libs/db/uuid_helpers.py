@@ -24,6 +24,57 @@ from llm_ensemble.libs.db.base import (
     NAMESPACE_AGGREGATED_JUDGEMENT,
 )
 
+# ========================================================================
+# Run Info UUIDs
+# ========================================================================
+
+def compute_ingest_run_uuid(run_id: str) -> uuid.UUID:
+    """Compute deterministic UUID for an IngestRunInfo.
+    
+    Args:
+        run_id: Run identifier (timestamp-based)
+    
+    Returns:
+        Deterministic UUID for this ingest run
+    
+    Example:
+        >>> compute_ingest_run_uuid("20240101_120000_abc123")
+        UUID('...')
+    """
+    return uuid.uuid5(NAMESPACE_INGEST_RUN, run_id)
+
+
+def compute_infer_run_uuid(run_id: str) -> uuid.UUID:
+    """Compute deterministic UUID for an InferRunInfo.
+    
+    Args:
+        run_id: Run identifier (timestamp-based)
+    
+    Returns:
+        Deterministic UUID for this infer run
+    
+    Example:
+        >>> compute_infer_run_uuid("20240101_130000_def456")
+        UUID('...')
+    """
+    return uuid.uuid5(NAMESPACE_INFER_RUN, run_id)
+
+
+def compute_aggregate_run_uuid(run_id: str) -> uuid.UUID:
+    """Compute deterministic UUID for an AggregateRunInfo.
+    
+    Args:
+        run_id: Run identifier (timestamp-based)
+    
+    Returns:
+        Deterministic UUID for this aggregate run
+    
+    Example:
+        >>> compute_aggregate_run_uuid("20240101_140000_ghi789")
+        UUID('...')
+    """
+    return uuid.uuid5(NAMESPACE_AGGREGATE_RUN, run_id)
+
 
 # ========================================================================
 # Core Entity UUIDs (from ingest)

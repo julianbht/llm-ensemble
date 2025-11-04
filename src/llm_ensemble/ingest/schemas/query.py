@@ -47,7 +47,7 @@ class Query(BaseModel):
             >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
             >>> query = Query.create(dataset, "q123", "what is python?")
         """
-        query_id = compute_query_uuid(dataset.name, external_id)
+        query_id = compute_query_uuid(dataset.id, external_id)
         return cls(
             id=query_id,
             dataset=dataset,

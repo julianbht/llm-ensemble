@@ -47,7 +47,7 @@ class Document(BaseModel):
             >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
             >>> doc = Document.create(dataset, "d456", "Python is a programming language.")
         """
-        doc_id = compute_document_uuid(dataset.name, external_id)
+        doc_id = compute_document_uuid(dataset.id, external_id)
         return cls(
             id=doc_id,
             dataset=dataset,

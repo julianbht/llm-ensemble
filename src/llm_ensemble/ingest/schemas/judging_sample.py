@@ -58,8 +58,8 @@ class JudgingSample(BaseModel):
         run_info: IngestRunInfo
     ) -> JudgingSample:
         sample_id = compute_judging_sample_uuid(
-            query.external_id,
-            document.external_id
+            query.id,
+            document.id
         )
         return cls(
             id=sample_id,

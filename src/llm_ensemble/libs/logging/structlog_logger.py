@@ -22,7 +22,7 @@ def _drop_stdlib_fields(_, __, event_dict):
 
 def configure_logger(
     cli_name: str,
-    run_id: Optional[str] = None,
+    run_name: Optional[str] = None,
     pretty_print: bool = True,
     save_logs: bool = False,
     log_file_path: Optional[Path] = None,
@@ -33,7 +33,7 @@ def configure_logger(
 
     Args:
         cli_name: Name of the CLI (e.g., "ingest", "infer", "aggregate", "evaluate")
-        run_id: Optional run ID for context
+        run_name: Optional run ID for context
         pretty_print: If True, use human-readable console output with colors.
                      If False, use structured JSON output.
         save_logs: If True, save logs to file (requires log_file_path)
@@ -50,7 +50,7 @@ def configure_logger(
     Example:
         >>> logger = configure_logger(
         ...     cli_name="infer",
-        ...     run_id="20250115_143022_phi3",
+        ...     run_name="20250115_143022_phi3",
         ...     pretty_print=True,
         ...     save_logs=True,
         ...     log_file_path=Path("artifacts/runs/infer/20250115_143022_phi3/run.log"),
@@ -145,7 +145,7 @@ def configure_logger(
         force=True,  # Override any existing config
     )
 
-    # Create logger without binding context (cli_name and run_id are not needed)
+    # Create logger without binding context (cli_name and run_name are not needed)
     logger = structlog.get_logger()
 
     return logger

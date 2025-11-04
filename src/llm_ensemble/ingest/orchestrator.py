@@ -19,7 +19,7 @@ from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
-from llm_ensemble.libs.runtime.run_id import generate_run_name
+from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging import configure_logger
@@ -30,7 +30,7 @@ def run_ingest(
     logging_config: LoggingConfig,
     io_config_name: str,
     input_path: Path,
-    run_id: Optional[str] = None,
+    run_name: Optional[str] = None,
     limit: Optional[int] = None,
     official: bool = False,
     notes: Optional[str] = None,
@@ -50,7 +50,7 @@ def run_ingest(
         logging_config: Logging configuration (controls pretty printing and log saving)
         io_config_name: Name of the I/O config file (e.g., "llm_judge_challenge_ndjson")
         input_path: Path to input directory containing raw dataset files
-        run_id: Custom run ID (auto-generates if not provided)
+        run_name: Custom run ID (auto-generates if not provided)
         limit: Process at most N samples
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
@@ -64,14 +64,14 @@ def run_ingest(
     if not input_path.exists():
         raise FileNotFoundError(f"Input directory does not exist: {input_path}")
 
-    # Generate or use provided run_id (collect name hints from config)
-    if run_id is None:
-        run_id = generate_run_name([io_config.name_hint])
+    # Generate or use provided run_name (collect name hints from config)
+    if run_name is None:
+        run_name = generate_run_name([io_config.name_hint])
 
     # Get run directory path and create it
     run_dir = PathManager.get_run_dir(
         cli_name="ingest",
-        run_id=run_id,
+        run_name=run_name,
         official=official
     )
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -81,7 +81,7 @@ def run_ingest(
 
     # Create immutable run info using create() method (runtime context known before run starts)
     run_info = IngestRunInfo.create(
-        run_id=run_id,
+        run_name=run_name,
         io_config_name=io_config_name,
         io_config=io_config,
         input_path=str(input_path),
@@ -99,7 +99,7 @@ def run_ingest(
     # Initialize structlog logger with config
     logger = configure_logger(
         cli_name="ingest",
-        run_id=run_id,
+        run_name=run_name,
         pretty_print=logging_config.pretty_print,
         save_logs=logging_config.save_logs,
         log_file_path=log_file_path,

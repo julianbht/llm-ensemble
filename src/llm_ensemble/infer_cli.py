@@ -34,7 +34,7 @@ def infer(
     ),
     # Optional parameters
     limit: Limit = None,
-    run_id: RunName = None,
+    run_name: RunName = None,
     log_cfg: LogCfg = None,
     official: Official = False,
     notes: Notes = None,
@@ -72,7 +72,7 @@ def infer(
         model_config_name=model_cfg,
         prompt_config_name=prompt_cfg,
         io_config_name=io_cfg,
-        run_id=run_id,
+        run_name=run_name,
         limit=limit,
         official=official,
         notes=notes,

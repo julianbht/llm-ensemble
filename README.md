@@ -9,7 +9,7 @@ CLI-first research system for evaluating LLM-as-judge ensembles on information r
 3. **aggregate** — Combine judgements using ensemble strategies (e.g., weighted majority vote)
 4. **evaluate** — Compute metrics and generate HTML reports
 
-All artifacts are written to `artifacts/runs/<cli_name>/<run_id>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
+All artifacts are written to `artifacts/runs/<cli_name>/<run_name>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
 
 ## Quick Start
 
@@ -24,7 +24,7 @@ make test
 
 # Run individual CLIs
 ingest --adapter llm-judge --data-dir ./data --limit 100
-infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_id>/samples.ndjson
+infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_name>/samples.ndjson
 ```
 
 ## Development

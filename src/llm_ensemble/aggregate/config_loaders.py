@@ -41,7 +41,7 @@ def load_ensemble_config(config_name: str) -> EnsembleConfig:
     with config_path.open("r", encoding="utf-8") as f:
         config_data = yaml.safe_load(f)
     
-    # Add name_hint from filename for run_id generation
+    # Add name_hint from filename for run_name generation
     config_data["name_hint"] = config_name
     
     # Validate with Pydantic

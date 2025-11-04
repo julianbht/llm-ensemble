@@ -118,18 +118,18 @@ class PathManager:
     @staticmethod
     def get_run_dir(
         cli_name: str,
-        run_id: str,
+        run_name: str,
         official: bool = False
     ) -> Path:
         """Get the directory path for a CLI run.
 
         Run directories follow the pattern:
-        - Test runs: artifacts/runs/{cli_name}/test/{run_id}/
-        - Official runs: artifacts/runs/{cli_name}/official/{run_id}/
+        - Test runs: artifacts/runs/{cli_name}/test/{run_name}/
+        - Official runs: artifacts/runs/{cli_name}/official/{run_name}/
 
         Args:
             cli_name: CLI name (e.g., "ingest", "infer", "aggregate", "evaluate")
-            run_id: Run identifier (e.g., "20250128_143022_gpt-oss-20b")
+            run_name: Run identifier (e.g., "20250128_143022_gpt-oss-20b")
             official: If True, place in official/ subdirectory for git-tracked runs
 
         Returns:
@@ -142,4 +142,4 @@ class PathManager:
             PosixPath('artifacts/runs/ingest/official/20250128_baseline')
         """
         run_type = "official" if official else "test"
-        return PathManager.get_artifacts_dir() / "runs" / cli_name / run_type / run_id
+        return PathManager.get_artifacts_dir() / "runs" / cli_name / run_type / run_name

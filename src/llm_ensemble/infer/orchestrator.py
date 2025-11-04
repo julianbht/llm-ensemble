@@ -21,7 +21,7 @@ from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
 from llm_ensemble.infer.domain import InferenceService
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
-from llm_ensemble.libs.runtime.run_id import generate_run_name
+from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging import configure_logger
@@ -36,7 +36,7 @@ def run_inference(
     model_config_name: str,
     prompt_config_name: str,
     io_config_name: str,
-    run_id: Optional[str] = None,
+    run_name: Optional[str] = None,
     limit: Optional[int] = None,
     official: bool = False,
     notes: Optional[str] = None,
@@ -60,7 +60,7 @@ def run_inference(
         model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
         prompt_config_name: Name of the prompt config file (e.g., "thomas-et-al-prompt")
         io_config_name: Name of the I/O config file (e.g., "ndjson")
-        run_id: Custom run ID (auto-generates if not provided)
+        run_name: Custom run ID (auto-generates if not provided)
         limit: Process at most N examples
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
@@ -74,9 +74,9 @@ def run_inference(
     if not input_file.exists():
         raise FileNotFoundError(f"Input file does not exist: {input_file}")
 
-    # Generate or use provided run_id (collect name hints from all configs)
-    if run_id is None:
-        run_id = generate_run_name([
+    # Generate or use provided run_name (collect name hints from all configs)
+    if run_name is None:
+        run_name = generate_run_name([
             model_config.name_hint,
             prompt_config.name_hint,
             io_config.name_hint,
@@ -85,7 +85,7 @@ def run_inference(
     # Get run directory path and create it
     run_dir = PathManager.get_run_dir(
         cli_name="infer",
-        run_id=run_id,
+        run_name=run_name,
         official=official
     )
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -95,7 +95,7 @@ def run_inference(
 
     # Create immutable run info (runtime context known before run starts)
     run_info = InferRunInfo(
-        run_name=run_id,
+        run_name=run_name,
         run_type=RunType.OFFICIAL if official else RunType.TEST,
         notes=notes,
         git_sha=git_info["git_sha"],
@@ -117,7 +117,7 @@ def run_inference(
     # Initialize structlog logger with config
     logger = configure_logger(
         cli_name="infer",
-        run_id=run_id,
+        run_name=run_name,
         pretty_print=logging_config.pretty_print,
         save_logs=logging_config.save_logs,
         log_file_path=log_file_path,

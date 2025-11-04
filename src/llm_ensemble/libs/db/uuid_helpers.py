@@ -103,11 +103,11 @@ def compute_judging_sample_uuid(
     natural_key = f"{dataset}:{query_external_id}:{doc_external_id}"
     return uuid.uuid5(NAMESPACE_JUDGING_SAMPLE, natural_key)
 
-def compute_ingest_run_uuid(run_id: str) -> uuid.UUID:
+def compute_ingest_run_uuid(run_name: str) -> uuid.UUID:
     """Compute deterministic UUID for an IngestRunInfo.
     
     Args:
-        run_id: Run identifier (timestamp-based)
+        run_name: Run identifier (timestamp-based)
     
     Returns:
         Deterministic UUID for this ingest run
@@ -116,4 +116,4 @@ def compute_ingest_run_uuid(run_id: str) -> uuid.UUID:
         >>> compute_ingest_run_uuid("20240101_120000_abc123")
         UUID('...')
     """
-    return uuid.uuid5(NAMESPACE_INGEST_RUN, run_id)
+    return uuid.uuid5(NAMESPACE_INGEST_RUN, run_name)

@@ -26,13 +26,13 @@ def generate_run_name(name_hints: Optional[list[str]] = None) -> str:
         Unique run ID string
 
     Examples:
-        >>> generate_run_id(['gpt20b', 'thomas', 'ndjson'])
+        >>> generate_run_name(['gpt20b', 'thomas', 'ndjson'])
         '20250128_143022_gpt20b_thomas_ndjson'
-        >>> generate_run_id(['llmjudge'])
+        >>> generate_run_name(['llmjudge'])
         '20250128_143022_llmjudge'
-        >>> generate_run_id([])
+        >>> generate_run_name([])
         '20250128_143022'
-        >>> generate_run_id(None)
+        >>> generate_run_name(None)
         '20250128_143022'
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

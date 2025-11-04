@@ -20,7 +20,7 @@ Every log entry is a JSON object with:
 {
   "event": "inference_started",
   "cli": "infer",
-  "run_id": "20251015_134402_phi3",
+  "run_name": "20251015_134402_phi3",
   "git_sha": "85bf941",
   "model": "phi3-mini",
   "num_samples": 100,
@@ -34,7 +34,7 @@ Every log entry is a JSON object with:
 
 - `event`: Event name (e.g., `inference_started`, `parse_failed`)
 - `cli`: CLI name (`ingest`, `infer`, `aggregate`, `evaluate`)
-- `run_id`: Unique run identifier
+- `run_name`: Unique run identifier
 - `git_sha`: Git commit SHA (reproducibility)
 - `level`: Log level (`debug`, `info`, `warning`, `error`)
 - `logger`: Logger name (typically same as `cli`)
@@ -84,7 +84,7 @@ ingest --adapter llm-judge --data-dir ./data --limit 100
 ```
 Run ID: 20251015_134402_llm-judge
 Output: artifacts/runs/ingest/20251015_134402_llm-judge/samples.ndjson
-{"event": "ingest_started", "cli": "ingest", "run_id": "20251015_134402_llm-judge", ...}
+{"event": "ingest_started", "cli": "ingest", "run_name": "20251015_134402_llm-judge", ...}
 Wrote 100 examples
 {"event": "ingest_completed", "sample_count": 100, ...}
 ```
@@ -104,7 +104,7 @@ Wrote 100 examples
 infer --model phi3-mini --input artifacts/runs/ingest/xyz/samples.ndjson
 ```
 
-**Log file:** `artifacts/runs/infer/<run_id>/logs.jsonl`
+**Log file:** `artifacts/runs/infer/<run_name>/logs.jsonl`
 
 ## Log Analysis
 
@@ -160,8 +160,8 @@ cat logs.jsonl | jq 'select(.level == "error")' | wc -l
 cat logs.jsonl | jq 'select(.event == "inference_success") | .latency_ms' | \
   awk '{sum+=$1; n++} END {print sum/n}'
 
-# Filter by run_id
-cat artifacts/runs/*/*/logs.jsonl | jq 'select(.run_id == "xyz")'
+# Filter by run_name
+cat artifacts/runs/*/*/logs.jsonl | jq 'select(.run_name == "xyz")'
 
 # Pretty-print all logs
 cat logs.jsonl | jq '.'
@@ -178,7 +178,7 @@ from llm_ensemble.libs.logging import configure_logging
 
 logger = configure_logging(
     cli_name="infer",
-    run_id=run_id,
+    run_name=run_name,
     log_file=Path("artifacts/runs/infer/xyz/logs.jsonl"),
     git_sha="85bf941"
 )
@@ -200,11 +200,11 @@ Default level: `INFO` (change via `log_level` parameter)
 ## Reproducibility
 
 Every log record includes:
-- `run_id` — Unique run identifier
+- `run_name` — Unique run identifier
 - `git_sha` — Exact code version
 - `cli` — Which CLI produced this log
 
-Logs are saved to `artifacts/runs/<cli>/<run_id>/logs.jsonl` and referenced in `manifest.json`.
+Logs are saved to `artifacts/runs/<cli>/<run_name>/logs.jsonl` and referenced in `manifest.json`.
 
 ## Best Practices
 

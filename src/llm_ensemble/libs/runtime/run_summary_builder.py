@@ -34,7 +34,7 @@ class RunSummaryBuilder:
     Example:
         >>> # Orchestrator creates RunInfo
         >>> run_info = InferRunInfo(
-        ...     run_id="20250128_143022_gpt-oss-20b",
+        ...     run_name="20250128_143022_gpt-oss-20b",
         ...     cli_name="infer",
         ...     run_type="test",
         ...     git_sha="abc123",

@@ -31,13 +31,13 @@ class IngestRunInfo(RunInfo):
     This is separate from IngestRunSummary which contains post-run metrics like
     sample counts and timing statistics.
     
-    The id field is a mandatory deterministic UUID computed from run_id.
+    The id field is a mandatory deterministic UUID computed from run_name.
     """
 
     # Deterministic UUID
     id: UUID = Field(
         ...,
-        description="Deterministic UUID computed from run_id"
+        description="Deterministic UUID computed from run_name"
     )
 
     # Override cli_name from base RunInfo to automatically set it to "ingest"
@@ -77,7 +77,7 @@ class IngestRunInfo(RunInfo):
     @classmethod
     def create(
         cls,
-        run_id: str,
+        run_name: str,
         io_config_name: str,
         io_config: IngestIOConfig,
         input_path: str,
@@ -87,7 +87,7 @@ class IngestRunInfo(RunInfo):
         """Create an IngestRunInfo with computed deterministic UUID.
         
         Args:
-            run_id: Run identifier (timestamp-based)
+            run_name: Run identifier (timestamp-based)
             io_config_name: I/O config name
             io_config: Full I/O configuration
             input_path: Input directory path
@@ -99,16 +99,16 @@ class IngestRunInfo(RunInfo):
         
         Example:
             >>> run_info = IngestRunInfo.create(
-            ...     run_id="20250128_120000_abc123",
+            ...     run_name="20250128_120000_abc123",
             ...     io_config_name="llm_judge_challenge_ndjson",
             ...     io_config=config,
             ...     input_path="/data/llmjudge"
             ... )
         """
-        run_info_id = compute_ingest_run_uuid(run_id)
+        run_info_id = compute_ingest_run_uuid(run_name)
         return cls(
             id=run_info_id,
-            run_id=run_id,
+            run_name=run_name,
             io_config_name=io_config_name,
             io_config=io_config,
             input_path=input_path,

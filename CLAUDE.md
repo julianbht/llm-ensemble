@@ -15,7 +15,7 @@ The project follows a 4-stage pipeline architecture with shared libraries and he
 3. **aggregate** — Combine judgements using ensemble strategies (weighted majority vote, etc.)
 4. **evaluate** — Compute metrics and generate HTML reports
 
-All artifacts are managed by the **run manager** (`libs/runtime/run_manager.py`), which creates run directories, generates IDs, and writes manifests. Outputs are organized under `artifacts/runs/<cli_name>/<run_id>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
+All artifacts are managed by the **run manager** (`libs/runtime/run_manager.py`), which creates run directories, generates IDs, and writes manifests. Outputs are organized under `artifacts/runs/<cli_name>/<run_name>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
 
 ## Architecture: Clean Architecture / Ports & Adapters
 
@@ -115,15 +115,15 @@ ingest --io llm_judge_ingest --override data_dir=/custom/path --limit 100
 
 # Infer - Run LLM judge inference
 # Uses configs: configs/models/gpt-oss-20b.yaml, configs/prompts/thomas-et-al-prompt.yaml, configs/io/ndjson.yaml
-infer --model gpt-oss-20b --prompt thomas-et-al-prompt --io ndjson --input artifacts/runs/ingest/<run_id>/samples.ndjson
+infer --model gpt-oss-20b --prompt thomas-et-al-prompt --io ndjson --input artifacts/runs/ingest/<run_name>/samples.ndjson
 
 # Aggregate - Combine model judgements using ensemble strategies
 # Uses configs: configs/ensembles/weighted_majority.yaml, configs/io/ndjson.yaml
-aggregate --ensemble weighted_majority --io ndjson --input artifacts/runs/infer/<run_id>/judgements.ndjson
+aggregate --ensemble weighted_majority --io ndjson --input artifacts/runs/infer/<run_name>/judgements.ndjson
 
 # Evaluate - Compute metrics and generate reports
 # Uses config: configs/io/ndjson.yaml
-evaluate --io ndjson --input artifacts/runs/aggregate/<run_id>/ensemble.ndjson
+evaluate --io ndjson --input artifacts/runs/aggregate/<run_name>/ensemble.ndjson
 
 # Alternative: run via python module
 python3 -m llm_ensemble.ingest_cli --help

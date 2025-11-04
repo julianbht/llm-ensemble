@@ -25,7 +25,7 @@ class RunInfo(BaseModel):
     """Base runtime context for all CLI runs.
 
     This captures immutable metadata that is known before the run starts:
-    - Run identification (run_id, run_type, cli_name)
+    - Run identification (run_name, run_type, cli_name)
     - User-provided context (notes)
     - Git metadata for reproducibility (sha, branch, clean status)
 

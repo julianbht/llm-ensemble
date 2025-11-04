@@ -38,10 +38,10 @@ class EnsembleConfig(BaseConfig):
         description="Strategy adapter class name in UpperCamelCase (e.g., 'MajorityVoteAdapter')"
     )
     
-    # Optional name hint for run_id generation (derived from filename by loader)
+    # Optional name hint for run_name generation (derived from filename by loader)
     name_hint: Optional[str] = Field(
         default=None,
-        description="Short name hint for run_id generation (e.g., 'majority_vote')"
+        description="Short name hint for run_name generation (e.g., 'majority_vote')"
     )
     
     def get_strategy(self) -> Any:

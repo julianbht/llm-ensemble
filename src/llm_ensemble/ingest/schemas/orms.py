@@ -95,13 +95,13 @@ class DocumentModel(Base):
 class IngestRunModel(Base):
     """IngestRun ORM model - metadata for ingest runs.
     
-    Uses deterministic UUID based on run_id.
+    Uses deterministic UUID based on run_name.
     Tracks run_type using RunType enum for proper typing and validation.
     """
     __tablename__ = "ingest_runs"
     
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    run_id = Column(String(255), nullable=False, unique=True)
+    run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType), nullable=False, default=RunType.TEST)
     io_config_name = Column(String(255), nullable=False)
     input_path = Column(String(1024), nullable=False)
@@ -127,7 +127,7 @@ class JudgingSampleModel(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     query_id = Column(PG_UUID(as_uuid=True), ForeignKey("queries.id"), nullable=False)
     document_id = Column(PG_UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
-    ingest_run_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest_runs.id"), nullable=False)
+    ingest_run_name = Column(PG_UUID(as_uuid=True), ForeignKey("ingest_runs.id"), nullable=False)
     gold_score = Column(SQLEnum(RelevanceScore), nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     

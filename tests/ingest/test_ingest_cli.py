@@ -41,7 +41,7 @@ class TestIngestCLI:
             "q1 1 d1\nq2 0 d2\nq3 1 d3\n",
         )
 
-        test_run_id = "test_limit"
+        test_run_name = "test_limit"
         result = runner.invoke(
             app,
             [
@@ -52,7 +52,7 @@ class TestIngestCLI:
                 "--limit",
                 "2",
                 "--run-id",
-                test_run_id,
+                test_run_name,
             ],
         )
 
@@ -60,7 +60,7 @@ class TestIngestCLI:
         assert "total_examples=2" in result.stderr
 
         # Verify output file has exactly 2 examples (uses tmp_artifacts via fixture)
-        run_dir = PathManager.get_run_dir(cli_name="ingest", run_id=test_run_id, official=False)
+        run_dir = PathManager.get_run_dir(cli_name="ingest", run_name=test_run_name, official=False)
         output_file = run_dir / "normalized_dataset.ndjson"
         assert output_file.exists()
 
@@ -115,16 +115,16 @@ class TestIngestCLI:
             tmp_path, "llm4eval_test_qrel_2024.txt", "q1 1 d1\nq2 0 d2\n"
         )
 
-        test_run_id = "test_multiple"
+        test_run_name = "test_multiple"
         result = runner.invoke(
             app,
-            ["--dataset", "llm-judge-2024", "--data-dir", str(tmp_path), "--run-id", test_run_id],
+            ["--dataset", "llm-judge-2024", "--data-dir", str(tmp_path), "--run-id", test_run_name],
         )
 
         assert result.exit_code == 0, f"CLI failed: {result.stderr}"
 
         # Read output file (uses tmp_artifacts via fixture)
-        run_dir = get_run_dir(test_run_id, cli_name="ingest", official=False)
+        run_dir = get_run_dir(test_run_name, cli_name="ingest", official=False)
         output_file = run_dir / "samples.ndjson"
         assert output_file.exists()
 
@@ -139,21 +139,21 @@ class TestIngestCLI:
 
     def test_output_validates_against_schema(self, mock_llm_judge_dataset, tmp_artifacts):
         """Test that ingest CLI output validates against sample.schema.json."""
-        test_run_id = "test_schema_validation"
+        test_run_name = "test_schema_validation"
 
         result = runner.invoke(
             app,
             [
                 "--dataset", "llm-judge-2024",
                 "--data-dir", str(mock_llm_judge_dataset),
-                "--run-id", test_run_id,
+                "--run-id", test_run_name,
             ],
         )
 
         assert result.exit_code == 0, f"CLI failed: {result.stderr}"
 
         # Get output file path using run_manager (uses tmp_artifacts via fixture)
-        run_dir = get_run_dir(test_run_id, cli_name="ingest", official=False)
+        run_dir = get_run_dir(test_run_name, cli_name="ingest", official=False)
         output_file = run_dir / "samples.ndjson"
         assert output_file.exists(), f"Output file not found at {output_file}"
 

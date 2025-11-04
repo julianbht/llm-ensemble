@@ -71,8 +71,8 @@ def tmp_artifacts(tmp_path: Path, monkeypatch) -> Path:
     original_get_run_dir = run_manager.get_run_dir
 
     # Create patched version that uses tmp artifacts
-    def patched_get_run_dir(run_id: str, cli_name: str, official: bool = False, base_dir: Path | None = None):
-        return original_get_run_dir(run_id, cli_name, official, base_dir=artifacts_dir)
+    def patched_get_run_dir(run_name: str, cli_name: str, official: bool = False, base_dir: Path | None = None):
+        return original_get_run_dir(run_name, cli_name, official, base_dir=artifacts_dir)
 
     # Apply patch
     monkeypatch.setattr(run_manager, "get_run_dir", patched_get_run_dir)

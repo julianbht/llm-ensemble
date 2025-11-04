@@ -71,11 +71,11 @@ HF_TOKEN=hf_...
 
 Runs are organized by type for reproducibility:
 
-- **Test runs:** `artifacts/runs/<cli_name>/test/<run_id>/`
+- **Test runs:** `artifacts/runs/<cli_name>/test/<run_name>/`
   - Used for development, experimentation, quick tests
   - Not tracked in git, can be deleted freely
 
-- **Official runs:** `artifacts/runs/<cli_name>/official/<run_id>/`
+- **Official runs:** `artifacts/runs/<cli_name>/official/<run_name>/`
   - Used for thesis results, paper figures, benchmarks
   - Can be git-tracked for full reproducibility
   - Use `--official` flag in CLIs (e.g., `infer --official`)

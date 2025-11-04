@@ -37,7 +37,7 @@ def aggregate(
         readable=True,
     ),
     # Optional parameters
-    run_id: RunName = None,
+    run_name: RunName = None,
     log_cfg: LogCfg = None,
     official: Official = False,
     notes: Notes = None,
@@ -67,7 +67,7 @@ def aggregate(
         input_files=input_paths,
         ensemble_config_name=ensemble_cfg,
         io_config_name=io_cfg,
-        run_id=run_id,
+        run_name=run_name,
         official=official,
         notes=notes,
     )

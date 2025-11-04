@@ -52,14 +52,12 @@ class JudgingSample(BaseModel):
     @classmethod
     def create(
         cls,
-        dataset: str,
         query: Query,
         document: Document,
         gold_score: RelevanceScore,
         run_info: IngestRunInfo
     ) -> JudgingSample:
         sample_id = compute_judging_sample_uuid(
-            dataset,
             query.external_id,
             document.external_id
         )

@@ -95,7 +95,6 @@ class IngestionService:
         # Use JudgingSample.create() to compute deterministic UUID
         judging_samples = [
             JudgingSample.create(
-                dataset=dataset_name,
                 query=sample.query,
                 document=sample.document,
                 gold_score=sample.gold_score,

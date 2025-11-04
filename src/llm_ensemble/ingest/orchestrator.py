@@ -19,7 +19,7 @@ from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
-from llm_ensemble.libs.runtime.run_id import generate_run_id
+from llm_ensemble.libs.runtime.run_id import generate_run_name
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging import configure_logger
@@ -66,7 +66,7 @@ def run_ingest(
 
     # Generate or use provided run_id (collect name hints from config)
     if run_id is None:
-        run_id = generate_run_id([io_config.name_hint])
+        run_id = generate_run_name([io_config.name_hint])
 
     # Get run directory path and create it
     run_dir = PathManager.get_run_dir(

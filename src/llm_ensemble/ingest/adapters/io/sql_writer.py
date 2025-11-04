@@ -89,7 +89,7 @@ class SqlWriter(DatasetWriter):
             if not ingest_run_model:
                 ingest_run_model = IngestRunModel(
                     id=run_info.id,
-                    run_id=run_info.run_id,
+                    run_id=run_info.run_name,
                     run_type=run_info.run_type,
                     io_config_name=run_info.io_config_name,
                     input_path=run_info.input_path,

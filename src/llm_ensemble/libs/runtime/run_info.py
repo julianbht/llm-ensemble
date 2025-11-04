@@ -39,7 +39,7 @@ class RunInfo(BaseModel):
     immediately without waiting for run completion.
     """
 
-    run_id: str = Field(
+    run_name: str = Field(
         ...,
         description="Unique identifier for this run (timestamp-based, e.g., '20250115_143022_gpt-oss-20b')"
     )

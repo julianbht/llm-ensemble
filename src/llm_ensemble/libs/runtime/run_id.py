@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Optional
 
 
-def generate_run_id(name_hints: Optional[list[str]] = None) -> str:
+def generate_run_name(name_hints: Optional[list[str]] = None) -> str:
     """Generate a unique timestamped run ID, optionally with name hints.
 
     Format:

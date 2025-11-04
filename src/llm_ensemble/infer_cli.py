@@ -8,7 +8,7 @@ from llm_ensemble.libs.config.logging_config_loader import load_logging_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
-from llm_ensemble.libs.cli.common_params import InputPath, IoCfg, RunId, LogCfg, Official, Notes, Override, Limit
+from llm_ensemble.libs.cli.common_params import InputPath, IoCfg, RunName, LogCfg, Official, Notes, Override, Limit
 
 # Load runtime configuration early
 load_runtime_config()
@@ -34,7 +34,7 @@ def infer(
     ),
     # Optional parameters
     limit: Limit = None,
-    run_id: RunId = None,
+    run_id: RunName = None,
     log_cfg: LogCfg = None,
     official: Official = False,
     notes: Notes = None,

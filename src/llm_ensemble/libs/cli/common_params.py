@@ -31,11 +31,11 @@ IoCfg = Annotated[
     )
 ]
 
-RunId = Annotated[
+RunName = Annotated[
     Optional[str],
     typer.Option(
-        "--run-id",
-        help="Custom run ID (auto-generates if not provided)"
+        "--run-name",
+        help="Custom run name (auto-generates if not provided)"
     )
 ]
 

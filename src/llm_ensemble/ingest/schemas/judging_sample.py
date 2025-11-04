@@ -57,24 +57,7 @@ class JudgingSample(BaseModel):
         document: Document,
         gold_score: RelevanceScore,
         run_info: IngestRunInfo
-    ) -> "JudgingSample":
-        """Create a JudgingSample with computed deterministic UUID.
-        
-        Args:
-            dataset: Dataset name (e.g., 'msmarco', 'llmjudge')
-            query: Query object (must already have id set)
-            document: Document object (must already have id set)
-            gold_score: Gold relevance score
-            run_info: Ingest run info
-        
-        Returns:
-            JudgingSample instance with computed id
-        
-        Example:
-            >>> query = Query.create("msmarco", "q1", "what is python?")
-            >>> doc = Document.create("msmarco", "d1", "Python is...")
-            >>> sample = JudgingSample.create("msmarco", query, doc, 2, run_info)
-        """
+    ) -> JudgingSample:
         sample_id = compute_judging_sample_uuid(
             dataset,
             query.external_id,

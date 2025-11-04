@@ -46,7 +46,6 @@ class DatasetModel(Base):
     # Relationships
     queries = relationship("QueryModel", back_populates="dataset")
     documents = relationship("DocumentModel", back_populates="dataset")
-    judging_samples = relationship("JudgingSampleModel", back_populates="dataset")
 
 
 class QueryModel(Base):
@@ -122,11 +121,10 @@ class JudgingSampleModel(Base):
     Uses deterministic UUID based on dataset + query_external_id + doc_external_id.
     Links to Query, Document, Dataset, and IngestRun via foreign keys.
     Uses RelevanceScore enum for proper typing and validation.
-    """
+    """ 
     __tablename__ = "judging_samples"
     
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    dataset_id = Column(PG_UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
     query_id = Column(PG_UUID(as_uuid=True), ForeignKey("queries.id"), nullable=False)
     document_id = Column(PG_UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
     ingest_run_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest_runs.id"), nullable=False)
@@ -134,11 +132,10 @@ class JudgingSampleModel(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     
     # Relationships
-    dataset = relationship("DatasetModel", back_populates="judging_samples")
     query = relationship("QueryModel", back_populates="judging_samples")
     document = relationship("DocumentModel", back_populates="judging_samples")
     ingest_run = relationship("IngestRunModel", back_populates="judging_samples")
     
     __table_args__ = (
-        UniqueConstraint("dataset_id", "query_id", "document_id", name="uq_sample_dataset_query_doc"),
+        UniqueConstraint("query_id", "document_id", name="uq_query_doc"),
     )

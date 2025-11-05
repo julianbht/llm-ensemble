@@ -142,8 +142,6 @@ def run_ingest(
             limit=limit,
             on_write=on_write,
         )
-        sample_count = summary.sample_count
-        logger.info(IngestLogEvent.JUDGING_SAMPLES_PREPARED, count=sample_count)
 
         # Write standalone summary.json for convenience (not source of truth)
         write_standalone_summary(summary, run_dir)
@@ -153,7 +151,7 @@ def run_ingest(
         logger.error(IngestLogEvent.INGEST_FAILED, error=str(e))
         raise
 
-    logger.info(IngestLogEvent.INGEST_COMPLETE, total_samples=sample_count)
+    logger.info(IngestLogEvent.INGEST_COMPLETE)
 
     # Log where logs were saved if enabled
     if logging_config.save_logs:

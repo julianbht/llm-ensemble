@@ -40,7 +40,7 @@ class JudgementWriter(ABC):
         self._write_summary: Optional[WriteSummary] = None
 
     @abstractmethod
-    def open(self, run_dir: Path) -> "JudgementWriter":
+    def open(self, run_dir: Path) -> JudgementWriter:
         """Initialize writer with run directory and prepare for streaming.
 
         Args:

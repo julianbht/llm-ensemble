@@ -32,3 +32,28 @@ class IngestWriteEvent(str, Enum):
     WRITE_DOCUMENTS = "write_documents"
     WRITE_JUDGING_SAMPLES = "write_judging_samples"
     WRITE_COMPLETE = "write_complete"
+
+
+class InferLogEvent(str, Enum):
+    """Log events for infer orchestrator."""
+
+    INFER_STARTED = "inference_started"
+    RUN_DIRECTORY_CREATED = "run_directory_created"
+    SENDING_REQUEST = "sending_request"
+    PROCESSED_SAMPLE = "processed_sample"
+    JUDGEMENTS_PROCESSED = "judgements_processed"
+    INFER_SUMMARY_WRITTEN = "inference_summary_written"
+    INFER_COMPLETE = "inference_complete"
+    INFER_FAILED = "inference_failed"
+    LOGS_SAVED = "logs_saved"
+    WARNINGS_COLLECTED = "warnings_collected"
+
+
+class InferWriteEvent(str, Enum):
+    """Log events for judgement write operations.
+
+    Used by WriteSummary.get_log_entries() to generate structured logs.
+    """
+
+    WRITE_JUDGEMENTS = "write_judgements"
+    WRITE_COMPLETE = "write_complete"

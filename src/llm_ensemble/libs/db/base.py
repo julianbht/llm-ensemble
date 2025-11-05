@@ -15,15 +15,15 @@ Base = declarative_base()
 
 def get_engine(database_url: Optional[str] = None, echo: bool = False) -> Engine:
     """Create a SQLAlchemy engine for the database.
-    
+
     Args:
         database_url: Database connection URL. If None, reads from DATABASE_URL
                      environment variable. Defaults to SQLite if not set.
         echo: If True, log all SQL statements (useful for debugging)
-    
+
     Returns:
         Configured SQLAlchemy engine
-    
+
     Example:
         >>> engine = get_engine()  # Uses env var or default SQLite
         >>> engine = get_engine("postgresql://user:pass@localhost/db")
@@ -35,15 +35,28 @@ def get_engine(database_url: Optional[str] = None, echo: bool = False) -> Engine
             "DATABASE_URL",
             "sqlite:///artifacts/llm_ensemble.db"
         )
-    
-    # Create engine with appropriate settings
-    engine = create_engine(
-        database_url,
-        echo=echo,
-        # SQLite-specific: enable foreign keys
-        connect_args={"check_same_thread": False} if database_url.startswith("sqlite") else {}
-    )
-    
+
+    # SQLite-specific settings
+    if database_url.startswith("sqlite"):
+        from sqlalchemy.pool import NullPool
+
+        # Create engine with NullPool (no connection pooling) and timeout
+        engine = create_engine(
+            database_url,
+            echo=echo,
+            poolclass=NullPool,  # Disable connection pooling for SQLite
+            connect_args={
+                "check_same_thread": False,
+                "timeout": 30  # Wait up to 30 seconds for locks
+            }
+        )
+    else:
+        # PostgreSQL, MySQL, etc. - use default pooling
+        engine = create_engine(
+            database_url,
+            echo=echo,
+        )
+
     return engine
 
 

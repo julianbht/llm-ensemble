@@ -17,6 +17,7 @@ from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
+from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
 from llm_ensemble.infer.domain import InferenceService
 from llm_ensemble.libs.runtime.run_info import RunType
@@ -25,7 +26,7 @@ from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging import configure_logger
-from llm_ensemble.libs.logging.log_events import InferLogEvent, InferWriteEvent
+from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
 def run_inference(
@@ -190,13 +191,11 @@ def run_inference(
             warnings=[str(w) for w in judgement.get_all_warnings()],
         )
 
-    def on_write(judgement: LLMJudgement) -> None:
-        """Log when judgement is written to disk."""
-        logger.info(
-            InferWriteEvent.WRITE_JUDGEMENT_COMPLETE,
-            sample_id=str(judgement.judging_sample.id),
-            judgements_written=1,
-        )
+    def on_write(write_summary: WriteSummary) -> None:
+        """Log when judgement is written to disk using WriteSummary from writer."""
+        # Use the WriteSummary returned by the writer for consistent logging
+        for log_entry in write_summary.get_log_entries():
+            logger.info(**log_entry)
 
     # Run inference pipeline (pure business logic)
     try:
@@ -207,13 +206,14 @@ def run_inference(
             run_dir=run_dir,
             limit=limit,
             on_request_start=on_request_start,
-            on_judgement=on_judgement,
+            on_response=on_judgement,
             on_write=on_write,
         )
         judgement_count = summary.judgement_count
         logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=judgement_count)
 
         # Write standalone summary.json for convenience (not source of truth)
+        # Note: summary contains write_summary with aggregate write statistics
         write_standalone_summary(summary, run_dir)
         logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(run_dir / "summary.json"))
 

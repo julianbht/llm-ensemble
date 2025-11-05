@@ -63,13 +63,16 @@ class NdjsonJudgementWriter(JudgementWriter):
 
         return self
 
-    def write_one(self, judgement: LLMJudgement) -> None:
+    def write_one(self, judgement: LLMJudgement) -> WriteSummary:
         """Write a single judgement to NDJSON file.
 
         Judgement is written immediately and flushed to disk for fault tolerance.
 
         Args:
             judgement: LLMJudgement object to write
+
+        Returns:
+            WriteSummary for this single write operation
 
         Raises:
             IOError: If write operation fails
@@ -88,18 +91,24 @@ class NdjsonJudgementWriter(JudgementWriter):
         # Track write
         self._judgements_written += 1
 
+        # Return summary for this write (include sample_id for traceability)
+        return WriteSummary(
+            judgements_written=1,
+            sample_id=judgement.judging_sample.id
+        )
+
     def close(self) -> WriteSummary:
         """Close NDJSON file and release resources.
 
         Called automatically by context manager __exit__.
 
         Returns:
-            WriteSummary tracking number of judgements written
+            WriteSummary tracking total number of judgements written across the entire run
 
         Raises:
             IOError: If close operation fails
         """
-        # Create summary before closing
+        # Create aggregate summary (total across all writes, no sample_id)
         summary = WriteSummary(judgements_written=self._judgements_written)
 
         if self._file_handle is not None:

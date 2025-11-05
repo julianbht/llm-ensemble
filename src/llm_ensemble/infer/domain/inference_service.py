@@ -13,6 +13,7 @@ from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
+from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import (
     LLMProvider,
     ExampleReader,
@@ -75,8 +76,8 @@ class InferenceService:
         run_dir: Path,
         limit: Optional[int] = None,
         on_request_start: Optional[Callable[[], None]] = None,
-        on_judgement: Optional[Callable[[LLMJudgement], None]] = None,
-        on_write: Optional[Callable[[LLMJudgement], None]] = None,
+        on_response: Optional[Callable[[LLMJudgement], None]] = None,
+        on_write: Optional[Callable[[WriteSummary], None]] = None,
     ) -> InferRunSummary:
         """Execute the inference pipeline with streaming and immediate persistence.
 
@@ -144,15 +145,15 @@ class InferenceService:
                 )
 
                 # Invoke callback for progress tracking
-                if on_judgement:
-                    on_judgement(judgement)
+                if on_response:
+                    on_response(judgement)
 
                 # Write judgement immediately to disk (fault tolerance!)
-                writer.write_one(judgement)
+                write_summary = writer.write_one(judgement)
 
                 # Invoke callback after write (for persistence logging)
                 if on_write:
-                    on_write(judgement)
+                    on_write(write_summary)
 
                 # Collect for summary statistics
                 llm_judgements.append(judgement)

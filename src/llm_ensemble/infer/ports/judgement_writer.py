@@ -55,7 +55,7 @@ class JudgementWriter(ABC):
         pass
 
     @abstractmethod
-    def write_one(self, judgement: LLMJudgement) -> None:
+    def write_one(self, judgement: LLMJudgement) -> WriteSummary:
         """Write a single judgement to the output sink.
 
         Must be called within the context manager (after open()).
@@ -63,6 +63,9 @@ class JudgementWriter(ABC):
 
         Args:
             judgement: LLMJudgement object to write
+
+        Returns:
+            WriteSummary for this write operation
 
         Raises:
             IOError: If write operation fails

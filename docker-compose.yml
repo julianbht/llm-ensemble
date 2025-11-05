@@ -1,0 +1,43 @@
+# Docker Compose for LLM Ensemble PostgreSQL database
+#
+# Quick start:
+#   1. Start database:    docker-compose up -d
+#   2. Check status:      docker-compose ps
+#   3. View logs:         docker-compose logs -f postgres
+#   4. Stop database:     docker-compose down
+#   5. Reset data:        docker-compose down -v  (deletes all data!)
+#
+# Database credentials (matches .env.example):
+#   - User:     llm_ensemble
+#   - Password: llm_ensemble
+#   - Database: llm_ensemble
+#   - Port:     5432 (localhost:5432)
+#
+# Connect with psql:
+#   docker-compose exec postgres psql -U llm_ensemble -d llm_ensemble
+#
+# Data persistence:
+#   Data is stored in Docker volume 'postgres_data' and persists across restarts
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: llm-ensemble-db
+    environment:
+      POSTGRES_USER: llm_ensemble
+      POSTGRES_PASSWORD: llm_ensemble
+      POSTGRES_DB: llm_ensemble
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U llm_ensemble"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

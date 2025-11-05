@@ -102,39 +102,41 @@ def compute_dataset_uuid(name: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE_DATASET, name)
 
 
-def compute_query_uuid(dataset: str, external_id: str) -> uuid.UUID:
+def compute_query_uuid(dataset_id: uuid.UUID, external_id: str) -> uuid.UUID:
     """Compute deterministic UUID for a Query.
-    
+
     Args:
-        dataset: Dataset name (e.g., 'msmarco', 'trec-covid')
+        dataset_id: Dataset UUID (matches foreign key in database)
         external_id: Query's external identifier from the dataset
-    
+
     Returns:
         Deterministic UUID for this query
-    
+
     Example:
-        >>> compute_query_uuid("msmarco", "q123")
+        >>> dataset_id = compute_dataset_uuid("msmarco")
+        >>> compute_query_uuid(dataset_id, "q123")
         UUID('...')
     """
-    natural_key = f"{dataset}:{external_id}"
+    natural_key = f"{dataset_id}:{external_id}"
     return uuid.uuid5(NAMESPACE_QUERY, natural_key)
 
 
-def compute_document_uuid(dataset: str, external_id: str) -> uuid.UUID:
+def compute_document_uuid(dataset_id: uuid.UUID, external_id: str) -> uuid.UUID:
     """Compute deterministic UUID for a Document.
-    
+
     Args:
-        dataset: Dataset name (e.g., 'msmarco', 'trec-covid')
+        dataset_id: Dataset UUID (matches foreign key in database)
         external_id: Document's external identifier from the dataset
-    
+
     Returns:
         Deterministic UUID for this document
-    
+
     Example:
-        >>> compute_document_uuid("msmarco", "d456")
+        >>> dataset_id = compute_dataset_uuid("msmarco")
+        >>> compute_document_uuid(dataset_id, "d456")
         UUID('...')
     """
-    natural_key = f"{dataset}:{external_id}"
+    natural_key = f"{dataset_id}:{external_id}"
     return uuid.uuid5(NAMESPACE_DOCUMENT, natural_key)
 
 

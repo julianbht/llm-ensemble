@@ -14,48 +14,38 @@ Base = declarative_base()
 # ========================================================================
 
 def get_engine(database_url: Optional[str] = None, echo: bool = False) -> Engine:
-    """Create a SQLAlchemy engine for the database.
+    """Create a SQLAlchemy engine for PostgreSQL database.
 
     Args:
-        database_url: Database connection URL. If None, reads from DATABASE_URL
-                     environment variable. Defaults to SQLite if not set.
+        database_url: PostgreSQL connection URL. If None, reads from DATABASE_URL
+                     environment variable (required).
         echo: If True, log all SQL statements (useful for debugging)
 
     Returns:
         Configured SQLAlchemy engine
 
+    Raises:
+        ValueError: If database_url is None and DATABASE_URL env var is not set
+
     Example:
-        >>> engine = get_engine()  # Uses env var or default SQLite
-        >>> engine = get_engine("postgresql://user:pass@localhost/db")
+        >>> engine = get_engine()  # Uses DATABASE_URL env var
+        >>> engine = get_engine("postgresql://user:pass@localhost:5432/llm_ensemble")
         >>> engine = get_engine(echo=True)  # Enable SQL logging
     """
     if database_url is None:
-        # Read from environment or use default SQLite
-        database_url = os.getenv(
-            "DATABASE_URL",
-            "sqlite:///artifacts/llm_ensemble.db"
-        )
+        # Read from environment (required)
+        database_url = os.getenv("DATABASE_URL")
+        if not database_url:
+            raise ValueError(
+                "DATABASE_URL environment variable is required. "
+                "Example: postgresql://user:password@localhost:5432/llm_ensemble"
+            )
 
-    # SQLite-specific settings
-    if database_url.startswith("sqlite"):
-        from sqlalchemy.pool import NullPool
-
-        # Create engine with NullPool (no connection pooling) and timeout
-        engine = create_engine(
-            database_url,
-            echo=echo,
-            poolclass=NullPool,  # Disable connection pooling for SQLite
-            connect_args={
-                "check_same_thread": False,
-                "timeout": 30  # Wait up to 30 seconds for locks
-            }
-        )
-    else:
-        # PostgreSQL, MySQL, etc. - use default pooling
-        engine = create_engine(
-            database_url,
-            echo=echo,
-        )
+    # Create PostgreSQL engine with default connection pooling
+    engine = create_engine(
+        database_url,
+        echo=echo,
+    )
 
     return engine
 

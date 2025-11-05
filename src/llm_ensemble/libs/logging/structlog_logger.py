@@ -7,9 +7,28 @@ pretty printing and structured JSON output, configured via LoggingConfig.
 from __future__ import annotations
 import sys
 import logging
+from enum import Enum
 from pathlib import Path
 from typing import Optional, Any
 import structlog
+
+
+def _convert_enums_to_values(_, __, event_dict):
+    """Convert all Enum values to their string values automatically.
+
+    This allows using enums directly in log calls without needing to call .value:
+        logger.info(MyEvent.SOME_EVENT, key=value)  # instead of MyEvent.SOME_EVENT.value
+    """
+    # Convert the event name if it's an enum
+    if isinstance(event_dict.get("event"), Enum):
+        event_dict["event"] = event_dict["event"].value
+
+    # Convert any enum values in the event_dict
+    for key, value in list(event_dict.items()):
+        if isinstance(value, Enum):
+            event_dict[key] = value.value
+
+    return event_dict
 
 
 def _drop_stdlib_fields(_, __, event_dict):
@@ -74,6 +93,7 @@ def configure_logger(
         structlog.stdlib.PositionalArgumentsFormatter(),
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
+        _convert_enums_to_values,  # Convert enums to their string values automatically
     ]
 
     # Console renderer - always human-readable one-line format

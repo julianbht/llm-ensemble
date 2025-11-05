@@ -98,7 +98,7 @@ class WriteSummary(BaseModel):
 
         if self.samples_created > 0 or self.samples_skipped > 0:
             yield {
-                "event": IngestWriteEvent.WRITE_SAMPLES,
+                "event": IngestWriteEvent.WRITE_JUDGING_SAMPLES,
                 "created": self.samples_created,
                 "skipped": self.samples_skipped,
             }

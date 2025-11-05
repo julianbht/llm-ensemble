@@ -12,8 +12,8 @@ class IngestLogEvent(str, Enum):
 
     INGEST_STARTED = "ingest_started"
     RUN_DIRECTORY_CREATED = "run_directory_created"
-    JUDGING_SAMPLES_BUILT = "judging_samples_built"
-    SUMMARY_WRITTEN = "summary_written"
+    JUDGING_SAMPLES_PREPARED = "judging_samples_prepared"
+    INGEST_SUMMARY_WRITTEN = "ingest_summary_written"
     INGEST_COMPLETE = "ingest_complete"
     INGEST_FAILED = "ingest_failed"
     LOGS_SAVED = "logs_saved"
@@ -30,5 +30,5 @@ class IngestWriteEvent(str, Enum):
     WRITE_RUNS = "write_runs"
     WRITE_QUERIES = "write_queries"
     WRITE_DOCUMENTS = "write_documents"
-    WRITE_SAMPLES = "write_samples"
+    WRITE_JUDGING_SAMPLES = "write_judging_samples"
     WRITE_COMPLETE = "write_complete"

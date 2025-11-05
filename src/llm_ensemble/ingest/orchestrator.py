@@ -135,7 +135,7 @@ def run_ingest(
             limit=limit,
         )
         sample_count = summary.sample_count
-        logger.info(IngestLogEvent.JUDGING_SAMPLES_BUILT, count=sample_count)
+        logger.info(IngestLogEvent.JUDGING_SAMPLES_PREPARED, count=sample_count)
 
         # Log write summary (WriteSummary encapsulates its own logging structure)
         for log_entry in summary.write_summary.get_log_entries():
@@ -143,7 +143,7 @@ def run_ingest(
 
         # Write standalone summary.json for convenience (not source of truth)
         write_standalone_summary(summary, run_dir)
-        logger.info(IngestLogEvent.SUMMARY_WRITTEN, path=str(run_dir / "summary.json"))
+        logger.info(IngestLogEvent.INGEST_SUMMARY_WRITTEN, path=str(run_dir / "summary.json"))
 
     except Exception as e:
         logger.error(IngestLogEvent.INGEST_FAILED, error=str(e))

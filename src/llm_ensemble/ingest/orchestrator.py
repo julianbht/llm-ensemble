@@ -16,7 +16,7 @@ from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.ingest.schemas import IngestIOConfig
 from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
-from llm_ensemble.ingest.log_events import IngestLogEvent
+from llm_ensemble.libs.logging.log_events import IngestLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_name import generate_run_name

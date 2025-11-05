@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Iterator, Dict, Any
 from pydantic import BaseModel, Field
 
-from llm_ensemble.ingest.log_events import IngestWriteEvent
+from llm_ensemble.libs.logging.log_events import IngestWriteEvent
 
 
 class WriteSummary(BaseModel):

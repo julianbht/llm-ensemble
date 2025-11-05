@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
 
 
@@ -33,6 +34,7 @@ class FullyPopulatedJsonWriter(JudgementWriter):
 
     def __init__(self):
         """Initialize the JSON writer."""
+        super().__init__()
         self.output_path: Optional[Path] = None
         self.judgements: list[LLMJudgement] = []
 
@@ -73,22 +75,27 @@ class FullyPopulatedJsonWriter(JudgementWriter):
 
         self.judgements.append(judgement)
 
-    def close(self) -> None:
+    def close(self) -> WriteSummary:
         """Write all accumulated judgements to a single JSON file.
+
+        Returns:
+            WriteSummary tracking number of judgements written
 
         Raises:
             IOError: If write operation fails
         """
-        if self.output_path is None:
-            return  # Already closed or never opened
+        judgements_count = len(self.judgements)
 
-        # Convert all judgements to dicts
-        judgements_data = [judgement.model_dump() for judgement in self.judgements]
+        if self.output_path is not None:
+            # Convert all judgements to dicts
+            judgements_data = [judgement.model_dump() for judgement in self.judgements]
 
-        # Write as a single JSON array
-        with self.output_path.open("w", encoding="utf-8") as f:
-            json.dump(judgements_data, f, indent=2, ensure_ascii=False)
+            # Write as a single JSON array
+            with self.output_path.open("w", encoding="utf-8") as f:
+                json.dump(judgements_data, f, indent=2, ensure_ascii=False)
 
-        # Reset state
-        self.output_path = None
-        self.judgements = []
+            # Reset state
+            self.output_path = None
+            self.judgements = []
+
+        return WriteSummary(judgements_written=judgements_count)

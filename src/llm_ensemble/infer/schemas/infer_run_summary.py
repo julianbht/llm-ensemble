@@ -11,6 +11,7 @@ from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_summary import RunSummary
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
+from llm_ensemble.infer.schemas.write_summary import WriteSummary
 
 
 class InferRunSummary(RunSummary):
@@ -36,6 +37,11 @@ class InferRunSummary(RunSummary):
     )
 
     # Aggregate statistics (computed at end of run)
+    write_summary: WriteSummary = Field(
+        ...,
+        description="Summary of write operations (judgements written to disk)"
+    )
+
     judgement_count: int = Field(
         ...,
         description="Number of judgements produced"

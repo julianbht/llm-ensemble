@@ -25,6 +25,7 @@ from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging import configure_logger
+from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
 def run_inference(
@@ -126,7 +127,7 @@ def run_inference(
     )
 
     logger.info(
-        "starting_inference",
+        InferLogEvent.INFER_STARTED,
         model=model_config_name,
         provider=model_config.provider,
         io_format=io_config_name,
@@ -134,7 +135,7 @@ def run_inference(
         input_file=str(input_file),
         limit=limit,
     )
-    logger.info("run_directory", path=str(run_dir))
+    logger.info(InferLogEvent.RUN_DIRECTORY_CREATED, path=str(run_dir))
 
     # Instantiate I/O adapters directly from config
     reader = io_config.get_reader()
@@ -160,7 +161,7 @@ def run_inference(
     # Define logging callbacks (infrastructure concern)
     def on_request_start() -> None:
         """Log when request is being sent."""
-        logger.info("sending_request")
+        logger.info(InferLogEvent.SENDING_REQUEST)
 
     def on_judgement(judgement: LLMJudgement) -> None:
         """Log each completed judgement."""
@@ -170,7 +171,7 @@ def run_inference(
 
         # Info to console
         logger.info(
-            "processed_sample",
+            InferLogEvent.PROCESSED_SAMPLE,
             extracted_score=extracted_score,
             gold_score=gold_score,
             latency_s=f"{latency_s:.1f}",
@@ -201,18 +202,22 @@ def run_inference(
             on_judgement=on_judgement,
         )
         judgement_count = summary.judgement_count
-        logger.info("judgements_processed", count=judgement_count)
+        logger.info(InferLogEvent.JUDGEMENTS_PROCESSED, count=judgement_count)
+
+        # Log write summary (WriteSummary encapsulates its own logging structure)
+        for log_entry in summary.write_summary.get_log_entries():
+            logger.info(**log_entry)
 
         # Write standalone summary.json for convenience (not source of truth)
         write_standalone_summary(summary, run_dir)
-        logger.info("summary_written", path=str(run_dir / "summary.json"))
+        logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(run_dir / "summary.json"))
 
     except Exception as e:
-        logger.error("inference_failed", error=str(e))
+        logger.error(InferLogEvent.INFER_FAILED, error=str(e))
         raise
 
     logger.info(
-        "inference_complete",
+        InferLogEvent.INFER_COMPLETE,
         total_judgements=summary.judgement_count,
         parsing_failures=summary.error_count,
         avg_latency_ms=f"{summary.avg_latency_ms:.1f}",
@@ -222,11 +227,11 @@ def run_inference(
     if summary.warnings_summary and sum(summary.warnings_summary.values()) > 0:
         total_warnings = sum(summary.warnings_summary.values())
         logger.info(
-            "warnings_collected",
+            InferLogEvent.WARNINGS_COLLECTED,
             total_warnings=total_warnings,
             **summary.warnings_summary
         )
 
     # Log where logs were saved if enabled
     if logging_config.save_logs:
-        logger.info("logs_saved", path=str(run_dir / "run.log"))
+        logger.info(InferLogEvent.LOGS_SAVED, path=str(run_dir / "run.log"))

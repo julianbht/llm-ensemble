@@ -132,7 +132,7 @@ class InferenceService:
 
                 # Parse response to extract structured score
                 score = self.response_parser.parse(response.raw_response)
-                
+
                 # Create judgement immediately
                 judgement = LLMJudgement(
                     judging_sample=sample,
@@ -152,6 +152,9 @@ class InferenceService:
                 # Collect for summary statistics
                 llm_judgements.append(judgement)
 
+        # Retrieve write summary after context manager closes
+        write_summary = self.judgement_writer.get_summary()
+
         # Calculate aggregate statistics from judgements (for summary)
         count = len(llm_judgements)
         error_count = sum(1 for j in llm_judgements if j.llm_score.label is None)
@@ -165,6 +168,9 @@ class InferenceService:
             for warning in judgement.get_all_warnings():
                 warning_type = warning.__class__.__name__
                 warnings_summary[warning_type] = warnings_summary.get(warning_type, 0) + 1
+
+        # Add write summary to builder for inclusion in final summary
+        summary_builder.add("write_summary", write_summary)
 
         # Add statistics to summary builder
         summary_builder.add("judgement_count", count)

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional, TextIO
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
 
 
@@ -30,8 +31,10 @@ class NdjsonJudgementWriter(JudgementWriter):
 
     def __init__(self):
         """Initialize writer."""
+        super().__init__()
         self._file_handle: Optional[TextIO] = None
         self._output_file: Optional[Path] = None
+        self._judgements_written: int = 0
 
     def open(self, run_dir: Path) -> "NdjsonJudgementWriter":
         """Open NDJSON file for streaming writes.
@@ -54,6 +57,9 @@ class NdjsonJudgementWriter(JudgementWriter):
 
         # Open file for writing (context manager will handle closing)
         self._file_handle = self._output_file.open("w", encoding="utf-8", newline="\n")
+
+        # Reset counter for new write session
+        self._judgements_written = 0
 
         return self
 
@@ -79,15 +85,26 @@ class NdjsonJudgementWriter(JudgementWriter):
         # Flush to ensure immediate persistence (fault tolerance)
         self._file_handle.flush()
 
-    def close(self) -> None:
+        # Track write
+        self._judgements_written += 1
+
+    def close(self) -> WriteSummary:
         """Close NDJSON file and release resources.
 
         Called automatically by context manager __exit__.
 
+        Returns:
+            WriteSummary tracking number of judgements written
+
         Raises:
             IOError: If close operation fails
         """
+        # Create summary before closing
+        summary = WriteSummary(judgements_written=self._judgements_written)
+
         if self._file_handle is not None:
             self._file_handle.close()
             self._file_handle = None
             self._output_file = None
+
+        return summary

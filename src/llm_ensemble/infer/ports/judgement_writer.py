@@ -8,8 +8,10 @@ to work with any output format without coupling to a specific implementation.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Optional
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.write_summary import WriteSummary
 
 
 class JudgementWriter(ABC):
@@ -22,12 +24,20 @@ class JudgementWriter(ABC):
     Each judgement is written immediately upon calling write_one(), enabling
     fault-tolerant streaming with partial progress preservation.
 
+    The write summary is captured when close() is called and can be retrieved
+    after the context manager exits via get_summary().
+
     Example:
         >>> writer = NdjsonJudgementWriter()
         >>> with writer.open(run_dir) as w:
         ...     for judgement in judgements:
         ...         w.write_one(judgement)  # Written immediately to disk
+        >>> summary = writer.get_summary()  # Get write summary
     """
+
+    def __init__(self):
+        """Initialize writer."""
+        self._write_summary: Optional[WriteSummary] = None
 
     @abstractmethod
     def open(self, run_dir: Path) -> "JudgementWriter":
@@ -61,11 +71,14 @@ class JudgementWriter(ABC):
         pass
 
     @abstractmethod
-    def close(self) -> None:
+    def close(self) -> WriteSummary:
         """Close writer and finalize output.
 
         Ensures all buffered data is flushed and resources are released.
         Called automatically by context manager __exit__.
+
+        Returns:
+            WriteSummary tracking write operations performed during streaming
 
         Raises:
             IOError: If close operation fails
@@ -83,9 +96,26 @@ class JudgementWriter(ABC):
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit context manager and ensure cleanup.
 
+        Calls close() and stores the returned WriteSummary for later retrieval.
+
         Args:
             exc_type: Exception type if an error occurred
             exc_val: Exception value if an error occurred
             exc_tb: Exception traceback if an error occurred
         """
-        self.close()
+        self._write_summary = self.close()
+
+    def get_summary(self) -> WriteSummary:
+        """Get the write summary after the writer has been closed.
+
+        Must be called after the context manager exits.
+
+        Returns:
+            WriteSummary tracking write operations
+
+        Raises:
+            RuntimeError: If called before writer is closed
+        """
+        if self._write_summary is None:
+            raise RuntimeError("Writer has not been closed yet - must call after context manager exits")
+        return self._write_summary

@@ -232,6 +232,178 @@ def thomas_prompt_template():
     return load_prompt_template("thomas-et-al-prompt")
 
 
+@pytest.fixture
+def mock_git_info(monkeypatch):
+    """Fixture that monkeypatches git_utils.get_git_info to return deterministic values.
+
+    This ensures test reproducibility by providing consistent git metadata
+    regardless of the actual git state.
+
+    Returns:
+        Dict with deterministic git metadata
+
+    Example:
+        >>> def test_run_info(mock_git_info):
+        ...     # get_git_info() will return deterministic values
+        ...     info = get_git_info()
+        ...     assert info["git_sha"] == "abc1234"
+    """
+    deterministic_git_info = {
+        "git_sha": "abc1234",
+        "git_clean": True,
+        "git_branch": "test-branch"
+    }
+
+    # Patch at the module level where it's defined
+    monkeypatch.setattr("llm_ensemble.libs.runtime.git_utils.get_git_info", lambda: deterministic_git_info)
+
+    return deterministic_git_info
+
+
+@pytest.fixture
+def tmp_runs_dir(tmp_path: Path, monkeypatch):
+    """Fixture that redirects run directories to a temporary location.
+
+    Monkeypatches PathManager.get_run_dir and get_artifacts_dir to use
+    tmp_path/artifacts instead of the real artifacts directory.
+
+    Automatically cleaned up after the test via tmp_path fixture.
+
+    Returns:
+        Tuple of (artifacts_base_path, get_run_dir_helper)
+        - artifacts_base_path: Path to tmp_path/artifacts
+        - get_run_dir_helper: Function(cli_name, run_name, official) -> Path
+
+    Example:
+        >>> def test_cli(tmp_runs_dir):
+        ...     artifacts_path, get_run_dir = tmp_runs_dir
+        ...     run_dir = get_run_dir("ingest", "test_run", False)
+        ...     # CLI will write to tmp artifacts directory
+    """
+    from llm_ensemble.libs.runtime.path_manager import PathManager
+
+    # Create temporary artifacts directory
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+
+    # Store original methods
+    original_get_artifacts_dir = PathManager.get_artifacts_dir
+    original_get_run_dir = PathManager.get_run_dir
+
+    # Create patched versions
+    def patched_get_artifacts_dir() -> Path:
+        return artifacts_dir
+
+    def patched_get_run_dir(
+        cli_name: str,
+        run_name: str,
+        official: bool = False
+    ) -> Path:
+        # Call original with base_dir override would be ideal, but original doesn't accept it
+        # So we reconstruct the path logic here
+        run_type = "official" if official else "test"
+        return artifacts_dir / "runs" / cli_name / run_type / run_name
+
+    # Apply patches
+    monkeypatch.setattr(PathManager, "get_artifacts_dir", patched_get_artifacts_dir)
+    monkeypatch.setattr(PathManager, "get_run_dir", patched_get_run_dir)
+
+    # Helper for tests to compute expected run directory
+    def get_run_dir_helper(cli_name: str, run_name: str, official: bool = False) -> Path:
+        return patched_get_run_dir(cli_name, run_name, official)
+
+    yield artifacts_dir, get_run_dir_helper
+
+    # Cleanup happens automatically via tmp_path fixture
+
+
+@pytest.fixture
+def fake_reader_factory():
+    """Factory fixture for creating fake SampleReader test doubles.
+
+    Returns a factory function that creates configurable fake readers
+    for testing without actual I/O.
+
+    Returns:
+        Factory function(samples: list[RawJudgingSample]) -> FakeReader
+
+    Example:
+        >>> def test_service(fake_reader_factory):
+        ...     reader = fake_reader_factory([sample1, sample2])
+        ...     result = reader.read(Path("/fake"), dataset_name="test")
+        ...     assert len(result) == 2
+        ...     assert reader.called_with["limit"] is None
+    """
+    from llm_ensemble.ingest.ports import SampleReader
+    from llm_ensemble.ingest.ports.sample_reader import RawJudgingSample
+
+    class FakeReader(SampleReader):
+        """Test double for SampleReader that returns pre-configured samples."""
+
+        def __init__(self, samples: list[RawJudgingSample]):
+            self.samples = samples
+            self.called_with = {}
+
+        def read(
+            self,
+            input_path: Path,
+            dataset_name: str,
+            dataset_description: str | None = None,
+            limit: int | None = None,
+        ) -> list[RawJudgingSample]:
+            # Record what we were called with
+            self.called_with = {
+                "input_path": input_path,
+                "dataset_name": dataset_name,
+                "dataset_description": dataset_description,
+                "limit": limit,
+            }
+            # Apply limit if specified
+            if limit is not None:
+                return self.samples[:limit]
+            return self.samples
+
+    return FakeReader
+
+
+@pytest.fixture
+def fake_writer_factory():
+    """Factory fixture for creating fake DatasetWriter test doubles.
+
+    Returns a factory function that creates configurable fake writers
+    for testing without actual I/O.
+
+    Returns:
+        Factory function() -> FakeWriter
+
+    Example:
+        >>> def test_service(fake_writer_factory):
+        ...     writer = fake_writer_factory()
+        ...     summary = writer.write([sample1, sample2], run_dir)
+        ...     assert len(writer.written_samples) == 2
+        ...     assert summary.samples_created == 2
+    """
+    from llm_ensemble.ingest.ports import DatasetWriter
+    from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary
+
+    class FakeWriter(DatasetWriter):
+        """Test double for DatasetWriter that records writes without I/O."""
+
+        def __init__(self):
+            self.written_samples: list[JudgingSample] = []
+            self.write_calls: list[tuple[list[JudgingSample], Path]] = []
+
+        def write(self, samples: list[JudgingSample], run_dir: Path) -> WriteSummary:
+            # Record the call
+            self.write_calls.append((samples, run_dir))
+            # Store samples
+            self.written_samples.extend(samples)
+            # Return summary
+            return WriteSummary(samples_created=len(samples))
+
+    return FakeWriter
+
+
 # Pytest configuration hooks
 def pytest_configure(config):
     """Register custom markers for test categorization."""

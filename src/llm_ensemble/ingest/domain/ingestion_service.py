@@ -108,8 +108,11 @@ class IngestionService:
             for sample in judging_samples:
                 on_sample(sample)
 
-        # Write samples (writer determines output file structure)
-        self.dataset_writer.write(judging_samples, run_dir)
+        # Write samples (writer determines output file structure and returns summary)
+        write_summary = self.dataset_writer.write(judging_samples, run_dir)
+
+        # Add write summary to builder for inclusion in final summary
+        summary_builder.add("write_summary", write_summary)
 
         # Add statistics to summary builder
         summary_builder.add("sample_count", sample_count)

@@ -10,6 +10,7 @@ from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_summary import RunSummary
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.schemas.write_summary import WriteSummary
 
 
 class IngestRunSummary(RunSummary):
@@ -17,6 +18,7 @@ class IngestRunSummary(RunSummary):
 
     Extends the base RunSummary with ingestion-specific aggregate statistics:
     - Sample counts (number of samples produced)
+    - Write summary (details of what was written to storage)
 
     This is separate from IngestRunInfo which contains immutable configuration.
     The IngestRunInfo can be embedded in JudgingSample objects immediately, while
@@ -36,4 +38,9 @@ class IngestRunSummary(RunSummary):
     sample_count: int = Field(
         ...,
         description="Number of judging samples produced"
+    )
+
+    write_summary: WriteSummary = Field(
+        ...,
+        description="Summary of write operations (created vs skipped entities)"
     )

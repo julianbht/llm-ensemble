@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List
 
-from llm_ensemble.ingest.schemas import JudgingSample
+from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary
 from llm_ensemble.ingest.ports import DatasetWriter
 
 
@@ -24,12 +24,15 @@ class FullyPopulatedNdjsonWriter(DatasetWriter):
         {"query": {...}, "document": {...}, "gold_score": 1, "manifest": {...}}
     """
 
-    def write(self, samples: List[JudgingSample], run_dir: Path) -> None:
+    def write(self, samples: List[JudgingSample], run_dir: Path) -> WriteSummary:
         """Write fully populated judging samples to NDJSON.
 
         Args:
             samples: List of judging samples (each contains full manifest)
             run_dir: Run directory where output should be written
+
+        Returns:
+            WriteSummary tracking write operations (file writes always create all samples)
 
         Raises:
             IOError: If writing fails
@@ -43,3 +46,6 @@ class FullyPopulatedNdjsonWriter(DatasetWriter):
             for sample in samples:
                 json_str = sample.model_dump_json()
                 f.write(json_str + "\n")
+
+        # File writes always create all samples (no skipping)
+        return WriteSummary(samples_created=len(samples))

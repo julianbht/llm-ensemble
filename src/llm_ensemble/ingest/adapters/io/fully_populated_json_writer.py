@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import List
 
-from llm_ensemble.ingest.schemas import JudgingSample
+from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary
 from llm_ensemble.ingest.ports import DatasetWriter
 
 
@@ -27,12 +27,15 @@ class FullyPopulatedJsonWriter(DatasetWriter):
         ]
     """
 
-    def write(self, samples: List[JudgingSample], run_dir: Path) -> None:
+    def write(self, samples: List[JudgingSample], run_dir: Path) -> WriteSummary:
         """Write fully populated judging samples to a single JSON file.
 
         Args:
             samples: List of judging samples (each contains full run_info)
             run_dir: Run directory where output should be written
+
+        Returns:
+            WriteSummary tracking write operations (file writes always create all samples)
 
         Raises:
             IOError: If writing fails
@@ -47,3 +50,6 @@ class FullyPopulatedJsonWriter(DatasetWriter):
         # Write as a single JSON array
         with output_path.open("w", encoding="utf-8") as f:
             json.dump(samples_data, f, indent=2, ensure_ascii=False)
+
+        # File writes always create all samples (no skipping)
+        return WriteSummary(samples_created=len(samples))

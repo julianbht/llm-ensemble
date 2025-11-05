@@ -7,6 +7,7 @@ from llm_ensemble.ingest.schemas.judging_sample import JudgingSample
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
 from llm_ensemble.ingest.schemas.ingest_io_config import IngestIOConfig
+from llm_ensemble.ingest.schemas.write_summary import WriteSummary
 
 # ORM models (SQLAlchemy) - separate from Pydantic schemas
 from llm_ensemble.ingest.schemas.orms import (
@@ -26,6 +27,7 @@ __all__ = [
     "IngestRunInfo",
     "IngestRunSummary",
     "IngestIOConfig",
+    "WriteSummary",
     # ORM models
     "DatasetModel",
     "QueryModel",

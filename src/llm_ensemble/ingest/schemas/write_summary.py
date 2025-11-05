@@ -8,6 +8,8 @@ from __future__ import annotations
 from typing import Iterator, Dict, Any
 from pydantic import BaseModel, Field
 
+from llm_ensemble.ingest.log_events import IngestWriteEvent
+
 
 class WriteSummary(BaseModel):
     """Summary of database write operations.
@@ -68,35 +70,35 @@ class WriteSummary(BaseModel):
         # Only log entity types that had activity
         if self.datasets_created > 0 or self.datasets_skipped > 0:
             yield {
-                "event": "db_write_datasets",
+                "event": IngestWriteEvent.WRITE_DATASETS,
                 "created": self.datasets_created,
                 "skipped": self.datasets_skipped,
             }
 
         if self.runs_created > 0 or self.runs_skipped > 0:
             yield {
-                "event": "db_write_runs",
+                "event": IngestWriteEvent.WRITE_RUNS,
                 "created": self.runs_created,
                 "skipped": self.runs_skipped,
             }
 
         if self.queries_created > 0 or self.queries_skipped > 0:
             yield {
-                "event": "db_write_queries",
+                "event": IngestWriteEvent.WRITE_QUERIES,
                 "created": self.queries_created,
                 "skipped": self.queries_skipped,
             }
 
         if self.documents_created > 0 or self.documents_skipped > 0:
             yield {
-                "event": "db_write_documents",
+                "event": IngestWriteEvent.WRITE_DOCUMENTS,
                 "created": self.documents_created,
                 "skipped": self.documents_skipped,
             }
 
         if self.samples_created > 0 or self.samples_skipped > 0:
             yield {
-                "event": "db_write_samples",
+                "event": IngestWriteEvent.WRITE_SAMPLES,
                 "created": self.samples_created,
                 "skipped": self.samples_skipped,
             }
@@ -104,7 +106,7 @@ class WriteSummary(BaseModel):
         # Always log totals if there was any activity
         if self.total_created > 0 or self.total_skipped > 0:
             yield {
-                "event": "write_complete",
+                "event": IngestWriteEvent.WRITE_COMPLETE,
                 "total_created": self.total_created,
                 "total_skipped": self.total_skipped,
             }

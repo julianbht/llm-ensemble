@@ -67,6 +67,12 @@ Adapters - concrete implementations:
 
 Adapters are instantiated dynamically from configuration, not via separate factory modules. Config files specify module paths and class names, and config objects provide methods to instantiate adapters.
 
+### Summary Return Pattern
+
+Adapters return Pydantic summary objects instead of handling their own logging (separation of concerns). Summaries encapsulate their logging structure via methods like `get_log_entries()`, so orchestrators iterate and log without knowing internal fields. This follows the same pattern as `RunSummaryBuilder` - infrastructure returns data, orchestrators handle presentation.
+
+**Example:** `WriteSummary` returned by `DatasetWriter.write()` tracks created/skipped entities and provides structured log entries.
+
 ## Design Principles
 
 ### Explicit Configuration Over Implicit Defaults

@@ -16,6 +16,7 @@ from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.ingest.schemas import IngestIOConfig
 from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.log_events import IngestLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_name import generate_run_name
@@ -107,13 +108,13 @@ def run_ingest(
     )
 
     logger.info(
-        "starting_ingest",
+        IngestLogEvent.INGEST_STARTED,
         dataset=io_config.dataset_name,
         io_format=io_config_name,
         input_path=str(input_path),
         limit=limit,
     )
-    logger.info("run_directory", path=str(run_dir))
+    logger.info(IngestLogEvent.RUN_DIRECTORY_CREATED, path=str(run_dir))
 
     # Instantiate adapters directly from config
     sample_reader = io_config.get_reader()
@@ -134,7 +135,7 @@ def run_ingest(
             limit=limit,
         )
         sample_count = summary.sample_count
-        logger.info("samples_processed", count=sample_count)
+        logger.info(IngestLogEvent.JUDGING_SAMPLES_BUILT, count=sample_count)
 
         # Log write summary (WriteSummary encapsulates its own logging structure)
         for log_entry in summary.write_summary.get_log_entries():
@@ -142,14 +143,14 @@ def run_ingest(
 
         # Write standalone summary.json for convenience (not source of truth)
         write_standalone_summary(summary, run_dir)
-        logger.info("summary_written", path=str(run_dir / "summary.json"))
+        logger.info(IngestLogEvent.SUMMARY_WRITTEN, path=str(run_dir / "summary.json"))
 
     except Exception as e:
-        logger.error("ingest_failed", error=str(e))
+        logger.error(IngestLogEvent.INGEST_FAILED, error=str(e))
         raise
 
-    logger.info("ingest_complete", total_samples=sample_count)
+    logger.info(IngestLogEvent.INGEST_COMPLETE, total_samples=sample_count)
 
     # Log where logs were saved if enabled
     if logging_config.save_logs:
-        logger.info("logs_saved", path=str(run_dir / "run.log"))
+        logger.info(IngestLogEvent.LOGS_SAVED, path=str(run_dir / "run.log"))

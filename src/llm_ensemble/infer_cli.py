@@ -40,7 +40,7 @@ def infer(
     notes: Notes = None,
     override: Override = [],
 ):
-    """Run LLM inference on judging samples and output structured judgements."""
+    """Run LLM inference on judging samples and output structured judgements.
         OPENROUTER_API_KEY: OpenRouter API key (required for OpenRouter models)
         HF_TOKEN: HuggingFace API token (required for HF models)
     """

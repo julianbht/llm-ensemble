@@ -40,9 +40,8 @@ class InferLogEvent(str, Enum):
     INFER_STARTED = "inference_started"
     RUN_DIRECTORY_CREATED = "run_directory_created"
     SENDING_REQUEST = "sending_request"
-    PROCESSED_SAMPLE = "processed_sample"
-    JUDGEMENT_WRITTEN = "judgement_written"
-    JUDGEMENTS_PROCESSED = "judgements_processed"
+    RESPONSE_PARSED = "response_parsed"
+    ALL_SAMPLES_PROCESSED = "all_samples_processed"
     INFER_SUMMARY_WRITTEN = "inference_summary_written"
     INFER_COMPLETE = "inference_complete"
     INFER_FAILED = "inference_failed"
@@ -56,5 +55,4 @@ class InferWriteEvent(str, Enum):
     Used by WriteSummary.get_log_entries() to generate structured logs.
     """
 
-    WRITE_JUDGEMENTS = "write_judgements"
-    WRITE_COMPLETE = "write_complete"
+    WRITE_JUDGEMENT_COMPLETE = "write_judgement_complete"

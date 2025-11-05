@@ -25,7 +25,7 @@ from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging import configure_logger
-from llm_ensemble.libs.logging.log_events import InferLogEvent
+from llm_ensemble.libs.logging.log_events import InferLogEvent, InferWriteEvent
 
 
 def run_inference(
@@ -171,7 +171,7 @@ def run_inference(
 
         # Info to console
         logger.info(
-            InferLogEvent.PROCESSED_SAMPLE,
+            InferLogEvent.RESPONSE_PARSED,
             extracted_score=extracted_score,
             gold_score=gold_score,
             latency_s=f"{latency_s:.1f}",
@@ -190,9 +190,13 @@ def run_inference(
             warnings=[str(w) for w in judgement.get_all_warnings()],
         )
 
-    def on_write() -> None:
+    def on_write(judgement: LLMJudgement) -> None:
         """Log when judgement is written to disk."""
-        logger.info(InferLogEvent.JUDGEMENT_WRITTEN)
+        logger.info(
+            InferWriteEvent.WRITE_JUDGEMENT_COMPLETE,
+            sample_id=str(judgement.judging_sample.id),
+            judgements_written=1,
+        )
 
     # Run inference pipeline (pure business logic)
     try:
@@ -207,11 +211,7 @@ def run_inference(
             on_write=on_write,
         )
         judgement_count = summary.judgement_count
-        logger.info(InferLogEvent.JUDGEMENTS_PROCESSED, count=judgement_count)
-
-        # Log write summary (WriteSummary encapsulates its own logging structure)
-        for log_entry in summary.write_summary.get_log_entries():
-            logger.info(**log_entry)
+        logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=judgement_count)
 
         # Write standalone summary.json for convenience (not source of truth)
         write_standalone_summary(summary, run_dir)

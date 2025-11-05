@@ -76,7 +76,7 @@ class InferenceService:
         limit: Optional[int] = None,
         on_request_start: Optional[Callable[[], None]] = None,
         on_judgement: Optional[Callable[[LLMJudgement], None]] = None,
-        on_write: Optional[Callable[[], None]] = None,
+        on_write: Optional[Callable[[LLMJudgement], None]] = None,
     ) -> InferRunSummary:
         """Execute the inference pipeline with streaming and immediate persistence.
 
@@ -152,7 +152,7 @@ class InferenceService:
 
                 # Invoke callback after write (for persistence logging)
                 if on_write:
-                    on_write()
+                    on_write(judgement)
 
                 # Collect for summary statistics
                 llm_judgements.append(judgement)

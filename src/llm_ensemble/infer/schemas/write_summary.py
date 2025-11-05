@@ -1,7 +1,12 @@
 """Write summary schema for tracking judgement write operations.
 
-This follows the same pattern as ingest's WriteSummary - writers return immutable summaries
-that orchestrators can log, rather than writers handling their own logging.
+This follows the same pattern as the ingest WriteSummary - writers return
+immutable summaries that orchestrators can log, rather than writers handling
+their own logging (separation of concerns).
+
+Unlike the ingest CLI which does batch inserts of multiple entity types,
+the infer CLI writes judgements one at a time. This summary simply tracks
+that a judgement was successfully written to disk.
 """
 
 from __future__ import annotations
@@ -15,13 +20,21 @@ class WriteSummary(BaseModel):
     """Summary of judgement write operations.
 
     Returned by JudgementWriter implementations to provide transparency
-    into what was written during streaming inference.
+    into write operations during streaming inference.
 
     This follows the architectural pattern where adapters return summaries
     instead of handling their own logging, maintaining separation of concerns.
+
+    Unlike the ingest WriteSummary which tracks batch operations across multiple
+    entity types (datasets, runs, queries, documents, samples), this simply
+    tracks the count of judgements written during the inference streaming process.
     """
 
-    judgements_written: int = Field(default=0, ge=0, description="Number of judgements written")
+    judgements_written: int = Field(
+        default=0,
+        ge=0,
+        description="Number of judgements written to disk"
+    )
 
     def get_log_entries(self) -> Iterator[Dict[str, Any]]:
         """Yield structured log entries for write operations.
@@ -30,21 +43,15 @@ class WriteSummary(BaseModel):
         so orchestrators don't need to know about internal fields.
 
         Yields:
-            Dict with 'event' key and write statistics
+            Dict with 'event' key and judgement-specific counts
 
         Example:
             >>> for entry in write_summary.get_log_entries():
             ...     logger.info(**entry)
         """
-        # Log judgements written
+        # Only log if judgements were written
         if self.judgements_written > 0:
             yield {
-                "event": InferWriteEvent.WRITE_JUDGEMENTS,
-                "count": self.judgements_written,
+                "event": InferWriteEvent.WRITE_JUDGEMENT_COMPLETE,
+                "judgements_written": self.judgements_written,
             }
-
-        # Always log completion
-        yield {
-            "event": InferWriteEvent.WRITE_COMPLETE,
-            "total_written": self.judgements_written,
-        }

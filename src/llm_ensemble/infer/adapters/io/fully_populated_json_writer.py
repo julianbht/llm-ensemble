@@ -87,8 +87,8 @@ class FullyPopulatedJsonWriter(JudgementWriter):
         judgements_count = len(self.judgements)
 
         if self.output_path is not None:
-            # Convert all judgements to dicts
-            judgements_data = [judgement.model_dump() for judgement in self.judgements]
+            # Convert to JSON-ready dicts so UUIDs and datetimes serialize correctly
+            judgements_data = [judgement.model_dump(mode="json") for judgement in self.judgements]
 
             # Write as a single JSON array
             with self.output_path.open("w", encoding="utf-8") as f:

@@ -1,4 +1,4 @@
-name_hint: llmjudge
+name_hint: llmjudge-sql
 description: |
   LLM Judge Challenge 2024 raw dataset format with SQL persistence.
   Reads from TSV queries, JSONL documents, and TSV qrels files.

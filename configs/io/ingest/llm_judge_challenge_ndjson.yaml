@@ -1,4 +1,4 @@
-name_hint: llmjudge
+name_hint: llmjudgend-json
 description: |
   LLM Judge Challenge 2024 raw dataset format.
   Reads from TSV queries, JSONL documents, and TSV qrels files.

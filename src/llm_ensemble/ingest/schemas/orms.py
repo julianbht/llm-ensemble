@@ -117,20 +117,23 @@ class IngestRunModel(Base):
 
 class JudgingSampleModel(Base):
     """JudgingSample ORM model - query-document pairs with gold relevance scores.
-    
+
     Uses deterministic UUID based on dataset + query_external_id + doc_external_id.
     Links to Query, Document, Dataset, and IngestRun via foreign keys.
     Uses RelevanceScore enum for proper typing and validation.
-    """ 
+
+    Stores both ingest_run_id (UUID FK) and run_name (denormalized string) for easier querying.
+    """
     __tablename__ = "judging_samples"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     query_id = Column(PG_UUID(as_uuid=True), ForeignKey("queries.id"), nullable=False)
     document_id = Column(PG_UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
-    ingest_run_name = Column(PG_UUID(as_uuid=True), ForeignKey("ingest_runs.id"), nullable=False)
+    ingest_run_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest_runs.id"), nullable=False)
+    run_name = Column(String(255), nullable=False)  # Denormalized for easy querying
     gold_score = Column(SQLEnum(RelevanceScore), nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    
+
     # Relationships
     query = relationship("QueryModel", back_populates="judging_samples")
     document = relationship("DocumentModel", back_populates="judging_samples")

@@ -137,7 +137,8 @@ class SqlWriter(DatasetWriter):
                         id=sample.id,
                         query_id=sample.query.id,
                         document_id=sample.document.id,
-                        ingest_run_name=ingest_run_model.id,
+                        ingest_run_id=ingest_run_model.id,
+                        run_name=ingest_run_model.run_name,
                         gold_score=sample.gold_score,
                     )
                     session.merge(sample_model)

@@ -19,6 +19,7 @@ from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
+from llm_ensemble.libs.schemas.write_result import WriteResult
 from llm_ensemble.infer.domain import InferenceService
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
@@ -191,8 +192,16 @@ def run_inference(
             warnings=[str(w) for w in judgement.get_all_warnings()],
         )
 
-    def on_write(write_summary: WriteSummary) -> None:
-        """Log when judgement is written to disk using WriteSummary from writer."""
+    def on_write_one(write_result: WriteResult) -> None:
+        """Log individual write operations using WriteResult from writer."""
+        logger.info(
+            InferLogEvent.JUDGEMENT_PERSISTED,
+            sample_id=str(write_result.item_id),
+            item_type=write_result.item_type,
+        )
+
+    def on_write_complete(write_summary: WriteSummary) -> None:
+        """Log aggregate write statistics using WriteSummary from writer."""
         # Use the WriteSummary returned by the writer for consistent logging
         for log_entry in write_summary.get_log_entries():
             logger.info(**log_entry)
@@ -207,7 +216,8 @@ def run_inference(
             limit=limit,
             on_request_start=on_request_start,
             on_response=on_judgement,
-            on_write=on_write,
+            on_write_one=on_write_one,
+            on_write_complete=on_write_complete,
         )
         judgement_count = summary.judgement_count
         logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=judgement_count)

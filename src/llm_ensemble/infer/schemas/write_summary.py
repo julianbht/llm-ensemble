@@ -5,21 +5,21 @@ immutable summaries that orchestrators can log, rather than writers handling
 their own logging (separation of concerns).
 
 Unlike the ingest CLI which does batch inserts of multiple entity types,
-the infer CLI writes judgements one at a time. This summary simply tracks
-that a judgement was successfully written to disk, along with the sample ID
-for traceability.
+the infer CLI writes judgements one at a time. This summary tracks aggregate
+statistics across all write operations (returned after streaming completes).
+
+For per-write feedback, use WriteResult instead.
 """
 
 from __future__ import annotations
-from typing import Iterator, Dict, Any, Optional
-from uuid import UUID
+from typing import Iterator, Dict, Any
 from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.logging.log_events import InferWriteEvent
 
 
 class WriteSummary(BaseModel):
-    """Summary of judgement write operations.
+    """Aggregate summary of judgement write operations.
 
     Returned by JudgementWriter implementations to provide transparency
     into write operations during streaming inference.
@@ -29,18 +29,15 @@ class WriteSummary(BaseModel):
 
     Unlike the ingest WriteSummary which tracks batch operations across multiple
     entity types (datasets, runs, queries, documents, samples), this tracks
-    individual judgement writes with the sample ID for traceability.
+    aggregate judgement writes across all streaming operations.
+
+    For per-write feedback with item IDs, use WriteResult instead.
     """
 
     judgements_written: int = Field(
         default=0,
         ge=0,
-        description="Number of judgements written to disk"
-    )
-
-    sample_id: Optional[UUID] = Field(
-        default=None,
-        description="ID of the sample that was written (for per-item write tracking)"
+        description="Total number of judgements written to disk"
     )
 
     def get_log_entries(self) -> Iterator[Dict[str, Any]]:
@@ -58,11 +55,7 @@ class WriteSummary(BaseModel):
         """
         # Only log if judgements were written
         if self.judgements_written > 0:
-            log_entry = {
-                "event": InferWriteEvent.WRITE_JUDGEMENT_COMPLETE,
-                "judgements_written": self.judgements_written,
+            yield {
+                "event": InferWriteEvent.WRITE_COMPLETE,
+                "total_judgements": self.judgements_written,
             }
-            # Add sample_id if present (for per-item writes)
-            if self.sample_id is not None:
-                log_entry["sample_id"] = str(self.sample_id)
-            yield log_entry

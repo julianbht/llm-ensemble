@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Callable
 
-from llm_ensemble.ingest.schemas import JudgingSample
+from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
 from llm_ensemble.ingest.ports import SampleReader, DatasetWriter
@@ -47,6 +47,7 @@ class IngestionService:
         run_dir: Path,
         limit: Optional[int] = None,
         on_sample: Optional[Callable[[JudgingSample], None]] = None,
+        on_write: Optional[Callable[[WriteSummary], None]] = None,
     ) -> IngestRunSummary:
         """Execute the ingestion pipeline.
 
@@ -63,6 +64,7 @@ class IngestionService:
             run_dir: Run directory where output should be written (writer determines file structure)
             limit: Optional maximum number of samples to process
             on_sample: Optional callback invoked for each sample (for logging/progress)
+            on_write: Optional callback invoked after batch write completes (for logging)
 
         Returns:
             Finalized IngestRunSummary with sample_count and timing information
@@ -110,6 +112,10 @@ class IngestionService:
 
         # Write samples (writer determines output file structure and returns summary)
         write_summary = self.dataset_writer.write(judging_samples, run_dir)
+
+        # Invoke callback after write (for logging)
+        if on_write:
+            on_write(write_summary)
 
         # Add write summary to builder for inclusion in final summary
         summary_builder.add("write_summary", write_summary)

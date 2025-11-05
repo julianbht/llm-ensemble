@@ -11,6 +11,7 @@ from typing import Optional, TextIO
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
+from llm_ensemble.libs.schemas.write_result import WriteResult
 
 
 class NdjsonJudgementWriter(JudgementWriter):
@@ -63,7 +64,7 @@ class NdjsonJudgementWriter(JudgementWriter):
 
         return self
 
-    def write_one(self, judgement: LLMJudgement) -> WriteSummary:
+    def write_one(self, judgement: LLMJudgement) -> WriteResult:
         """Write a single judgement to NDJSON file.
 
         Judgement is written immediately and flushed to disk for fault tolerance.
@@ -72,7 +73,7 @@ class NdjsonJudgementWriter(JudgementWriter):
             judgement: LLMJudgement object to write
 
         Returns:
-            WriteSummary for this single write operation
+            WriteResult for this specific write operation (contains judgement ID)
 
         Raises:
             IOError: If write operation fails
@@ -91,10 +92,10 @@ class NdjsonJudgementWriter(JudgementWriter):
         # Track write
         self._judgements_written += 1
 
-        # Return summary for this write (include sample_id for traceability)
-        return WriteSummary(
-            judgements_written=1,
-            sample_id=judgement.judging_sample.id
+        # Return result for this specific write (per-operation feedback)
+        return WriteResult(
+            item_id=judgement.judging_sample.id,
+            item_type="judgement"
         )
 
     def close(self) -> WriteSummary:
@@ -103,12 +104,12 @@ class NdjsonJudgementWriter(JudgementWriter):
         Called automatically by context manager __exit__.
 
         Returns:
-            WriteSummary tracking total number of judgements written across the entire run
+            WriteSummary with aggregate statistics (total judgements written across entire run)
 
         Raises:
             IOError: If close operation fails
         """
-        # Create aggregate summary (total across all writes, no sample_id)
+        # Create aggregate summary (total across all writes)
         summary = WriteSummary(judgements_written=self._judgements_written)
 
         if self._file_handle is not None:

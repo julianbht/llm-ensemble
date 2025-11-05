@@ -12,6 +12,7 @@ from typing import Optional
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
+from llm_ensemble.libs.schemas.write_result import WriteResult
 
 
 class FullyPopulatedJsonWriter(JudgementWriter):
@@ -59,13 +60,16 @@ class FullyPopulatedJsonWriter(JudgementWriter):
 
         return self
 
-    def write_one(self, judgement: LLMJudgement) -> None:
+    def write_one(self, judgement: LLMJudgement) -> WriteResult:
         """Accumulate a single judgement in memory.
 
         Judgement will be written to disk when close() is called.
 
         Args:
             judgement: LLMJudgement object to write
+
+        Returns:
+            WriteResult for this specific write operation (contains judgement ID)
 
         Raises:
             RuntimeError: If called outside of context manager
@@ -74,6 +78,12 @@ class FullyPopulatedJsonWriter(JudgementWriter):
             raise RuntimeError("Writer must be opened before writing")
 
         self.judgements.append(judgement)
+
+        # Return result for this specific write (per-operation feedback)
+        return WriteResult(
+            item_id=judgement.judging_sample.id,
+            item_type="judgement"
+        )
 
     def close(self) -> WriteSummary:
         """Write all accumulated judgements to a single JSON file.

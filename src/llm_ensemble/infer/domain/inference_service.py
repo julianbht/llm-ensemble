@@ -22,6 +22,7 @@ from llm_ensemble.infer.ports import (
     PromptBuilder,
 )
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
+from llm_ensemble.libs.schemas.write_result import WriteResult
 
 
 class InferenceService:
@@ -77,7 +78,8 @@ class InferenceService:
         limit: Optional[int] = None,
         on_request_start: Optional[Callable[[], None]] = None,
         on_response: Optional[Callable[[LLMJudgement], None]] = None,
-        on_write: Optional[Callable[[WriteSummary], None]] = None,
+        on_write_one: Optional[Callable[[WriteResult], None]] = None,
+        on_write_complete: Optional[Callable[[WriteSummary], None]] = None,
     ) -> InferRunSummary:
         """Execute the inference pipeline with streaming and immediate persistence.
 
@@ -99,8 +101,9 @@ class InferenceService:
             run_dir: Run directory where output should be written (writer determines file structure)
             limit: Optional maximum number of examples to process
             on_request_start: Optional callback invoked before sending request
-            on_judgement: Optional callback for each completed judgement (for logging/progress)
-            on_write: Optional callback invoked after each judgement is written to disk
+            on_response: Optional callback for each completed judgement (for logging/progress)
+            on_write_one: Optional callback invoked after each judgement is written (per-write logging)
+            on_write_complete: Optional callback invoked after all writes complete (aggregate logging)
 
         Returns:
             Finalized InferRunSummary with statistics, timing, and warnings summary
@@ -149,17 +152,21 @@ class InferenceService:
                     on_response(judgement)
 
                 # Write judgement immediately to disk (fault tolerance!)
-                write_summary = writer.write_one(judgement)
+                write_result = writer.write_one(judgement)
 
-                # Invoke callback after write (for persistence logging)
-                if on_write:
-                    on_write(write_summary)
+                # Invoke callback after write (per-write logging)
+                if on_write_one:
+                    on_write_one(write_result)
 
                 # Collect for summary statistics
                 llm_judgements.append(judgement)
 
-        # Retrieve write summary after context manager closes
+        # Retrieve aggregate write summary after context manager closes
         write_summary = self.judgement_writer.get_summary()
+
+        # Invoke callback after all writes complete (aggregate logging)
+        if on_write_complete:
+            on_write_complete(write_summary)
 
         # Calculate aggregate statistics from judgements (for summary)
         count = len(llm_judgements)

@@ -12,6 +12,7 @@ from typing import Optional
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
+from llm_ensemble.libs.schemas.write_result import WriteResult
 
 
 class JudgementWriter(ABC):
@@ -55,7 +56,7 @@ class JudgementWriter(ABC):
         pass
 
     @abstractmethod
-    def write_one(self, judgement: LLMJudgement) -> WriteSummary:
+    def write_one(self, judgement: LLMJudgement) -> WriteResult:
         """Write a single judgement to the output sink.
 
         Must be called within the context manager (after open()).
@@ -65,7 +66,7 @@ class JudgementWriter(ABC):
             judgement: LLMJudgement object to write
 
         Returns:
-            WriteSummary for this write operation
+            WriteResult for this specific write operation (contains item ID and type)
 
         Raises:
             IOError: If write operation fails

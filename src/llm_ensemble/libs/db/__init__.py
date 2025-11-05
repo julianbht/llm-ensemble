@@ -8,19 +8,6 @@ from llm_ensemble.libs.db.base import (
     Base,
     get_engine,
     create_all_tables,
-    NAMESPACE_DATASET,
-    NAMESPACE_QUERY,
-    NAMESPACE_DOCUMENT,
-    NAMESPACE_JUDGING_SAMPLE,
-    NAMESPACE_INGEST_RUN,
-    NAMESPACE_INFER_RUN,
-    NAMESPACE_AGGREGATE_RUN,
-    NAMESPACE_LLM_REQUEST,
-    NAMESPACE_LLM_RESPONSE,
-    NAMESPACE_LLM_SCORE,
-    NAMESPACE_LLM_JUDGEMENT,
-    NAMESPACE_AGGREGATED_SCORE,
-    NAMESPACE_AGGREGATED_JUDGEMENT,
 )
 
 from llm_ensemble.libs.db.session import (

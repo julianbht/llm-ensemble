@@ -190,6 +190,10 @@ def run_inference(
             warnings=[str(w) for w in judgement.get_all_warnings()],
         )
 
+    def on_write() -> None:
+        """Log when judgement is written to disk."""
+        logger.info(InferLogEvent.JUDGEMENT_WRITTEN)
+
     # Run inference pipeline (pure business logic)
     try:
         summary = service.run_inference(
@@ -200,6 +204,7 @@ def run_inference(
             limit=limit,
             on_request_start=on_request_start,
             on_judgement=on_judgement,
+            on_write=on_write,
         )
         judgement_count = summary.judgement_count
         logger.info(InferLogEvent.JUDGEMENTS_PROCESSED, count=judgement_count)

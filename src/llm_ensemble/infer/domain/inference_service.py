@@ -76,6 +76,7 @@ class InferenceService:
         limit: Optional[int] = None,
         on_request_start: Optional[Callable[[], None]] = None,
         on_judgement: Optional[Callable[[LLMJudgement], None]] = None,
+        on_write: Optional[Callable[[], None]] = None,
     ) -> InferRunSummary:
         """Execute the inference pipeline with streaming and immediate persistence.
 
@@ -97,8 +98,8 @@ class InferenceService:
             run_dir: Run directory where output should be written (writer determines file structure)
             limit: Optional maximum number of examples to process
             on_request_start: Optional callback invoked before sending request
-            on_response_received: Optional callback invoked after receiving response
             on_judgement: Optional callback for each completed judgement (for logging/progress)
+            on_write: Optional callback invoked after each judgement is written to disk
 
         Returns:
             Finalized InferRunSummary with statistics, timing, and warnings summary
@@ -148,6 +149,10 @@ class InferenceService:
 
                 # Write judgement immediately to disk (fault tolerance!)
                 writer.write_one(judgement)
+
+                # Invoke callback after write (for persistence logging)
+                if on_write:
+                    on_write()
 
                 # Collect for summary statistics
                 llm_judgements.append(judgement)

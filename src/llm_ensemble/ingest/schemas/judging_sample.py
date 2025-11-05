@@ -53,9 +53,9 @@ class JudgingSample(BaseModel):
     def create(
         cls,
         query: Query,
-        document: Document,
         gold_score: RelevanceScore,
-        run_info: IngestRunInfo
+        run_info: IngestRunInfo,
+        document: Document
     ) -> JudgingSample:
         sample_id = compute_judging_sample_uuid(
             query.id,

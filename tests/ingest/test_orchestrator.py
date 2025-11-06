@@ -6,7 +6,6 @@ concerns like run directories, logging, and adapter instantiation.
 
 import json
 import pytest
-import re
 from pathlib import Path
 
 from llm_ensemble.ingest.orchestrator import run_ingest

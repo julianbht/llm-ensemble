@@ -55,7 +55,7 @@ class ProviderModel(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
-    model_configs = relationship("ModelConfigModel", back_populates="provider")
+    model_specs = relationship("ModelSpecModel", back_populates="provider")
 
 
 class PromptTemplateModel(Base):
@@ -74,14 +74,14 @@ class PromptTemplateModel(Base):
     infer_runs = relationship("InferRunModel", back_populates="prompt_template")
 
 
-class ModelConfigModel(Base):
-    """ModelConfig ORM model - model configuration metadata.
+class ModelSpecModel(Base):
+    """ModelSpec ORM model - model specification with inference parameters.
 
-    Uses deterministic UUID based on config name.
-    One row per model config file (e.g., gpt-oss-20b, claude-sonnet).
-    Stores key parameters explicitly for SQL querying, additional params as JSONB.
+    Uses deterministic UUID based on spec name.
+    Captures experimental parameters (model ID, temperature, etc.) that affect LLM behavior.
+    This is a domain entity, not a config - configs are just YAML plumbing.
     """
-    __tablename__ = "model_configs"
+    __tablename__ = "model_specs"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
@@ -110,8 +110,8 @@ class ModelConfigModel(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
-    provider = relationship("ProviderModel", back_populates="model_configs")
-    infer_runs = relationship("InferRunModel", back_populates="model_config")
+    provider = relationship("ProviderModel", back_populates="model_specs")
+    infer_runs = relationship("InferRunModel", back_populates="model_spec")
 
 
 class InferRunModel(Base):
@@ -128,9 +128,9 @@ class InferRunModel(Base):
     run_type = Column(SQLEnum(RunType), nullable=False, default=RunType.TEST)
 
     # Configuration FKs (normalized for SQL querying)
-    model_config_id = Column(
+    model_spec_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("model_configs.id"),
+        ForeignKey("model_specs.id"),
         nullable=False
     )
     prompt_template_id = Column(
@@ -142,9 +142,6 @@ class InferRunModel(Base):
     # Config names as strings (for reference only, not querying)
     prompt_config_name = Column(String(255), nullable=False)
     io_config_name = Column(String(255), nullable=False)
-
-    # I/O config as JSONB (less critical for querying)
-    io_config = Column(JSONB, nullable=False)
 
     # Input parameters
     input_file = Column(String(1024), nullable=False)
@@ -161,7 +158,7 @@ class InferRunModel(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
-    model_config = relationship("ModelConfigModel", back_populates="infer_runs")
+    model_spec = relationship("ModelSpecModel", back_populates="infer_runs")
     prompt_template = relationship("PromptTemplateModel", back_populates="infer_runs")
     llm_judgements = relationship("LLMJudgementModel", back_populates="infer_run")
 

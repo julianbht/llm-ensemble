@@ -30,7 +30,7 @@ NAMESPACE_LLM_JUDGEMENT = uuid.UUID('d3e4f567-890a-bcde-f123-4567890abcde')
 NAMESPACE_INFER_WARNING = uuid.UUID('1a2b3c4d-5e6f-7890-abcd-ef1234567890')
 NAMESPACE_PROMPT_TEMPLATE = uuid.UUID('2b3c4d5e-6f78-9012-3456-789abcdef012')
 NAMESPACE_PROMPT_CONFIG = uuid.UUID('3c4d5e6f-7890-1234-5678-90abcdef1234')
-NAMESPACE_MODEL_CONFIG = uuid.UUID('4d5e6f78-9012-3456-7890-1abcdef12345')
+NAMESPACE_MODEL_SPEC = uuid.UUID('4d5e6f78-9012-3456-7890-1abcdef12345')
 NAMESPACE_PROVIDER = uuid.UUID('5e6f7890-1234-5678-9012-3abcdef12346')
 NAMESPACE_AGGREGATED_SCORE = uuid.UUID('e4f56789-0abc-def1-2345-67890abcdef1')
 NAMESPACE_AGGREGATED_JUDGEMENT = uuid.UUID('f5678901-abcd-ef12-3456-7890abcdef12')
@@ -118,8 +118,20 @@ def compute_prompt_config_uuid(config_name: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE_PROMPT_CONFIG, config_name)
 
 
-def compute_model_config_uuid(config_name: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE_MODEL_CONFIG, config_name)
+def compute_model_spec_uuid(spec_name: str) -> uuid.UUID:
+    """Compute deterministic UUID for a ModelSpec.
+
+    Args:
+        spec_name: Model spec name (e.g., "gpt-oss-20b", "claude-sonnet")
+
+    Returns:
+        Deterministic UUID for this model spec
+
+    Example:
+        >>> compute_model_spec_uuid("gpt-oss-20b")
+        UUID('...')
+    """
+    return uuid.uuid5(NAMESPACE_MODEL_SPEC, spec_name)
 
 
 def compute_provider_uuid(provider_name: str) -> uuid.UUID:

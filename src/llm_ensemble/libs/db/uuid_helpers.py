@@ -109,18 +109,6 @@ def compute_infer_warning_uuid(
 # ========================================================================
 
 def compute_prompt_template_uuid(template_name: str) -> uuid.UUID:
-    """Compute deterministic UUID for a PromptTemplate.
-
-    Args:
-        template_name: Template name (e.g., "thomas-simple", "thomas-advanced")
-
-    Returns:
-        Deterministic UUID for this prompt template
-
-    Example:
-        >>> compute_prompt_template_uuid("thomas-simple")
-        UUID('...')
-    """
     return uuid.uuid5(NAMESPACE_PROMPT_TEMPLATE, template_name)
 
 
@@ -129,32 +117,8 @@ def compute_prompt_config_uuid(config_name: str) -> uuid.UUID:
 
 
 def compute_model_spec_uuid(spec_name: str) -> uuid.UUID:
-    """Compute deterministic UUID for a ModelSpec.
-
-    Args:
-        spec_name: Model spec name (e.g., "gpt-oss-20b", "claude-sonnet")
-
-    Returns:
-        Deterministic UUID for this model spec
-
-    Example:
-        >>> compute_model_spec_uuid("gpt-oss-20b")
-        UUID('...')
-    """
     return uuid.uuid5(NAMESPACE_MODEL_SPEC, spec_name)
 
 
 def compute_provider_uuid(provider_name: str) -> uuid.UUID:
-    """Compute deterministic UUID for a Provider.
-
-    Args:
-        provider_name: Provider name (e.g., "openrouter", "ollama", "hf")
-
-    Returns:
-        Deterministic UUID for this provider
-
-    Example:
-        >>> compute_provider_uuid("openrouter")
-        UUID('...')
-    """
     return uuid.uuid5(NAMESPACE_PROVIDER, provider_name)

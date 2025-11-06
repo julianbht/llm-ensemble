@@ -31,6 +31,7 @@ NAMESPACE_INFER_WARNING = uuid.UUID('1a2b3c4d-5e6f-7890-abcd-ef1234567890')
 NAMESPACE_PROMPT_TEMPLATE = uuid.UUID('2b3c4d5e-6f78-9012-3456-789abcdef012')
 NAMESPACE_PROMPT_CONFIG = uuid.UUID('3c4d5e6f-7890-1234-5678-90abcdef1234')
 NAMESPACE_MODEL_CONFIG = uuid.UUID('4d5e6f78-9012-3456-7890-1abcdef12345')
+NAMESPACE_PROVIDER = uuid.UUID('5e6f7890-1234-5678-9012-3abcdef12346')
 NAMESPACE_AGGREGATED_SCORE = uuid.UUID('e4f56789-0abc-def1-2345-67890abcdef1')
 NAMESPACE_AGGREGATED_JUDGEMENT = uuid.UUID('f5678901-abcd-ef12-3456-7890abcdef12')
 
@@ -119,3 +120,19 @@ def compute_prompt_config_uuid(config_name: str) -> uuid.UUID:
 
 def compute_model_config_uuid(config_name: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE_MODEL_CONFIG, config_name)
+
+
+def compute_provider_uuid(provider_name: str) -> uuid.UUID:
+    """Compute deterministic UUID for a Provider.
+
+    Args:
+        provider_name: Provider name (e.g., "openrouter", "ollama", "hf")
+
+    Returns:
+        Deterministic UUID for this provider
+
+    Example:
+        >>> compute_provider_uuid("openrouter")
+        UUID('...')
+    """
+    return uuid.uuid5(NAMESPACE_PROVIDER, provider_name)

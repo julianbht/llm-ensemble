@@ -42,12 +42,84 @@ class WarningStage(str, PyEnum):
     PARSER = "PARSER"
 
 
+class ProviderModel(Base):
+    """Provider ORM model - LLM provider entity.
+
+    Uses deterministic UUID based on provider name.
+    One row per provider (openrouter, ollama, hf).
+    """
+    __tablename__ = "providers"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    name = Column(String(255), nullable=False, unique=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    model_configs = relationship("ModelConfigModel", back_populates="provider")
+
+
+class PromptTemplateModel(Base):
+    """PromptTemplate ORM model - raw template text (content-addressable).
+
+    Uses deterministic UUID based on SHA-256 hash of template_text.
+    Content-addressable storage enables automatic deduplication of identical templates.
+    """
+    __tablename__ = "prompt_templates"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    template_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    infer_runs = relationship("InferRunModel", back_populates="prompt_template")
+
+
+class ModelConfigModel(Base):
+    """ModelConfig ORM model - model configuration metadata.
+
+    Uses deterministic UUID based on config name.
+    One row per model config file (e.g., gpt-oss-20b, claude-sonnet).
+    Stores key parameters explicitly for SQL querying, additional params as JSONB.
+    """
+    __tablename__ = "model_configs"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    name = Column(String(255), nullable=False, unique=True)
+    model_id = Column(String(255), nullable=False)
+    provider_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("providers.id"),
+        nullable=False
+    )
+    provider_module = Column(String(512), nullable=False)
+    provider_class = Column(String(255), nullable=False)
+    context_window = Column(Integer, nullable=False)
+
+    # Explicit inference parameters for SQL querying
+    temperature = Column(Float, nullable=True)
+    max_tokens = Column(Integer, nullable=True)
+    top_p = Column(Float, nullable=True)
+    frequency_penalty = Column(Float, nullable=True)
+    presence_penalty = Column(Float, nullable=True)
+    seed = Column(Integer, nullable=True)
+
+    # Additional parameters as JSONB (stop sequences, response_format, etc.)
+    additional_params = Column(JSONB, nullable=True)
+    capabilities = Column(JSONB, nullable=True)
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    provider = relationship("ProviderModel", back_populates="model_configs")
+    infer_runs = relationship("InferRunModel", back_populates="model_config")
+
+
 class InferRunModel(Base):
     """InferRun ORM model - metadata for infer runs.
 
     Uses deterministic UUID based on run_name.
     Tracks run_type using RunType enum for proper typing and validation.
-    Stores full configuration objects as JSONB for reproducibility.
+    References normalized config tables via FKs for SQL querying.
     """
     __tablename__ = "infer_runs"
 
@@ -55,14 +127,23 @@ class InferRunModel(Base):
     run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType), nullable=False, default=RunType.TEST)
 
-    # Configuration names
-    model_config_name = Column(String(255), nullable=False)
+    # Configuration FKs (normalized for SQL querying)
+    model_config_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("model_configs.id"),
+        nullable=False
+    )
+    prompt_template_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("prompt_templates.id"),
+        nullable=False
+    )
+
+    # Config names as strings (for reference only, not querying)
     prompt_config_name = Column(String(255), nullable=False)
     io_config_name = Column(String(255), nullable=False)
 
-    # Full configuration objects (JSONB for reproducibility)
-    model_config = Column(JSONB, nullable=False)
-    prompt_config = Column(JSONB, nullable=False)
+    # I/O config as JSONB (less critical for querying)
     io_config = Column(JSONB, nullable=False)
 
     # Input parameters
@@ -80,6 +161,8 @@ class InferRunModel(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
+    model_config = relationship("ModelConfigModel", back_populates="infer_runs")
+    prompt_template = relationship("PromptTemplateModel", back_populates="infer_runs")
     llm_judgements = relationship("LLMJudgementModel", back_populates="infer_run")
 
 

@@ -44,8 +44,8 @@ class DatasetORM(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     
     # Relationships
-    queries = relationship("QueryModel", back_populates="dataset")
-    documents = relationship("DocumentModel", back_populates="dataset")
+    queries = relationship("QueryORM", back_populates="dataset")
+    documents = relationship("DocumentORM", back_populates="dataset")
 
 
 class QueryORM(Base):
@@ -62,8 +62,8 @@ class QueryORM(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     
     # Relationships
-    dataset = relationship("DatasetModel", back_populates="queries")
-    judging_samples = relationship("JudgingSampleModel", back_populates="query")
+    dataset = relationship("DatasetORM", back_populates="queries")
+    judging_samples = relationship("JudgingSampleORM", back_populates="query")
     
     __table_args__ = (
         UniqueConstraint("dataset_id", "external_id", name="uq_query_dataset_external_id"),
@@ -84,8 +84,8 @@ class DocumentORM(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     
     # Relationships
-    dataset = relationship("DatasetModel", back_populates="documents")
-    judging_samples = relationship("JudgingSampleModel", back_populates="document")
+    dataset = relationship("DatasetORM", back_populates="documents")
+    judging_samples = relationship("JudgingSampleORM", back_populates="document")
     
     __table_args__ = (
         UniqueConstraint("dataset_id", "external_id", name="uq_document_dataset_external_id"),
@@ -112,11 +112,11 @@ class IngestRunORM(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     
     # Relationships
-    judging_samples = relationship("JudgingSampleModel", back_populates="ingest_run")
+    judging_samples = relationship("JudgingSampleORM", back_populates="ingest_run")
 
 
 class JudgingSampleORM(Base):
-    """JudgingSample ORM model - query-document pairs with gold relevance scores.
+    """JudgingSample ORM - query-document pairs with gold relevance scores.
 
     Uses deterministic UUID based on dataset + query_external_id + doc_external_id.
     Links to Query, Document, Dataset, and IngestRun via foreign keys.
@@ -135,9 +135,9 @@ class JudgingSampleORM(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
-    query = relationship("QueryModel", back_populates="judging_samples")
-    document = relationship("DocumentModel", back_populates="judging_samples")
-    ingest_run = relationship("IngestRunModel", back_populates="judging_samples")
+    query = relationship("QueryORM", back_populates="judging_samples")
+    document = relationship("DocumentORM", back_populates="judging_samples")
+    ingest_run = relationship("IngestRunORM", back_populates="judging_samples")
     
     __table_args__ = (
         UniqueConstraint("query_id", "document_id", name="uq_query_doc"),

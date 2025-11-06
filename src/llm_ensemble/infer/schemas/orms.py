@@ -5,7 +5,6 @@ Separate from Pydantic schemas to maintain clean architecture.
 
 All models use deterministic UUID primary keys computed via uuid_helpers.
 
-Naming convention: ORM models use "Model" suffix to distinguish from Pydantic schemas.
 Example: LLMJudgementModel (ORM) vs LLMJudgement (Pydantic)
 """
 
@@ -43,7 +42,7 @@ class WarningStage(str, PyEnum):
 
 
 class ProviderORM(Base):
-    """Provider ORM model - LLM provider entity.
+    """Provider ORM- LLM provider entity.
 
     Uses deterministic UUID based on provider name.
     One row per provider (openrouter, ollama, hf).
@@ -55,11 +54,11 @@ class ProviderORM(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
-    model_specs = relationship("ModelSpecModel", back_populates="provider")
+    model_specs = relationship("ModelSpecORM", back_populates="provider")
 
 
 class PromptTemplateORM(Base):
-    """PromptTemplate ORM model - prompt template with name.
+    """PromptTemplate ORM - prompt template with name.
 
     Uses deterministic UUID based on template name.
     Each prompt config (e.g., thomas-simple, thomas-advanced) is a distinct entity,
@@ -77,7 +76,7 @@ class PromptTemplateORM(Base):
 
 
 class ModelSpecORM(Base):
-    """ModelSpec ORM model - model specification with inference parameters.
+    """ModelSpec ORM specification with inference parameters.
 
     Uses deterministic UUID based on spec name.
     Captures experimental parameters (model ID, temperature, etc.) that affect LLM behavior.
@@ -112,12 +111,12 @@ class ModelSpecORM(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
-    provider = relationship("ProviderModel", back_populates="model_specs")
-    infer_runs = relationship("InferRunModel", back_populates="model_spec")
+    provider = relationship("ProviderORM", back_populates="model_specs")
+    infer_runs = relationship("InferRunORM", back_populates="model_spec")
 
 
 class InferRunORM(Base):
-    """InferRun ORM model - metadata for infer runs.
+    """InferRun ORM - metadata for infer runs.
 
     Uses deterministic UUID based on run_name.
     Tracks run_type using RunType enum for proper typing and validation.
@@ -141,10 +140,6 @@ class InferRunORM(Base):
         nullable=False
     )
 
-    # Config names as strings (for reference only, not querying)
-    prompt_config_name = Column(String(255), nullable=False)
-    io_config_name = Column(String(255), nullable=False)
-
     # Input parameters
     input_file = Column(String(1024), nullable=False)
     limit = Column(Integer, nullable=True)
@@ -160,13 +155,13 @@ class InferRunORM(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
-    model_spec = relationship("ModelSpecModel", back_populates="infer_runs")
-    prompt_template = relationship("PromptTemplateModel", back_populates="infer_runs")
-    llm_judgements = relationship("LLMJudgementModel", back_populates="infer_run")
+    model_spec = relationship("ModelSpecORM", back_populates="infer_runs")
+    prompt_template = relationship("PromptTemplateORM", back_populates="infer_runs")
+    llm_judgements = relationship("LLMJudgementORM", back_populates="infer_run")
 
 
 class LLMJudgementORM(Base):
-    """LLMJudgement ORM model - denormalized LLM inference results.
+    """LLMJudgement ORM - denormalized LLM inference results.
 
     Uses deterministic UUID based on judging_sample_id + infer_run_id.
     Links to JudgingSampleModel (from INGEST) and InferRunModel via foreign keys.
@@ -191,7 +186,6 @@ class LLMJudgementORM(Base):
         ForeignKey("infer_runs.id"),
         nullable=False
     )
-    run_name = Column(String(255), nullable=False)  # Denormalized for easy querying
 
     # Request fields (from LLMRequest)
     prompt = Column(Text, nullable=False)
@@ -210,8 +204,8 @@ class LLMJudgementORM(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
-    infer_run = relationship("InferRunModel", back_populates="llm_judgements")
-    warnings = relationship("InferWarningModel", back_populates="judgement")
+    infer_run = relationship("InferRunORM", back_populates="llm_judgements")
+    warnings = relationship("InferWarningORM", back_populates="judgement")
 
     __table_args__ = (
         UniqueConstraint(
@@ -223,7 +217,7 @@ class LLMJudgementORM(Base):
 
 
 class InferWarningORM(Base):
-    """InferWarning ORM model - warnings from all pipeline stages.
+    """InferWarning ORM - warnings from all pipeline stages.
 
     Uses deterministic UUID based on judgement_id + stage + code + message_hash.
     Polymorphic table storing warnings from three stages:
@@ -248,7 +242,7 @@ class InferWarningORM(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
-    judgement = relationship("LLMJudgementModel", back_populates="warnings")
+    judgement = relationship("LLMJudgementORM", back_populates="warnings")
 
     __table_args__ = (
         Index("idx_warning_judgement_stage", "judgement_id", "stage"),

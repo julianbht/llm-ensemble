@@ -46,3 +46,20 @@ class PromptBuilder(ABC):
                        Recoverable issues should be captured as warnings in the returned LLMRequest.
         """
         pass
+
+    @abstractmethod
+    def get_template_text(self) -> str:
+        """Get the raw template text for database storage.
+
+        Returns the unrendered template string (e.g., Jinja template source).
+        This enables storing templates in the database for analysis and filtering.
+
+        Returns:
+            Raw template text (before variable substitution)
+
+        Example:
+            >>> builder = JinjaPromptBuilder()
+            >>> builder.get_template_text()
+            'Query: {{ query }}\\nDocument: {{ document }}'
+        """
+        pass

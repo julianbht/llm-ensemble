@@ -59,7 +59,8 @@ class JinjaPromptBuilder(PromptBuilder):
             )
 
         with open(template_path, "r", encoding="utf-8") as f:
-            self.template = Template(f.read())
+            self.template_text = f.read()
+            self.template = Template(self.template_text)
 
     def build(self, example: JudgingSample) -> LLMRequest:
         """Build a prompt from a judging sample.
@@ -98,3 +99,11 @@ class JinjaPromptBuilder(PromptBuilder):
             prompt = ""
 
         return LLMRequest(prompt=prompt, warnings=warnings)
+
+    def get_template_text(self) -> str:
+        """Get the raw Jinja template text.
+
+        Returns:
+            Raw template string (unrendered Jinja template)
+        """
+        return self.template_text

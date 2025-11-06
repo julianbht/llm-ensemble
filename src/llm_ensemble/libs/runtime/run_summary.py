@@ -9,7 +9,7 @@ provenance without waiting for aggregate metrics.
 from __future__ import annotations
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
 
@@ -48,9 +48,3 @@ class RunSummary(BaseModel):
         ...,
         description="Timestamp when the run completed (captured at end)"
     )
-
-    class Config:
-        """Pydantic config."""
-        json_encoders = {
-            datetime: lambda v: v.isoformat(),
-        }

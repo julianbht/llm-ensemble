@@ -9,7 +9,7 @@ waiting for the run to complete.
 from __future__ import annotations
 from typing import Optional
 from uuid import UUID
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.ingest.schemas.ingest_io_config import IngestIOConfig
@@ -69,10 +69,7 @@ class IngestRunInfo(RunInfo):
         description="Maximum number of samples to process (None = no limit)"
     )
 
-    # Pydantic-specific pattern to make this class immutable
-    class Config:
-        """Pydantic config."""
-        frozen = True  # Make immutable to emphasize this is runtime context
+    model_config = ConfigDict(frozen=True)
     
     @classmethod
     def create(

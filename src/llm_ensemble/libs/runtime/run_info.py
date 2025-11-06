@@ -9,7 +9,7 @@ for aggregate metrics to be computed at the end.
 from __future__ import annotations
 from enum import Enum
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 class RunType(str, Enum):
     """Enumeration of run types for reproducibility tracking."""
@@ -75,7 +75,4 @@ class RunInfo(BaseModel):
         description="Git branch name at time of run (auto-captured)"
     )
 
-    # Pydantic-specific pattern to make this class immutable
-    class Config:
-        """Pydantic config."""
-        frozen = True  # Make immutable to emphasize this is runtime context
+    model_config = ConfigDict(frozen=True)

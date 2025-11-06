@@ -10,7 +10,7 @@ Provides convenience methods for instantiating adapters from module paths.
 
 from __future__ import annotations
 from typing import Any
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from llm_ensemble.libs.schemas.base_config import BaseConfig
 
@@ -31,10 +31,7 @@ class IOConfig(BaseConfig):
     writer_module: str = Field(description="Full Python module path to writer (e.g., 'llm_ensemble.infer.adapters.io.ndjson_judgement_writer')")
     writer_class: str = Field(description="Writer class name in UpperCamelCase (e.g., 'NdjsonJudgementWriter')")
 
-    class Config:
-        """Pydantic config."""
-
-        extra = "forbid"  # Raise error on unexpected fields
+    model_config = ConfigDict(extra="forbid")
 
     def get_reader(self) -> Any:
         """Instantiate and return the reader adapter.

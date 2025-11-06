@@ -5,7 +5,7 @@ controlling pretty printing and log file saving behavior.
 """
 
 from __future__ import annotations
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LoggingConfig(BaseModel):
@@ -60,6 +60,4 @@ class LoggingConfig(BaseModel):
         description="Short identifier for this config (used in run IDs)"
     )
 
-    class Config:
-        """Pydantic config."""
-        extra = "forbid"  # Reject unknown fields
+    model_config = ConfigDict(extra="forbid")

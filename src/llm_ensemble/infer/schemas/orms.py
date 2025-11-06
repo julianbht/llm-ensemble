@@ -59,14 +59,16 @@ class ProviderModel(Base):
 
 
 class PromptTemplateModel(Base):
-    """PromptTemplate ORM model - raw template text (content-addressable).
+    """PromptTemplate ORM model - prompt template with name.
 
-    Uses deterministic UUID based on SHA-256 hash of template_text.
-    Content-addressable storage enables automatic deduplication of identical templates.
+    Uses deterministic UUID based on template name.
+    Each prompt config (e.g., thomas-simple, thomas-advanced) is a distinct entity,
+    even if template text is similar. This ensures we know exactly what was used.
     """
     __tablename__ = "prompt_templates"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    name = Column(String(255), nullable=False, unique=True)
     template_text = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 

@@ -108,10 +108,20 @@ def compute_infer_warning_uuid(
 # Config Entity UUIDs
 # ========================================================================
 
-def compute_prompt_template_uuid(template_text: str) -> uuid.UUID:
-    # Use SHA-256 hash of template text for content-addressable UUID
-    template_hash = hashlib.sha256(template_text.encode('utf-8')).hexdigest()
-    return uuid.uuid5(NAMESPACE_PROMPT_TEMPLATE, template_hash)
+def compute_prompt_template_uuid(template_name: str) -> uuid.UUID:
+    """Compute deterministic UUID for a PromptTemplate.
+
+    Args:
+        template_name: Template name (e.g., "thomas-simple", "thomas-advanced")
+
+    Returns:
+        Deterministic UUID for this prompt template
+
+    Example:
+        >>> compute_prompt_template_uuid("thomas-simple")
+        UUID('...')
+    """
+    return uuid.uuid5(NAMESPACE_PROMPT_TEMPLATE, template_name)
 
 
 def compute_prompt_config_uuid(config_name: str) -> uuid.UUID:

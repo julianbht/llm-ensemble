@@ -57,14 +57,20 @@ class Provider(BaseModel):
 
 
 class PromptTemplate(BaseModel):
-    """PromptTemplate domain entity - the actual prompt text.
+    """PromptTemplate domain entity - the actual prompt text with name.
 
-    Content-addressable - same template text always produces same UUID.
+    Each prompt config (e.g., thomas-simple, thomas-advanced) is a distinct entity.
+    UUID is deterministic from name, not content hash.
     """
 
     id: UUID = Field(
         ...,
-        description="Deterministic UUID computed from template text hash"
+        description="Deterministic UUID computed from template name"
+    )
+
+    name: str = Field(
+        ...,
+        description="Template name (e.g., 'thomas-simple', 'thomas-advanced')"
     )
 
     template_text: str = Field(
@@ -73,24 +79,29 @@ class PromptTemplate(BaseModel):
     )
 
     @classmethod
-    def create(cls, template_text: str) -> "PromptTemplate":
+    def create(cls, name: str, template_text: str) -> "PromptTemplate":
         """Create a PromptTemplate with deterministic UUID.
 
         Args:
+            name: Template name (e.g., "thomas-simple", "thomas-advanced")
             template_text: Raw template string (before variable substitution)
 
         Returns:
-            PromptTemplate instance with computed UUID (content-addressable)
+            PromptTemplate instance with computed UUID from name
 
         Example:
-            >>> template = PromptTemplate.create("Query: {{ query }}\\nDoc: {{ document }}")
-            >>> template.id  # deterministic UUID from hash
+            >>> template = PromptTemplate.create(
+            ...     "thomas-simple",
+            ...     "Query: {{ query }}\\nDoc: {{ document }}"
+            ... )
+            >>> template.id  # deterministic UUID from name
             UUID('...')
         """
-        template_id = compute_prompt_template_uuid(template_text)
+        template_id = compute_prompt_template_uuid(name)
 
         return cls(
             id=template_id,
+            name=name,
             template_text=template_text,
         )
 

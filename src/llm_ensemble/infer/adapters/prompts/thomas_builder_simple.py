@@ -47,10 +47,10 @@ class JinjaPromptBuilder(PromptBuilder):
     def __init__(self):
         """Initialize Jinja prompt builder.
 
-        Loads the template from templates/thomas-et-al-prompt.jinja using PathManager.
+        Loads the template from templates/thomas-simple.jinja using PathManager.
         """
         # Load template using PathManager
-        template_path = PathManager.get_prompt_templates_dir() / "thomas-et-al-prompt.jinja"
+        template_path = PathManager.get_prompt_templates_dir() / "thomas-simple.jinja"
 
         if not template_path.exists():
             raise FileNotFoundError(

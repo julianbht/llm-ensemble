@@ -43,10 +43,10 @@ class ThomasBuilderAdvanced(PromptBuilder):
     def __init__(self):
         """Initialize advanced Thomas et al. prompt builder.
 
-        Loads the template from templates/thomas-et-al-prompt.jinja using PathManager.
+        Loads the template from templates/thomas-advanced.jinja using PathManager.
         """
         # Load template using PathManager
-        template_path = PathManager.get_prompt_templates_dir() / "thomas-et-al-prompt.jinja"
+        template_path = PathManager.get_prompt_templates_dir() / "thomas-advanced.jinja"
 
         if not template_path.exists():
             raise FileNotFoundError(
@@ -59,13 +59,10 @@ class ThomasBuilderAdvanced(PromptBuilder):
             self.template = Template(self.template_text)
 
     def build(self, example: JudgingSample) -> LLMRequest:
-        """Build a prompt from a judging sample with advanced features enabled.
+        """Build a prompt from a judging sample with advanced features.
 
-        Passes query and document text along with feature flags:
-        - query: The query text string
-        - document: The document text string
-        - role: True (enables role description)
-        - aspects: True (enables M, T, O scoring)
+        Passes query and document text to the template.
+        Uses thomas-advanced.jinja which includes role description and M, T, O scoring.
 
         Args:
             example: JudgingSample object containing query and document
@@ -75,12 +72,10 @@ class ThomasBuilderAdvanced(PromptBuilder):
         """
         warnings = []
 
-        # Pass query/document text and enable advanced features
+        # Pass query/document text to template
         template_vars = {
             "query": example.query.query_text,
             "document": example.document.doc_text,
-            "role": True,  # Enable role description
-            "aspects": True,  # Enable aspects-based evaluation (M, T, O)
         }
 
         # Render template (catch rendering errors and convert to warnings)

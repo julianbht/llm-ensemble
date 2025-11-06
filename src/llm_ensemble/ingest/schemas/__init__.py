@@ -11,11 +11,11 @@ from llm_ensemble.ingest.schemas.write_summary import WriteSummary
 
 # ORM models (SQLAlchemy) - separate from Pydantic schemas
 from llm_ensemble.ingest.schemas.orms import (
-    DatasetModel,
-    QueryModel,
-    DocumentModel,
-    IngestRunModel,
-    JudgingSampleModel,
+    DatasetORM,
+    QueryORM,
+    DocumentORM,
+    IngestRunORM,
+    JudgingSampleORM,
 )
 
 __all__ = [
@@ -29,9 +29,9 @@ __all__ = [
     "IngestIOConfig",
     "WriteSummary",
     # ORM models
-    "DatasetModel",
-    "QueryModel",
-    "DocumentModel",
-    "IngestRunModel",
-    "JudgingSampleModel",
+    "DatasetORM",
+    "QueryORM",
+    "DocumentORM",
+    "IngestRunORM",
+    "JudgingSampleORM",
 ]

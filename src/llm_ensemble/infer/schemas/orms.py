@@ -42,7 +42,7 @@ class WarningStage(str, PyEnum):
     PARSER = "PARSER"
 
 
-class ProviderModel(Base):
+class ProviderORM(Base):
     """Provider ORM model - LLM provider entity.
 
     Uses deterministic UUID based on provider name.
@@ -58,7 +58,7 @@ class ProviderModel(Base):
     model_specs = relationship("ModelSpecModel", back_populates="provider")
 
 
-class PromptTemplateModel(Base):
+class PromptTemplateORM(Base):
     """PromptTemplate ORM model - prompt template with name.
 
     Uses deterministic UUID based on template name.
@@ -76,7 +76,7 @@ class PromptTemplateModel(Base):
     infer_runs = relationship("InferRunModel", back_populates="prompt_template")
 
 
-class ModelSpecModel(Base):
+class ModelSpecORM(Base):
     """ModelSpec ORM model - model specification with inference parameters.
 
     Uses deterministic UUID based on spec name.
@@ -116,7 +116,7 @@ class ModelSpecModel(Base):
     infer_runs = relationship("InferRunModel", back_populates="model_spec")
 
 
-class InferRunModel(Base):
+class InferRunORM(Base):
     """InferRun ORM model - metadata for infer runs.
 
     Uses deterministic UUID based on run_name.
@@ -165,7 +165,7 @@ class InferRunModel(Base):
     llm_judgements = relationship("LLMJudgementModel", back_populates="infer_run")
 
 
-class LLMJudgementModel(Base):
+class LLMJudgementORM(Base):
     """LLMJudgement ORM model - denormalized LLM inference results.
 
     Uses deterministic UUID based on judging_sample_id + infer_run_id.
@@ -222,7 +222,7 @@ class LLMJudgementModel(Base):
     )
 
 
-class InferWarningModel(Base):
+class InferWarningORM(Base):
     """InferWarning ORM model - warnings from all pipeline stages.
 
     Uses deterministic UUID based on judgement_id + stage + code + message_hash.

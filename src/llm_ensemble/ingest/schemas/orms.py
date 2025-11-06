@@ -30,7 +30,7 @@ from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
-class DatasetModel(Base):
+class DatasetORM(Base):
     """Dataset ORM model - normalized dataset metadata.
     
     Each dataset represents a distinct IR dataset (e.g., 'msmarco', 'trec-covid').
@@ -48,7 +48,7 @@ class DatasetModel(Base):
     documents = relationship("DocumentModel", back_populates="dataset")
 
 
-class QueryModel(Base):
+class QueryORM(Base):
     """Query ORM model - search queries from IR datasets.
     
     Uses deterministic UUID based on dataset + external_id.
@@ -70,7 +70,7 @@ class QueryModel(Base):
     )
 
 
-class DocumentModel(Base):
+class DocumentORM(Base):
     """Document ORM model - documents from IR datasets.
     
     Uses deterministic UUID based on dataset + external_id.
@@ -92,7 +92,7 @@ class DocumentModel(Base):
     )
 
 
-class IngestRunModel(Base):
+class IngestRunORM(Base):
     """IngestRun ORM model - metadata for ingest runs.
     
     Uses deterministic UUID based on run_name.
@@ -115,7 +115,7 @@ class IngestRunModel(Base):
     judging_samples = relationship("JudgingSampleModel", back_populates="ingest_run")
 
 
-class JudgingSampleModel(Base):
+class JudgingSampleORM(Base):
     """JudgingSample ORM model - query-document pairs with gold relevance scores.
 
     Uses deterministic UUID based on dataset + query_external_id + doc_external_id.

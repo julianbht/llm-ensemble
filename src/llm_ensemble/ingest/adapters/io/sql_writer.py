@@ -13,11 +13,11 @@ from sqlalchemy.orm import Session
 from llm_ensemble.ingest.schemas import JudgingSample, Dataset, Query, Document, WriteSummary
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.orms import (
-    DatasetModel,
-    QueryModel,
-    DocumentModel,
-    IngestRunModel,
-    JudgingSampleModel,
+    DatasetORM,
+    QueryORM,
+    DocumentORM,
+    IngestRunORM,
+    JudgingSampleORM,
 )
 from llm_ensemble.ingest.ports import DatasetWriter
 from llm_ensemble.libs.db import (
@@ -138,11 +138,11 @@ class SqlWriter(DatasetWriter):
         Returns:
             Tuple of (created_count, skipped_count)
         """
-        existing = session.get(DatasetModel, dataset.id)
+        existing = session.get(DatasetORM, dataset.id)
         if existing:
             return (0, 1)
 
-        dataset_model = DatasetModel(
+        dataset_model = DatasetORM(
             id=dataset.id,
             name=dataset.name,
             description=dataset.description,
@@ -160,11 +160,11 @@ class SqlWriter(DatasetWriter):
         Returns:
             Tuple of (created_count, skipped_count)
         """
-        existing = session.get(IngestRunModel, run_info.id)
+        existing = session.get(IngestRunORM, run_info.id)
         if existing:
             return (0, 1)
 
-        ingest_run_model = IngestRunModel(
+        ingest_run_model = IngestRunORM(
             id=run_info.id,
             run_name=run_info.run_name,
             run_type=run_info.run_type,
@@ -217,12 +217,12 @@ class SqlWriter(DatasetWriter):
         skipped = 0
 
         for query in queries.values():
-            existing = session.get(QueryModel, query.id)
+            existing = session.get(QueryORM, query.id)
             if existing:
                 skipped += 1
                 continue
 
-            query_model = QueryModel(
+            query_model = QueryORM(
                 id=query.id,
                 dataset_id=dataset_id,
                 external_id=query.external_id,
@@ -250,12 +250,12 @@ class SqlWriter(DatasetWriter):
         skipped = 0
 
         for document in documents.values():
-            existing = session.get(DocumentModel, document.id)
+            existing = session.get(DocumentORM, document.id)
             if existing:
                 skipped += 1
                 continue
 
-            doc_model = DocumentModel(
+            doc_model = DocumentORM(
                 id=document.id,
                 dataset_id=dataset_id,
                 external_id=document.external_id,
@@ -283,12 +283,12 @@ class SqlWriter(DatasetWriter):
         skipped = 0
 
         for sample in samples:
-            existing = session.get(JudgingSampleModel, sample.id)
+            existing = session.get(JudgingSampleORM, sample.id)
             if existing:
                 skipped += 1
                 continue
 
-            sample_model = JudgingSampleModel(
+            sample_model = JudgingSampleORM(
                 id=sample.id,
                 query_id=sample.query.id,
                 document_id=sample.document.id,

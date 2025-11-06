@@ -27,6 +27,7 @@ NAMESPACE_LLM_REQUEST = uuid.UUID('a0b1c2d3-e4f5-6789-0abc-def123456789')
 NAMESPACE_LLM_RESPONSE = uuid.UUID('b1c2d3e4-f567-890a-bcde-f12345678901')
 NAMESPACE_LLM_SCORE = uuid.UUID('c2d3e4f5-6789-0abc-def1-234567890abc')
 NAMESPACE_LLM_JUDGEMENT = uuid.UUID('d3e4f567-890a-bcde-f123-4567890abcde')
+NAMESPACE_INFER_WARNING = uuid.UUID('1a2b3c4d-5e6f-7890-abcd-ef1234567890')
 NAMESPACE_AGGREGATED_SCORE = uuid.UUID('e4f56789-0abc-def1-2345-67890abcdef1')
 NAMESPACE_AGGREGATED_JUDGEMENT = uuid.UUID('f5678901-abcd-ef12-3456-7890abcdef12')
 
@@ -163,15 +164,76 @@ def compute_judging_sample_uuid(
 
 def compute_ingest_run_uuid(run_name: str) -> uuid.UUID:
     """Compute deterministic UUID for an IngestRunInfo.
-    
+
     Args:
         run_name: Run identifier (timestamp-based)
-    
+
     Returns:
         Deterministic UUID for this ingest run
-    
+
     Example:
         >>> compute_ingest_run_uuid("20240101_120000_abc123")
         UUID('...')
     """
     return uuid.uuid5(NAMESPACE_INGEST_RUN, run_name)
+
+
+# ========================================================================
+# Infer Entity UUIDs
+# ========================================================================
+
+def compute_llm_judgement_uuid(
+    judging_sample_id: uuid.UUID,
+    infer_run_id: uuid.UUID
+) -> uuid.UUID:
+    """Compute deterministic UUID for an LLMJudgement.
+
+    Args:
+        judging_sample_id: UUID of the JudgingSample being judged
+        infer_run_id: UUID of the InferRun
+
+    Returns:
+        Deterministic UUID for this LLM judgement
+
+    Example:
+        >>> sample_id = uuid.UUID('...')
+        >>> run_id = compute_infer_run_uuid("20240101_130000_def456")
+        >>> compute_llm_judgement_uuid(sample_id, run_id)
+        UUID('...')
+    """
+    natural_key = f"{judging_sample_id}:{infer_run_id}"
+    return uuid.uuid5(NAMESPACE_LLM_JUDGEMENT, natural_key)
+
+
+def compute_infer_warning_uuid(
+    judgement_id: uuid.UUID,
+    stage: str,
+    code: str,
+    message: str
+) -> uuid.UUID:
+    """Compute deterministic UUID for an InferWarning.
+
+    Args:
+        judgement_id: UUID of the LLMJudgement this warning belongs to
+        stage: Warning stage (PROMPT/PROVIDER/PARSER)
+        code: Warning code
+        message: Warning message
+
+    Returns:
+        Deterministic UUID for this warning
+
+    Example:
+        >>> judgement_id = uuid.UUID('...')
+        >>> compute_infer_warning_uuid(
+        ...     judgement_id,
+        ...     "PARSER",
+        ...     "FIELD_ERROR",
+        ...     "Missing confidence field"
+        ... )
+        UUID('...')
+    """
+    # Hash message to keep natural key reasonable length
+    import hashlib
+    message_hash = hashlib.sha256(message.encode()).hexdigest()[:16]
+    natural_key = f"{judgement_id}:{stage}:{code}:{message_hash}"
+    return uuid.uuid5(NAMESPACE_INFER_WARNING, natural_key)

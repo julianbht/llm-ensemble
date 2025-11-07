@@ -130,7 +130,6 @@ class OpenRouterAdapter(LLMProvider):
         llm_response = LLMResponse(
             raw_response=raw_response,
             latency_ms=latency_ms,
-            retries=0,
             cost_estimate_usd=None,  # Could be added later
             warnings=warnings,
         )

@@ -130,7 +130,6 @@ class JudgingSampleORM(Base):
     query_id = Column(PG_UUID(as_uuid=True), ForeignKey("queries.id"), nullable=False)
     document_id = Column(PG_UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
     ingest_run_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest_runs.id"), nullable=False)
-    run_name = Column(String(255), nullable=False)  # Denormalized for easy querying
     gold_score = Column(SQLEnum(RelevanceScore), nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 

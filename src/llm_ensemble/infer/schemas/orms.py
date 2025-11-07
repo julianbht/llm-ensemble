@@ -21,7 +21,6 @@ from sqlalchemy import (
     Text,
     ForeignKey,
     UniqueConstraint,
-    Index,
     Enum as SQLEnum,
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
@@ -243,7 +242,3 @@ class InferWarningORM(Base):
 
     # Relationships
     judgement = relationship("LLMJudgementORM", back_populates="warnings")
-
-    __table_args__ = (
-        Index("idx_warning_judgement_stage", "judgement_id", "stage"),
-    )

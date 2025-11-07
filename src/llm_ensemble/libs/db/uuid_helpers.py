@@ -39,16 +39,14 @@ NAMESPACE_AGGREGATED_JUDGEMENT = uuid.UUID('f5678901-abcd-ef12-3456-7890abcdef12
 # Run Info UUIDs
 # ========================================================================
 
-def compute_ingest_run_uuid(run_id: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE_INGEST_RUN, run_id)
+def compute_ingest_run_uuid(run_name: str) -> uuid.UUID:
+    return uuid.uuid5(NAMESPACE_INGEST_RUN, run_name)
 
+def compute_infer_run_uuid(run_name: str) -> uuid.UUID:
+    return uuid.uuid5(NAMESPACE_INFER_RUN, run_name)
 
-def compute_infer_run_uuid(run_id: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE_INFER_RUN, run_id)
-
-
-def compute_aggregate_run_uuid(run_id: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE_AGGREGATE_RUN, run_id)
+def compute_aggregate_run_uuid(run_name: str) -> uuid.UUID:
+    return uuid.uuid5(NAMESPACE_AGGREGATE_RUN, run_name)
 
 
 # ========================================================================
@@ -75,10 +73,6 @@ def compute_judging_sample_uuid(
 ) -> uuid.UUID:
     natural_key = f"{query_id}:{doc_id}"
     return uuid.uuid5(NAMESPACE_JUDGING_SAMPLE, natural_key)
-
-def compute_ingest_run_uuid(run_name: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE_INGEST_RUN, run_name)
-
 
 # ========================================================================
 # Infer Entity UUIDs

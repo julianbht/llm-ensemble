@@ -1,13 +1,3 @@
-"""SQLAlchemy ORM models for INFER CLI.
-
-Pure SQLAlchemy models (NOT SQLModel) for database persistence.
-Separate from Pydantic schemas to maintain clean architecture.
-
-All models use deterministic UUID primary keys computed via uuid_helpers.
-
-Example: LLMJudgementModel (ORM) vs LLMJudgement (Pydantic)
-"""
-
 from __future__ import annotations
 from datetime import datetime
 from enum import Enum as PyEnum
@@ -22,6 +12,7 @@ from sqlalchemy import (
     ForeignKey,
     UniqueConstraint,
     Enum as SQLEnum,
+    ForeignKeyConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
 from sqlalchemy.orm import relationship
@@ -31,21 +22,15 @@ from llm_ensemble.libs.runtime.run_info import RunType
 
 
 class WarningStage(str, PyEnum):
-    """Warning stage enum for InferWarningModel.
-
-    Differentiates warnings from three pipeline stages.
-    """
+    """Warning stage enum for InferWarningORM."""
     PROMPT = "PROMPT"
     PROVIDER = "PROVIDER"
     PARSER = "PARSER"
 
 
 class ProviderORM(Base):
-    """Provider ORM- LLM provider entity.
+    """LLM provider entity (openrouter, ollama, hf, etc.)."""
 
-    Uses deterministic UUID based on provider name.
-    One row per provider (openrouter, ollama, hf).
-    """
     __tablename__ = "providers"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -57,12 +42,8 @@ class ProviderORM(Base):
 
 
 class PromptTemplateORM(Base):
-    """PromptTemplate ORM - prompt template with name.
+    """Prompt template with a stable name."""
 
-    Uses deterministic UUID based on template name.
-    Each prompt config (e.g., thomas-simple, thomas-advanced) is a distinct entity,
-    even if template text is similar. This ensures we know exactly what was used.
-    """
     __tablename__ = "prompt_templates"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -71,31 +52,29 @@ class PromptTemplateORM(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
-    infer_runs = relationship("InferRunModel", back_populates="prompt_template")
+    infer_runs = relationship("InferRunORM", back_populates="prompt_template")
 
 
 class ModelSpecORM(Base):
-    """ModelSpec ORM specification with inference parameters.
+    """Model specification with provider + inference parameters."""
 
-    Uses deterministic UUID based on spec name.
-    Captures experimental parameters (model ID, temperature, etc.) that affect LLM behavior.
-    This is a domain entity, not a config - configs are just YAML plumbing.
-    """
     __tablename__ = "model_specs"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
+
     model_id = Column(String(255), nullable=False)
+
     provider_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("providers.id"),
-        nullable=False
+        nullable=False,
     )
+
     provider_module = Column(String(512), nullable=False)
     provider_class = Column(String(255), nullable=False)
     context_window = Column(Integer, nullable=False)
 
-    # Explicit inference parameters for SQL querying
     temperature = Column(Float, nullable=True)
     max_tokens = Column(Integer, nullable=True)
     top_p = Column(Float, nullable=True)
@@ -103,7 +82,6 @@ class ModelSpecORM(Base):
     presence_penalty = Column(Float, nullable=True)
     seed = Column(Integer, nullable=True)
 
-    # Additional parameters as JSONB (stop sequences, response_format, etc.)
     additional_params = Column(JSONB, nullable=True)
     capabilities = Column(JSONB, nullable=True)
 
@@ -114,41 +92,62 @@ class ModelSpecORM(Base):
     infer_runs = relationship("InferRunORM", back_populates="model_spec")
 
 
-class InferRunORM(Base):
-    """InferRun ORM - metadata for infer runs.
+class ParserSpecORM(Base):
+    """Identifies a concrete response parser implementation."""
 
-    Uses deterministic UUID based on run_name.
-    Tracks run_type using RunType enum for proper typing and validation.
-    References normalized config tables via FKs for SQL querying.
-    """
+    __tablename__ = "parser_specs"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    parser_module = Column(String(512), nullable=False)
+    parser_class = Column(String(255), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "parser_module",
+            "parser_class",
+            name="uq_parser_spec_module_class",
+        ),
+    )
+
+    # Relationships
+    infer_runs = relationship("InferRunORM", back_populates="parser_spec")
+
+
+class InferRunORM(Base):
+    """One concrete evaluation / run configuration."""
+
     __tablename__ = "infer_runs"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType), nullable=False, default=RunType.TEST)
 
-    # Configuration FKs (normalized for SQL querying)
     model_spec_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("model_specs.id"),
-        nullable=False
+        nullable=False,
     )
+
     prompt_template_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("prompt_templates.id"),
-        nullable=False
+        nullable=False,
     )
 
-    # Input parameters
+    parser_spec_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("parser_specs.id"),
+        nullable=False,
+    )
+
     input_file = Column(String(1024), nullable=False)
     limit = Column(Integer, nullable=True)
 
-    # Git reproducibility
     git_sha = Column(String(40), nullable=True)
     git_branch = Column(String(255), nullable=True)
     git_is_dirty = Column(String(10), nullable=True)
 
-    # Optional notes
     notes = Column(Text, nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -156,83 +155,156 @@ class InferRunORM(Base):
     # Relationships
     model_spec = relationship("ModelSpecORM", back_populates="infer_runs")
     prompt_template = relationship("PromptTemplateORM", back_populates="infer_runs")
+    parser_spec = relationship("ParserSpecORM", back_populates="infer_runs")
+
+    parsed_results = relationship("ParsedResultORM", back_populates="infer_run")
     llm_judgements = relationship("LLMJudgementORM", back_populates="infer_run")
 
 
-class LLMJudgementORM(Base):
-    """LLMJudgement ORM - denormalized LLM inference results.
-
-    Uses deterministic UUID based on judging_sample_id + infer_run_id.
-    Links to JudgingSampleModel (from INGEST) and InferRunModel via foreign keys.
-
-    Denormalizes request/response/score fields for simpler queries:
-    - Request fields: prompt
-    - Response fields: raw_response, latency_ms, retries, cost_estimate_usd
-    - Score fields: label, confidence, rationale
-
-    Stores run_name (denormalized) for easy querying without joins.
+class ParsedResultORM(Base):
     """
-    __tablename__ = "llm_judgements"
+    ParsedResult belongs to a specific InferRun.
+
+    Semantics:
+        For a given run (and thus a fixed parser_spec), this is how a raw_response
+        was parsed (label, confidence, rationale).
+
+    Invariant:
+        - infer_run_id -> infer_runs.id
+        - (infer_run_id, raw_response) is unique for de-dup within a run.
+    """
+
+    __tablename__ = "parsed_results"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    judging_sample_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("judging_samples.id"),
-        nullable=False
-    )
+
     infer_run_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("infer_runs.id"),
-        nullable=False
+        nullable=False,
     )
 
-    # Request fields (from LLMRequest)
-    prompt = Column(Text,False)
-
-    # Response fields (from LLMResponse)
     raw_response = Column(Text, nullable=False)
-    latency_ms = Column(Float, nullable=False)
-    cost_estimate_usd = Column(Float, nullable=True)
 
-    # Score fields (from LLMScore - nullable if parse failed)
-    label = Column(Integer, nullable=True)  # 0/1/2/3 or NULL
+    label = Column(Integer, nullable=False)
     confidence = Column(Float, nullable=True)
     rationale = Column(Text, nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
+    __table_args__ = (
+        # Within a given run, same raw_response maps to one ParsedResult
+        UniqueConstraint(
+            "infer_run_id",
+            "raw_response",
+            name="uq_parsed_result_run_response",
+        ),
+        # For composite FK from LLMJudgement to (id, infer_run_id)
+        UniqueConstraint(
+            "id",
+            "infer_run_id",
+            name="uq_parsed_result_id_run",
+        ),
+    )
+
     # Relationships
-    infer_run = relationship("InferRunORM", back_populates="llm_judgements")
-    warnings = relationship("InferWarningORM", back_populates="judgement")
+    infer_run = relationship("InferRunORM", back_populates="parsed_results")
+    llm_judgements = relationship("LLMJudgementORM", back_populates="parsed_result")
+
+
+class LLMJudgementORM(Base):
+    """
+    Normalized judgement per (judging_sample, infer_run).
+
+    - Links a judging_sample to a specific infer_run.
+    - Optionally references a ParsedResult from THAT SAME run.
+    - Stores request/metric info.
+
+    DB-enforced invariant (no triggers):
+        If parsed_result_id is non-null:
+            parsed_results.infer_run_id == llm_judgements.infer_run_id
+    """
+
+    __tablename__ = "llm_judgements"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+
+    judging_sample_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("judging_samples.id"),
+        nullable=False,
+    )
+
+    infer_run_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer_runs.id"),
+        nullable=False,
+    )
+
+    # Optional link to ParsedResult; must belong to the same run (see FK below)
+    parsed_result_id = Column(
+        PG_UUID(as_uuid=True),
+        nullable=True,
+    )
+
+    # Request data
+    prompt = Column(Text, nullable=False)
+
+    # Metrics
+    latency_ms = Column(Float, nullable=False)
+    cost_estimate_usd = Column(Float, nullable=True)
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     __table_args__ = (
+        # One judgement per (sample, run)
         UniqueConstraint(
             "judging_sample_id",
             "infer_run_id",
-            name="uq_judgement_sample_run"
+            name="uq_judgement_sample_run",
         ),
+
+        # Enforce: if parsed_result_id set, it must be from the same infer_run
+        ForeignKeyConstraint(
+            ["parsed_result_id", "infer_run_id"],
+            ["parsed_results.id", "parsed_results.infer_run_id"],
+            name="fk_judgement_parsed_result_same_run",
+            ondelete="SET NULL",
+        ),
+    )
+
+    # Relationships
+    infer_run = relationship("InferRunORM", back_populates="llm_judgements")
+
+    parsed_result = relationship(
+        "ParsedResultORM",
+        back_populates="llm_judgements",
+        primaryjoin=(
+            "and_(LLMJudgementORM.parsed_result_id==ParsedResultORM.id, "
+            "LLMJudgementORM.infer_run_id==ParsedResultORM.infer_run_id)"
+        ),
+    )
+
+    warnings = relationship(
+        "InferWarningORM",
+        back_populates="judgement",
+        cascade="all, delete-orphan",
     )
 
 
 class InferWarningORM(Base):
-    """InferWarning ORM - warnings from all pipeline stages.
+    """Polymorphic warnings for PROMPT / PROVIDER / PARSER stages."""
 
-    Uses deterministic UUID based on judgement_id + stage + code + message_hash.
-    Polymorphic table storing warnings from three stages:
-    - PROMPT: PromptBuilder warnings (rendering errors, validation)
-    - PROVIDER: LLMProvider warnings (API errors, retries)
-    - PARSER: ResponseParser warnings (parse errors, field errors)
-
-    Stores metadata as JSONB for flexible analytics.
-    """
     __tablename__ = "infer_warnings"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
+
     judgement_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("llm_judgements.id"),
-        nullable=False
+        nullable=False,
     )
+
     stage = Column(SQLEnum(WarningStage), nullable=False)
     code = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)

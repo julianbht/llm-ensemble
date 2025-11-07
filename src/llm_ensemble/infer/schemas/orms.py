@@ -192,7 +192,6 @@ class LLMJudgementORM(Base):
     # Response fields (from LLMResponse)
     raw_response = Column(Text, nullable=False)
     latency_ms = Column(Float, nullable=False)
-    retries = Column(Integer, nullable=False)
     cost_estimate_usd = Column(Float, nullable=True)
 
     # Score fields (from LLMScore - nullable if parse failed)

@@ -138,6 +138,11 @@ class InferRunORM(Base):
         ForeignKey("prompt_templates.id"),
         nullable=False
     )
+    parser_spec_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("parser_specs.id"),
+        nullable=False,
+    )
 
     # Input parameters
     input_file = Column(String(1024), nullable=False)

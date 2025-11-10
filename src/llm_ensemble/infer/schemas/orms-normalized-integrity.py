@@ -207,7 +207,6 @@ class ParserSpecORM(Base):
 
     # Relationships
     infer_runs = relationship("InferRunORM", back_populates="parser_spec")
-    parsed_results = relationship("ParsedResultORM", back_populates="parser_spec")
 
 
 class ParsedResultORM(Base):

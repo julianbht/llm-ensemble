@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import (
+    CHAR,
     Column,
     String,
     Integer,
@@ -125,36 +126,37 @@ class InferRunORM(Base):
 
     # Relationships
     model_spec = relationship("ModelSpecORM", back_populates="infer_runs")
+    parser_spec = relationship("ParserSpecORM", back_populates="infer_runs")
     prompt_template = relationship("PromptTemplateORM", back_populates="infer_runs")
     llm_judgements = relationship("LLMJudgementORM", back_populates="infer_run")
 
-
-class LLMResponseOrm(Base):
-    __tablename__ = "parsed_results"
+class ParserSpecORM(Base):
+    """ParserSpec ORM - identifies a concrete response parser implementation.
+    
+    Immutable snapshot:
+    One row per unique (parser_module, parser_class, code_hash).
+    id is a surrogate/deterministic UUID on that triple.
+    """
+    __tablename__ = "parser_specs"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    infer_run_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer_runs.id"),
-        nullable=False,
-    )
-    raw_response = Column(Text, nullable=False)
-    label = Column(Integer, nullable=False)
-    confidence = Column(Float, nullable=True)
-    rationale = Column(Text, nullable=True)
+
+    code_hash = Column(CHAR(64), nullable=False)
+    parser_module = Column(String(512), nullable=False)
+    parser_class = Column(String(255), nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     __table_args__ = (
         UniqueConstraint(
-            "parser_spec_id",
-            "raw_response",
-            name="uq_parsed_result_parser_response",
+            "parser_module",
+            "parser_class",
+            "code_hash",
+            name="uq_parser_spec_identity",
         ),
     )
 
     # Relationships
-    parser_spec = relationship("ParserSpecORM", back_populates="parsed_results")
-    llm_judgements = relationship("LLMJudgementORM", back_populates="parsed_result")
+    infer_runs = relationship("InferRunORM", back_populates="parser_spec")
 
 
 
@@ -193,3 +195,31 @@ class LLMRequestORM(Base):
     # Relationships
     infer_run = relationship("InferRunORM", back_populates="llm_judgements")
     parsed_result = relationship("ParsedResultORM", back_populates="llm_judgements")
+
+
+class LLMResponseOrm(Base):
+    __tablename__ = "parsed_results"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    llm_request_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("llm_requests.id"),
+        nullable=False,
+    )
+    raw_response = Column(Text, nullable=False)
+    label = Column(Integer, nullable=False)
+    confidence = Column(Float, nullable=True)
+    rationale = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "llm_request_id",
+            "raw_response",
+            name="uq_infer_run_raw_response",
+        ),
+    )
+
+    # Relationships
+    parser_spec = relationship("ParserSpecORM", back_populates="parsed_results")
+    llm_judgements = relationship("LLMJudgementORM", back_populates="parsed_result")

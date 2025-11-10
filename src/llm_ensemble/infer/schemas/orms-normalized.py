@@ -5,7 +5,6 @@ All models use deterministic UUID primary keys computed via uuid_helpers.
 """
 
 from __future__ import annotations
-from datetime import datetime, timezone
 
 from sqlalchemy import (
     CHAR,
@@ -62,10 +61,7 @@ class PromptTemplateORM(Base):
 
 class ModelSpecORM(Base):
     """ModelSpec ORM specification with inference parameters.
-
-    Uses deterministic UUID based on spec name.
     Captures experimental parameters (model ID, temperature, etc.) that affect LLM behavior.
-    This is a domain entity, not a config - configs are just YAML plumbing.
     """
     __tablename__ = "model_specs"
 
@@ -77,8 +73,6 @@ class ModelSpecORM(Base):
         ForeignKey("providers.id"),
         nullable=False
     )
-    provider_module = Column(String(512), nullable=False)
-    provider_class = Column(String(255), nullable=False)
     context_window = Column(Integer, nullable=False)
 
     # Explicit inference parameters for SQL querying
@@ -112,13 +106,11 @@ class InferRunORM(Base):
         ForeignKey("model_specs.id"),
         nullable=False,
     )
-
     prompt_template_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("prompt_templates.id"),
         nullable=False,
     )
-
     parser_spec_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("parser_specs.id"),
@@ -172,10 +164,9 @@ class LLMRequestORM(Base):
     __tablename__ = "llm_requests"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    judging_sample_id = Column(PG_UUID(as_uuid=True), ForeignKey("judging_samples.id"), nullable=False)
     prompt = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
-
-    judging_sample_id = Column(PG_UUID(as_uuid=True), ForeignKey("judging_samples.id"), nullable=False)
 
     __table_args__ = (
         UniqueConstraint(
@@ -188,17 +179,12 @@ class LLMRequestORM(Base):
     # Relationships
     calls = relationship("LLMRequestCallORM", back_populates="llm_request")
 
-class LLMRequestCallORM(Base):
-    __tablename__ = "llm_request_calls"
+class LLMCall(Base):
+    __tablename__ = "llm_calls"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-
-    llm_request_id = Column(PG_UUID(as_uuid=True),
-                            ForeignKey("llm_requests.id"),
-                            nullable=False)
-    infer_run_id = Column(PG_UUID(as_uuid=True),
-                          ForeignKey("infer_runs.id"),
-                          nullable=False)
+    llm_request_id = Column(PG_UUID(as_uuid=True),ForeignKey("llm_requests.id"),nullable=False)
+    infer_run_id = Column(PG_UUID(as_uuid=True),ForeignKey("infer_runs.id"),nullable=False)
 
     latency_ms = Column(Float, nullable=False)
     cost_estimate_usd = Column(Float, nullable=True)
@@ -222,10 +208,7 @@ class LLMResponseORM(Base):
     __tablename__ = "llm_responses"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-
-    call_id = Column(PG_UUID(as_uuid=True),
-                     ForeignKey("llm_request_calls.id"),
-                     nullable=False)
+    call_id = Column(PG_UUID(as_uuid=True),ForeignKey("llm_calls.id"),nullable=False)
 
     raw_response = Column(Text, nullable=False)
     label = Column(Integer, nullable=False)

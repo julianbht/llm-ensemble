@@ -26,6 +26,7 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
 
 from llm_ensemble.libs.db import Base
+from llm_ensemble.libs.db.utcnow import utcnow
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.schemas import RelevanceScore
 
@@ -41,7 +42,7 @@ class DatasetORM(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
     description = Column(Text, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
     
     # Relationships
     queries = relationship("QueryORM", back_populates="dataset")
@@ -59,7 +60,7 @@ class QueryORM(Base):
     dataset_id = Column(PG_UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
     external_id = Column(String(255), nullable=False)
     query_text = Column(Text, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
     
     # Relationships
     dataset = relationship("DatasetORM", back_populates="queries")
@@ -81,7 +82,7 @@ class DocumentORM(Base):
     dataset_id = Column(PG_UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
     external_id = Column(String(255), nullable=False)
     doc_text = Column(Text, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
     
     # Relationships
     dataset = relationship("DatasetORM", back_populates="documents")
@@ -109,7 +110,7 @@ class IngestRunORM(Base):
     git_sha = Column(String(40), nullable=True)
     git_branch = Column(String(255), nullable=True)
     git_is_dirty = Column(String(10), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
     
     # Relationships
     judging_samples = relationship("JudgingSampleORM", back_populates="ingest_run")
@@ -131,7 +132,7 @@ class JudgingSampleORM(Base):
     document_id = Column(PG_UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
     ingest_run_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest_runs.id"), nullable=False)
     gold_score = Column(SQLEnum(RelevanceScore), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
     query = relationship("QueryORM", back_populates="judging_samples")

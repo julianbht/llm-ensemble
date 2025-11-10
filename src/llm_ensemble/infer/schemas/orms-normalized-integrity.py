@@ -27,7 +27,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
 from sqlalchemy.orm import relationship
 
-from llm_ensemble.libs.db import Base
+from llm_ensemble.libs.db import Base, utcnow
 from llm_ensemble.libs.runtime.run_info import RunType
 
 
@@ -41,7 +41,7 @@ class ProviderORM(Base):
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
     model_specs = relationship("ModelSpecORM", back_populates="provider")
@@ -59,7 +59,7 @@ class PromptTemplateORM(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
     template_text = Column(Text, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
     infer_runs = relationship("InferRunModel", back_populates="prompt_template")
@@ -98,7 +98,7 @@ class ModelSpecORM(Base):
     additional_params = Column(JSONB, nullable=True)
     capabilities = Column(JSONB, nullable=True)
 
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
     provider = relationship("ProviderORM", back_populates="model_specs")
@@ -175,7 +175,7 @@ class InferRunORM(Base):
 
     notes = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
     model_spec = relationship("ModelSpecORM", back_populates="infer_runs")
@@ -195,7 +195,7 @@ class ParserSpecORM(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     parser_module = Column(String(512), nullable=False)
     parser_class = Column(String(255), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
     __table_args__ = (
         UniqueConstraint(
@@ -232,7 +232,7 @@ class ParsedResultORM(Base):
     confidence = Column(Float, nullable=True)
     rationale = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
     __table_args__ = (
         UniqueConstraint(
@@ -286,7 +286,7 @@ class LLMJudgementORM(Base):
     latency_ms = Column(Float, nullable=False)
     cost_estimate_usd = Column(Float, nullable=True)
 
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
     __table_args__ = (
         UniqueConstraint(

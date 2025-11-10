@@ -59,4 +59,6 @@ __all__ = [
     "compute_llm_judgement_uuid",
     "compute_aggregated_score_uuid",
     "compute_aggregated_judgement_uuid",
+    # Other db helpers
+    "utcnow",
 ]

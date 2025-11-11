@@ -24,6 +24,7 @@ from sqlalchemy.orm import relationship
 
 from llm_ensemble.libs.db import Base, utcnow
 from llm_ensemble.libs.runtime.run_info import RunType
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 class ProviderORM(Base):
@@ -130,15 +131,10 @@ class InferRunORM(Base):
     model_spec = relationship("ModelSpecORM", back_populates="infer_runs")
     prompt_template = relationship("PromptTemplateORM", back_populates="infer_runs")
     parser_spec = relationship("ParserSpecORM", back_populates="infer_runs")
-    calls = relationship("LLMRequestCallORM", back_populates="infer_run")
+    calls = relationship("LLMCallORM", back_populates="infer_run")
 
 
 class ParserSpecORM(Base):
-    """ParserSpec ORM - identifies a concrete response parser implementation.
-
-    Immutable snapshot:
-    One row per unique (parser_module, parser_class, code_hash).
-    """
     __tablename__ = "parser_specs"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -157,15 +153,21 @@ class ParserSpecORM(Base):
         ),
     )
 
-    # One parser spec can be used by many runs
     infer_runs = relationship("InferRunORM", back_populates="parser_spec")
+
+    # One parser spec can be used by many parsed responses
+    responses = relationship("LLMResponseORM", back_populates="parser_spec")
 
 
 class LLMRequestORM(Base):
     __tablename__ = "llm_requests"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    judging_sample_id = Column(PG_UUID(as_uuid=True), ForeignKey("judging_samples.id"), nullable=False)
+    judging_sample_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("judging_samples.id"),
+        nullable=False,
+    )
     prompt = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
@@ -177,15 +179,31 @@ class LLMRequestORM(Base):
         ),
     )
 
-    # Relationships
-    calls = relationship("LLMRequestCallORM", back_populates="llm_request")
+    calls = relationship("LLMCallORM", back_populates="llm_request")
 
-class LLMCall(Base):
+
+class LLMCallORM(Base):
     __tablename__ = "llm_calls"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    llm_request_id = Column(PG_UUID(as_uuid=True),ForeignKey("llm_requests.id"),nullable=False)
-    infer_run_id = Column(PG_UUID(as_uuid=True),ForeignKey("infer_runs.id"),nullable=False)
+
+    llm_request_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("llm_requests.id"),
+        nullable=False,
+    )
+    infer_run_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer_runs.id"),
+        nullable=False,
+    )
+
+    # Each call has at most one (possibly shared) response
+    response_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("llm_responses.id"),
+        nullable=True,
+    )
 
     latency_ms = Column(Float, nullable=False)
     cost_estimate_usd = Column(Float, nullable=True)
@@ -199,23 +217,40 @@ class LLMCall(Base):
         ),
     )
 
-    # Relationships
     llm_request = relationship("LLMRequestORM", back_populates="calls")
     infer_run = relationship("InferRunORM", back_populates="calls")
-    responses = relationship("LLMResponseORM", back_populates="call")
+    response = relationship("LLMResponseORM", back_populates="calls")
+
 
 
 class LLMResponseORM(Base):
     __tablename__ = "llm_responses"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    call_id = Column(PG_UUID(as_uuid=True),ForeignKey("llm_calls.id"),nullable=False)
 
+    parser_spec_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("parser_specs.id"),
+        nullable=False,
+    )
     raw_response = Column(Text, nullable=False)
-    label = Column(Integer, nullable=False)
+
+    # Derived / parsed info; functionally dependent on (parser_spec_id, raw_response)
+    label = Column(SQLEnum(RelevanceScore), nullable=False)
     confidence = Column(Float, nullable=True)
     rationale = Column(Text, nullable=True)
+
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
-    # Relationships
-    call = relationship("LLMRequestCallORM", back_populates="responses")
+    __table_args__ = (
+        UniqueConstraint(
+            "parser_spec_id",
+            "raw_response",
+            name="uq_response_parser_raw",
+        ),
+    )
+
+    # One response can be reused by many calls
+    calls = relationship("LLMCallORM", back_populates="response")
+    parser_spec = relationship("ParserSpecORM", back_populates="responses")
+

@@ -22,31 +22,16 @@ class RunSummaryBuilder:
     """Builder for constructing CLI-specific run summaries step-by-step.
 
     This implements the Builder pattern, allowing domain services to:
-    1. Initialize with RunInfo (immutable runtime context from orchestrator)
-    2. Set start_time when processing begins
-    3. Add aggregate metrics incrementally as they're computed
-    4. Finalize to create the immutable Pydantic RunSummary at the end
+    1. Set start_time when processing begins
+    2. Add aggregate metrics incrementally as they're computed
+    3. Finalize to create the immutable Pydantic RunSummary at the end
 
-    The builder starts with a RunInfo object (created by orchestrator) which
-    contains all immutable context. The builder then collects timing and
-    aggregate statistics during execution.
+    The builder collects timing and aggregate statistics during execution.
+    RunInfo is persisted separately to avoid duplication in the summary.
 
     Example:
-        >>> # Orchestrator creates RunInfo
-        >>> run_info = InferRunInfo(
-        ...     run_name="20250128_143022_gpt-oss-20b",
-        ...     cli_name="infer",
-        ...     run_type="test",
-        ...     git_sha="abc123",
-        ...     git_clean=True,
-        ...     git_branch="master",
-        ...     model_config_name="gpt-oss-20b",
-        ...     model_cfg=model_config,
-        ...     ...
-        ... )
-        >>>
-        >>> # Domain service creates builder with RunInfo
-        >>> builder = RunSummaryBuilder(run_info)
+        >>> # Domain service creates builder
+        >>> builder = RunSummaryBuilder()
         >>>
         >>> # Domain service sets start time when processing begins
         >>> builder.set_start_time()
@@ -61,17 +46,10 @@ class RunSummaryBuilder:
         >>> summary = builder.finalize(InferRunSummary)
     """
 
-    def __init__(self, run_info: RunInfo):
-        """Initialize run summary builder with immutable runtime context.
-
-        Args:
-            run_info: Immutable runtime context (created by orchestrator before run starts)
-        """
-        self.run_info = run_info
-
-        # Initialize fields with RunInfo and timing placeholders
+    def __init__(self):
+        """Initialize run summary builder for collecting runtime metrics."""
+        # Initialize fields with timing placeholders
         self._fields: dict[str, Any] = {
-            "run_info": run_info,
             "start_time": None,  # Set by domain service when processing begins
             "end_time": None,    # Set during finalize()
         }
@@ -128,16 +106,17 @@ class RunSummaryBuilder:
 
 
 def write_standalone_summary(summary: BaseModel, run_dir: Any) -> Any:
-    """Write a standalone summary.json for human convenience (optional).
+    """Write a standalone summary.json for quick inspection of runtime metrics.
 
-    NOTE: This is for quick inspection only. The source of truth for summaries
-    is embedded in the domain data (e.g., LLMJudgements contain run_info).
-    I/O adapters are responsible for persisting summaries with domain data.
+    This writes a simplified metrics-only summary for human convenience.
+    The summary contains only runtime statistics (timing, counts, errors, etc.)
+    without configuration duplication. Configuration is persisted separately
+    (e.g., infer_run_info.json).
 
-    This function is provided as a convenience for:
-    - Quick inspection of run metadata without loading all samples
+    This function is provided for:
+    - Quick inspection of run performance without loading entity files
     - Debugging and exploration
-    - Compatibility with tools expecting summary.json files
+    - At-a-glance view of runtime metrics
 
     Args:
         summary: Pydantic RunSummary object (base or CLI-specific subclass)
@@ -147,7 +126,7 @@ def write_standalone_summary(summary: BaseModel, run_dir: Any) -> Any:
         Path to the written summary file
 
     Example:
-        >>> # Optionally write standalone summary for convenience
+        >>> # Write simplified metrics-only summary
         >>> summary_path = write_standalone_summary(summary, run_dir)
     """
     from pathlib import Path

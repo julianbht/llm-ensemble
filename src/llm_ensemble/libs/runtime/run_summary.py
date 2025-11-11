@@ -23,20 +23,11 @@ class RunSummary(BaseModel):
     - Aggregate statistics (counts, averages, summaries)
 
     This is separate from RunInfo (which contains immutable runtime context).
-    The RunInfo can be embedded in domain objects immediately, while RunSummary
-    is only computed and written at the end of the run.
+    The RunInfo is persisted separately (e.g., infer_run_info.json) to avoid
+    duplication. The summary contains only runtime metrics for quick inspection.
 
     CLI-specific summaries should extend this class to add domain-specific metrics.
-
-    The RunSummary includes the full RunInfo for convenience, so the summary
-    contains both the runtime context and the post-run metrics in one place.
     """
-
-    # Embed full run info for convenience (summary contains both context + metrics)
-    run_info: RunInfo = Field(
-        ...,
-        description="Immutable runtime context (known before run starts)"
-    )
 
     # Timing (computed during/after run)
     start_time: datetime = Field(

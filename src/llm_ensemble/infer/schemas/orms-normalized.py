@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from sqlalchemy import (
     CHAR,
+    Boolean,
     Column,
     String,
     Integer,
@@ -121,7 +122,7 @@ class InferRunORM(Base):
     limit = Column(Integer, nullable=True)
     git_sha = Column(String(40), nullable=True)
     git_branch = Column(String(255), nullable=True)
-    git_is_dirty = Column(String(10), nullable=True)
+    git_is_dirty = Column(Boolean, nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 

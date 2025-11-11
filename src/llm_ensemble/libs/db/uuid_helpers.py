@@ -32,6 +32,8 @@ NAMESPACE_PROMPT_TEMPLATE = uuid.UUID('2b3c4d5e-6f78-9012-3456-789abcdef012')
 NAMESPACE_PROMPT_CONFIG = uuid.UUID('3c4d5e6f-7890-1234-5678-90abcdef1234')
 NAMESPACE_MODEL_SPEC = uuid.UUID('4d5e6f78-9012-3456-7890-1abcdef12345')
 NAMESPACE_PROVIDER = uuid.UUID('5e6f7890-1234-5678-9012-3abcdef12346')
+NAMESPACE_PARSER_SPEC = uuid.UUID('6f789012-3456-7890-abcd-1234def56789')
+NAMESPACE_LLM_CALL = uuid.UUID('789012ab-cdef-1234-5678-90abcdef1234')
 NAMESPACE_AGGREGATED_SCORE = uuid.UUID('e4f56789-0abc-def1-2345-67890abcdef1')
 NAMESPACE_AGGREGATED_JUDGEMENT = uuid.UUID('f5678901-abcd-ef12-3456-7890abcdef12')
 
@@ -116,3 +118,73 @@ def compute_model_spec_uuid(spec_name: str) -> uuid.UUID:
 
 def compute_provider_uuid(provider_name: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE_PROVIDER, provider_name)
+
+
+def compute_parser_spec_uuid(parser_module: str, parser_class: str, code_hash: str) -> uuid.UUID:
+    """Compute deterministic UUID for a parser spec.
+
+    Args:
+        parser_module: Full module path (e.g., 'llm_ensemble.infer.adapters.parsers.json_response_parser')
+        parser_class: Class name (e.g., 'JsonResponseParser')
+        code_hash: SHA256 hash of parser code
+
+    Returns:
+        Deterministic UUID for this parser spec
+    """
+    natural_key = f"{parser_module}:{parser_class}:{code_hash}"
+    return uuid.uuid5(NAMESPACE_PARSER_SPEC, natural_key)
+
+
+def compute_llm_request_uuid(prompt: str, judging_sample_id: uuid.UUID) -> uuid.UUID:
+    """Compute deterministic UUID for an LLM request.
+
+    Same prompt + same sample = same request UUID (deduplication).
+
+    Args:
+        prompt: Rendered prompt text
+        judging_sample_id: UUID of the judging sample
+
+    Returns:
+        Deterministic UUID for this request
+    """
+    # Hash prompt to keep natural key reasonable length
+    prompt_hash = hashlib.sha256(prompt.encode()).hexdigest()
+    natural_key = f"{judging_sample_id}:{prompt_hash}"
+    return uuid.uuid5(NAMESPACE_LLM_REQUEST, natural_key)
+
+
+def compute_llm_response_uuid(parser_spec_id: uuid.UUID, raw_response: str) -> uuid.UUID:
+    """Compute deterministic UUID for an LLM response.
+
+    Same parser + same raw text = same response UUID (deduplication).
+    Parsed fields (label, confidence, rationale) are functionally dependent
+    on (parser_spec_id, raw_response), so they're stored together.
+
+    Args:
+        parser_spec_id: UUID of the parser spec used
+        raw_response: Raw LLM output text
+
+    Returns:
+        Deterministic UUID for this response
+    """
+    # Hash raw response to keep natural key reasonable length
+    response_hash = hashlib.sha256(raw_response.encode()).hexdigest()
+    natural_key = f"{parser_spec_id}:{response_hash}"
+    return uuid.uuid5(NAMESPACE_LLM_RESPONSE, natural_key)
+
+
+def compute_llm_call_uuid(llm_request_id: uuid.UUID, infer_run_id: uuid.UUID) -> uuid.UUID:
+    """Compute deterministic UUID for an LLM call.
+
+    Represents a specific request made during a specific run.
+    Same request in different runs = different calls.
+
+    Args:
+        llm_request_id: UUID of the request
+        infer_run_id: UUID of the infer run
+
+    Returns:
+        Deterministic UUID for this call
+    """
+    natural_key = f"{llm_request_id}:{infer_run_id}"
+    return uuid.uuid5(NAMESPACE_LLM_CALL, natural_key)

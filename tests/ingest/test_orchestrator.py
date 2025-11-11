@@ -80,7 +80,7 @@ class TestRunIngestOfficialFlow:
                     on_write(write_summary)
 
                 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
-                builder = RunSummaryBuilder(run_info)
+                builder = RunSummaryBuilder()
                 builder.set_start_time()
                 builder.add("sample_count", 5)
                 builder.add("write_summary", write_summary)
@@ -121,11 +121,11 @@ class TestRunIngestOfficialFlow:
         summary_file = expected_run_dir / "summary.json"
         assert summary_file.exists()
 
-        # Verify summary content
+        # Verify summary content (run_info is now persisted separately)
         with open(summary_file) as f:
             summary = json.load(f)
             assert summary["sample_count"] == 5
-            assert summary["run_info"]["run_type"] == "official"
+            assert "run_info" not in summary  # run_info is persisted separately now
 
     def test_run_metadata_completeness(
         self,
@@ -163,7 +163,7 @@ class TestRunIngestOfficialFlow:
                     on_write(write_summary)
 
                 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
-                builder = RunSummaryBuilder(run_info)
+                builder = RunSummaryBuilder()
                 builder.set_start_time()
                 builder.add("sample_count", 10)
                 builder.add("write_summary", write_summary)
@@ -218,29 +218,20 @@ class TestRunIngestOfficialFlow:
         assert captured_run_info.io_config.dataset_name == "test-dataset"
         assert captured_run_info.input_path == str(input_dir)
         
-        # Verify summary.json contains all metadata
+        # Verify summary.json has aggregate metrics (no run_info)
+        # Note: run_info is now persisted separately by writers (ingest_run_info.json)
+        # This test uses a fake service, so we only verify summary.json content
         run_dir = get_run_dir("ingest", "metadata_test_run", official=True)
         summary_file = run_dir / "summary.json"
-        
+
         with open(summary_file) as f:
             summary = json.load(f)
-            
-            # Verify all metadata is persisted
-            run_info = summary["run_info"]
-            assert run_info["run_name"] == "metadata_test_run"
-            assert run_info["run_type"] == "official"
-            assert run_info["notes"] == test_notes
-            assert run_info["limit"] == 100
-            
-            # Git metadata should be present (actual values may vary)
-            assert "git_sha" in run_info
-            assert "git_clean" in run_info
-            assert "git_branch" in run_info
-            assert len(run_info["git_sha"]) > 0
-            assert len(run_info["git_branch"]) > 0
-            
-            assert run_info["io_config_name"] == "test_config"
-            assert run_info["input_path"] == str(input_dir)
+            assert "sample_count" in summary
+            assert summary["sample_count"] == 10
+            assert "run_info" not in summary  # run_info is persisted separately by writers now
+
+        # The captured_run_info already verifies all metadata was passed correctly to the domain service
+        # Writers are responsible for persisting run_info to ingest_run_info.json (tested separately)
             
             # Verify timing metadata exists
             assert "start_time" in summary

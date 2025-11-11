@@ -7,26 +7,25 @@ from pydantic import BaseModel, Field
 from llm_ensemble.ingest.schemas.query import Query
 from llm_ensemble.ingest.schemas.document import Document
 from llm_ensemble.libs.schemas import RelevanceScore  # Shared schema
-from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.db import compute_judging_sample_uuid
 
 
 class JudgingSample(BaseModel):
-    """A single judging sample: query + document + gold relevance score + run info.
+    """A single judging sample: query + document + gold relevance score - pure domain entity.
 
     This is the canonical normalized unit for LLM relevance judging.
-    Represents a single query-document pair with its ground truth relevance label,
-    along with a reference to the ingest run info (Many-to-One relationship).
+    Represents a single query-document pair with its ground truth relevance label.
 
-    Each sample carries complete provenance metadata (via run_info) from the moment
-    it's created, without waiting for aggregate statistics at the end of the run.
-    
-    The id field is a mandatory deterministic UUID computed from dataset + query + document.
+    The id field is a mandatory deterministic UUID computed from query_id + document_id.
+
+    Note: The run_info relationship is NOT stored on the domain entity - it's only used
+    during creation for UUID computation if needed and later handled at the persistence layer.
+    This keeps the domain entity clean and free from ORM concerns.
     """
 
     id: UUID = Field(
         ...,
-        description="Deterministic UUID computed from dataset + query_external_id + doc_external_id"
+        description="Deterministic UUID computed from query_id + document_id"
     )
 
     query: Query = Field(
@@ -44,19 +43,31 @@ class JudgingSample(BaseModel):
         description="Ground truth relevance score from the original dataset"
     )
 
-    run_info: IngestRunInfo = Field(
-        ...,
-        description="Reference to the ingest run info (Many-to-One relationship)"
-    )
-    
     @classmethod
     def create(
         cls,
         query: Query,
+        document: Document,
         gold_score: RelevanceScore,
-        run_info: IngestRunInfo,
-        document: Document
-    ) -> JudgingSample:
+    ) -> "JudgingSample":
+        """Create a JudgingSample with computed deterministic UUID.
+
+        Args:
+            query: Query entity
+            document: Document entity
+            gold_score: Ground truth relevance score
+
+        Returns:
+            JudgingSample instance with computed id
+
+        Example:
+            >>> from llm_ensemble.ingest.schemas import Dataset, Query, Document, JudgingSample
+            >>> from llm_ensemble.libs.schemas import RelevanceScore
+            >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
+            >>> query = Query.create(dataset, "q123", "what is python?")
+            >>> doc = Document.create(dataset, "d456", "Python is a programming language.")
+            >>> sample = JudgingSample.create(query, doc, RelevanceScore.RELEVANT)
+        """
         sample_id = compute_judging_sample_uuid(
             query.id,
             document.id
@@ -66,5 +77,4 @@ class JudgingSample(BaseModel):
             query=query,
             document=document,
             gold_score=gold_score,
-            run_info=run_info
         )

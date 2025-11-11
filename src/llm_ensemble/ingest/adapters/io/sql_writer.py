@@ -2,11 +2,17 @@
 
 Uses pure SQLAlchemy ORM models with deterministic UUIDs.
 Auto-creates tables on first write and returns write summary for transparent logging.
+
+This adapter contains the mapping layer that handles ORM concerns:
+- Extracting dataset information from run_info for foreign key relationships
+- Mapping pure domain entities to ORM models
+- Handling persistence with run_info context
 """
 
 from __future__ import annotations
 from pathlib import Path
 from typing import List, Dict, Tuple
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -28,17 +34,25 @@ from llm_ensemble.libs.db import (
 
 
 class SqlWriter(DatasetWriter):
-    """SQL writer adapter for judging samples.
+    """SQL writer adapter for judging samples - handles ORM mapping.
 
     Writes judging samples to SQL database using pure SQLAlchemy ORM.
+    Contains the mapping layer that extracts dataset/run context from run_info
+    and handles ORM relationships.
 
     Features:
     - Auto-creates tables on first write
-    - Deterministic UUIDs for all entities (already in Pydantic schemas)
+    - Deterministic UUIDs for all entities (computed in domain layer)
     - Central shared database across all runs for data accumulation
     - Idempotent writes via merge (insert or update if exists)
     - Uses session_context() for transaction management
     - Returns WriteSummary for transparent logging (separation of concerns)
+
+    Mapping responsibilities:
+    - Receives run_info alongside samples (contains dataset config)
+    - Reconstructs Dataset entity from config for persistence
+    - Maps pure domain entities (Query, Document, JudgingSample) to ORM models
+    - Handles foreign key relationships at persistence time
 
     Database URL is read from DATABASE_URL environment variable.
     Defaults to sqlite:///artifacts/llm_ensemble.db if not set.
@@ -54,14 +68,15 @@ class SqlWriter(DatasetWriter):
         self.database_url = database_url
         self.engine = get_engine(database_url)
 
-    def write(self, samples: List[JudgingSample], run_dir: Path) -> WriteSummary:
+    def write(self, samples: List[JudgingSample], run_dir: Path, run_info: IngestRunInfo) -> WriteSummary:
         """Write judging samples to SQL database.
 
         Idempotent operation - merges entities (insert if new, update if exists).
 
         Args:
-            samples: List of judging samples (Pydantic schemas with id fields set)
+            samples: List of judging samples (pure domain entities with id fields set)
             run_dir: Run directory (not used by SQL writer - writes to centralized database)
+            run_info: Immutable runtime context (contains dataset config, used for mapping)
 
         Returns:
             WriteSummary tracking what was created vs. skipped
@@ -90,9 +105,12 @@ class SqlWriter(DatasetWriter):
         # Write to database in transaction
         try:
             with session_context(self.engine) as session:
-                # Extract metadata from first sample (all samples from same dataset/run)
-                dataset = samples[0].query.dataset
-                run_info = samples[0].run_info
+                # MAPPING LAYER: Reconstruct Dataset entity from run_info config
+                # All samples come from the same dataset, so we extract it once from config
+                dataset = Dataset.create(
+                    name=run_info.io_config.dataset_name,
+                    description=run_info.io_config.dataset_description
+                )
 
                 # Save entities in dependency order
                 datasets_created, datasets_skipped = self._save_dataset(session, dataset)
@@ -180,7 +198,7 @@ class SqlWriter(DatasetWriter):
 
     def _collect_unique_entities(
         self, samples: List[JudgingSample]
-    ) -> Tuple[Dict[str, Query], Dict[str, Document]]:
+    ) -> Tuple[Dict[UUID, Query], Dict[UUID, Document]]:
         """Collect unique queries and documents from samples batch.
 
         Args:
@@ -189,8 +207,8 @@ class SqlWriter(DatasetWriter):
         Returns:
             Tuple of (unique_queries_dict, unique_documents_dict) keyed by UUID
         """
-        unique_queries = {}
-        unique_documents = {}
+        unique_queries: Dict[UUID, Query] = {}
+        unique_documents: Dict[UUID, Document] = {}
 
         for sample in samples:
             if sample.query.id not in unique_queries:
@@ -201,14 +219,14 @@ class SqlWriter(DatasetWriter):
         return unique_queries, unique_documents
 
     def _save_queries(
-        self, session: Session, queries: Dict[str, Query], dataset_id: str
+        self, session: Session, queries: Dict[UUID, Query], dataset_id: UUID
     ) -> Tuple[int, int]:
         """Save query entities to database.
 
         Args:
             session: SQLAlchemy session
             queries: Dictionary of Query Pydantic schemas keyed by ID
-            dataset_id: Parent dataset UUID
+            dataset_id: Parent dataset UUID (for foreign key)
 
         Returns:
             Tuple of (created_count, skipped_count)
@@ -234,14 +252,14 @@ class SqlWriter(DatasetWriter):
         return (created, skipped)
 
     def _save_documents(
-        self, session: Session, documents: Dict[str, Document], dataset_id: str
+        self, session: Session, documents: Dict[UUID, Document], dataset_id: UUID
     ) -> Tuple[int, int]:
         """Save document entities to database.
 
         Args:
             session: SQLAlchemy session
             documents: Dictionary of Document Pydantic schemas keyed by ID
-            dataset_id: Parent dataset UUID
+            dataset_id: Parent dataset UUID (for foreign key)
 
         Returns:
             Tuple of (created_count, skipped_count)

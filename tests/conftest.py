@@ -383,6 +383,7 @@ def fake_writer_factory():
         ...     assert len(writer.written_samples) == 2
         ...     assert summary.samples_created == 2
     """
+    from typing import Any
     from llm_ensemble.ingest.ports import DatasetWriter
     from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary
 
@@ -391,11 +392,11 @@ def fake_writer_factory():
 
         def __init__(self):
             self.written_samples: list[JudgingSample] = []
-            self.write_calls: list[tuple[list[JudgingSample], Path]] = []
+            self.write_calls: list[tuple[list[JudgingSample], Path, Any]] = []
 
-        def write(self, samples: list[JudgingSample], run_dir: Path) -> WriteSummary:
+        def write(self, samples: list[JudgingSample], run_dir: Path, run_info: Any) -> WriteSummary:
             # Record the call
-            self.write_calls.append((samples, run_dir))
+            self.write_calls.append((samples, run_dir, run_info))
             # Store samples
             self.written_samples.extend(samples)
             # Return summary

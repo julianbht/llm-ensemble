@@ -8,41 +8,39 @@ from llm_ensemble.ingest.schemas.dataset import Dataset
 
 
 class Query(BaseModel):
-    """Represents a search query in an IR dataset.
+    """Represents a search query in an IR dataset - pure domain entity.
 
     Uses external_id to clearly indicate this is the dataset's original identifier,
     not an internal system ID.
-    
+
     The id field is a mandatory deterministic UUID computed from dataset + external_id.
-    The dataset field is a full Dataset entity reference.
+
+    Note: The dataset relationship is NOT stored on the domain entity - it's only used
+    during creation for UUID computation and later handled at the persistence layer.
     """
 
     id: UUID = Field(
         ...,
         description="Deterministic UUID computed from dataset + external_id"
     )
-    dataset: Dataset = Field(
-        ...,
-        description="Dataset entity this query belongs to"
-    )
     external_id: str = Field(
         ...,
         description="Query identifier from the original dataset (e.g., 'q123', 'msmarco_42')"
     )
     query_text: str = Field(..., description="The natural language query text")
-    
+
     @classmethod
     def create(cls, dataset: Dataset, external_id: str, query_text: str) -> "Query":
         """Create a Query with computed deterministic UUID.
-        
+
         Args:
-            dataset: Dataset entity
+            dataset: Dataset entity (used for UUID computation only, not stored)
             external_id: Query's external identifier
             query_text: Query text
-        
+
         Returns:
-            Query instance with computed id and dataset set
-        
+            Query instance with computed id
+
         Example:
             >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
             >>> query = Query.create(dataset, "q123", "what is python?")
@@ -50,7 +48,6 @@ class Query(BaseModel):
         query_id = compute_query_uuid(dataset.id, external_id)
         return cls(
             id=query_id,
-            dataset=dataset,
             external_id=external_id,
-            query_text=query_text
+            query_text=query_text,
         )

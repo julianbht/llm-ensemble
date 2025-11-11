@@ -20,8 +20,7 @@ from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 class IngestionService:
     """Domain service for coordinating data ingestion pipeline.
 
-    Pure business logic that orchestrates reading raw datasets, attaching
-    manifest to each sample (Many-to-One relationship), and writing output.
+    Pure business logic that orchestrates reading raw datasets and writing output.
     Depends only on port abstractions, enabling complete independence from
     infrastructure concerns.
     """
@@ -35,7 +34,7 @@ class IngestionService:
 
         Args:
             sample_reader: Port for reading raw datasets
-            dataset_writer: Port for writing judging samples with manifest
+            dataset_writer: Port for writing judging samples
         """
         self.sample_reader = sample_reader
         self.dataset_writer = dataset_writer
@@ -54,13 +53,13 @@ class IngestionService:
         Pure business logic that coordinates:
         1. Creating run summary builder with timing
         2. Reading RawJudgingSample DTOs from raw dataset via SampleReader port
-        3. Attaching run_info to each sample (Many-to-One relationship) to create JudgingSamples
+        3. Converting RawJudgingSamples to JudgingSamples (pure domain entities)
         4. Writing JudgingSamples via DatasetWriter port (writer determines output structure)
         5. Calculating summary statistics and finalizing
 
         Args:
             data_dir: Directory containing raw dataset files
-            run_info: Immutable runtime context (created by orchestrator, attached to each sample)
+            run_info: Immutable runtime context (passed to writer for persistence, not attached to samples)
             run_dir: Run directory where output should be written (writer determines file structure)
             limit: Optional maximum number of samples to process
             on_sample: Optional callback invoked for each sample (for logging/progress)
@@ -75,7 +74,7 @@ class IngestionService:
             Exception: If any step in the pipeline fails
         """
         # Create run summary builder (for timing and collection of metrics)
-        summary_builder = RunSummaryBuilder(run_info)
+        summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
 
         # Extract dataset name and description from IngestIOConfig
@@ -83,9 +82,8 @@ class IngestionService:
         dataset_description = run_info.io_config.dataset_description
 
         # Read RawJudgingSample DTOs from raw dataset (SampleReader handles limit internally)
-        # Pass dataset_name and dataset_description so reader can create Dataset entity
         raw_samples: list[RawJudgingSample] = self.sample_reader.read(
-            data_dir, 
+            data_dir,
             dataset_name=dataset_name,
             dataset_description=dataset_description,
             limit=limit
@@ -93,14 +91,12 @@ class IngestionService:
 
         sample_count = len(raw_samples)
 
-        # Attach run_info to each sample (Many-to-One relationship)
-        # Use JudgingSample.create() to compute deterministic UUID
+        # Convert RawJudgingSamples to JudgingSamples (pure domain entities)
         judging_samples = [
             JudgingSample.create(
                 query=sample.query,
                 document=sample.document,
                 gold_score=sample.gold_score,
-                run_info=run_info,
             )
             for sample in raw_samples
         ]
@@ -110,8 +106,8 @@ class IngestionService:
             for sample in judging_samples:
                 on_sample(sample)
 
-        # Write samples (writer determines output file structure and returns summary)
-        write_summary = self.dataset_writer.write(judging_samples, run_dir)
+        # Write samples 
+        write_summary = self.dataset_writer.write(judging_samples, run_dir, run_info)
 
         # Invoke callback after write (for logging)
         if on_write:

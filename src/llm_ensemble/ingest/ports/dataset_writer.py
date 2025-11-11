@@ -40,14 +40,16 @@ class DatasetWriter(ABC):
 
         The adapter determines the specific output file(s) structure.
         Common patterns:
-        - Single file: run_dir / "normalized_dataset.ndjson"
-        - Multiple files: run_dir / "samples.ndjson", run_dir / "ingest_run_info.json"
+        - Separate files: run_dir / "judging_samples.ndjson" + run_dir / "ingest_run_info.json"
         - Database: Write to centralized database with foreign keys
+        
+        Filenames should be derived using get_entity_filename() for consistency
+        with other CLIs (e.g., INFER uses llm_judgements.ndjson + infer_run_info.json).
 
         Args:
-            samples: List of judging samples to write (pure domain entities)
+            samples: List of judging samples to write (pure domain entities without run_info)
             run_dir: Run directory where output should be written
-            run_info: Immutable runtime context (for persistence/metadata, not part of domain entity)
+            run_info: Immutable runtime context (written as separate manifest, not embedded in samples)
 
         Returns:
             WriteSummary tracking what was created vs. skipped

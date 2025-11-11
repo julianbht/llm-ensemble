@@ -21,14 +21,17 @@ class FullyPopulatedJsonWriter(DatasetWriter):
     Each sample is self-contained with all nested objects fully populated.
 
     Outputs:
-    - run_dir / "ingest_run_info.json" - IngestRunInfo (written once)
-    - run_dir / "normalized_dataset.json" - Samples array (each with run_info embedded)
+    - run_dir / "ingest_run_info.json" - IngestRunInfo (written once as separate manifest)
+    - run_dir / "judging_samples.json" - Samples array (pure domain entities without run_info)
 
     Example output:
         [
-            {"id": "...", "query": {...}, "document": {...}, "gold_score": 2, "run_info": {...}},
-            {"id": "...", "query": {...}, "document": {...}, "gold_score": 1, "run_info": {...}}
+            {"id": "...", "query": {...}, "document": {...}, "gold_score": 2},
+            {"id": "...", "query": {...}, "document": {...}, "gold_score": 1}
         ]
+    
+    Note: run_info is kept separate to maintain clean domain entities and avoid
+    duplication. Downstream CLIs can read samples without parsing run_info on each record.
     """
 
     def write(self, samples: List[JudgingSample], run_dir: Path, run_info: IngestRunInfo) -> WriteSummary:
@@ -37,7 +40,7 @@ class FullyPopulatedJsonWriter(DatasetWriter):
         Args:
             samples: List of judging samples (pure domain entities)
             run_dir: Run directory where output should be written
-            run_info: Immutable runtime context (written to separate manifest and embedded in samples)
+            run_info: Immutable runtime context (written to separate manifest)
 
         Returns:
             WriteSummary tracking write operations (file writes always create all samples)
@@ -45,27 +48,22 @@ class FullyPopulatedJsonWriter(DatasetWriter):
         Raises:
             IOError: If writing fails
         """
-        # Derive filename from entity class name (following INFER pattern)
+        # Derive filenames from entity class names (DRY principle, following INFER pattern)
         manifest_file = run_dir / get_entity_filename(IngestRunInfo, "json", plural=False)
+        samples_file = run_dir / get_entity_filename(JudgingSample, "json")
 
         # Write run_info manifest (separate from samples)
         with manifest_file.open("w", encoding="utf-8") as f:
             json.dump(run_info.model_dump(mode="json"), f, indent=2)
 
-        # Write samples file
-        output_path = run_dir / "normalized_dataset.json"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        # Write samples file (pure domain entities without run_info)
+        samples_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Convert all samples to JSON-friendly dicts (ensures UUIDs become strings)
-        # Reconstruct fully populated format at write time by embedding run_info
-        samples_data = []
-        for sample in samples:
-            sample_dict = sample.model_dump(mode="json")
-            sample_dict["run_info"] = run_info.model_dump(mode="json")
-            samples_data.append(sample_dict)
+        samples_data = [sample.model_dump(mode="json") for sample in samples]
 
         # Write as a single JSON array
-        with output_path.open("w", encoding="utf-8") as f:
+        with samples_file.open("w", encoding="utf-8") as f:
             json.dump(samples_data, f, indent=2, ensure_ascii=False)
 
         # File writes always create all samples (no skipping)

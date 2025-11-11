@@ -82,34 +82,37 @@ class TestIngestCLIEndToEnd:
         run_dir = get_run_dir("ingest", "ndjson_test", official=False)
         assert run_dir.exists(), f"Run directory not found: {run_dir}"
 
-        # Verify output file exists
-        output_file = run_dir / "normalized_dataset.ndjson"
-        assert output_file.exists(), f"Output file not found: {output_file}"
+        # Verify output files exist (samples + manifest)
+        samples_file = run_dir / "judging_samples.ndjson"
+        manifest_file = run_dir / "ingest_run_info.json"
+        assert samples_file.exists(), f"Samples file not found: {samples_file}"
+        assert manifest_file.exists(), f"Manifest file not found: {manifest_file}"
 
-        # Read and verify NDJSON content
-        lines = [line for line in output_file.read_text().strip().split("\n") if line]
+        # Read and verify NDJSON content (samples should NOT have run_info embedded)
+        lines = [line for line in samples_file.read_text().strip().split("\n") if line]
         assert len(lines) == 2, f"Expected 2 samples, got {len(lines)}"
 
         # Parse first record
         sample1 = json.loads(lines[0])
 
-        # Verify sample structure
+        # Verify sample structure (pure domain entity without run_info)
         assert "id" in sample1, "Missing 'id' field"
         assert "query" in sample1, "Missing 'query' field"
         assert "document" in sample1, "Missing 'document' field"
         assert "gold_score" in sample1, "Missing 'gold_score' field"
-        assert "run_info" in sample1, "Missing 'run_info' field"
+        assert "run_info" not in sample1, "run_info should not be embedded in samples"
 
-        # Verify run_info metadata
-        run_info = sample1["run_info"]
-        assert run_info["run_name"] == "ndjson_test"
-        assert run_info["io_config_name"] == "llm_judge_challenge_ndjson"
-        assert run_info["input_path"] == str(sample_llm_judge_dataset)
+        # Verify run_info is in separate manifest file
+        with open(manifest_file) as f:
+            run_info = json.load(f)
+            assert run_info["run_name"] == "ndjson_test"
+            assert run_info["io_config_name"] == "llm_judge_challenge_ndjson"
+            assert run_info["input_path"] == str(sample_llm_judge_dataset)
 
-        # Verify git info from mock (or actual git if not mocked)
-        assert "git_sha" in run_info
-        assert "git_clean" in run_info
-        assert "git_branch" in run_info
+            # Verify git info from mock (or actual git if not mocked)
+            assert "git_sha" in run_info
+            assert "git_clean" in run_info
+            assert "git_branch" in run_info
 
         # Verify query and document content
         assert sample1["query"]["external_id"] == "q1"
@@ -156,16 +159,23 @@ class TestIngestCLIEndToEnd:
         # Get run directory
         run_dir = get_run_dir("ingest", "multi_override_test", official=False)
 
-        # Verify JSON file exists (writer override worked)
-        json_file = run_dir / "normalized_dataset.json"
-        assert json_file.exists()
+        # Verify JSON files exist (writer override worked)
+        json_file = run_dir / "judging_samples.json"
+        manifest_file = run_dir / "ingest_run_info.json"
+        assert json_file.exists(), f"Samples file not found: {json_file}"
+        assert manifest_file.exists(), f"Manifest file not found: {manifest_file}"
 
-        # Verify dataset metadata overrides
+        # Verify dataset metadata overrides in manifest (not embedded in samples)
+        with open(manifest_file) as f:
+            run_info = json.load(f)
+            assert run_info["io_config"]["dataset_name"] == "multi-test"
+            assert "multiple overrides" in run_info["io_config"]["dataset_description"].lower()
+
+        # Verify samples are clean domain entities without run_info
         with open(json_file) as f:
             data = json.load(f)
             sample = data[0]
-            assert sample["run_info"]["io_config"]["dataset_name"] == "multi-test"
-            assert "multiple overrides" in sample["run_info"]["io_config"]["dataset_description"].lower()
+            assert "run_info" not in sample, "run_info should not be embedded in samples"
 
 
 @pytest.mark.integration

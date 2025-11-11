@@ -1,4 +1,8 @@
 # INGEST
+ingest \
+> --input ./data \
+> --io-cfg llm_judge_challenge_json \
+> --limit 20
 # INFER
 infer \
   --input ./artifacts/runs/ingest/test/20251111_075759_llmjudge-json/normalized_dataset.json \

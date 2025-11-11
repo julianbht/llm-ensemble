@@ -14,7 +14,6 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from llm_ensemble.ingest.schemas.judging_sample import JudgingSample
-from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.warnings import BaseWarning
 from llm_ensemble.libs.schemas import RelevanceScore
 
@@ -101,21 +100,19 @@ class LLMScore(BaseModel):
 
 
 class LLMJudgement(BaseModel):
-    """A complete LLM relevance judgement with full provenance.
+    """A complete LLM relevance judgement - pure domain model.
 
     This is the canonical judgement schema that combines:
-    - judging_sample: The input (query + document + gold score + ingest manifest)
+    - judging_sample: The input (query + document + gold score)
     - prompt: The rendered prompt text sent to the LLM
-    - llm_response: The raw LLM output (unparsed text + observability metadata + provider warnings)
-    - llm_score: The parsed relevance assessment (label + confidence + rationale + parser warnings)
-    - run_info: The inference run context (model config + prompt config + git info + input params)
+    - llm_response: The raw LLM output (unparsed text + observability metadata)
+    - llm_score: The parsed relevance assessment (label + confidence + rationale)
 
-    This captures the complete data lineage: what was judged, what prompt was sent,
-    what response came back, and what score was extracted.
+    This captures the complete data lineage for a single inference:
+    what was judged, what prompt was sent, what response came back, and what score was extracted.
 
-    Many LLMJudgements share one InferRunInfo (Many-to-One relationship). The run_info
-    contains immutable runtime context known before the run starts, allowing judgements
-    to be serialized immediately without waiting for aggregate statistics.
+    Note: Run context (model config, git SHA, etc.) is NOT part of the judgement itself.
+    That metadata is provided separately to persistence adapters when needed.
     """
 
     judging_sample: JudgingSample = Field(
@@ -139,11 +136,6 @@ class LLMJudgement(BaseModel):
             "The parsed relevance assessment (label + confidence + rationale). "
             "None if response parsing completely failed."
         )
-    )
-
-    run_info: InferRunInfo = Field(
-        ...,
-        description="Inference run context (Many-to-One: many judgements share one run_info)"
     )
 
     def get_all_warnings(self) -> list[BaseWarning]:

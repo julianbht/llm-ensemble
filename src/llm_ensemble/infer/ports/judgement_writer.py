@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.libs.schemas.write_result import WriteResult
 
@@ -28,9 +29,12 @@ class JudgementWriter(ABC):
     The write summary is captured when close() is called and can be retrieved
     after the context manager exits via get_summary().
 
+    Run context (InferRunInfo) is provided once during open() rather than
+    being embedded in every judgement, keeping the domain model clean.
+
     Example:
         >>> writer = NdjsonJudgementWriter()
-        >>> with writer.open(run_dir) as w:
+        >>> with writer.open(run_dir, run_info) as w:
         ...     for judgement in judgements:
         ...         w.write_one(judgement)  # Written immediately to disk
         >>> summary = writer.get_summary()  # Get write summary
@@ -41,11 +45,16 @@ class JudgementWriter(ABC):
         self._write_summary: Optional[WriteSummary] = None
 
     @abstractmethod
-    def open(self, run_dir: Path) -> JudgementWriter:
-        """Initialize writer with run directory and prepare for streaming.
+    def open(self, run_dir: Path, run_info: InferRunInfo) -> JudgementWriter:
+        """Initialize writer with run directory and context, prepare for streaming.
+
+        The run_info contains metadata about the inference run (model config,
+        prompt config, git SHA, etc.) that the writer needs for persistence
+        but is not part of individual judgements.
 
         Args:
             run_dir: Run directory where output should be written (writer determines file structure)
+            run_info: Inference run context (metadata about model, prompt, git state, etc.)
 
         Returns:
             Self, to enable context manager usage

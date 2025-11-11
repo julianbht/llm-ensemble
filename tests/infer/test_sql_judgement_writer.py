@@ -62,6 +62,21 @@ def sample_judgement():
 
     sample = JudgingSample.create(query, doc, RelevanceScore.RELEVANT, ingest_run_info)
 
+    # Create judgement (no run_info - that's a persistence concern)
+    response = LLMResponse(raw_response='{"O": 1}', latency_ms=100.0, retries=0, warnings=[])
+    score = LLMScore(label=RelevanceScore.RELEVANT, confidence=0.9, rationale="Test rationale", warnings=[])
+
+    return LLMJudgement(
+        judging_sample=sample,
+        prompt="Test prompt",
+        llm_response=response,
+        llm_score=score,
+    )
+
+
+@pytest.fixture
+def sample_run_info():
+    """Create InferRunInfo for testing."""
     # Create model config
     model_cfg = ModelConfig(
         name_hint="test-model",
@@ -84,7 +99,7 @@ def sample_judgement():
     )
 
     # Create run info
-    run_info = InferRunInfo(
+    return InferRunInfo(
         run_name="infer_test_run",
         run_type=RunType.TEST,
         notes=None,
@@ -101,25 +116,13 @@ def sample_judgement():
         limit=None,
     )
 
-    # Create judgement
-    response = LLMResponse(raw_response='{"O": 1}', latency_ms=100.0, retries=0, warnings=[])
-    score = LLMScore(label=RelevanceScore.RELEVANT, confidence=0.9, rationale="Test rationale", warnings=[])
-
-    return LLMJudgement(
-        judging_sample=sample,
-        prompt="Test prompt",
-        llm_response=response,
-        llm_score=score,
-        run_info=run_info,
-    )
-
 
 @pytest.mark.integration
-def test_sql_writer_writes_judgement(in_memory_db, sample_judgement, tmp_path):
+def test_sql_writer_writes_judgement(in_memory_db, sample_judgement, sample_run_info, tmp_path):
     """Test that SqlJudgementWriter can write a judgement to database."""
     writer = SqlJudgementWriter()
 
-    with writer.open(tmp_path) as w:
+    with writer.open(tmp_path, sample_run_info) as w:
         result = w.write_one(sample_judgement)
         assert result.item_type == "llm_call"
         assert result.item_id is not None
@@ -129,11 +132,11 @@ def test_sql_writer_writes_judgement(in_memory_db, sample_judgement, tmp_path):
 
 
 @pytest.mark.integration
-def test_sql_writer_deduplicates_responses(in_memory_db, sample_judgement, tmp_path):
+def test_sql_writer_deduplicates_responses(in_memory_db, sample_judgement, sample_run_info, tmp_path):
     """Test that identical responses are deduplicated."""
     writer = SqlJudgementWriter()
 
-    with writer.open(tmp_path) as w:
+    with writer.open(tmp_path, sample_run_info) as w:
         # Write same judgement twice
         result1 = w.write_one(sample_judgement)
         result2 = w.write_one(sample_judgement)
@@ -146,7 +149,7 @@ def test_sql_writer_deduplicates_responses(in_memory_db, sample_judgement, tmp_p
 
 
 @pytest.mark.integration
-def test_sql_writer_handles_null_score(in_memory_db, sample_judgement, tmp_path):
+def test_sql_writer_handles_null_score(in_memory_db, sample_judgement, sample_run_info, tmp_path):
     """Test that writer handles judgements with null score (parsing failure)."""
     # Create judgement with null score
     judgement_with_null_score = LLMJudgement(
@@ -154,12 +157,11 @@ def test_sql_writer_handles_null_score(in_memory_db, sample_judgement, tmp_path)
         prompt=sample_judgement.prompt,
         llm_response=sample_judgement.llm_response,
         llm_score=None,  # Parsing failed
-        run_info=sample_judgement.run_info,
     )
 
     writer = SqlJudgementWriter()
 
-    with writer.open(tmp_path) as w:
+    with writer.open(tmp_path, sample_run_info) as w:
         result = w.write_one(judgement_with_null_score)
         assert result.item_type == "llm_call"
         assert result.item_id is not None

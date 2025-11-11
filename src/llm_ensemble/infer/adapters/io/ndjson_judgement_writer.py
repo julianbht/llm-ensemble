@@ -1,14 +1,17 @@
 """NDJSON adapter for writing LLM judgements.
 
 Writes LLMJudgement records as newline-delimited JSON files.
+Writes run metadata as a separate manifest JSON file.
 This is the standard format for downstream aggregate and evaluate CLIs.
 """
 
 from __future__ import annotations
 from pathlib import Path
 from typing import Optional, TextIO
+import json
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
 from llm_ensemble.libs.schemas.write_result import WriteResult
@@ -17,15 +20,19 @@ from llm_ensemble.libs.schemas.write_result import WriteResult
 class NdjsonJudgementWriter(JudgementWriter):
     """Write LLMJudgement records to NDJSON files with streaming support.
 
-    This adapter writes LLMJudgement objects (with sample, llm_response, and manifest)
-    as newline-delimited JSON, which is the expected input format for the aggregate CLI.
+    This adapter writes:
+    - LLMJudgement objects to judgements.ndjson (one per line)
+    - InferRunInfo to run_manifest.json (separate file, written once)
+
+    This separation keeps run metadata out of individual judgements, reducing
+    duplication and file size. The manifest format is standard for downstream CLIs.
 
     Uses context manager pattern for proper file lifecycle. Each judgement is written
     immediately upon calling write_one(), enabling fault-tolerant streaming.
 
     Example:
         >>> writer = NdjsonJudgementWriter()
-        >>> with writer.open(run_dir) as w:
+        >>> with writer.open(run_dir, run_info) as w:
         ...     for judgement in judgements:
         ...         w.write_one(judgement)  # Written immediately to disk
     """
@@ -35,13 +42,15 @@ class NdjsonJudgementWriter(JudgementWriter):
         super().__init__()
         self._file_handle: Optional[TextIO] = None
         self._output_file: Optional[Path] = None
+        self._manifest_file: Optional[Path] = None
         self._judgements_written: int = 0
 
-    def open(self, run_dir: Path) -> "NdjsonJudgementWriter":
-        """Open NDJSON file for streaming writes.
+    def open(self, run_dir: Path, run_info: InferRunInfo) -> "NdjsonJudgementWriter":
+        """Open NDJSON file for streaming writes and write manifest.
 
         Args:
             run_dir: Run directory where output should be written
+            run_info: Inference run context (written to separate manifest file)
 
         Returns:
             Self, to enable context manager usage
@@ -53,10 +62,15 @@ class NdjsonJudgementWriter(JudgementWriter):
         if self._file_handle is not None:
             raise RuntimeError("Writer is already open")
 
-        # Writer determines output file structure: judgements.ndjson in run_dir
+        # Writer determines output file structure
         self._output_file = run_dir / "judgements.ndjson"
+        self._manifest_file = run_dir / "run_manifest.json"
 
-        # Open file for writing (context manager will handle closing)
+        # Write run manifest immediately (separate from judgements)
+        with self._manifest_file.open("w", encoding="utf-8") as f:
+            json.dump(run_info.model_dump(mode="json"), f, indent=2)
+
+        # Open judgements file for streaming writes
         self._file_handle = self._output_file.open("w", encoding="utf-8", newline="\n")
 
         # Reset counter for new write session
@@ -116,5 +130,6 @@ class NdjsonJudgementWriter(JudgementWriter):
             self._file_handle.close()
             self._file_handle = None
             self._output_file = None
+            self._manifest_file = None
 
         return summary

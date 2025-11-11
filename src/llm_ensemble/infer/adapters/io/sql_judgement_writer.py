@@ -102,16 +102,17 @@ class SqlJudgementWriter(JudgementWriter):
         self._judgements_written: int = 0
         self._responses_created: int = 0  # Track new vs deduplicated responses
 
-    def open(self, run_dir: Path) -> "SqlJudgementWriter":
+    def open(self, run_dir: Path, run_info: InferRunInfo) -> "SqlJudgementWriter":
         """Open database session and initialize run metadata.
 
         This method:
         1. Creates SQLAlchemy session from DATABASE_URL env var
-        2. Waits for first write_one() call to initialize run metadata
-           (we need the first judgement to extract run info)
+        2. Immediately initializes run metadata (Provider, ModelSpec, PromptTemplate, etc.)
+        3. Ready for streaming write_one() calls
 
         Args:
             run_dir: Run directory (cached but not used for DB writer)
+            run_info: Inference run context (used to create run metadata entities)
 
         Returns:
             Self, to enable context manager usage
@@ -134,8 +135,8 @@ class SqlJudgementWriter(JudgementWriter):
         self._judgements_written = 0
         self._responses_created = 0
 
-        # Run metadata will be initialized on first write_one() call
-        # (we need the first judgement to extract InferRunInfo)
+        # Initialize run metadata immediately using run_info
+        self._initialize_run_metadata(run_info)
 
         return self
 
@@ -143,11 +144,12 @@ class SqlJudgementWriter(JudgementWriter):
         """Write a single judgement to database.
 
         Decomposes LLMJudgement into normalized ORM entities:
-        1. Initialize run metadata on first call (Provider, ModelSpec, etc.)
-        2. Upsert LLMRequestORM (deduplicated by prompt + sample)
-        3. Upsert LLMResponseORM (deduplicated by parser + raw_response)
-        4. Create LLMCallORM (links request + response + run)
-        5. Commit transaction immediately
+        1. Upsert LLMRequestORM (deduplicated by prompt + sample)
+        2. Upsert LLMResponseORM (deduplicated by parser + raw_response)
+        3. Create LLMCallORM (links request + response + run)
+        4. Commit transaction immediately
+
+        Run metadata was already initialized in open().
 
         Args:
             judgement: LLMJudgement object to write
@@ -161,10 +163,6 @@ class SqlJudgementWriter(JudgementWriter):
         """
         if self._session is None:
             raise RuntimeError("Writer is not open - must call within context manager")
-
-        # Initialize run metadata on first write
-        if self._infer_run_id is None:
-            self._initialize_run_metadata(judgement)
 
         # Decompose judgement into ORM entities
         request_id = self._upsert_request(judgement)
@@ -213,8 +211,8 @@ class SqlJudgementWriter(JudgementWriter):
     # Internal Data Mapper Methods
     # ========================================================================
 
-    def _initialize_run_metadata(self, first_judgement: LLMJudgement) -> None:
-        """Initialize run metadata from first judgement.
+    def _initialize_run_metadata(self, run_info: InferRunInfo) -> None:
+        """Initialize run metadata from run context.
 
         Creates/upserts shared entities that remain constant across all judgements:
         - Provider (e.g., openrouter, ollama)
@@ -224,9 +222,8 @@ class SqlJudgementWriter(JudgementWriter):
         - InferRun (run metadata and parameters)
 
         Args:
-            first_judgement: First judgement to extract run info from
+            run_info: Inference run context (passed to open())
         """
-        run_info = first_judgement.run_info
 
         # 1. Upsert Provider
         self._provider_id = self._upsert_provider(run_info.model_cfg.provider)

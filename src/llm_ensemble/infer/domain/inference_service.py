@@ -122,7 +122,8 @@ class InferenceService:
         llm_judgements: list[LLMJudgement] = []
 
         # Open writer for streaming (context manager ensures proper cleanup)
-        with self.judgement_writer.open(run_dir) as writer:
+        # Pass run_info to writer - it's a persistence concern, not part of judgements
+        with self.judgement_writer.open(run_dir, run_info) as writer:
             # Process each sample individually (streaming loop)
             for sample in samples:
                 # Build prompt for this sample
@@ -138,13 +139,12 @@ class InferenceService:
                 # Parse response to extract structured score
                 score = self.response_parser.parse(response.raw_response)
 
-                # Create judgement immediately
+                # Create judgement immediately (pure domain object - no run context)
                 judgement = LLMJudgement(
                     judging_sample=sample,
                     prompt=prompt,
                     llm_response=response,
                     llm_score=score,
-                    run_info=run_info,
                 )
 
                 # Invoke callback for progress tracking

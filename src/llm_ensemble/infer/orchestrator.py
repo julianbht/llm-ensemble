@@ -139,19 +139,14 @@ def run_inference(
     )
     logger.info(InferLogEvent.RUN_DIRECTORY_CREATED, path=str(run_dir))
 
-    # Instantiate I/O adapters directly from config
+    # Instantiate adapters directly from config
     reader = io_config.get_reader()
     writer = io_config.get_writer()
-
-    # Instantiate prompt builder and response parser directly from config
-    # Builder is responsible for loading its own template
     prompt_builder = prompt_config.get_prompt_builder()
     response_parser = prompt_config.get_response_parser(score_field="O")
-
-    # Instantiate provider directly from config
     provider = model_config.get_provider()
 
-    # Create domain service - it orchestrates ALL port interactions
+    # Create domain service by injecting adapters- it orchestrates ALL port interactions
     service = InferenceService(
         example_reader=reader,
         judgement_writer=writer,
@@ -184,7 +179,7 @@ def run_inference(
             "judgement_details",
             query=judgement.judging_sample.query.query_text,
             doc=judgement.judging_sample.document.doc_text,
-            prompt=judgement.llm_request.prompt,
+            prompt=judgement.prompt,
             raw_response=judgement.llm_response.raw_response,
             extracted_score=extracted_score,
             gold_score=gold_score,

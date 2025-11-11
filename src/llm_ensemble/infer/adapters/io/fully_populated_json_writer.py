@@ -15,6 +15,7 @@ from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
 from llm_ensemble.libs.schemas.write_result import WriteResult
+from llm_ensemble.libs.utils.entity_filenames import get_entity_filename
 
 
 class FullyPopulatedJsonWriter(JudgementWriter):
@@ -24,10 +25,12 @@ class FullyPopulatedJsonWriter(JudgementWriter):
     when the writer is closed. Run metadata is written to a separate manifest file.
 
     Output files:
-    - run_dir / "judgements.json" - Array of judgements
-    - run_dir / "run_manifest.json" - Run metadata
+    - run_dir / "llm_judgements.json" - Array of LLMJudgement entities
+    - run_dir / "infer_run_info.json" - InferRunInfo entity (run metadata)
 
-    Example judgements.json:
+    Note: Filenames are derived from entity class names using get_entity_filename().
+
+    Example llm_judgements.json:
         [
             {"judging_sample": {...}, "prompt": "...", "llm_response": {...}, "llm_score": {...}},
             {"judging_sample": {...}, "prompt": "...", "llm_response": {...}, "llm_score": {...}}
@@ -60,8 +63,9 @@ class FullyPopulatedJsonWriter(JudgementWriter):
         if self.output_path is not None:
             raise RuntimeError("Writer is already open")
 
-        self.output_path = run_dir / "judgements.json"
-        self.manifest_path = run_dir / "run_manifest.json"
+        # Derive filenames from entity class names (DRY principle)
+        self.output_path = run_dir / get_entity_filename(LLMJudgement, "json")
+        self.manifest_path = run_dir / get_entity_filename(InferRunInfo, "json", plural=False)
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         self.judgements = []
 

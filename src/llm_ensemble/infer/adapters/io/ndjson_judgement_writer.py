@@ -15,15 +15,17 @@ from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
 from llm_ensemble.libs.schemas.write_result import WriteResult
+from llm_ensemble.libs.utils.entity_filenames import get_entity_filename
 
 
 class NdjsonJudgementWriter(JudgementWriter):
     """Write LLMJudgement records to NDJSON files with streaming support.
 
     This adapter writes:
-    - LLMJudgement objects to judgements.ndjson (one per line)
-    - InferRunInfo to run_manifest.json (separate file, written once)
+    - LLMJudgement objects to llm_judgements.ndjson (one per line)
+    - InferRunInfo to infer_run_info.json (separate file, written once)
 
+    Filenames are derived from entity class names using get_entity_filename().
     This separation keeps run metadata out of individual judgements, reducing
     duplication and file size. The manifest format is standard for downstream CLIs.
 
@@ -62,9 +64,9 @@ class NdjsonJudgementWriter(JudgementWriter):
         if self._file_handle is not None:
             raise RuntimeError("Writer is already open")
 
-        # Writer determines output file structure
-        self._output_file = run_dir / "judgements.ndjson"
-        self._manifest_file = run_dir / "run_manifest.json"
+        # Derive filenames from entity class names (DRY principle)
+        self._output_file = run_dir / get_entity_filename(LLMJudgement, "ndjson")
+        self._manifest_file = run_dir / get_entity_filename(InferRunInfo, "json", plural=False)
 
         # Write run manifest immediately (separate from judgements)
         with self._manifest_file.open("w", encoding="utf-8") as f:

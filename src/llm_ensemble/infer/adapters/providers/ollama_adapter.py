@@ -10,7 +10,7 @@ ResponseParser's job). The InferenceService orchestrates all port interactions.
 
 from __future__ import annotations
 
-from llm_ensemble.infer.schemas.llm_response import LLMResponse
+from llm_ensemble.infer.schemas.llm_judgement import LLMResponse
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.ports import LLMProvider
 

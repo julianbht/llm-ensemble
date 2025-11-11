@@ -10,9 +10,9 @@ from uuid import uuid4
 
 from llm_ensemble.infer.adapters.io.sql_judgement_writer import SqlJudgementWriter
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
-from llm_ensemble.infer.schemas.llm_request import LLMRequest
-from llm_ensemble.infer.schemas.llm_response import LLMResponse
-from llm_ensemble.infer.schemas.llm_score import LLMScore
+from llm_ensemble.infer.schemas.llm_judgement import LLMRequest
+from llm_ensemble.infer.schemas.llm_judgement import LLMResponse
+from llm_ensemble.infer.schemas.llm_judgement import LLMScore
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig

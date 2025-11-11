@@ -222,7 +222,6 @@ class LLMCallORM(Base):
     response = relationship("LLMResponseORM", back_populates="calls")
 
 
-
 class LLMResponseORM(Base):
     __tablename__ = "llm_responses"
 

@@ -1,11 +1,9 @@
 """Pydantic schemas for the infer CLI.
 
-Centralizes all data structure definitions.
+Exports configuration schemas and run metadata for convenient importing.
+Workflow DTOs (LLMRequest, LLMResponse, LLMScore, LLMJudgement) should be
+imported directly from llm_judgement module.
 """
-
-# NOTE: LLMResponse and LLMJudgement not imported here to avoid circular imports
-# (they depend on JudgingSample which has complex dependencies)
-# Import them directly: from llm_ensemble.infer.schemas.llm_response import LLMResponse
 
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig

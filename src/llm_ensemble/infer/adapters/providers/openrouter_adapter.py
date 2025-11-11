@@ -14,7 +14,7 @@ import time
 from typing import Optional
 from openai import OpenAI
 
-from llm_ensemble.infer.schemas.llm_response import LLMResponse
+from llm_ensemble.infer.schemas.llm_judgement import LLMResponse
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.ports import LLMProvider
 

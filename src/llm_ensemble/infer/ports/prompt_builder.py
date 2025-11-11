@@ -9,7 +9,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from llm_ensemble.ingest.schemas import JudgingSample
-from llm_ensemble.infer.schemas.llm_request import LLMRequest
+from llm_ensemble.infer.schemas.llm_judgement import LLMRequest
 
 
 class PromptBuilder(ABC):

@@ -8,7 +8,7 @@ to specific parsing implementations.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
-from llm_ensemble.infer.schemas.llm_score import LLMScore
+from llm_ensemble.infer.schemas.llm_judgement import LLMScore
 
 
 class ResponseParser(ABC):

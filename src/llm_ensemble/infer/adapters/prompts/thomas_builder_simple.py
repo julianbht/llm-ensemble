@@ -9,7 +9,7 @@ from jinja2 import Template
 
 from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.ports import PromptBuilder
-from llm_ensemble.infer.schemas.llm_request import LLMRequest
+from llm_ensemble.infer.schemas.llm_judgement import LLMRequest
 from llm_ensemble.infer.schemas.warnings import PromptWarning, PromptWarningCode
 from llm_ensemble.libs.runtime.path_manager import PathManager
 

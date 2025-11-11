@@ -8,7 +8,7 @@ provider implementations (OpenRouter, Ollama, HuggingFace, etc.).
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
-from llm_ensemble.infer.schemas.llm_response import LLMResponse
+from llm_ensemble.infer.schemas.llm_judgement import LLMResponse
 from llm_ensemble.infer.schemas import ModelConfig
 
 

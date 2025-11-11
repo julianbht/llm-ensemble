@@ -9,7 +9,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from llm_ensemble.ingest.schemas import JudgingSample
-from llm_ensemble.infer.schemas.llm_judgement import LLMRequest
 
 
 class PromptBuilder(ABC):
@@ -18,32 +17,29 @@ class PromptBuilder(ABC):
     Implementations can build prompts using different templates and formats
     while providing a consistent interface to the LLM provider adapters.
 
-    Returns LLMRequest containing the rendered prompt and any warnings from
-    template rendering (missing variables, validation errors, etc.).
+    Returns the rendered prompt string directly (no wrapper needed).
 
     Example:
         >>> class JinjaPromptBuilder(PromptBuilder):
         ...     def build(self, example):
-        ...         prompt = self.template.render(
-        ...             query=example.query_text,
-        ...             page_text=example.doc
+        ...         return self.template.render(
+        ...             query=example.query.query_text,
+        ...             document=example.document.doc_text
         ...         )
-        ...         return LLMRequest(prompt=prompt, warnings=[])
     """
 
     @abstractmethod
-    def build(self, example: JudgingSample) -> LLMRequest:
+    def build(self, example: JudgingSample) -> str:
         """Build a prompt from a judging example.
 
         Args:
             example: JudgingSample object containing query and document
 
         Returns:
-            LLMRequest containing rendered prompt and any warnings from building
+            Rendered prompt string
 
         Raises:
-            Exception: Only for unrecoverable errors (e.g., template file missing).
-                       Recoverable issues should be captured as warnings in the returned LLMRequest.
+            Exception: For unrecoverable errors (e.g., template file missing).
         """
         pass
 

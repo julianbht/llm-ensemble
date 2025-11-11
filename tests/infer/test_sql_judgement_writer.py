@@ -10,7 +10,6 @@ from uuid import uuid4
 
 from llm_ensemble.infer.adapters.io.sql_judgement_writer import SqlJudgementWriter
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
-from llm_ensemble.infer.schemas.llm_judgement import LLMRequest
 from llm_ensemble.infer.schemas.llm_judgement import LLMResponse
 from llm_ensemble.infer.schemas.llm_judgement import LLMScore
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
@@ -103,13 +102,12 @@ def sample_judgement():
     )
 
     # Create judgement
-    request = LLMRequest(prompt="Test prompt", warnings=[])
     response = LLMResponse(raw_response='{"O": 1}', latency_ms=100.0, retries=0, warnings=[])
     score = LLMScore(label=RelevanceScore.RELEVANT, confidence=0.9, rationale="Test rationale", warnings=[])
 
     return LLMJudgement(
         judging_sample=sample,
-        llm_request=request,
+        prompt="Test prompt",
         llm_response=response,
         llm_score=score,
         run_info=run_info,
@@ -153,7 +151,7 @@ def test_sql_writer_handles_null_score(in_memory_db, sample_judgement, tmp_path)
     # Create judgement with null score
     judgement_with_null_score = LLMJudgement(
         judging_sample=sample_judgement.judging_sample,
-        llm_request=sample_judgement.llm_request,
+        prompt=sample_judgement.prompt,
         llm_response=sample_judgement.llm_response,
         llm_score=None,  # Parsing failed
         run_info=sample_judgement.run_info,

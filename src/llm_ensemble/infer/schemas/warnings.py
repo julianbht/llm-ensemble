@@ -133,38 +133,6 @@ class ParserWarning(BaseWarning):
 
 
 # ============================================================================
-# Prompt Warnings (PromptBuilder port)
-# ============================================================================
-
-
-class PromptWarningCode(str, Enum):
-    """Warning codes for prompt builder issues.
-
-    General categories to avoid taxonomy explosion. Use metadata for specifics.
-    """
-
-    RENDERING_ERROR = "rendering_error"  # Rendering errors, missing variables
-    VALIDATION_ERROR = "validation_error"  # Exceeds limits, failed constraints
-    OTHER = "other"
-
-
-class PromptWarning(BaseWarning):
-    """Warning from prompt builder adapter.
-
-    Tracks issues during prompt construction from templates and samples.
-
-    Example:
-        >>> PromptWarning(
-        ...     code=PromptWarningCode.RENDERING_ERROR,
-        ...     message="Variable 'rationale_instructions' not found, using empty string",
-        ...     metadata={"variable_name": "rationale_instructions"}
-        ... )
-    """
-
-    code: PromptWarningCode  # Override base type with specific enum
-
-
-# ============================================================================
 # Utility functions
 # ============================================================================
 

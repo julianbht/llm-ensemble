@@ -2,7 +2,7 @@
 
 Writes LLMJudgement records to a SQL database using SQLAlchemy ORM.
 This adapter decomposes the denormalized LLMJudgement domain objects
-into normalized relational entities as defined in orms-normalized.py.
+into normalized relational entities as defined in orms_normalized.py.
 
 The adapter implements a data mapper pattern internally:
 - Domain service works with LLMJudgement objects (document-oriented)
@@ -424,7 +424,7 @@ class SqlJudgementWriter(JudgementWriter):
             LLMRequest UUID (deterministic, deduplicated)
         """
         request_id = compute_llm_request_uuid(
-            judgement.llm_request.prompt,
+            judgement.prompt,
             judgement.judging_sample.id
         )
 
@@ -437,7 +437,7 @@ class SqlJudgementWriter(JudgementWriter):
         request = LLMRequestORM(
             id=request_id,
             judging_sample_id=judgement.judging_sample.id,
-            prompt=judgement.llm_request.prompt,
+            prompt=judgement.prompt,
         )
         self._session.add(request)
 

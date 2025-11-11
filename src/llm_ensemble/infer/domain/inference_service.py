@@ -86,10 +86,10 @@ class InferenceService:
         Pure business logic that coordinates:
         1. Reading JudgingSample objects via ExampleReader port
         2. For each sample (streaming loop):
-           a. Building prompt via PromptBuilder port → LLMRequest (prompt + prompt warnings)
+           a. Building prompt via PromptBuilder port → str (rendered prompt)
            b. Running inference via LLMProvider port → LLMResponse (raw response + provider warnings)
            c. Parsing response via ResponseParser port → LLMScore (parsed score + parser warnings)
-           d. Creating LLMJudgement object (sample + request + response + score + run_info)
+           d. Creating LLMJudgement object (sample + prompt + response + score + run_info)
            e. Invoking callback for progress tracking
            f. Writing judgement immediately to disk (fault tolerance)
         3. Calculating statistics including warnings summary from all stages
@@ -126,14 +126,14 @@ class InferenceService:
             # Process each sample individually (streaming loop)
             for sample in samples:
                 # Build prompt for this sample
-                request = self.prompt_builder.build(sample)
+                prompt = self.prompt_builder.build(sample)
 
                 # Invoke callback before sending request
                 if on_request_start:
                     on_request_start()
 
                 # Run inference for this sample (simple, synchronous call)
-                response = self.llm_provider.infer(request.prompt, model_config)
+                response = self.llm_provider.infer(prompt, model_config)
 
                 # Parse response to extract structured score
                 score = self.response_parser.parse(response.raw_response)
@@ -141,7 +141,7 @@ class InferenceService:
                 # Create judgement immediately
                 judgement = LLMJudgement(
                     judging_sample=sample,
-                    llm_request=request,
+                    prompt=prompt,
                     llm_response=response,
                     llm_score=score,
                     run_info=run_info,

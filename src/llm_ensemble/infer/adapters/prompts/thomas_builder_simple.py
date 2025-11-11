@@ -9,8 +9,6 @@ from jinja2 import Template
 
 from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.ports import PromptBuilder
-from llm_ensemble.infer.schemas.llm_judgement import LLMRequest
-from llm_ensemble.infer.schemas.warnings import PromptWarning, PromptWarningCode
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
@@ -62,7 +60,7 @@ class JinjaPromptBuilder(PromptBuilder):
             self.template_text = f.read()
             self.template = Template(self.template_text)
 
-    def build(self, example: JudgingSample) -> LLMRequest:
+    def build(self, example: JudgingSample) -> str:
         """Build a prompt from a judging sample.
 
         Passes JudgingSample model attributes to the template:
@@ -73,32 +71,20 @@ class JinjaPromptBuilder(PromptBuilder):
             example: JudgingSample object containing query and document
 
         Returns:
-            LLMRequest containing rendered prompt and any warnings
-        """
-        warnings = []
+            Rendered prompt string
 
+        Raises:
+            Exception: If template rendering fails (unrecoverable error)
+        """
         # Pass JudgingSample Pydantic model attributes directly to template
         template_vars = {
             "query": example.query.query_text,
             "document": example.document.doc_text,
         }
 
-        # Render template (catch rendering errors and convert to warnings)
-        try:
-            prompt = self.template.render(**template_vars)
-        except Exception as e:
-            # Template rendering failed - this is recoverable, return warning
-            warnings.append(
-                PromptWarning(
-                    code=PromptWarningCode.RENDERING_ERROR,
-                    message=f"Template rendering failed: {str(e)}",
-                    metadata={"error_type": type(e).__name__}
-                )
-            )
-            # Return empty prompt on render failure
-            prompt = ""
-
-        return LLMRequest(prompt=prompt, warnings=warnings)
+        # Render template
+        prompt = self.template.render(**template_vars)
+        return prompt
 
     def get_template_text(self) -> str:
         """Get the raw Jinja template text.

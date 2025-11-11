@@ -1,6 +1,7 @@
 """Fully populated JSON adapter for writing LLM judgements.
 
 Writes judgements to a single JSON array with streaming support.
+Writes run metadata as a separate manifest JSON file.
 Accumulates judgements in memory and writes all at once on close.
 """
 
@@ -10,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
 from llm_ensemble.libs.schemas.write_result import WriteResult
@@ -19,14 +21,16 @@ class FullyPopulatedJsonWriter(JudgementWriter):
     """Fully populated JSON adapter for writing LLM judgements.
 
     Accumulates judgements in memory and writes them as a single JSON array
-    when the writer is closed. All objects are fully populated (no references).
+    when the writer is closed. Run metadata is written to a separate manifest file.
 
-    Output: run_dir / "judgements.json"
+    Output files:
+    - run_dir / "judgements.json" - Array of judgements
+    - run_dir / "run_manifest.json" - Run metadata
 
-    Example output:
+    Example judgements.json:
         [
-            {"judging_sample": {...}, "llm_response": {...}, "llm_score": {...}, "run_info": {...}},
-            {"judging_sample": {...}, "llm_response": {...}, "llm_score": {...}, "run_info": {...}}
+            {"judging_sample": {...}, "prompt": "...", "llm_response": {...}, "llm_score": {...}},
+            {"judging_sample": {...}, "prompt": "...", "llm_response": {...}, "llm_score": {...}}
         ]
 
     Note: This adapter accumulates all judgements in memory before writing.
@@ -37,13 +41,15 @@ class FullyPopulatedJsonWriter(JudgementWriter):
         """Initialize the JSON writer."""
         super().__init__()
         self.output_path: Optional[Path] = None
+        self.manifest_path: Optional[Path] = None
         self.judgements: list[LLMJudgement] = []
 
-    def open(self, run_dir: Path) -> "FullyPopulatedJsonWriter":
-        """Initialize writer and prepare for streaming.
+    def open(self, run_dir: Path, run_info: InferRunInfo) -> "FullyPopulatedJsonWriter":
+        """Initialize writer, write manifest, and prepare for streaming.
 
         Args:
             run_dir: Run directory where output should be written
+            run_info: Inference run context (written to separate manifest file)
 
         Returns:
             Self, to enable context manager usage
@@ -55,8 +61,13 @@ class FullyPopulatedJsonWriter(JudgementWriter):
             raise RuntimeError("Writer is already open")
 
         self.output_path = run_dir / "judgements.json"
+        self.manifest_path = run_dir / "run_manifest.json"
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         self.judgements = []
+
+        # Write run manifest immediately (separate from judgements)
+        with self.manifest_path.open("w", encoding="utf-8") as f:
+            json.dump(run_info.model_dump(mode="json"), f, indent=2)
 
         return self
 

@@ -8,10 +8,7 @@ provenance without waiting for aggregate metrics.
 
 from __future__ import annotations
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field
-
-from llm_ensemble.libs.runtime.run_info import RunInfo
+from pydantic import BaseModel, Field
 
 
 class RunSummary(BaseModel):

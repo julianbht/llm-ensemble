@@ -11,7 +11,7 @@ from llm_ensemble.libs.cli.common_params import InputPath, IoCfg, RunName, LogCf
 # Load runtime configuration early
 load_runtime_config()
 
-app = typer.Typer(add_completion=False, help="LLM Ensemble – data ingest CLI")
+app = typer.Typer(add_completion=True, help="LLM Ensemble – data ingest CLI")
 
 
 @app.command("ingest")

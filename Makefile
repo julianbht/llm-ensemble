@@ -68,12 +68,7 @@ db:
 	@echo "Starting PostgreSQL database..."
 	docker-compose up -d
 	@echo ""
-	@echo "Database started!"
-	@echo "  Container: llm-ensemble-db"
-	@echo "  Port:      localhost:5432"
-	@echo "  User:      llm_ensemble"
-	@echo "  Database:  llm_ensemble"
-	@echo ""
+@echo "Database started!"
 	@echo "View logs:    make db-logs"
 	@echo "Check status: make db-status"
 

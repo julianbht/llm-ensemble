@@ -1,16 +1,30 @@
 SHELL := /usr/bin/env bash
 .PHONY: help install install-dev test test-ingest test-infer test-schema schemas clean
+.PHONY: db-up db-down db-logs db-status autocomplete
 
 export PYTHONUNBUFFERED=1
 
 help:
 	@echo "Available targets:"
+	@echo ""
+	@echo "Installation:"
 	@echo "  make install       - Install package"
 	@echo "  make install-dev   - Install package with dev dependencies"
+	@echo "  make autocomplete  - Install shell autocomplete for CLIs"
+	@echo ""
+	@echo "Database:"
+	@echo "  make db-up         - Start PostgreSQL database (docker-compose)"
+	@echo "  make db-down       - Stop PostgreSQL database"
+	@echo "  make db-status     - Check database status"
+	@echo "  make db-logs       - View database logs"
+	@echo ""
+	@echo "Testing:"
 	@echo "  make test          - Run all tests"
 	@echo "  make test-ingest   - Run ingest tests only"
 	@echo "  make test-infer    - Run infer tests only"
 	@echo "  make test-schema   - Run schema validation tests only"
+	@echo ""
+	@echo "Utilities:"
 	@echo "  make schemas       - Generate JSON schemas from Pydantic models"
 	@echo "  make clean         - Remove artifacts and cached files"
 
@@ -19,6 +33,23 @@ install:
 
 install-dev:
 	pip install -e ".[dev]"
+
+autocomplete:
+	@echo "Installing shell autocomplete for CLIs..."
+	@echo "This will install autocomplete for: ingest, infer, aggregate, evaluate"
+	@echo ""
+	@if [ -d .venv ]; then \
+		. .venv/bin/activate && \
+		ingest --install-completion 2>/dev/null && \
+		infer --install-completion 2>/dev/null && \
+		aggregate --install-completion 2>/dev/null && \
+		evaluate --install-completion 2>/dev/null && \
+		echo "" && \
+		echo "Autocomplete installed! Restart your shell or run 'source ~/.bashrc' (or ~/.zshrc)"; \
+	else \
+		echo "Virtual environment not found. Run 'make install-dev' first."; \
+		exit 1; \
+	fi
 
 test:
 	pytest
@@ -31,6 +62,33 @@ test-infer:
 
 test-schema:
 	pytest -k "schema"
+
+# Database management
+db-up:
+	@echo "Starting PostgreSQL database..."
+	docker-compose up -d
+	@echo ""
+	@echo "Database started!"
+	@echo "  Container: llm-ensemble-db"
+	@echo "  Port:      localhost:5432"
+	@echo "  User:      llm_ensemble"
+	@echo "  Database:  llm_ensemble"
+	@echo ""
+	@echo "View logs:    make db-logs"
+	@echo "Check status: make db-status"
+
+db-down:
+	@echo "Stopping PostgreSQL database..."
+	docker-compose down
+	@echo "Database stopped (data preserved in volume)"
+
+db-status:
+	@docker-compose ps
+	@echo ""
+	@docker-compose exec postgres pg_isready -U llm_ensemble 2>/dev/null || echo "Database is not running. Start with 'make db-up'"
+
+db-logs:
+	docker-compose logs -f postgres
 
 schemas:
 	@if [ -d .venv ]; then \

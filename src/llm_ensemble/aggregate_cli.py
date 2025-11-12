@@ -16,7 +16,11 @@ from llm_ensemble.libs.cli.common_params import IoCfg, RunName, LogCfg, Official
 # Load runtime configuration early
 load_runtime_config()
 
-app = typer.Typer(add_completion=True, help="LLM Ensemble – aggregate CLI")
+app = typer.Typer(
+    add_completion=True,
+    help="LLM Ensemble – aggregate CLI",
+    pretty_exceptions_enable=False,  # Disable Rich verbose tracebacks
+)
 
 
 @app.command("aggregate")

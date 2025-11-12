@@ -1,6 +1,6 @@
 SHELL := /usr/bin/env bash
 .PHONY: help install install-dev test test-ingest test-infer test-schema schemas clean
-.PHONY: db-up db-down db-logs db-status autocomplete
+.PHONY: db db-down db-logs db-status autocomplete
 
 export PYTHONUNBUFFERED=1
 
@@ -13,7 +13,7 @@ help:
 	@echo "  make autocomplete  - Install shell autocomplete for CLIs"
 	@echo ""
 	@echo "Database:"
-	@echo "  make db-up         - Start PostgreSQL database (docker-compose)"
+	@echo "  make db            - Start PostgreSQL database (docker-compose)"
 	@echo "  make db-down       - Stop PostgreSQL database"
 	@echo "  make db-status     - Check database status"
 	@echo "  make db-logs       - View database logs"
@@ -68,7 +68,7 @@ db:
 	@echo "Starting PostgreSQL database..."
 	docker-compose up -d
 	@echo ""
-@echo "Database started!"
+	@echo "Database started!"
 	@echo "View logs:    make db-logs"
 	@echo "Check status: make db-status"
 
@@ -93,7 +93,7 @@ schemas:
 	fi
 
 clean:
-	rm -rf artifacts/runs/*/test_*
+	rm -rf artifacts/runs/*/test/*
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "*.egg-info" -exec rm -rf {} +

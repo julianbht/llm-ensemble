@@ -1,0 +1,155 @@
+"""SQL database adapter for reading judging samples.
+
+Reads JudgingSample records from PostgreSQL database by ingest run name.
+This adapter queries the normalized relational schema and reconstructs
+domain objects from ORM entities.
+
+The adapter follows the same database connection pattern as SqlJudgementWriter,
+using SQLAlchemy sessions from the libs/db layer.
+
+Example:
+    >>> reader = SqlJudgingSampleReader()
+    >>> samples = reader.read(Path("my_ingest_run"), limit=100)
+    >>> len(samples)
+    100
+"""
+
+from __future__ import annotations
+from pathlib import Path
+from typing import Optional
+
+from sqlalchemy.orm import joinedload
+
+from llm_ensemble.ingest.schemas import JudgingSample, Query, Document, Dataset
+from llm_ensemble.ingest.schemas.orms import (
+    JudgingSampleORM,
+    QueryORM,
+    DocumentORM,
+    DatasetORM,
+    IngestRunORM,
+)
+from llm_ensemble.infer.ports import ExampleReader
+from llm_ensemble.libs.db import get_engine, get_session
+
+
+class SqlJudgingSampleReader(ExampleReader):
+    """Read JudgingSample records from SQL database by ingest run name.
+
+    This adapter implements the ExampleReader port while handling the
+    impedance mismatch between relational entities and domain objects.
+
+    Architecture:
+    - Implements same interface as NdjsonExampleReader (unified port)
+    - Data mapper logic lives inside this adapter (preserves domain purity)
+    - Queries by ingest run name passed via input_path parameter
+
+    Database connection:
+    - Reads DATABASE_URL from environment (.env file)
+    - Uses SQLAlchemy session with eager loading
+    - Session closed automatically after read
+
+    Query strategy:
+    - Find IngestRunORM by run_name
+    - Query JudgingSampleORM records for that run
+    - Eager load related Query, Document, Dataset entities (avoid N+1)
+    - Reconstruct Pydantic domain models from ORM entities
+
+    Example:
+        >>> reader = SqlJudgingSampleReader()
+        >>> # input_path interpreted as run_name
+        >>> samples = reader.read(Path("my_ingest_run_2024_01_15"), limit=100)
+    """
+
+    def read(
+        self,
+        input_path: Path,
+        limit: Optional[int] = None,
+    ) -> list[JudgingSample]:
+        """Read judging samples from database by ingest run name.
+
+        Args:
+            input_path: Path object interpreted as ingest run name (string)
+            limit: Optional maximum number of samples to read
+
+        Returns:
+            List of JudgingSample domain objects
+
+        Raises:
+            FileNotFoundError: If ingest run doesn't exist in database
+            ValueError: If database query fails or data is invalid
+        """
+        # Extract run name from path (interpret Path as run name string)
+        run_name = str(input_path)
+
+        # Get database engine and create session
+        engine = get_engine()  # Reads DATABASE_URL from .env
+        session = get_session(engine)
+
+        try:
+            # 1. Find ingest run by name
+            ingest_run = (
+                session.query(IngestRunORM)
+                .filter_by(run_name=run_name)
+                .one_or_none()
+            )
+
+            if not ingest_run:
+                raise FileNotFoundError(f"Ingest run not found: {run_name}")
+
+            # 2. Query judging samples with eager loading of relationships
+            query = (
+                session.query(JudgingSampleORM)
+                .filter_by(ingest_run_id=ingest_run.id)
+                .options(
+                    # Eager load query and its dataset
+                    joinedload(JudgingSampleORM.query).joinedload(QueryORM.dataset),
+                    # Eager load document and its dataset
+                    joinedload(JudgingSampleORM.document).joinedload(DocumentORM.dataset),
+                )
+            )
+
+            # Apply limit if specified
+            if limit is not None:
+                query = query.limit(limit)
+
+            samples_orm = query.all()
+
+            # 3. Convert ORM entities to Pydantic domain models
+            samples = []
+            for sample_orm in samples_orm:
+                # Reconstruct Dataset (use query's dataset as canonical)
+                dataset = Dataset(
+                    id=sample_orm.query.dataset.id,
+                    name=sample_orm.query.dataset.name,
+                    description=sample_orm.query.dataset.description,
+                )
+
+                # Reconstruct Query
+                query_obj = Query(
+                    id=sample_orm.query.id,
+                    external_id=sample_orm.query.external_id,
+                    query_text=sample_orm.query.query_text,
+                )
+
+                # Reconstruct Document
+                document = Document(
+                    id=sample_orm.document.id,
+                    external_id=sample_orm.document.external_id,
+                    doc_text=sample_orm.document.doc_text,
+                )
+
+                # Reconstruct JudgingSample
+                sample = JudgingSample(
+                    id=sample_orm.id,
+                    dataset=dataset,
+                    query=query_obj,
+                    document=document,
+                    gold_score=sample_orm.gold_score,
+                )
+                samples.append(sample)
+
+            return samples
+
+        finally:
+            # Always close session (resource cleanup)
+            session.close()

@@ -14,12 +14,11 @@ from llm_ensemble.libs.runtime.path_manager import PathManager
 # Common parameters shared by all CLIs
 # Note: Defaults are specified in function signatures, not here
 InputPath = Annotated[
-    Path,
+    Optional[Path],
     typer.Option(
         "--input",
         "-i",
-        help="Input path",
-        exists=True,
+        help="Input path (optional for database-backed readers)",
     )
 ]
 

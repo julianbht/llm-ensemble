@@ -1,12 +1,16 @@
 name_hint: sql
 description: |
   SQL database format for infer CLI.
-  Reads JudgingExample records from NDJSON files (reuses NdjsonExampleReader).
+  Reads JudgingSample records from PostgreSQL database by ingest run name.
   Writes LLMJudgement records to SQL database with normalized schema.
+
+  Usage: --io sql --input <ingest_run_name>
+
+  Requires DATABASE_URL environment variable (loaded from .env).
 
 # Adapter specifications (loaded dynamically)
 # Format: module paths are snake_case, class names are UpperCamelCase
-reader_module: llm_ensemble.infer.adapters.io.ndjson_example_reader
-reader_class: NdjsonExampleReader
+reader_module: llm_ensemble.infer.adapters.io.sql_judging_sample_reader
+reader_class: SqlJudgingSampleReader
 writer_module: llm_ensemble.infer.adapters.io.sql_judgement_writer
 writer_class: SqlJudgementWriter

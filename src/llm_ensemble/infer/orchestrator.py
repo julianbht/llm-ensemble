@@ -35,7 +35,7 @@ def run_inference(
     prompt_config: PromptConfig,
     io_config: IOConfig,
     logging_config: LoggingConfig,
-    input_file: Path,
+    input_file: Optional[Path],
     model_config_name: str,
     prompt_config_name: str,
     io_config_name: str,
@@ -59,7 +59,7 @@ def run_inference(
         prompt_config: Prompt configuration (already loaded and validated with overrides applied)
         io_config: I/O configuration (already loaded and validated with overrides applied)
         logging_config: Logging configuration (controls pretty printing and log saving)
-        input_file: Input file with JudgingExample records (from ingest CLI)
+        input_file: Input file with JudgingExample records (optional for database-backed readers)
         model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
         prompt_config_name: Name of the prompt config file (e.g., "thomas-et-al-prompt")
         io_config_name: Name of the I/O config file (e.g., "ndjson")
@@ -69,13 +69,9 @@ def run_inference(
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
 
     Raises:
-        FileNotFoundError: If input file doesn't exist
+        FileNotFoundError: If input is invalid (raised by adapter during read)
         ValueError: If adapter is not recognized or config is invalid
     """
-
-    # Verify input file exists
-    if not input_file.exists():
-        raise FileNotFoundError(f"Input file does not exist: {input_file}")
 
     # Generate or use provided run_name (collect name hints from all configs)
     if run_name is None:
@@ -110,7 +106,7 @@ def run_inference(
         model_cfg=model_config,
         prompt_config=prompt_config,
         io_config=io_config,
-        input_file=str(input_file),
+        input_file=str(input_file) if input_file else None,
         limit=limit,
     )
 
@@ -134,7 +130,7 @@ def run_inference(
         provider=model_config.provider,
         io_format=io_config_name,
         prompt=prompt_config_name,
-        input_file=str(input_file),
+        input_file=str(input_file) if input_file else "database",
         limit=limit,
     )
     logger.info(InferLogEvent.RUN_DIRECTORY_CREATED, path=str(run_dir))

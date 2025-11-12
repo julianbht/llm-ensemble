@@ -19,8 +19,8 @@ app = typer.Typer(add_completion=True, help="LLM Ensemble – inference CLI")
 @app.command("infer")
 def infer(
     # Required parameters
-    input_path: InputPath,
     io_cfg: IoCfg,
+    input_path: InputPath = None,
     model_cfg: str = typer.Option(
         ...,
         "--model-cfg",

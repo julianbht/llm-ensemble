@@ -72,9 +72,9 @@ class InferRunInfo(RunInfo):
     )
 
     # Input parameters
-    input_file: str = Field(
-        ...,
-        description="Path to input file containing JudgingExample records"
+    input_file: Optional[str] = Field(
+        default=None,
+        description="Path to input file containing JudgingExample records (optional for database-backed readers)"
     )
 
     limit: Optional[int] = Field(

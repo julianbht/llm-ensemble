@@ -19,8 +19,6 @@
 # Data persistence:
 #   Data is stored in Docker volume 'postgres_data' and persists across restarts
 
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine

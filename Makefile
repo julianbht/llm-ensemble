@@ -1,6 +1,6 @@
 SHELL := /usr/bin/env bash
 .PHONY: help install install-dev test test-ingest test-infer test-schema schemas clean
-.PHONY: db db-down db-logs db-status autocomplete
+.PHONY: db db-down db-init db-logs db-status autocomplete
 
 export PYTHONUNBUFFERED=1
 
@@ -14,6 +14,7 @@ help:
 	@echo ""
 	@echo "Database:"
 	@echo "  make db            - Start PostgreSQL database (docker-compose)"
+	@echo "  make db-init       - Initialize database schema (create tables, run once)"
 	@echo "  make db-down       - Stop PostgreSQL database"
 	@echo "  make db-status     - Check database status"
 	@echo "  make db-logs       - View database logs"
@@ -81,6 +82,14 @@ db-status:
 	@docker-compose ps
 	@echo ""
 	@docker-compose exec postgres pg_isready -U llm_ensemble 2>/dev/null || echo "Database is not running. Start with 'make db-up'"
+
+db-init:
+	@echo "Initializing database schema..."
+	@if [ -d .venv ]; then \
+		. .venv/bin/activate && python scripts/init_db.py; \
+	else \
+		python3 scripts/init_db.py; \
+	fi
 
 db-logs:
 	docker-compose logs -f postgres

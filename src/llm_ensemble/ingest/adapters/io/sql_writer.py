@@ -28,7 +28,6 @@ from llm_ensemble.ingest.schemas.orms import (
 from llm_ensemble.ingest.ports import DatasetWriter
 from llm_ensemble.libs.db import (
     get_engine,
-    create_all_tables,
     session_context,
 )
 
@@ -87,9 +86,7 @@ class SqlWriter(DatasetWriter):
         if not samples:
             return WriteSummary()
 
-        # Auto-create tables on first write
-        create_all_tables(self.engine)
-
+        # Note: Tables must be created via `make db-init` before first write
         # Track counts
         datasets_created = 0
         datasets_skipped = 0

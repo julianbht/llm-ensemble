@@ -64,7 +64,7 @@ test-schema:
 	pytest -k "schema"
 
 # Database management
-db-up:
+db:
 	@echo "Starting PostgreSQL database..."
 	docker-compose up -d
 	@echo ""

@@ -34,7 +34,7 @@ class ProviderORM(Base):
     One row per provider (openrouter, ollama, hf).
     """
     __tablename__ = "providers"
-    __natural_key__ = ("name",)
+    __natural_key__ = "name"
     __uuid_function__ = "compute_provider_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -53,7 +53,7 @@ class PromptTemplateORM(Base):
     even if template text is similar. This ensures we know exactly what was used.
     """
     __tablename__ = "prompt_templates"
-    __natural_key__ = ("name",)
+    __natural_key__ = "name"
     __uuid_function__ = "compute_prompt_template_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -70,7 +70,7 @@ class ModelSpecORM(Base):
     Captures experimental parameters (model ID, temperature, etc.) that affect LLM behavior.
     """
     __tablename__ = "model_specs"
-    __natural_key__ = ("name",)
+    __natural_key__ = "name"
     __uuid_function__ = "compute_model_spec_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -104,7 +104,7 @@ class ModelSpecORM(Base):
 
 class InferRunORM(Base):
     __tablename__ = "infer_runs"
-    __natural_key__ = ("run_name",)
+    __natural_key__ = "run_name"
     __uuid_function__ = "compute_infer_run_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)

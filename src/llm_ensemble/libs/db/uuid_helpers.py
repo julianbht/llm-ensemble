@@ -4,7 +4,9 @@ All UUIDs are computed using UUIDv5 with entity-specific namespace UUIDs.
 This ensures:
 - Same logical entity → same UUID (idempotent writes)
 - Different entity types → different UUIDs (no collisions)
-- No need to query database before insert (just compute UUID)
+- Because using combined UUID's as primary keys is essentially the same as enforcing
+unique constraints on the db level, we ensure that the uuid computation matches the 
+db unique constraints with automated tests.
 """
 
 import uuid
@@ -73,15 +75,6 @@ def compute_judging_sample_uuid(
     query_id: str,
     document_id: str
 ) -> uuid.UUID:
-    """Compute deterministic UUID for a judging sample.
-
-    Args:
-        query_id: UUID of the query
-        document_id: UUID of the document
-
-    Returns:
-        Deterministic UUID for this judging sample
-    """
     natural_key = f"{query_id}:{document_id}"
     return uuid.uuid5(NAMESPACE_JUDGING_SAMPLE, natural_key)
 
@@ -114,82 +107,27 @@ def compute_infer_warning_uuid(
 # ========================================================================
 
 def compute_prompt_template_uuid(name: str) -> uuid.UUID:
-    """Compute deterministic UUID for a prompt template from its name.
-
-    Args:
-        name: Prompt template name (e.g., 'thomas-et-al-prompt')
-
-    Returns:
-        Deterministic UUID for this prompt template
-    """
     return uuid.uuid5(NAMESPACE_PROMPT_TEMPLATE, name)
 
 
 def compute_prompt_config_uuid(config_name: str) -> uuid.UUID:
-    """Compute deterministic UUID for a prompt config from its name.
-
-    Note: This is for legacy/future use. Current system uses prompt_template.
-
-    Args:
-        config_name: Prompt config name
-
-    Returns:
-        Deterministic UUID for this prompt config
-    """
     return uuid.uuid5(NAMESPACE_PROMPT_CONFIG, config_name)
 
 
 def compute_model_spec_uuid(name: str) -> uuid.UUID:
-    """Compute deterministic UUID for a model spec from its config name.
-
-    Args:
-        name: Model spec name (from config filename, e.g., 'gpt-oss-20b')
-
-    Returns:
-        Deterministic UUID for this model spec
-    """
     return uuid.uuid5(NAMESPACE_MODEL_SPEC, name)
 
 
 def compute_provider_uuid(name: str) -> uuid.UUID:
-    """Compute deterministic UUID for a provider from its name.
-
-    Args:
-        name: Provider name (e.g., 'openrouter', 'ollama', 'hf')
-
-    Returns:
-        Deterministic UUID for this provider
-    """
     return uuid.uuid5(NAMESPACE_PROVIDER, name)
 
 
 def compute_parser_spec_uuid(parser_module: str, parser_class: str, code_hash: str) -> uuid.UUID:
-    """Compute deterministic UUID for a parser spec.
-
-    Args:
-        parser_module: Full module path (e.g., 'llm_ensemble.infer.adapters.parsers.json_response_parser')
-        parser_class: Class name (e.g., 'JsonResponseParser')
-        code_hash: SHA256 hash of parser code
-
-    Returns:
-        Deterministic UUID for this parser spec
-    """
     natural_key = f"{parser_module}:{parser_class}:{code_hash}"
     return uuid.uuid5(NAMESPACE_PARSER_SPEC, natural_key)
 
 
 def compute_llm_request_uuid(prompt: str, judging_sample_id: uuid.UUID) -> uuid.UUID:
-    """Compute deterministic UUID for an LLM request.
-
-    Same prompt + same sample = same request UUID (deduplication).
-
-    Args:
-        prompt: Rendered prompt text
-        judging_sample_id: UUID of the judging sample
-
-    Returns:
-        Deterministic UUID for this request
-    """
     # Hash prompt to keep natural key reasonable length
     prompt_hash = hashlib.sha256(prompt.encode()).hexdigest()
     natural_key = f"{judging_sample_id}:{prompt_hash}"
@@ -197,19 +135,6 @@ def compute_llm_request_uuid(prompt: str, judging_sample_id: uuid.UUID) -> uuid.
 
 
 def compute_llm_response_uuid(parser_spec_id: uuid.UUID, raw_response: str) -> uuid.UUID:
-    """Compute deterministic UUID for an LLM response.
-
-    Same parser + same raw text = same response UUID (deduplication).
-    Parsed fields (label, confidence, rationale) are functionally dependent
-    on (parser_spec_id, raw_response), so they're stored together.
-
-    Args:
-        parser_spec_id: UUID of the parser spec used
-        raw_response: Raw LLM output text
-
-    Returns:
-        Deterministic UUID for this response
-    """
     # Hash raw response to keep natural key reasonable length
     response_hash = hashlib.sha256(raw_response.encode()).hexdigest()
     natural_key = f"{parser_spec_id}:{response_hash}"
@@ -217,17 +142,5 @@ def compute_llm_response_uuid(parser_spec_id: uuid.UUID, raw_response: str) -> u
 
 
 def compute_llm_call_uuid(llm_request_id: uuid.UUID, infer_run_id: uuid.UUID) -> uuid.UUID:
-    """Compute deterministic UUID for an LLM call.
-
-    Represents a specific request made during a specific run.
-    Same request in different runs = different calls.
-
-    Args:
-        llm_request_id: UUID of the request
-        infer_run_id: UUID of the infer run
-
-    Returns:
-        Deterministic UUID for this call
-    """
     natural_key = f"{llm_request_id}:{infer_run_id}"
     return uuid.uuid5(NAMESPACE_LLM_CALL, natural_key)

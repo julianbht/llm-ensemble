@@ -115,6 +115,8 @@ def test_uuid_alignment_for_all_orms():
         )
 
         # 4. Verify parameter ORDER and NAMES match natural key
+        # We assume that if a uuid generating function takes the same input
+        # as the natural key, then it will use these variables to compute the natural key
         for i, (param, col) in enumerate(zip(param_names, natural_key)):
             # Normalize both names for flexible comparison
             # This handles variations like "run_name" vs "runname" or case differences

@@ -7,13 +7,15 @@ waiting for the run to complete.
 """
 
 from __future__ import annotations
+from pathlib import Path
 from typing import Optional
 from uuid import UUID
 from pydantic import ConfigDict, Field
 
-from llm_ensemble.libs.runtime.run_info import RunInfo
+from llm_ensemble.libs.runtime.run_info import RunInfo, RunType
 from llm_ensemble.ingest.schemas.ingest_io_config import IngestIOConfig
 from llm_ensemble.libs.db import compute_ingest_run_uuid
+from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
 class IngestRunInfo(RunInfo):
@@ -111,4 +113,25 @@ class IngestRunInfo(RunInfo):
             input_path=input_path,
             limit=limit,
             **kwargs
+        )
+
+    @property
+    def run_dir(self) -> Path:
+        """Derive run directory from run context.
+
+        Computed on-demand from run_name, cli_name, and run_type.
+        Single source of truth via PathManager.
+
+        Returns:
+            Path to run directory (e.g., artifacts/runs/ingest/test/<run_name>)
+
+        Example:
+            >>> run_info = IngestRunInfo.create(run_name="20250128_120000_test", ...)
+            >>> run_info.run_dir
+            PosixPath('artifacts/runs/ingest/test/20250128_120000_test')
+        """
+        return PathManager.get_run_dir(
+            cli_name=self.cli_name,
+            run_name=self.run_name,
+            official=(self.run_type == RunType.OFFICIAL)
         )

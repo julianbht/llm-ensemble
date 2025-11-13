@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore
+from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore, Dataset
 
 
 @dataclass(frozen=True)
@@ -49,20 +49,18 @@ class SampleReader(ABC):
     def read(
         self,
         input_path: Path,
-        dataset_name: str,
-        dataset_description: Optional[str] = None,
+        dataset: Dataset,
         limit: Optional[int] = None,
     ) -> list[RawJudgingSample]:
         """Read raw dataset and return RawJudgingSample DTOs (without manifest).
 
         Args:
             input_path: Path to input dataset (file or directory)
-            dataset_name: Dataset identifier for computing deterministic UUIDs
-            dataset_description: Optional dataset description
+            dataset: Dataset domain object (created by orchestrator, used for UUID computation)
             limit: Optional maximum number of samples to read
 
         Returns:
-            List of RawJudgingSample DTOs (with IDs computed from dataset_name)
+            List of RawJudgingSample DTOs (with IDs computed from dataset)
 
         Raises:
             FileNotFoundError: If input_path doesn't exist

@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Callable
 
-from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary
+from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, Dataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
 from llm_ensemble.ingest.ports import SampleReader, DatasetWriter
@@ -43,7 +43,7 @@ class IngestionService:
         self,
         data_dir: Path,
         run_info: IngestRunInfo,
-        run_dir: Path,
+        dataset: Dataset,
         limit: Optional[int] = None,
         on_sample: Optional[Callable[[JudgingSample], None]] = None,
         on_write: Optional[Callable[[WriteSummary], None]] = None,
@@ -54,13 +54,13 @@ class IngestionService:
         1. Creating run summary builder with timing
         2. Reading RawJudgingSample DTOs from raw dataset via SampleReader port
         3. Converting RawJudgingSamples to JudgingSamples (pure domain entities)
-        4. Writing JudgingSamples via DatasetWriter port (writer determines output structure)
+        4. Writing JudgingSamples via DatasetWriter port (writer derives output path from run_info)
         5. Calculating summary statistics and finalizing
 
         Args:
             data_dir: Directory containing raw dataset files
-            run_info: Immutable runtime context (passed to writer for persistence, not attached to samples)
-            run_dir: Run directory where output should be written (writer determines file structure)
+            run_info: Immutable runtime context (contains run_dir property for writers)
+            dataset: Dataset domain object (created by orchestrator, used for UUID computation)
             limit: Optional maximum number of samples to process
             on_sample: Optional callback invoked for each sample (for logging/progress)
             on_write: Optional callback invoked after batch write completes (for logging)
@@ -77,15 +77,10 @@ class IngestionService:
         summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
 
-        # Extract dataset name and description from IngestIOConfig
-        dataset_name = run_info.io_config.dataset_name
-        dataset_description = run_info.io_config.dataset_description
-
         # Read RawJudgingSample DTOs from raw dataset (SampleReader handles limit internally)
         raw_samples: list[RawJudgingSample] = self.sample_reader.read(
             data_dir,
-            dataset_name=dataset_name,
-            dataset_description=dataset_description,
+            dataset=dataset,
             limit=limit
         )
 
@@ -106,8 +101,8 @@ class IngestionService:
             for sample in judging_samples:
                 on_sample(sample)
 
-        # Write samples 
-        write_summary = self.dataset_writer.write(judging_samples, run_dir, run_info)
+        # Write samples (writer derives output location from run_info)
+        write_summary = self.dataset_writer.write(judging_samples, run_info, dataset)
 
         # Invoke callback after write (for logging)
         if on_write:

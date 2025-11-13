@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.ingest.domain import IngestionService
-from llm_ensemble.ingest.schemas import IngestIOConfig, WriteSummary
+from llm_ensemble.ingest.schemas import IngestIOConfig, WriteSummary, Dataset
 from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.logging.log_events import IngestLogEvent
@@ -133,12 +133,18 @@ def run_ingest(
         for log_entry in write_summary.get_log_entries():
             logger.info(**log_entry)
 
+    # Create Dataset domain object (orchestrator owns this context)
+    dataset = Dataset.create(
+        name=io_config.dataset_name,
+        description=io_config.dataset_description
+    )
+
     # Run ingestion pipeline (pure business logic)
     try:
         summary = service.ingest_dataset(
             data_dir=input_path,
             run_info=run_info,
-            run_dir=run_dir,
+            dataset=dataset,
             limit=limit,
             on_write=on_write,
         )

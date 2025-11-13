@@ -53,16 +53,14 @@ class LlmJudgeSampleReader(SampleReader):
     def read(
         self,
         input_path: Path,
-        dataset_name: str,
-        dataset_description: Optional[str] = None,
+        dataset: Dataset,
         limit: Optional[int] = None,
     ) -> list[RawJudgingSample]:
         """Read LLM Judge dataset and return RawJudgingSample DTOs.
 
         Args:
             input_path: Base directory containing dataset files
-            dataset_name: Dataset identifier for computing deterministic UUIDs
-            dataset_description: Optional dataset description
+            dataset: Dataset domain object (created by orchestrator, used for UUID computation)
             limit: Optional maximum number of samples to return
 
         Returns:
@@ -73,9 +71,6 @@ class LlmJudgeSampleReader(SampleReader):
             ValueError: If dataset files are malformed or qrels reference missing queries/documents
         """
         paths = LlmJudgePaths(input_path)
-
-        # Create Dataset entity
-        dataset = Dataset.create(dataset_name, description=dataset_description)
 
         # Load queries and documents into memory (with IDs computed from dataset)
         queries = self._read_queries(paths.queries, dataset)

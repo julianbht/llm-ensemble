@@ -18,11 +18,13 @@ from __future__ import annotations
 from uuid import UUID
 
 from llm_ensemble.ingest.schemas import Dataset, Query, Document, JudgingSample
+from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.orms import (
     DatasetORM,
     QueryORM,
     DocumentORM,
     JudgingSampleORM,
+    IngestRunORM,
 )
 
 
@@ -241,4 +243,37 @@ def judging_sample_from_orm(
         query=query,
         document=document,
         gold_score=sample_orm.gold_score,
+    )
+
+
+# ============================================================================
+# IngestRun Mappers
+# ============================================================================
+
+def ingest_run_info_to_orm(run_info: IngestRunInfo) -> IngestRunORM:
+    """Convert IngestRunInfo to IngestRunORM.
+
+    Note: IngestRunInfo is a rich context object with full configuration,
+    but the ORM only persists a subset of fields for run tracking.
+
+    Args:
+        run_info: IngestRunInfo context object
+
+    Returns:
+        IngestRunORM model ready for persistence
+
+    Example:
+        >>> run_info = IngestRunInfo.create(...)
+        >>> run_orm = ingest_run_info_to_orm(run_info)
+    """
+    return IngestRunORM(
+        id=run_info.id,
+        run_name=run_info.run_name,
+        run_type=run_info.run_type,
+        io_config_name=run_info.io_config_name,
+        input_path=run_info.input_path,
+        limit=run_info.limit,
+        git_sha=run_info.git_sha,
+        git_branch=run_info.git_branch,
+        git_is_dirty="true" if not run_info.git_clean else "false",
     )

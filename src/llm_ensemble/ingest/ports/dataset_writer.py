@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List
 
-from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary
+from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, Dataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 
 
@@ -35,21 +35,25 @@ class DatasetWriter(ABC):
     """
 
     @abstractmethod
-    def write(self, samples: List[JudgingSample], run_dir: Path, run_info: IngestRunInfo) -> WriteSummary:
-        """Write judging samples to storage within the run directory.
+    def write(
+        self,
+        samples: List[JudgingSample],
+        run_info: IngestRunInfo,
+        dataset: Dataset,
+    ) -> WriteSummary:
+        """Write judging samples to storage.
 
-        The adapter determines the specific output file(s) structure.
-        Common patterns:
-        - Separate files: run_dir / "judging_samples.ndjson" + run_dir / "ingest_run_info.json"
-        - Database: Write to centralized database with foreign keys
-        
+        The adapter determines output location and structure:
+        - File-based writers: Use run_info.run_dir for output directory
+        - Database writers: Write to centralized database
+
         Filenames should be derived using get_entity_filename() for consistency
         with other CLIs (e.g., INFER uses llm_judgements.ndjson + infer_run_info.json).
 
         Args:
-            samples: List of judging samples to write (pure domain entities without run_info)
-            run_dir: Run directory where output should be written
-            run_info: Immutable runtime context (written as separate manifest, not embedded in samples)
+            samples: List of judging samples (pure domain entities)
+            run_info: Immutable runtime context (contains run_dir property for path derivation)
+            dataset: Dataset domain object (shared context)
 
         Returns:
             WriteSummary tracking what was created vs. skipped

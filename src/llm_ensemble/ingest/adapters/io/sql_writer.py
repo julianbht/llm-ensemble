@@ -28,6 +28,7 @@ from llm_ensemble.ingest.adapters.io.mappers import (
     query_to_orm,
     document_to_orm,
     judging_sample_to_orm,
+    ingest_run_info_to_orm,
 )
 from llm_ensemble.libs.db import (
     get_engine,
@@ -70,15 +71,20 @@ class SqlWriter(DatasetWriter):
         self.database_url = database_url
         self.engine = get_engine(database_url)
 
-    def write(self, samples: List[JudgingSample], run_dir: Path, run_info: IngestRunInfo) -> WriteSummary:
+    def write(
+        self,
+        samples: List[JudgingSample],
+        run_info: IngestRunInfo,
+        dataset: Dataset,
+    ) -> WriteSummary:
         """Write judging samples to SQL database.
 
         Idempotent operation - merges entities (insert if new, update if exists).
 
         Args:
             samples: List of judging samples (pure domain entities with id fields set)
-            run_dir: Run directory (not used by SQL writer - writes to centralized database)
-            run_info: Immutable runtime context (contains dataset config, used for mapping)
+            run_info: Immutable runtime context
+            dataset: Dataset domain object (created by orchestrator, shared across pipeline)
 
         Returns:
             WriteSummary tracking what was created vs. skipped
@@ -105,13 +111,6 @@ class SqlWriter(DatasetWriter):
         # Write to database in transaction
         try:
             with session_context(self.engine) as session:
-                # MAPPING LAYER: Reconstruct Dataset entity from run_info config
-                # All samples come from the same dataset, so we extract it once from config
-                dataset = Dataset.create(
-                    name=run_info.io_config.dataset_name,
-                    description=run_info.io_config.dataset_description
-                )
-
                 # Save entities in dependency order
                 datasets_created, datasets_skipped = self._save_dataset(session, dataset)
                 runs_created, runs_skipped = self._save_ingest_run(session, run_info)
@@ -165,11 +164,11 @@ class SqlWriter(DatasetWriter):
         return (1, 0)
 
     def _save_ingest_run(self, session: Session, run_info: IngestRunInfo) -> Tuple[int, int]:
-        """Save ingest run entity to database.
+        """Save ingest run entity to database using mapper.
 
         Args:
             session: SQLAlchemy session
-            run_info: IngestRunInfo Pydantic schema
+            run_info: IngestRunInfo context object
 
         Returns:
             Tuple of (created_count, skipped_count)
@@ -178,18 +177,8 @@ class SqlWriter(DatasetWriter):
         if existing:
             return (0, 1)
 
-        ingest_run_model = IngestRunORM(
-            id=run_info.id,
-            run_name=run_info.run_name,
-            run_type=run_info.run_type,
-            io_config_name=run_info.io_config_name,
-            input_path=run_info.input_path,
-            limit=run_info.limit,
-            git_sha=run_info.git_sha,
-            git_branch=run_info.git_branch,
-            git_is_dirty="true" if not run_info.git_clean else "false",
-        )
-        session.add(ingest_run_model)
+        ingest_run_orm = ingest_run_info_to_orm(run_info)
+        session.add(ingest_run_orm)
         return (1, 0)
 
     def _collect_unique_entities(

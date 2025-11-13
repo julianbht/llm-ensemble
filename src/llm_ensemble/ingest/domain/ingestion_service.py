@@ -79,13 +79,11 @@ class IngestionService:
             limit=limit
         )
 
-        sample_count = normalized_dataset.sample_count
-
         # Invoke callback after read completes (for logging)
         if on_read_complete:
             on_read_complete(normalized_dataset)
 
-        # Write normalized dataset (writer derives output location from run_info)
+        # Write normalized dataset 
         write_summary = self.dataset_writer.write(
             normalized_dataset,
             run_info
@@ -99,7 +97,7 @@ class IngestionService:
         summary_builder.add("write_summary", write_summary)
 
         # Add statistics to summary builder
-        summary_builder.add("sample_count", sample_count)
+        summary_builder.add("sample_count", normalized_dataset.sample_count)
 
         # Finalize summary (sets end_time and creates immutable Pydantic object)
         summary: IngestRunSummary = summary_builder.finalize(IngestRunSummary)

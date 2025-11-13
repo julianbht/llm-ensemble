@@ -33,12 +33,14 @@ from llm_ensemble.libs.schemas import RelevanceScore
 
 class DatasetORM(Base):
     """Dataset ORM model - normalized dataset metadata.
-    
+
     Each dataset represents a distinct IR dataset (e.g., 'msmarco', 'trec-covid').
     Uses deterministic UUID based on dataset name.
     """
     __tablename__ = "datasets"
-    
+    __natural_key__ = ("name",)
+    __uuid_function__ = "compute_dataset_uuid"
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
     description = Column(Text, nullable=True)
@@ -51,11 +53,13 @@ class DatasetORM(Base):
 
 class QueryORM(Base):
     """Query ORM model - search queries from IR datasets.
-    
+
     Uses deterministic UUID based on dataset + external_id.
     """
     __tablename__ = "queries"
-    
+    __natural_key__ = ("dataset_id", "external_id")
+    __uuid_function__ = "compute_query_uuid"
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     dataset_id = Column(PG_UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
     external_id = Column(String(255), nullable=False)
@@ -73,11 +77,13 @@ class QueryORM(Base):
 
 class DocumentORM(Base):
     """Document ORM model - documents from IR datasets.
-    
+
     Uses deterministic UUID based on dataset + external_id.
     """
     __tablename__ = "documents"
-    
+    __natural_key__ = ("dataset_id", "external_id")
+    __uuid_function__ = "compute_document_uuid"
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     dataset_id = Column(PG_UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
     external_id = Column(String(255), nullable=False)
@@ -95,12 +101,14 @@ class DocumentORM(Base):
 
 class IngestRunORM(Base):
     """IngestRun ORM model - metadata for ingest runs.
-    
+
     Uses deterministic UUID based on run_name.
     Tracks run_type using RunType enum for proper typing and validation.
     """
     __tablename__ = "ingest_runs"
-    
+    __natural_key__ = ("run_name",)
+    __uuid_function__ = "compute_ingest_run_uuid"
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType), nullable=False, default=RunType.TEST)
@@ -126,6 +134,8 @@ class JudgingSampleORM(Base):
     Stores both ingest_run_id (UUID FK) and run_name (denormalized string) for easier querying.
     """
     __tablename__ = "judging_samples"
+    __natural_key__ = ("query_id", "document_id")
+    __uuid_function__ = "compute_judging_sample_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     query_id = Column(PG_UUID(as_uuid=True), ForeignKey("queries.id"), nullable=False)

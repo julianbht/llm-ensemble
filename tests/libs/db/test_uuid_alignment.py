@@ -12,12 +12,10 @@ which could lead to UUID collisions or constraint violations.
 """
 
 import inspect
-import pytest
-from typing import get_type_hints
 from sqlalchemy import UniqueConstraint
-from sqlalchemy.orm import DeclarativeMeta
 
 from llm_ensemble.infer.schemas import orms_normalized
+from llm_ensemble.ingest.schemas import orms as ingest_orms
 from llm_ensemble.libs.db import uuid_helpers
 
 
@@ -71,12 +69,15 @@ def normalize_name(name: str) -> str:
 def test_uuid_alignment_for_all_orms():
     """Verify UUID generation natural keys match ORM unique constraints."""
 
-    orms = get_all_orm_classes(orms_normalized)
+    # Check both infer and ingest ORMs
+    infer_orms = get_all_orm_classes(orms_normalized)
+    ingest_orms_list = get_all_orm_classes(ingest_orms)
+    all_orms = infer_orms + ingest_orms_list
 
     # Track ORMs we've validated
     validated_orms = []
 
-    for orm_class in orms:
+    for orm_class in all_orms:
         # Skip if no UUID metadata (not all tables need deterministic UUIDs)
         if not hasattr(orm_class, "__uuid_function__"):
             continue
@@ -132,8 +133,9 @@ def test_uuid_alignment_for_all_orms():
         validated_orms.append(orm_class.__name__)
 
     # Ensure we validated at least some ORMs (sanity check)
-    assert len(validated_orms) >= 5, (
-        f"Expected to validate at least 5 ORMs, but only found {len(validated_orms)}: "
+    # We expect at least 5 ingest + 8 infer = 13 total
+    assert len(validated_orms) >= 10, (
+        f"Expected to validate at least 10 ORMs, but only found {len(validated_orms)}: "
         f"{validated_orms}"
     )
 
@@ -143,9 +145,12 @@ def test_uuid_alignment_for_all_orms():
 def test_uuid_function_naming_convention():
     """Verify UUID functions follow naming conventions."""
 
-    orms = get_all_orm_classes(orms_normalized)
+    # Check both infer and ingest ORMs
+    infer_orms = get_all_orm_classes(orms_normalized)
+    ingest_orms_list = get_all_orm_classes(ingest_orms)
+    all_orms = infer_orms + ingest_orms_list
 
-    for orm_class in orms:
+    for orm_class in all_orms:
         if not hasattr(orm_class, "__uuid_function__"):
             continue
 
@@ -163,9 +168,12 @@ def test_uuid_function_naming_convention():
 def test_natural_key_columns_exist():
     """Verify all columns in __natural_key__ actually exist in the ORM."""
 
-    orms = get_all_orm_classes(orms_normalized)
+    # Check both infer and ingest ORMs
+    infer_orms = get_all_orm_classes(orms_normalized)
+    ingest_orms_list = get_all_orm_classes(ingest_orms)
+    all_orms = infer_orms + ingest_orms_list
 
-    for orm_class in orms:
+    for orm_class in all_orms:
         if not hasattr(orm_class, "__natural_key__"):
             continue
 

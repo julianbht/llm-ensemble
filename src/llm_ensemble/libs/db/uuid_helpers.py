@@ -71,9 +71,18 @@ def compute_document_uuid(dataset_id: uuid.UUID, external_id: str) -> uuid.UUID:
 
 def compute_judging_sample_uuid(
     query_id: str,
-    doc_id: str
+    document_id: str
 ) -> uuid.UUID:
-    natural_key = f"{query_id}:{doc_id}"
+    """Compute deterministic UUID for a judging sample.
+
+    Args:
+        query_id: UUID of the query
+        document_id: UUID of the document
+
+    Returns:
+        Deterministic UUID for this judging sample
+    """
+    natural_key = f"{query_id}:{document_id}"
     return uuid.uuid5(NAMESPACE_JUDGING_SAMPLE, natural_key)
 
 # ========================================================================

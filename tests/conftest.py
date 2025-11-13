@@ -319,49 +319,51 @@ def tmp_runs_dir(tmp_path: Path, monkeypatch):
 
 @pytest.fixture
 def fake_reader_factory():
-    """Factory fixture for creating fake SampleReader test doubles.
+    """Factory fixture for creating fake DatasetReader test doubles.
 
     Returns a factory function that creates configurable fake readers
     for testing without actual I/O.
 
     Returns:
-        Factory function(samples: list[RawJudgingSample]) -> FakeReader
+        Factory function(normalized_dataset: NormalizedDataset) -> FakeReader
 
     Example:
         >>> def test_service(fake_reader_factory):
-        ...     reader = fake_reader_factory([sample1, sample2])
-        ...     result = reader.read(Path("/fake"), dataset_name="test")
-        ...     assert len(result) == 2
-        ...     assert reader.called_with["limit"] is None
+        ...     dataset = Dataset.create("test", "Test dataset")
+        ...     samples = [JudgingSample.create(...), ...]
+        ...     normalized = NormalizedDataset(dataset, samples)
+        ...     reader = fake_reader_factory(normalized)
+        ...     result = reader.read(Path("/fake"))
+        ...     assert result.sample_count == len(samples)
     """
-    from llm_ensemble.ingest.ports import SampleReader
-    from llm_ensemble.ingest.ports.sample_reader import RawJudgingSample
+    from llm_ensemble.ingest.ports import DatasetReader
+    from llm_ensemble.ingest.schemas import NormalizedDataset
 
-    class FakeReader(SampleReader):
-        """Test double for SampleReader that returns pre-configured samples."""
+    class FakeReader(DatasetReader):
+        """Test double for DatasetReader that returns pre-configured normalized dataset."""
 
-        def __init__(self, samples: list[RawJudgingSample]):
-            self.samples = samples
+        def __init__(self, normalized_dataset: NormalizedDataset):
+            self.normalized_dataset = normalized_dataset
             self.called_with = {}
 
         def read(
             self,
             input_path: Path,
-            dataset_name: str,
-            dataset_description: str | None = None,
             limit: int | None = None,
-        ) -> list[RawJudgingSample]:
+        ) -> NormalizedDataset:
             # Record what we were called with
             self.called_with = {
                 "input_path": input_path,
-                "dataset_name": dataset_name,
-                "dataset_description": dataset_description,
                 "limit": limit,
             }
             # Apply limit if specified
             if limit is not None:
-                return self.samples[:limit]
-            return self.samples
+                limited_samples = self.normalized_dataset.samples[:limit]
+                return NormalizedDataset(
+                    dataset=self.normalized_dataset.dataset,
+                    samples=limited_samples
+                )
+            return self.normalized_dataset
 
     return FakeReader
 

@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.ingest.domain import IngestionService
-from llm_ensemble.ingest.schemas import IngestIOConfig, WriteSummary, Dataset
+from llm_ensemble.ingest.schemas import WriteSummary, Dataset
+from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.logging.log_events import IngestLogEvent
@@ -26,7 +27,7 @@ from llm_ensemble.libs.logging import configure_logger
 
 
 def run_ingest(
-    io_config: IngestIOConfig,
+    io_config: IOConfig,
     logging_config: LoggingConfig,
     io_config_name: str,
     input_path: Path,
@@ -93,12 +94,6 @@ def run_ingest(
         git_branch=git_info["git_branch"],
     )
 
-    # Create Dataset object - all information is already available
-    dataset = Dataset.create(
-        name=io_config.dataset_name,
-        description=io_config.dataset_description
-    )
-
     # Set up log file path if saving logs
     log_file_path = run_dir / "run.log" if logging_config.save_logs else None
 
@@ -115,7 +110,6 @@ def run_ingest(
 
     logger.info(
         IngestLogEvent.INGEST_STARTED,
-        dataset=io_config.dataset_name,
         io_format=io_config_name,
         input_path=str(input_path),
         limit=limit,
@@ -123,12 +117,12 @@ def run_ingest(
     logger.info(IngestLogEvent.RUN_DIRECTORY_CREATED, path=str(run_dir))
 
     # Instantiate adapters directly from config
-    sample_reader = io_config.get_reader()
+    dataset_reader = io_config.get_reader()
     dataset_writer = io_config.get_writer()
 
     # Create domain service
     service = IngestionService(
-        sample_reader=sample_reader,
+        dataset_reader=dataset_reader,
         dataset_writer=dataset_writer,
     )
 
@@ -144,7 +138,6 @@ def run_ingest(
         summary = service.ingest_dataset(
             data_dir=input_path,
             run_info=run_info,
-            dataset=dataset,
             limit=limit,
             on_write=on_write,
         )

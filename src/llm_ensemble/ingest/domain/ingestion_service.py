@@ -9,11 +9,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Callable
 
-from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, Dataset
+from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, NormalizedDataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
-from llm_ensemble.ingest.ports import SampleReader, DatasetWriter
-from llm_ensemble.ingest.ports.sample_reader import RawJudgingSample
+from llm_ensemble.ingest.ports import DatasetReader, DatasetWriter
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 
 
@@ -27,23 +26,22 @@ class IngestionService:
 
     def __init__(
         self,
-        sample_reader: SampleReader,
+        dataset_reader: DatasetReader,
         dataset_writer: DatasetWriter,
     ):
         """Initialize ingestion service with port dependencies.
 
         Args:
-            sample_reader: Port for reading raw datasets
+            dataset_reader: Port for reading and normalizing datasets
             dataset_writer: Port for writing judging samples
         """
-        self.sample_reader = sample_reader
+        self.dataset_reader = dataset_reader
         self.dataset_writer = dataset_writer
 
     def ingest_dataset(
         self,
         data_dir: Path,
         run_info: IngestRunInfo,
-        dataset: Dataset,
         limit: Optional[int] = None,
         on_sample: Optional[Callable[[JudgingSample], None]] = None,
         on_write: Optional[Callable[[WriteSummary], None]] = None,
@@ -52,15 +50,13 @@ class IngestionService:
 
         Pure business logic that coordinates:
         1. Creating run summary builder with timing
-        2. Reading RawJudgingSample DTOs from raw dataset via SampleReader port
-        3. Converting RawJudgingSamples to JudgingSamples (pure domain entities)
-        4. Writing JudgingSamples via DatasetWriter port (writer derives output path from run_info)
-        5. Calculating summary statistics and finalizing
+        2. Reading complete NormalizedDataset via DatasetReader port (reader handles normalization)
+        3. Writing samples via DatasetWriter port (writer derives output path from run_info)
+        4. Calculating summary statistics and finalizing
 
         Args:
             data_dir: Directory containing raw dataset files
             run_info: Immutable runtime context (contains run_dir property for writers)
-            dataset: Dataset domain object (created by orchestrator, used for UUID computation)
             limit: Optional maximum number of samples to process
             on_sample: Optional callback invoked for each sample (for logging/progress)
             on_write: Optional callback invoked after batch write completes (for logging)
@@ -77,32 +73,25 @@ class IngestionService:
         summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
 
-        # Read RawJudgingSample DTOs from raw dataset (SampleReader handles limit internally)
-        raw_samples: list[RawJudgingSample] = self.sample_reader.read(
+        # Read and normalize dataset (reader creates complete JudgingSamples with UUIDs)
+        normalized_dataset: NormalizedDataset = self.dataset_reader.read(
             data_dir,
-            dataset=dataset,
             limit=limit
         )
 
-        sample_count = len(raw_samples)
-
-        # Convert RawJudgingSamples to JudgingSamples (pure domain entities)
-        judging_samples = [
-            JudgingSample.create(
-                query=sample.query,
-                document=sample.document,
-                gold_score=sample.gold_score,
-            )
-            for sample in raw_samples
-        ]
+        sample_count = normalized_dataset.sample_count
 
         # Invoke callback for each sample if provided (for logging/progress tracking)
         if on_sample:
-            for sample in judging_samples:
+            for sample in normalized_dataset.samples:
                 on_sample(sample)
 
         # Write samples (writer derives output location from run_info)
-        write_summary = self.dataset_writer.write(judging_samples, run_info, dataset)
+        write_summary = self.dataset_writer.write(
+            normalized_dataset.samples,
+            run_info,
+            normalized_dataset.dataset
+        )
 
         # Invoke callback after write (for logging)
         if on_write:

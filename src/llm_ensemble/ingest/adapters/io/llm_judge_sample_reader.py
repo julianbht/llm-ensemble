@@ -1,7 +1,7 @@
-"""Sample reader for LLM Judge Challenge 2024 dataset.
+"""Dataset reader for LLM Judge Challenge 2024 dataset.
 
 Reads the LLM Judge Challenge raw dataset format (queries.txt, documents.jsonl, qrels.txt)
-and converts it into normalized JudgingSample records.
+and returns a complete NormalizedDataset.
 """
 
 from __future__ import annotations
@@ -10,9 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
 
-from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore, Dataset
-from llm_ensemble.ingest.ports import SampleReader
-from llm_ensemble.ingest.ports.sample_reader import RawJudgingSample
+from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore, Dataset, JudgingSample, NormalizedDataset
+from llm_ensemble.ingest.ports import DatasetReader
 
 
 @dataclass(frozen=True)
@@ -38,11 +37,11 @@ class LlmJudgePaths:
         return self.base_dir / "llm4eval_test_qrel_2024.txt"
 
 
-class LlmJudgeSampleReader(SampleReader):
+class LlmJudgeDatasetReader(DatasetReader):
     """Reader for LLM Judge Challenge 2024 dataset.
 
     Reads queries (TSV), documents (JSONL), and relevance judgements (TSV)
-    and returns RawJudgingSample DTOs (without manifest).
+    and returns dataset metadata + samples.
 
     File format:
     - queries: TSV with columns (query_id, query_text)
@@ -53,24 +52,25 @@ class LlmJudgeSampleReader(SampleReader):
     def read(
         self,
         input_path: Path,
-        dataset: Dataset,
         limit: Optional[int] = None,
-    ) -> list[RawJudgingSample]:
-        """Read LLM Judge dataset and return RawJudgingSample DTOs.
+    ) -> NormalizedDataset:
+        """Read and normalize LLM Judge dataset.
 
         Args:
             input_path: Base directory containing dataset files
-            dataset: Dataset domain object (created by orchestrator, used for UUID computation)
             limit: Optional maximum number of samples to return
 
         Returns:
-            List of RawJudgingSample DTOs (with IDs computed)
+            NormalizedDataset with complete samples
 
         Raises:
             FileNotFoundError: If required dataset files are missing
             ValueError: If dataset files are malformed or qrels reference missing queries/documents
         """
         paths = LlmJudgePaths(input_path)
+
+        # Create Dataset entity (dataset metadata extracted from data context)
+        dataset = Dataset.create("llmjudge", description="LLM Judge Challenge 2024")
 
         # Load queries and documents into memory (with IDs computed from dataset)
         queries = self._read_queries(paths.queries, dataset)
@@ -92,8 +92,8 @@ class LlmJudgeSampleReader(SampleReader):
                     f"Document '{docid}' referenced in qrels but not found in documents file"
                 )
 
-            # Create RawJudgingSample (without manifest)
-            sample = RawJudgingSample(
+            # Create complete JudgingSample (reader does full normalization)
+            sample = JudgingSample.create(
                 query=q,
                 document=d,
                 gold_score=RelevanceScore(relevance),
@@ -104,7 +104,7 @@ class LlmJudgeSampleReader(SampleReader):
             if limit is not None and len(samples) >= limit:
                 break
 
-        return samples
+        return NormalizedDataset(dataset=dataset, samples=samples)
 
     def _read_queries(self, path: Path, dataset: Dataset) -> Dict[str, Query]:
         """Read TSV of (query_id, query_text) into a dict.

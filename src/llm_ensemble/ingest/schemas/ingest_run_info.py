@@ -13,7 +13,7 @@ from uuid import UUID
 from pydantic import ConfigDict, Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo, RunType
-from llm_ensemble.ingest.schemas.ingest_io_config import IngestIOConfig
+from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.libs.db import compute_ingest_run_uuid
 
 
@@ -54,9 +54,9 @@ class IngestRunInfo(RunInfo):
     )
 
     # Full configuration object (for reproducibility)
-    io_config: IngestIOConfig = Field(
+    io_config: IOConfig = Field(
         ...,
-        description="Ingest-specific I/O configuration used for this run"
+        description="I/O configuration used for this run"
     )
 
     # Input parameters
@@ -77,7 +77,7 @@ class IngestRunInfo(RunInfo):
         cls,
         run_name: str,
         io_config_name: str,
-        io_config: IngestIOConfig,
+        io_config: IOConfig,
         input_path: str,
         limit: Optional[int] = None,
         **kwargs

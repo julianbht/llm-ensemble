@@ -5,12 +5,9 @@ description: |
   Writes judging samples (each with manifest reference) to NDJSON format.
   Used by ingest CLI for dataset normalization.
 
-# Dataset identifier for UUID computation
-dataset_name: llmjudge
-
 # Adapter specifications (loaded dynamically)
 # Format: module paths are snake_case, class names are UpperCamelCase
 reader_module: llm_ensemble.ingest.adapters.io.llm_judge_sample_reader
-reader_class: LlmJudgeSampleReader
+reader_class: LlmJudgeDatasetReader
 writer_module: llm_ensemble.ingest.adapters.io.fully_populated_ndjson_writer
 writer_class: FullyPopulatedNdjsonWriter

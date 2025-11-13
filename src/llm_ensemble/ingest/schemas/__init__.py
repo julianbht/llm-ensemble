@@ -3,8 +3,8 @@ from llm_ensemble.ingest.schemas.judging_sample import Dataset, Query, Document,
 from llm_ensemble.libs.schemas import RelevanceScore  # Shared schema
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
-from llm_ensemble.ingest.schemas.ingest_io_config import IngestIOConfig
 from llm_ensemble.ingest.schemas.write_summary import WriteSummary
+from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 
 # ORM models (SQLAlchemy) - separate from Pydantic schemas
 from llm_ensemble.ingest.schemas.orms import (
@@ -21,9 +21,9 @@ __all__ = [
     "Document",
     "RelevanceScore",
     "JudgingSample",
+    "NormalizedDataset",
     "IngestRunInfo",
     "IngestRunSummary",
-    "IngestIOConfig",
     "WriteSummary",
     # ORM models
     "DatasetORM",

@@ -146,8 +146,6 @@ class TestIngestCLIEndToEnd:
                 "--input", str(sample_llm_judge_dataset),
                 "--io-cfg", "llm_judge_challenge_ndjson",
                 "--run-name", "multi_override_test",
-                "--override", "io.dataset_name=multi-test",
-                "--override", "io.dataset_description=Testing multiple overrides",
                 "--override", "io.writer_module=llm_ensemble.ingest.adapters.io.fully_populated_json_writer",
                 "--override", "io.writer_class=FullyPopulatedJsonWriter",
             ],
@@ -165,11 +163,11 @@ class TestIngestCLIEndToEnd:
         assert json_file.exists(), f"Samples file not found: {json_file}"
         assert manifest_file.exists(), f"Manifest file not found: {manifest_file}"
 
-        # Verify dataset metadata overrides in manifest (not embedded in samples)
+        # Verify writer module override worked (JSON writer instead of NDJSON)
         with open(manifest_file) as f:
             run_info = json.load(f)
-            assert run_info["io_config"]["dataset_name"] == "multi-test"
-            assert "multiple overrides" in run_info["io_config"]["dataset_description"].lower()
+            assert run_info["io_config"]["writer_module"] == "llm_ensemble.ingest.adapters.io.fully_populated_json_writer"
+            assert run_info["io_config"]["writer_class"] == "FullyPopulatedJsonWriter"
 
         # Verify samples are clean domain entities without run_info
         with open(json_file) as f:

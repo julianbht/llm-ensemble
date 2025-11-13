@@ -54,7 +54,7 @@ def compute_aggregate_run_uuid(run_name: str) -> uuid.UUID:
 
 
 # ========================================================================
-# Core Entity UUIDs (from ingest)
+# Ingest Entitie UUIDs
 # ========================================================================
 
 def compute_dataset_uuid(name: str) -> uuid.UUID:
@@ -100,11 +100,6 @@ def compute_infer_warning_uuid(
     message_hash = hashlib.sha256(message.encode()).hexdigest()[:16]
     natural_key = f"{judgement_id}:{stage}:{code}:{message_hash}"
     return uuid.uuid5(NAMESPACE_INFER_WARNING, natural_key)
-
-
-# ========================================================================
-# Config Entity UUIDs
-# ========================================================================
 
 def compute_prompt_template_uuid(name: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE_PROMPT_TEMPLATE, name)

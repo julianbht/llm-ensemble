@@ -104,20 +104,54 @@ def compute_infer_warning_uuid(
 # Config Entity UUIDs
 # ========================================================================
 
-def compute_prompt_template_uuid(template_name: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE_PROMPT_TEMPLATE, template_name)
+def compute_prompt_template_uuid(name: str) -> uuid.UUID:
+    """Compute deterministic UUID for a prompt template from its name.
+
+    Args:
+        name: Prompt template name (e.g., 'thomas-et-al-prompt')
+
+    Returns:
+        Deterministic UUID for this prompt template
+    """
+    return uuid.uuid5(NAMESPACE_PROMPT_TEMPLATE, name)
 
 
 def compute_prompt_config_uuid(config_name: str) -> uuid.UUID:
+    """Compute deterministic UUID for a prompt config from its name.
+
+    Note: This is for legacy/future use. Current system uses prompt_template.
+
+    Args:
+        config_name: Prompt config name
+
+    Returns:
+        Deterministic UUID for this prompt config
+    """
     return uuid.uuid5(NAMESPACE_PROMPT_CONFIG, config_name)
 
 
-def compute_model_spec_uuid(spec_name: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE_MODEL_SPEC, spec_name)
+def compute_model_spec_uuid(name: str) -> uuid.UUID:
+    """Compute deterministic UUID for a model spec from its config name.
+
+    Args:
+        name: Model spec name (from config filename, e.g., 'gpt-oss-20b')
+
+    Returns:
+        Deterministic UUID for this model spec
+    """
+    return uuid.uuid5(NAMESPACE_MODEL_SPEC, name)
 
 
-def compute_provider_uuid(provider_name: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE_PROVIDER, provider_name)
+def compute_provider_uuid(name: str) -> uuid.UUID:
+    """Compute deterministic UUID for a provider from its name.
+
+    Args:
+        name: Provider name (e.g., 'openrouter', 'ollama', 'hf')
+
+    Returns:
+        Deterministic UUID for this provider
+    """
+    return uuid.uuid5(NAMESPACE_PROVIDER, name)
 
 
 def compute_parser_spec_uuid(parser_module: str, parser_class: str, code_hash: str) -> uuid.UUID:

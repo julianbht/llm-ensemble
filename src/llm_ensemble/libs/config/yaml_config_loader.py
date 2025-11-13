@@ -78,6 +78,11 @@ def load_yaml_config(
             f"Invalid config file {config_path}: expected YAML object, got {type(data).__name__}"
         )
 
+    # Inject 'name' field from filename (configs inherit from BaseConfig which has this field)
+    # Only inject if not already present in YAML (allow explicit override for testing)
+    if 'name' not in data or data['name'] is None:
+        data['name'] = config_name
+
     # Parse and validate against Pydantic schema
     try:
         return schema(**data)

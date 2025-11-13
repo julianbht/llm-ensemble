@@ -34,6 +34,8 @@ class ProviderORM(Base):
     One row per provider (openrouter, ollama, hf).
     """
     __tablename__ = "providers"
+    __natural_key__ = ("name",)
+    __uuid_function__ = "compute_provider_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
@@ -51,6 +53,8 @@ class PromptTemplateORM(Base):
     even if template text is similar. This ensures we know exactly what was used.
     """
     __tablename__ = "prompt_templates"
+    __natural_key__ = ("name",)
+    __uuid_function__ = "compute_prompt_template_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
@@ -66,6 +70,8 @@ class ModelSpecORM(Base):
     Captures experimental parameters (model ID, temperature, etc.) that affect LLM behavior.
     """
     __tablename__ = "model_specs"
+    __natural_key__ = ("name",)
+    __uuid_function__ = "compute_model_spec_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
@@ -98,6 +104,8 @@ class ModelSpecORM(Base):
 
 class InferRunORM(Base):
     __tablename__ = "infer_runs"
+    __natural_key__ = ("run_name",)
+    __uuid_function__ = "compute_infer_run_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
@@ -136,6 +144,8 @@ class InferRunORM(Base):
 
 class ParserSpecORM(Base):
     __tablename__ = "parser_specs"
+    __natural_key__ = ("parser_module", "parser_class", "code_hash")
+    __uuid_function__ = "compute_parser_spec_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
@@ -161,6 +171,8 @@ class ParserSpecORM(Base):
 
 class LLMRequestORM(Base):
     __tablename__ = "llm_requests"
+    __natural_key__ = ("prompt", "judging_sample_id")
+    __uuid_function__ = "compute_llm_request_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     judging_sample_id = Column(
@@ -184,6 +196,8 @@ class LLMRequestORM(Base):
 
 class LLMCallORM(Base):
     __tablename__ = "llm_calls"
+    __natural_key__ = ("llm_request_id", "infer_run_id")
+    __uuid_function__ = "compute_llm_call_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
@@ -224,6 +238,8 @@ class LLMCallORM(Base):
 
 class LLMResponseORM(Base):
     __tablename__ = "llm_responses"
+    __natural_key__ = ("parser_spec_id", "raw_response")
+    __uuid_function__ = "compute_llm_response_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 

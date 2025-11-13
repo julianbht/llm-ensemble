@@ -19,11 +19,21 @@ class BaseConfig(BaseModel):
     All configuration types (ModelConfig, PromptConfig, IOConfig, EnsembleConfig)
     should inherit from this base class to ensure consistent metadata fields.
 
+    The name field is injected by config loaders from the filename (without extension).
     The name_hint field allows configs to explicitly contribute to human-readable
     run IDs, making it easy to identify what configurations were used in a run.
 
     Also provides helper methods for dynamic adapter instantiation from module paths.
     """
+
+    name: Optional[str] = Field(
+        None,
+        description=(
+            "Configuration name, derived from filename (without extension). "
+            "This field is injected by config loaders and should NOT be set in YAML files. "
+            "Used for identity/UUID generation. Example: 'gpt-oss-20b' from 'gpt-oss-20b.yaml'"
+        ),
+    )
 
     name_hint: Optional[str] = Field(
         None,

@@ -196,10 +196,8 @@ def infer_run_info_to_orm(
         ...     parser_spec_id
         ... )
     """
-    from llm_ensemble.libs.db import compute_infer_run_uuid
-
     return InferRunORM(
-        id=compute_infer_run_uuid(run_info.run_name),
+        id=run_info.id,
         run_name=run_info.run_name,
         run_type=run_info.run_type,
         model_spec_id=model_spec_id,

@@ -3,10 +3,7 @@
 Uses pure SQLAlchemy ORM models with deterministic UUIDs.
 Auto-creates tables on first write and returns write summary for transparent logging.
 
-This adapter contains the mapping layer that handles ORM concerns:
-- Extracting dataset information from run_info for foreign key relationships
-- Mapping pure domain entities to ORM models
-- Handling persistence with run_info context
+This adapter delegates ORM mapping to the mappers module for bidirectional symmetry.
 """
 
 from __future__ import annotations
@@ -26,6 +23,12 @@ from llm_ensemble.ingest.schemas.orms import (
     JudgingSampleORM,
 )
 from llm_ensemble.ingest.ports import DatasetWriter
+from llm_ensemble.ingest.adapters.io.mappers import (
+    dataset_to_orm,
+    query_to_orm,
+    document_to_orm,
+    judging_sample_to_orm,
+)
 from llm_ensemble.libs.db import (
     get_engine,
     session_context,
@@ -144,11 +147,11 @@ class SqlWriter(DatasetWriter):
             raise IOError(f"Failed to write samples to database: {e}") from e
 
     def _save_dataset(self, session: Session, dataset: Dataset) -> Tuple[int, int]:
-        """Save dataset entity to database.
+        """Save dataset entity to database using mapper.
 
         Args:
             session: SQLAlchemy session
-            dataset: Dataset Pydantic schema
+            dataset: Dataset domain object
 
         Returns:
             Tuple of (created_count, skipped_count)
@@ -157,12 +160,8 @@ class SqlWriter(DatasetWriter):
         if existing:
             return (0, 1)
 
-        dataset_model = DatasetORM(
-            id=dataset.id,
-            name=dataset.name,
-            description=dataset.description,
-        )
-        session.add(dataset_model)
+        dataset_orm = dataset_to_orm(dataset)
+        session.add(dataset_orm)
         return (1, 0)
 
     def _save_ingest_run(self, session: Session, run_info: IngestRunInfo) -> Tuple[int, int]:
@@ -218,11 +217,11 @@ class SqlWriter(DatasetWriter):
     def _save_queries(
         self, session: Session, queries: Dict[UUID, Query], dataset_id: UUID
     ) -> Tuple[int, int]:
-        """Save query entities to database.
+        """Save query entities to database using mapper.
 
         Args:
             session: SQLAlchemy session
-            queries: Dictionary of Query Pydantic schemas keyed by ID
+            queries: Dictionary of Query domain objects keyed by ID
             dataset_id: Parent dataset UUID (for foreign key)
 
         Returns:
@@ -237,13 +236,8 @@ class SqlWriter(DatasetWriter):
                 skipped += 1
                 continue
 
-            query_model = QueryORM(
-                id=query.id,
-                dataset_id=dataset_id,
-                external_id=query.external_id,
-                query_text=query.query_text,
-            )
-            session.merge(query_model)
+            query_orm = query_to_orm(query, dataset_id)
+            session.merge(query_orm)
             created += 1
 
         return (created, skipped)
@@ -251,11 +245,11 @@ class SqlWriter(DatasetWriter):
     def _save_documents(
         self, session: Session, documents: Dict[UUID, Document], dataset_id: UUID
     ) -> Tuple[int, int]:
-        """Save document entities to database.
+        """Save document entities to database using mapper.
 
         Args:
             session: SQLAlchemy session
-            documents: Dictionary of Document Pydantic schemas keyed by ID
+            documents: Dictionary of Document domain objects keyed by ID
             dataset_id: Parent dataset UUID (for foreign key)
 
         Returns:
@@ -270,13 +264,8 @@ class SqlWriter(DatasetWriter):
                 skipped += 1
                 continue
 
-            doc_model = DocumentORM(
-                id=document.id,
-                dataset_id=dataset_id,
-                external_id=document.external_id,
-                doc_text=document.doc_text,
-            )
-            session.merge(doc_model)
+            doc_orm = document_to_orm(document, dataset_id)
+            session.merge(doc_orm)
             created += 1
 
         return (created, skipped)
@@ -284,11 +273,11 @@ class SqlWriter(DatasetWriter):
     def _save_samples(
         self, session: Session, samples: List[JudgingSample], run_info: IngestRunInfo
     ) -> Tuple[int, int]:
-        """Save judging sample entities to database.
+        """Save judging sample entities to database using mapper.
 
         Args:
             session: SQLAlchemy session
-            samples: List of JudgingSample Pydantic schemas
+            samples: List of JudgingSample domain objects
             run_info: IngestRunInfo for foreign key reference
 
         Returns:
@@ -303,14 +292,8 @@ class SqlWriter(DatasetWriter):
                 skipped += 1
                 continue
 
-            sample_model = JudgingSampleORM(
-                id=sample.id,
-                query_id=sample.query.id,
-                document_id=sample.document.id,
-                ingest_run_id=run_info.id,
-                gold_score=sample.gold_score,
-            )
-            session.merge(sample_model)
+            sample_orm = judging_sample_to_orm(sample, run_info.id)
+            session.merge(sample_orm)
             created += 1
 
         return (created, skipped)

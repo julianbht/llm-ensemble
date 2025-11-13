@@ -294,7 +294,7 @@ class SqlJudgementWriter(JudgementWriter):
         # Create new model spec
         model_spec = ModelSpecORM(
             id=model_spec_id,
-            name=model_cfg.name_hint,
+            name=model_cfg.name,
             model_id=model_cfg.model_id,
             provider_id=self._provider_id,
             context_window=model_cfg.context_window,
@@ -320,7 +320,7 @@ class SqlJudgementWriter(JudgementWriter):
         Returns:
             PromptTemplate UUID (deterministic)
         """
-        prompt_template_id = compute_prompt_template_uuid(prompt_cfg.name_hint)
+        prompt_template_id = compute_prompt_template_uuid(prompt_cfg.name)
 
         # Check if exists
         existing = self._session.get(PromptTemplateORM, prompt_template_id)
@@ -335,7 +335,7 @@ class SqlJudgementWriter(JudgementWriter):
         # Create new prompt template
         prompt_template = PromptTemplateORM(
             id=prompt_template_id,
-            name=prompt_cfg.name_hint,
+            name=prompt_cfg.name,
             template_text=template_text,
         )
         self._session.add(prompt_template)

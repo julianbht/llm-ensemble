@@ -2,7 +2,7 @@
 
 Reads JudgingSample records from PostgreSQL database by ingest run name.
 This adapter queries the normalized relational schema and reconstructs
-domain objects from ORM entities.
+domain objects from ORM entities using the mappers module for symmetry.
 
 The adapter follows the same database connection pattern as SqlJudgementWriter,
 using SQLAlchemy sessions from the libs/db layer.
@@ -20,13 +20,17 @@ from typing import Optional
 
 from sqlalchemy.orm import joinedload
 
-from llm_ensemble.ingest.schemas import JudgingSample, Query, Document, Dataset
+from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.ingest.schemas.orms import (
     JudgingSampleORM,
     QueryORM,
     DocumentORM,
-    DatasetORM,
     IngestRunORM,
+)
+from llm_ensemble.ingest.adapters.io.mappers import (
+    query_from_orm,
+    document_from_orm,
+    judging_sample_from_orm,
 )
 from llm_ensemble.infer.ports import ExampleReader
 from llm_ensemble.libs.db import get_engine, get_session
@@ -114,38 +118,17 @@ class SqlJudgingSampleReader(ExampleReader):
 
             samples_orm = query.all()
 
-            # 3. Convert ORM entities to Pydantic domain models
+            # 3. Convert ORM entities to Pydantic domain models using mappers
             samples = []
             for sample_orm in samples_orm:
-                # Reconstruct Dataset (use query's dataset as canonical)
-                dataset = Dataset(
-                    id=sample_orm.query.dataset.id,
-                    name=sample_orm.query.dataset.name,
-                    description=sample_orm.query.dataset.description,
-                )
+                # Reconstruct Query from ORM
+                query = query_from_orm(sample_orm.query)
 
-                # Reconstruct Query
-                query_obj = Query(
-                    id=sample_orm.query.id,
-                    external_id=sample_orm.query.external_id,
-                    query_text=sample_orm.query.query_text,
-                )
+                # Reconstruct Document from ORM
+                document = document_from_orm(sample_orm.document)
 
-                # Reconstruct Document
-                document = Document(
-                    id=sample_orm.document.id,
-                    external_id=sample_orm.document.external_id,
-                    doc_text=sample_orm.document.doc_text,
-                )
-
-                # Reconstruct JudgingSample
-                sample = JudgingSample(
-                    id=sample_orm.id,
-                    dataset=dataset,
-                    query=query_obj,
-                    document=document,
-                    gold_score=sample_orm.gold_score,
-                )
+                # Reconstruct JudgingSample from ORM (with embedded query and document)
+                sample = judging_sample_from_orm(sample_orm, query, document)
                 samples.append(sample)
 
             return samples

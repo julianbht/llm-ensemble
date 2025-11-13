@@ -1,0 +1,244 @@
+"""Bidirectional mappers between domain objects and ORM models.
+
+This module provides symmetric conversion functions for mapping between
+pure Pydantic domain objects and SQLAlchemy ORM models.
+
+Design principles:
+- Bidirectional: Each entity has to_orm() and from_orm() functions
+- Symmetric: Conversion logic lives in one place for both read and write
+- Stateless: Pure functions with no side effects
+- Explicit: Clear parameter names for foreign keys that aren't in domain objects
+
+The domain layer works with pure Pydantic objects (Dataset, Query, Document, JudgingSample).
+The persistence layer works with SQLAlchemy ORMs (DatasetORM, QueryORM, etc.).
+These mappers handle the impedance mismatch.
+"""
+
+from __future__ import annotations
+from uuid import UUID
+
+from llm_ensemble.ingest.schemas import Dataset, Query, Document, JudgingSample
+from llm_ensemble.ingest.schemas.orms import (
+    DatasetORM,
+    QueryORM,
+    DocumentORM,
+    JudgingSampleORM,
+)
+
+
+# ============================================================================
+# Dataset Mappers
+# ============================================================================
+
+def dataset_to_orm(dataset: Dataset) -> DatasetORM:
+    """Convert Dataset domain object to DatasetORM.
+
+    Args:
+        dataset: Dataset domain object
+
+    Returns:
+        DatasetORM model ready for persistence
+
+    Example:
+        >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
+        >>> dataset_orm = dataset_to_orm(dataset)
+    """
+    return DatasetORM(
+        id=dataset.id,
+        name=dataset.name,
+        description=dataset.description,
+    )
+
+
+def dataset_from_orm(dataset_orm: DatasetORM) -> Dataset:
+    """Convert DatasetORM to Dataset domain object.
+
+    Args:
+        dataset_orm: DatasetORM model from database
+
+    Returns:
+        Dataset domain object
+
+    Example:
+        >>> dataset_orm = session.get(DatasetORM, dataset_id)
+        >>> dataset = dataset_from_orm(dataset_orm)
+    """
+    return Dataset(
+        id=dataset_orm.id,
+        name=dataset_orm.name,
+        description=dataset_orm.description,
+    )
+
+
+# ============================================================================
+# Query Mappers
+# ============================================================================
+
+def query_to_orm(query: Query, dataset_id: UUID) -> QueryORM:
+    """Convert Query domain object to QueryORM.
+
+    Note: dataset_id must be provided explicitly as it's not stored in the domain object.
+    The Query domain object only knows its own ID (which is computed from dataset_id + external_id),
+    but the ORM needs the foreign key.
+
+    Args:
+        query: Query domain object
+        dataset_id: Parent dataset UUID (for foreign key)
+
+    Returns:
+        QueryORM model ready for persistence
+
+    Example:
+        >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
+        >>> query = Query.create(dataset, "q123", "what is python?")
+        >>> query_orm = query_to_orm(query, dataset.id)
+    """
+    return QueryORM(
+        id=query.id,
+        dataset_id=dataset_id,
+        external_id=query.external_id,
+        query_text=query.query_text,
+    )
+
+
+def query_from_orm(query_orm: QueryORM) -> Query:
+    """Convert QueryORM to Query domain object.
+
+    Note: The dataset relationship is not reconstructed as Query domain object
+    doesn't store it. The dataset_id in the ORM is used only for foreign key constraints.
+
+    Args:
+        query_orm: QueryORM model from database
+
+    Returns:
+        Query domain object (without dataset reference)
+
+    Example:
+        >>> query_orm = session.get(QueryORM, query_id)
+        >>> query = query_from_orm(query_orm)
+    """
+    return Query(
+        id=query_orm.id,
+        external_id=query_orm.external_id,
+        query_text=query_orm.query_text,
+    )
+
+
+# ============================================================================
+# Document Mappers
+# ============================================================================
+
+def document_to_orm(document: Document, dataset_id: UUID) -> DocumentORM:
+    """Convert Document domain object to DocumentORM.
+
+    Note: dataset_id must be provided explicitly as it's not stored in the domain object.
+    The Document domain object only knows its own ID (which is computed from dataset_id + external_id),
+    but the ORM needs the foreign key.
+
+    Args:
+        document: Document domain object
+        dataset_id: Parent dataset UUID (for foreign key)
+
+    Returns:
+        DocumentORM model ready for persistence
+
+    Example:
+        >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
+        >>> doc = Document.create(dataset, "d456", "Python is a programming language.")
+        >>> doc_orm = document_to_orm(doc, dataset.id)
+    """
+    return DocumentORM(
+        id=document.id,
+        dataset_id=dataset_id,
+        external_id=document.external_id,
+        doc_text=document.doc_text,
+    )
+
+
+def document_from_orm(document_orm: DocumentORM) -> Document:
+    """Convert DocumentORM to Document domain object.
+
+    Note: The dataset relationship is not reconstructed as Document domain object
+    doesn't store it. The dataset_id in the ORM is used only for foreign key constraints.
+
+    Args:
+        document_orm: DocumentORM model from database
+
+    Returns:
+        Document domain object (without dataset reference)
+
+    Example:
+        >>> doc_orm = session.get(DocumentORM, doc_id)
+        >>> doc = document_from_orm(doc_orm)
+    """
+    return Document(
+        id=document_orm.id,
+        external_id=document_orm.external_id,
+        doc_text=document_orm.doc_text,
+    )
+
+
+# ============================================================================
+# JudgingSample Mappers
+# ============================================================================
+
+def judging_sample_to_orm(sample: JudgingSample, ingest_run_id: UUID) -> JudgingSampleORM:
+    """Convert JudgingSample domain object to JudgingSampleORM.
+
+    Note: ingest_run_id must be provided explicitly as it's not stored in the domain object.
+    The JudgingSample domain object is a pure query+document+score entity, but the ORM
+    tracks which ingest run created it.
+
+    Args:
+        sample: JudgingSample domain object
+        ingest_run_id: Ingest run UUID (for foreign key)
+
+    Returns:
+        JudgingSampleORM model ready for persistence
+
+    Example:
+        >>> sample = JudgingSample.create(query, doc, RelevanceScore.RELEVANT)
+        >>> sample_orm = judging_sample_to_orm(sample, run_info.id)
+    """
+    return JudgingSampleORM(
+        id=sample.id,
+        query_id=sample.query.id,
+        document_id=sample.document.id,
+        ingest_run_id=ingest_run_id,
+        gold_score=sample.gold_score,
+    )
+
+
+def judging_sample_from_orm(
+    sample_orm: JudgingSampleORM,
+    query: Query,
+    document: Document,
+) -> JudgingSample:
+    """Convert JudgingSampleORM to JudgingSample domain object.
+
+    Note: Query and Document domain objects must be provided separately as the
+    JudgingSample domain object embeds them directly (not as foreign keys).
+
+    This function expects the caller to have already loaded and converted the
+    related Query and Document entities.
+
+    Args:
+        sample_orm: JudgingSampleORM model from database
+        query: Query domain object (already converted from QueryORM)
+        document: Document domain object (already converted from DocumentORM)
+
+    Returns:
+        JudgingSample domain object with embedded query and document
+
+    Example:
+        >>> sample_orm = session.get(JudgingSampleORM, sample_id)
+        >>> query = query_from_orm(sample_orm.query)
+        >>> doc = document_from_orm(sample_orm.document)
+        >>> sample = judging_sample_from_orm(sample_orm, query, doc)
+    """
+    return JudgingSample(
+        id=sample_orm.id,
+        query=query,
+        document=document,
+        gold_score=sample_orm.gold_score,
+    )

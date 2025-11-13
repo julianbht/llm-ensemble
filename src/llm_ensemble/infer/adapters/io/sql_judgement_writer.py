@@ -277,7 +277,7 @@ class SqlJudgementWriter(JudgementWriter):
         Returns:
             ModelSpec UUID (deterministic)
         """
-        model_spec_id = compute_model_spec_uuid(model_cfg.name_hint)
+        model_spec_id = compute_model_spec_uuid(model_cfg.name)
 
         # Check if exists
         existing = self._session.get(ModelSpecORM, model_spec_id)

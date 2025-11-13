@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Callable
 
-from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, NormalizedDataset
+from llm_ensemble.ingest.schemas import WriteSummary, NormalizedDataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
 from llm_ensemble.ingest.ports import DatasetReader, DatasetWriter
@@ -43,7 +43,7 @@ class IngestionService:
         data_dir: Path,
         run_info: IngestRunInfo,
         limit: Optional[int] = None,
-        on_sample: Optional[Callable[[JudgingSample], None]] = None,
+        on_read_complete: Optional[Callable[[NormalizedDataset], None]] = None,
         on_write: Optional[Callable[[WriteSummary], None]] = None,
     ) -> IngestRunSummary:
         """Execute the ingestion pipeline.
@@ -58,7 +58,7 @@ class IngestionService:
             data_dir: Directory containing raw dataset files
             run_info: Immutable runtime context (contains run_dir property for writers)
             limit: Optional maximum number of samples to process
-            on_sample: Optional callback invoked for each sample (for logging/progress)
+            on_read_complete: Optional callback invoked after reading completes (for logging)
             on_write: Optional callback invoked after batch write completes (for logging)
 
         Returns:
@@ -73,7 +73,7 @@ class IngestionService:
         summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
 
-        # Read and normalize dataset (reader creates complete JudgingSamples with UUIDs)
+        # Read and normalize dataset
         normalized_dataset: NormalizedDataset = self.dataset_reader.read(
             data_dir,
             limit=limit
@@ -81,10 +81,9 @@ class IngestionService:
 
         sample_count = normalized_dataset.sample_count
 
-        # Invoke callback for each sample if provided (for logging/progress tracking)
-        if on_sample:
-            for sample in normalized_dataset.samples:
-                on_sample(sample)
+        # Invoke callback after read completes (for logging)
+        if on_read_complete:
+            on_read_complete(normalized_dataset)
 
         # Write normalized dataset (writer derives output location from run_info)
         write_summary = self.dataset_writer.write(

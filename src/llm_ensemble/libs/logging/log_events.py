@@ -12,6 +12,7 @@ class IngestLogEvent(str, Enum):
 
     INGEST_STARTED = "ingest_started"
     RUN_DIRECTORY_CREATED = "run_directory_created"
+    DATASET_READ_COMPLETE = "dataset_read_complete"
     JUDGING_SAMPLES_PREPARED = "judging_samples_prepared"
     INGEST_SUMMARY_WRITTEN = "ingest_summary_written"
     INGEST_COMPLETE = "ingest_complete"

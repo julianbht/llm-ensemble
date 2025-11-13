@@ -67,7 +67,7 @@ class TestRunIngestOfficialFlow:
                 self.dataset_reader = dataset_reader
                 self.dataset_writer = dataset_writer
 
-            def ingest_dataset(self, data_dir, run_info, limit=None, on_write=None):
+            def ingest_dataset(self, data_dir, run_info, limit=None, on_read_complete=None, on_write=None):
                 # Verify run_info is correct
                 assert run_info.run_type == RunType.OFFICIAL
                 assert run_info.io_config_name == "test_config"
@@ -151,7 +151,7 @@ class TestRunIngestOfficialFlow:
             def __init__(self, dataset_reader, dataset_writer):
                 pass
 
-            def ingest_dataset(self, data_dir, run_info, limit=None, on_write=None):
+            def ingest_dataset(self, data_dir, run_info, limit=None, on_read_complete=None, on_write=None):
                 nonlocal captured_run_info
                 captured_run_info = run_info
 

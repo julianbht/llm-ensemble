@@ -21,7 +21,6 @@ from llm_ensemble.libs.logging.log_events import IngestLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_name import generate_run_name
-from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging import configure_logger
 
@@ -122,7 +121,15 @@ def run_ingest(
         dataset_writer=dataset_writer,
     )
 
-    # Define logging callback for write operations (infrastructure concern)
+    # Define logging callbacks (infrastructure concerns)
+    def on_read_complete(normalized_dataset) -> None:
+        """Log read completion with sample count."""
+        logger.info(
+            IngestLogEvent.DATASET_READ_COMPLETE,
+            dataset=normalized_dataset.dataset.name,
+            sample_count=normalized_dataset.sample_count,
+        )
+
     def on_write(write_summary: WriteSummary) -> None:
         """Log write results using WriteSummary from writer."""
         # Use the WriteSummary returned by the writer for consistent logging
@@ -135,6 +142,7 @@ def run_ingest(
             data_dir=input_path,
             run_info=run_info,
             limit=limit,
+            on_read_complete=on_read_complete,
             on_write=on_write,
         )
 

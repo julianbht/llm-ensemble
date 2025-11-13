@@ -15,7 +15,6 @@ from pydantic import ConfigDict, Field
 from llm_ensemble.libs.runtime.run_info import RunInfo, RunType
 from llm_ensemble.ingest.schemas.ingest_io_config import IngestIOConfig
 from llm_ensemble.libs.db import compute_ingest_run_uuid
-from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
 class IngestRunInfo(RunInfo):
@@ -48,13 +47,13 @@ class IngestRunInfo(RunInfo):
         description="Name of the CLI that generated this run (always 'ingest' for IngestRunInfo)"
     )
 
-    # Configuration name (what user requested)
+    # Configuration name 
     io_config_name: str = Field(
         ...,
         description="Name of the I/O config used (e.g., 'llm_judge_challenge_ndjson')"
     )
 
-    # Full configuration object (for reproducibility) - now uses IngestIOConfig
+    # Full configuration object (for reproducibility)
     io_config: IngestIOConfig = Field(
         ...,
         description="Ingest-specific I/O configuration used for this run"
@@ -113,25 +112,4 @@ class IngestRunInfo(RunInfo):
             input_path=input_path,
             limit=limit,
             **kwargs
-        )
-
-    @property
-    def run_dir(self) -> Path:
-        """Derive run directory from run context.
-
-        Computed on-demand from run_name, cli_name, and run_type.
-        Single source of truth via PathManager.
-
-        Returns:
-            Path to run directory (e.g., artifacts/runs/ingest/test/<run_name>)
-
-        Example:
-            >>> run_info = IngestRunInfo.create(run_name="20250128_120000_test", ...)
-            >>> run_info.run_dir
-            PosixPath('artifacts/runs/ingest/test/20250128_120000_test')
-        """
-        return PathManager.get_run_dir(
-            cli_name=self.cli_name,
-            run_name=self.run_name,
-            official=(self.run_type == RunType.OFFICIAL)
         )

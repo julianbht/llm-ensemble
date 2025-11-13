@@ -1,0 +1,214 @@
+"""Bidirectional mappers between config objects and ORM models for INFER CLI.
+
+This module provides conversion functions for mapping between Pydantic config objects
+(ModelConfig, PromptConfig) and SQLAlchemy ORM models.
+
+Design principles:
+- Config objects are the domain truth (ModelConfig, PromptConfig from run_info)
+- Mappers convert configs → ORMs for SQL persistence
+- No separate domain entities needed - configs ARE the domain objects
+- Stateless pure functions
+
+The domain layer works with Pydantic configs (ModelConfig, PromptConfig).
+The persistence layer works with SQLAlchemy ORMs (ProviderORM, ModelSpecORM, etc.).
+These mappers handle the impedance mismatch.
+"""
+
+from __future__ import annotations
+from uuid import UUID
+
+from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
+from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
+from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
+from llm_ensemble.infer.schemas.orms_normalized import (
+    ProviderORM,
+    ModelSpecORM,
+    PromptTemplateORM,
+    ParserSpecORM,
+    InferRunORM,
+)
+from llm_ensemble.libs.db import (
+    compute_provider_uuid,
+    compute_model_spec_uuid,
+    compute_prompt_template_uuid,
+    compute_parser_spec_uuid,
+)
+
+
+# ============================================================================
+# Provider Mappers
+# ============================================================================
+
+def provider_name_to_orm(provider_name: str) -> ProviderORM:
+    """Convert provider name string to ProviderORM.
+
+    Args:
+        provider_name: Provider name (e.g., 'openrouter', 'ollama', 'hf')
+
+    Returns:
+        ProviderORM model ready for persistence
+
+    Example:
+        >>> provider_orm = provider_name_to_orm("openrouter")
+    """
+    provider_id = compute_provider_uuid(provider_name)
+    return ProviderORM(
+        id=provider_id,
+        name=provider_name,
+    )
+
+
+# ============================================================================
+# ModelSpec Mappers
+# ============================================================================
+
+def model_config_to_orm(model_cfg: ModelConfig, provider_id: UUID) -> ModelSpecORM:
+    """Convert ModelConfig to ModelSpecORM.
+
+    Note: provider_id must be provided explicitly as the ORM needs the foreign key.
+    The ModelConfig has the provider name, which we use to compute the provider_id.
+
+    Args:
+        model_cfg: ModelConfig object
+        provider_id: Provider UUID (for foreign key)
+
+    Returns:
+        ModelSpecORM model ready for persistence
+
+    Example:
+        >>> provider_id = compute_provider_uuid(model_cfg.provider)
+        >>> model_orm = model_config_to_orm(model_cfg, provider_id)
+    """
+    # Prepare additional_params (catch-all for non-explicit fields)
+    additional_params = model_cfg.additional_params.copy() if model_cfg.additional_params else {}
+    if model_cfg.stop:
+        additional_params["stop"] = model_cfg.stop
+    if model_cfg.response_format:
+        additional_params["response_format"] = model_cfg.response_format
+
+    return ModelSpecORM(
+        id=compute_model_spec_uuid(model_cfg.name),
+        name=model_cfg.name,
+        model_id=model_cfg.model_id,
+        provider_id=provider_id,
+        context_window=model_cfg.context_window,
+        temperature=model_cfg.temperature,
+        max_tokens=model_cfg.max_tokens,
+        top_p=model_cfg.top_p,
+        frequency_penalty=model_cfg.frequency_penalty,
+        presence_penalty=model_cfg.presence_penalty,
+        seed=model_cfg.seed,
+        additional_params=additional_params if additional_params else None,
+        capabilities=model_cfg.capabilities if model_cfg.capabilities else None,
+    )
+
+
+# ============================================================================
+# PromptTemplate Mappers
+# ============================================================================
+
+def prompt_config_to_template_orm(prompt_cfg: PromptConfig, template_text: str) -> PromptTemplateORM:
+    """Convert PromptConfig to PromptTemplateORM.
+
+    Note: template_text must be provided explicitly as it's loaded from the builder.
+    The PromptConfig knows how to get the builder, but the mapper is stateless.
+
+    Args:
+        prompt_cfg: PromptConfig object
+        template_text: Template text (loaded from builder)
+
+    Returns:
+        PromptTemplateORM model ready for persistence
+
+    Example:
+        >>> builder = prompt_cfg.get_prompt_builder()
+        >>> template_text = getattr(builder, "template_text", "")
+        >>> template_orm = prompt_config_to_template_orm(prompt_cfg, template_text)
+    """
+    return PromptTemplateORM(
+        id=compute_prompt_template_uuid(prompt_cfg.name),
+        name=prompt_cfg.name,
+        template_text=template_text,
+    )
+
+
+# ============================================================================
+# ParserSpec Mappers
+# ============================================================================
+
+def prompt_config_to_parser_orm(prompt_cfg: PromptConfig, code_hash: str) -> ParserSpecORM:
+    """Convert PromptConfig to ParserSpecORM.
+
+    Note: code_hash must be provided explicitly. Using placeholder for now.
+
+    Args:
+        prompt_cfg: PromptConfig object
+        code_hash: Parser code hash (for versioning)
+
+    Returns:
+        ParserSpecORM model ready for persistence
+
+    Example:
+        >>> code_hash = "0" * 64  # Placeholder
+        >>> parser_orm = prompt_config_to_parser_orm(prompt_cfg, code_hash)
+    """
+    return ParserSpecORM(
+        id=compute_parser_spec_uuid(
+            prompt_cfg.parser_module,
+            prompt_cfg.parser_class,
+            code_hash
+        ),
+        code_hash=code_hash,
+        parser_module=prompt_cfg.parser_module,
+        parser_class=prompt_cfg.parser_class,
+    )
+
+
+# ============================================================================
+# InferRun Mappers
+# ============================================================================
+
+def infer_run_info_to_orm(
+    run_info: InferRunInfo,
+    model_spec_id: UUID,
+    prompt_template_id: UUID,
+    parser_spec_id: UUID,
+) -> InferRunORM:
+    """Convert InferRunInfo to InferRunORM.
+
+    Note: Foreign key IDs must be provided explicitly as they're derived from
+    the related entities (ModelSpec, PromptTemplate, ParserSpec).
+
+    Args:
+        run_info: InferRunInfo context object
+        model_spec_id: ModelSpec UUID (for foreign key)
+        prompt_template_id: PromptTemplate UUID (for foreign key)
+        parser_spec_id: ParserSpec UUID (for foreign key)
+
+    Returns:
+        InferRunORM model ready for persistence
+
+    Example:
+        >>> run_orm = infer_run_info_to_orm(
+        ...     run_info,
+        ...     model_spec_id,
+        ...     prompt_template_id,
+        ...     parser_spec_id
+        ... )
+    """
+    from llm_ensemble.libs.db import compute_infer_run_uuid
+
+    return InferRunORM(
+        id=compute_infer_run_uuid(run_info.run_name),
+        run_name=run_info.run_name,
+        run_type=run_info.run_type,
+        model_spec_id=model_spec_id,
+        prompt_template_id=prompt_template_id,
+        parser_spec_id=parser_spec_id,
+        input_file=run_info.input_file or "",
+        limit=run_info.limit,
+        git_sha=run_info.git_sha,
+        git_branch=run_info.git_branch,
+        git_is_dirty=not run_info.git_clean,
+        notes=run_info.notes,
+    )

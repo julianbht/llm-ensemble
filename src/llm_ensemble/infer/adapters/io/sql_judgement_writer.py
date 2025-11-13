@@ -54,6 +54,13 @@ from llm_ensemble.infer.schemas.orms_normalized import (
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
+from llm_ensemble.infer.adapters.io.mappers import (
+    provider_name_to_orm,
+    model_config_to_orm,
+    prompt_config_to_template_orm,
+    prompt_config_to_parser_orm,
+    infer_run_info_to_orm,
+)
 
 
 class SqlJudgementWriter(JudgementWriter):
@@ -244,7 +251,7 @@ class SqlJudgementWriter(JudgementWriter):
         self._session.commit()
 
     def _upsert_provider(self, provider_name: str) -> UUID:
-        """Upsert provider entity.
+        """Upsert provider entity using mapper.
 
         Args:
             provider_name: Provider name (e.g., 'openrouter', 'ollama', 'hf')
@@ -259,17 +266,14 @@ class SqlJudgementWriter(JudgementWriter):
         if existing:
             return provider_id
 
-        # Create new provider
-        provider = ProviderORM(
-            id=provider_id,
-            name=provider_name,
-        )
-        self._session.add(provider)
+        # Create new provider using mapper
+        provider_orm = provider_name_to_orm(provider_name)
+        self._session.add(provider_orm)
 
         return provider_id
 
     def _upsert_model_spec(self, model_cfg: ModelConfig) -> UUID:
-        """Upsert model spec entity.
+        """Upsert model spec entity using mapper.
 
         Args:
             model_cfg: ModelConfig object from InferRunInfo
@@ -284,35 +288,14 @@ class SqlJudgementWriter(JudgementWriter):
         if existing:
             return model_spec_id
 
-        # Prepare additional_params (catch-all for non-explicit fields)
-        additional_params = model_cfg.additional_params.copy() if model_cfg.additional_params else {}
-        if model_cfg.stop:
-            additional_params["stop"] = model_cfg.stop
-        if model_cfg.response_format:
-            additional_params["response_format"] = model_cfg.response_format
-
-        # Create new model spec
-        model_spec = ModelSpecORM(
-            id=model_spec_id,
-            name=model_cfg.name,
-            model_id=model_cfg.model_id,
-            provider_id=self._provider_id,
-            context_window=model_cfg.context_window,
-            temperature=model_cfg.temperature,
-            max_tokens=model_cfg.max_tokens,
-            top_p=model_cfg.top_p,
-            frequency_penalty=model_cfg.frequency_penalty,
-            presence_penalty=model_cfg.presence_penalty,
-            seed=model_cfg.seed,
-            additional_params=additional_params if additional_params else None,
-            capabilities=model_cfg.capabilities if model_cfg.capabilities else None,
-        )
-        self._session.add(model_spec)
+        # Create new model spec using mapper
+        model_spec_orm = model_config_to_orm(model_cfg, self._provider_id)
+        self._session.add(model_spec_orm)
 
         return model_spec_id
 
     def _upsert_prompt_template(self, prompt_cfg: PromptConfig) -> UUID:
-        """Upsert prompt template entity.
+        """Upsert prompt template entity using mapper.
 
         Args:
             prompt_cfg: PromptConfig object from InferRunInfo
@@ -332,18 +315,14 @@ class SqlJudgementWriter(JudgementWriter):
         builder = prompt_cfg.get_prompt_builder()
         template_text = getattr(builder, "template_text", "")  # Get template text if available
 
-        # Create new prompt template
-        prompt_template = PromptTemplateORM(
-            id=prompt_template_id,
-            name=prompt_cfg.name,
-            template_text=template_text,
-        )
-        self._session.add(prompt_template)
+        # Create new prompt template using mapper
+        prompt_template_orm = prompt_config_to_template_orm(prompt_cfg, template_text)
+        self._session.add(prompt_template_orm)
 
         return prompt_template_id
 
     def _upsert_parser_spec(self, prompt_cfg: PromptConfig) -> UUID:
-        """Upsert parser spec entity.
+        """Upsert parser spec entity using mapper.
 
         Args:
             prompt_cfg: PromptConfig object from InferRunInfo
@@ -365,19 +344,14 @@ class SqlJudgementWriter(JudgementWriter):
         if existing:
             return parser_spec_id
 
-        # Create new parser spec
-        parser_spec = ParserSpecORM(
-            id=parser_spec_id,
-            code_hash=code_hash,
-            parser_module=prompt_cfg.parser_module,
-            parser_class=prompt_cfg.parser_class,
-        )
-        self._session.add(parser_spec)
+        # Create new parser spec using mapper
+        parser_spec_orm = prompt_config_to_parser_orm(prompt_cfg, code_hash)
+        self._session.add(parser_spec_orm)
 
         return parser_spec_id
 
     def _create_infer_run(self, run_info: InferRunInfo) -> UUID:
-        """Create infer run entity.
+        """Create infer run entity using mapper.
 
         Args:
             run_info: InferRunInfo object from judgement
@@ -392,22 +366,14 @@ class SqlJudgementWriter(JudgementWriter):
         if existing:
             return infer_run_id
 
-        # Create new infer run
-        infer_run = InferRunORM(
-            id=infer_run_id,
-            run_name=run_info.run_name,
-            run_type=run_info.run_type,
-            model_spec_id=self._model_spec_id,
-            prompt_template_id=self._prompt_template_id,
-            parser_spec_id=self._parser_spec_id,
-            input_file=run_info.input_file,
-            limit=run_info.limit,
-            git_sha=run_info.git_sha,
-            git_branch=run_info.git_branch,
-            git_is_dirty=not run_info.git_clean,  # Note: InferRunInfo.git_clean → InferRunORM.git_is_dirty
-            notes=run_info.notes,
+        # Create new infer run using mapper
+        infer_run_orm = infer_run_info_to_orm(
+            run_info,
+            self._model_spec_id,
+            self._prompt_template_id,
+            self._parser_spec_id,
         )
-        self._session.add(infer_run)
+        self._session.add(infer_run_orm)
 
         return infer_run_id
 

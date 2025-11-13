@@ -13,7 +13,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from llm_ensemble.ingest.schemas import JudgingSample, Dataset, Query, Document, WriteSummary
+from llm_ensemble.ingest.schemas import JudgingSample, Dataset, Query, Document, WriteSummary, NormalizedDataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.orms import (
     DatasetORM,
@@ -73,18 +73,16 @@ class SqlWriter(DatasetWriter):
 
     def write(
         self,
-        samples: List[JudgingSample],
+        normalized_dataset: NormalizedDataset,
         run_info: IngestRunInfo,
-        dataset: Dataset,
     ) -> WriteSummary:
         """Write judging samples to SQL database.
 
         Idempotent operation - merges entities (insert if new, update if exists).
 
         Args:
-            samples: List of judging samples (pure domain entities with id fields set)
+            normalized_dataset: Complete normalized dataset with samples and metadata
             run_info: Immutable runtime context
-            dataset: Dataset domain object (created by orchestrator, shared across pipeline)
 
         Returns:
             WriteSummary tracking what was created vs. skipped
@@ -92,6 +90,10 @@ class SqlWriter(DatasetWriter):
         Raises:
             IOError: If database write fails
         """
+        # Extract samples and dataset from normalized dataset
+        samples = normalized_dataset.samples
+        dataset = normalized_dataset.dataset
+
         if not samples:
             return WriteSummary()
 

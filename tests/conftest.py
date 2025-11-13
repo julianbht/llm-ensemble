@@ -387,22 +387,22 @@ def fake_writer_factory():
     """
     from typing import Any
     from llm_ensemble.ingest.ports import DatasetWriter
-    from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary
+    from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, NormalizedDataset
 
     class FakeWriter(DatasetWriter):
         """Test double for DatasetWriter that records writes without I/O."""
 
         def __init__(self):
             self.written_samples: list[JudgingSample] = []
-            self.write_calls: list[tuple[list[JudgingSample], Path, Any]] = []
+            self.write_calls: list[tuple[NormalizedDataset, Any]] = []
 
-        def write(self, samples: list[JudgingSample], run_dir: Path, run_info: Any) -> WriteSummary:
+        def write(self, normalized_dataset: NormalizedDataset, run_info: Any) -> WriteSummary:
             # Record the call
-            self.write_calls.append((samples, run_dir, run_info))
+            self.write_calls.append((normalized_dataset, run_info))
             # Store samples
-            self.written_samples.extend(samples)
+            self.written_samples.extend(normalized_dataset.samples)
             # Return summary
-            return WriteSummary(samples_created=len(samples))
+            return WriteSummary(samples_created=normalized_dataset.sample_count)
 
     return FakeWriter
 

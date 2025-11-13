@@ -86,11 +86,10 @@ class IngestionService:
             for sample in normalized_dataset.samples:
                 on_sample(sample)
 
-        # Write samples (writer derives output location from run_info)
+        # Write normalized dataset (writer derives output location from run_info)
         write_summary = self.dataset_writer.write(
-            normalized_dataset.samples,
-            run_info,
-            normalized_dataset.dataset
+            normalized_dataset,
+            run_info
         )
 
         # Invoke callback after write (for logging)

@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List
 
-from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, Dataset
+from llm_ensemble.ingest.schemas import WriteSummary, NormalizedDataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 
 
@@ -21,7 +21,7 @@ class DatasetWriter(ABC):
     Writers return WriteSummary objects to provide transparency into write operations
     without handling their own logging (separation of concerns).
 
-    Writers receive run_info separately from samples to maintain clean domain entities.
+    Writers receive run_info separately from normalized dataset to maintain clean domain entities.
     This follows the separation of concerns where run context is passed to persistence
     adapters but not embedded in domain entities.
 
@@ -30,16 +30,15 @@ class DatasetWriter(ABC):
 
     Example:
         >>> writer = FullyPopulatedNdjsonWriter()
-        >>> summary = writer.write(samples, run_dir, run_info)
+        >>> summary = writer.write(normalized_dataset, run_info)
         >>> logger.info("write_complete", created=summary.total_created)
     """
 
     @abstractmethod
     def write(
         self,
-        samples: List[JudgingSample],
+        normalized_dataset: NormalizedDataset,
         run_info: IngestRunInfo,
-        dataset: Dataset,
     ) -> WriteSummary:
         """Write judging samples to storage.
 
@@ -51,9 +50,8 @@ class DatasetWriter(ABC):
         with other CLIs (e.g., INFER uses llm_judgements.ndjson + infer_run_info.json).
 
         Args:
-            samples: List of judging samples (pure domain entities)
+            normalized_dataset: Complete normalized dataset with samples and metadata
             run_info: Immutable runtime context (contains run_dir property for path derivation)
-            dataset: Dataset domain object (shared context)
 
         Returns:
             WriteSummary tracking what was created vs. skipped

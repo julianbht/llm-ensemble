@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.ingest.domain import IngestionService
-from llm_ensemble.ingest.schemas import WriteSummary, Dataset
+from llm_ensemble.ingest.schemas import WriteSummary
 from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
@@ -69,14 +69,6 @@ def run_ingest(
     if run_name is None:
         run_name = generate_run_name([io_config.name_hint])
 
-    # Get run directory path and create it
-    run_dir = PathManager.get_run_dir(
-        cli_name="ingest",
-        run_name=run_name,
-        official=official
-    )
-    run_dir.mkdir(parents=True, exist_ok=True)
-
     # Get git info for reproducibility
     git_info = get_git_info()
 
@@ -93,6 +85,10 @@ def run_ingest(
         git_clean=git_info["git_clean"],
         git_branch=git_info["git_branch"],
     )
+
+    # Get run directory from run_info and create it
+    run_dir = run_info.run_dir
+    run_dir.mkdir(parents=True, exist_ok=True)
 
     # Set up log file path if saving logs
     log_file_path = run_dir / "run.log" if logging_config.save_logs else None

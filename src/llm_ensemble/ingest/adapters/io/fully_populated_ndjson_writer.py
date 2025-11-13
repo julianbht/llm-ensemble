@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List
 import json
 
-from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, Dataset
+from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, NormalizedDataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.ports import DatasetWriter
 from llm_ensemble.libs.utils.entity_filenames import get_entity_filename
@@ -27,23 +27,21 @@ class FullyPopulatedNdjsonWriter(DatasetWriter):
     Example output:
         {"id": "...", "query": {...}, "document": {...}, "gold_score": 2}
         {"id": "...", "query": {...}, "document": {...}, "gold_score": 1}
-    
+
     Note: run_info is kept separate to maintain clean domain entities and avoid
     duplication. Downstream CLIs can read samples without parsing run_info on each record.
     """
 
     def write(
         self,
-        samples: List[JudgingSample],
+        normalized_dataset: NormalizedDataset,
         run_info: IngestRunInfo,
-        dataset: Dataset,
     ) -> WriteSummary:
         """Write fully populated judging samples to NDJSON.
 
         Args:
-            samples: List of judging samples (pure domain entities)
+            normalized_dataset: Complete normalized dataset with samples and metadata
             run_info: Immutable runtime context (written to separate manifest, contains run_dir)
-            dataset: Dataset domain object (not used by file-based writer, for interface compatibility)
 
         Returns:
             WriteSummary tracking write operations (file writes always create all samples)
@@ -67,9 +65,9 @@ class FullyPopulatedNdjsonWriter(DatasetWriter):
 
         with samples_file.open("w", encoding="utf-8", newline="\n") as f:
             # Write each judging sample as a JSON line (use mode="json" for UUID serialization)
-            for sample in samples:
+            for sample in normalized_dataset.samples:
                 json_str = sample.model_dump_json()
                 f.write(json_str + "\n")
 
         # File writes always create all samples (no skipping)
-        return WriteSummary(samples_created=len(samples))
+        return WriteSummary(samples_created=normalized_dataset.sample_count)

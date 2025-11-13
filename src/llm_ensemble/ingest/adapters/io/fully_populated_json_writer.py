@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import List
 
-from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, Dataset
+from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, NormalizedDataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.ports import DatasetWriter
 from llm_ensemble.libs.utils.entity_filenames import get_entity_filename
@@ -29,23 +29,21 @@ class FullyPopulatedJsonWriter(DatasetWriter):
             {"id": "...", "query": {...}, "document": {...}, "gold_score": 2},
             {"id": "...", "query": {...}, "document": {...}, "gold_score": 1}
         ]
-    
+
     Note: run_info is kept separate to maintain clean domain entities and avoid
     duplication. Downstream CLIs can read samples without parsing run_info on each record.
     """
 
     def write(
         self,
-        samples: List[JudgingSample],
+        normalized_dataset: NormalizedDataset,
         run_info: IngestRunInfo,
-        dataset: Dataset,
     ) -> WriteSummary:
         """Write fully populated judging samples to a single JSON file.
 
         Args:
-            samples: List of judging samples (pure domain entities)
+            normalized_dataset: Complete normalized dataset with samples and metadata
             run_info: Immutable runtime context (written to separate manifest, contains run_dir)
-            dataset: Dataset domain object (not used by file-based writer, for interface compatibility)
 
         Returns:
             WriteSummary tracking write operations (file writes always create all samples)
@@ -53,6 +51,9 @@ class FullyPopulatedJsonWriter(DatasetWriter):
         Raises:
             IOError: If writing fails
         """
+        # Extract samples from normalized dataset
+        samples = normalized_dataset.samples
+
         # Derive run directory from run_info (computed property)
         run_dir = run_info.run_dir
 

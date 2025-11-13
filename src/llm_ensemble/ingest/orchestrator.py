@@ -93,6 +93,12 @@ def run_ingest(
         git_branch=git_info["git_branch"],
     )
 
+    # Create Dataset object - all information is already available
+    dataset = Dataset.create(
+        name=io_config.dataset_name,
+        description=io_config.dataset_description
+    )
+
     # Set up log file path if saving logs
     log_file_path = run_dir / "run.log" if logging_config.save_logs else None
 
@@ -132,12 +138,6 @@ def run_ingest(
         # Use the WriteSummary returned by the writer for consistent logging
         for log_entry in write_summary.get_log_entries():
             logger.info(**log_entry)
-
-    # Create Dataset domain object (orchestrator owns this context)
-    dataset = Dataset.create(
-        name=io_config.dataset_name,
-        description=io_config.dataset_description
-    )
 
     # Run ingestion pipeline (pure business logic)
     try:

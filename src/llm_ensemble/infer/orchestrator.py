@@ -24,7 +24,6 @@ from llm_ensemble.infer.domain import InferenceService
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_name import generate_run_name
-from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
@@ -81,25 +80,12 @@ def run_inference(
             io_config.name_hint,
         ])
 
-    # Get run directory path and create it
-    run_dir = PathManager.get_run_dir(
-        cli_name="infer",
-        run_name=run_name,
-        official=official
-    )
-    run_dir.mkdir(parents=True, exist_ok=True)
-
     # Get git info for reproducibility
     git_info = get_git_info()
 
-    # Create immutable run info (runtime context known before run starts)
-    run_info = InferRunInfo(
+    # Create immutable run info using create() method (runtime context known before run starts)
+    run_info = InferRunInfo.create(
         run_name=run_name,
-        run_type=RunType.OFFICIAL if official else RunType.TEST,
-        notes=notes,
-        git_sha=git_info["git_sha"],
-        git_clean=git_info["git_clean"],
-        git_branch=git_info["git_branch"],
         model_config_name=model_config_name,
         prompt_config_name=prompt_config_name,
         io_config_name=io_config_name,
@@ -108,7 +94,16 @@ def run_inference(
         io_config=io_config,
         input_file=str(input_file) if input_file else None,
         limit=limit,
+        run_type=RunType.OFFICIAL if official else RunType.TEST,
+        notes=notes,
+        git_sha=git_info["git_sha"],
+        git_clean=git_info["git_clean"],
+        git_branch=git_info["git_branch"],
     )
+
+    # Get run directory from run_info and create it
+    run_dir = run_info.run_dir
+    run_dir.mkdir(parents=True, exist_ok=True)
 
     # Set up log file path if saving logs
     log_file_path = run_dir / "run.log" if logging_config.save_logs else None

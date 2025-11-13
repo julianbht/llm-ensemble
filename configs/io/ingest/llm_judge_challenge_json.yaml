@@ -5,9 +5,6 @@ description: |
   Writes judging samples to a single JSON array (fully populated).
   Used by ingest CLI for dataset normalization.
 
-# Dataset identifier for UUID computation
-dataset_name: llmjudge
-
 # Adapter specifications (loaded dynamically)
 # Format: module paths are snake_case, class names are UpperCamelCase
 reader_module: llm_ensemble.ingest.adapters.io.llm_judge_sample_reader

@@ -113,7 +113,7 @@ class InferRunORM(Base):
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
-    run_type = Column(SQLEnum(RunType), nullable=False, default=RunType.TEST)
+    run_type = Column(SQLEnum(RunType, schema="public"), nullable=False, default=RunType.TEST)
 
     model_spec_id = Column(
         PG_UUID(as_uuid=True),
@@ -260,7 +260,7 @@ class LLMResponseORM(Base):
     raw_response = Column(Text, nullable=False)
 
     # Derived / parsed info; functionally dependent on (parser_spec_id, raw_response)
-    label = Column(SQLEnum(RelevanceScore), nullable=False)
+    label = Column(SQLEnum(RelevanceScore, schema="public"), nullable=False)
     confidence = Column(Float, nullable=True)
     rationale = Column(Text, nullable=True)
 

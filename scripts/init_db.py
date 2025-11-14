@@ -71,6 +71,7 @@ def main():
     print("Database schema initialized successfully!")
     print("")
     print("Schemas and tables created:")
+    print("  public: runtype (enum), relevancescore (enum) - shared across schemas")
     print("  ingest: datasets, queries, documents, ingest_runs, judging_samples")
     print("  infer: providers, prompt_templates, model_specs, parser_specs,")
     print("         infer_runs, llm_requests, llm_calls, llm_responses")

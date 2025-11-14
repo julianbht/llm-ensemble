@@ -54,6 +54,9 @@ def create_schemas(engine: Engine) -> None:
     """Create PostgreSQL schemas if they don't exist.
 
     Creates the schemas used by the application: ingest, infer, aggregate, evaluate.
+    Also ensures shared ENUM types (RunType, RelevanceScore) exist in public schema
+    so they can be referenced across multiple schemas.
+
     Safe to call multiple times (idempotent).
 
     Args:
@@ -63,11 +66,17 @@ def create_schemas(engine: Engine) -> None:
         >>> engine = get_engine()
         >>> create_schemas(engine)
     """
-    schemas = ["ingest", "infer", "aggregate", "evaluate"]
+    schemas = ["public", "ingest", "infer", "aggregate", "evaluate"]
 
     with engine.connect() as conn:
+        # Create schemas (including public for shared ENUMs)
         for schema in schemas:
             conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+
+        # Note: Shared ENUMs (RunType, RelevanceScore) will be created in public schema
+        # by SQLAlchemy when create_all_tables() is called. We don't create them manually
+        # here because SQLAlchemy handles the proper type creation based on the Python enums.
+
         conn.commit()
 
 

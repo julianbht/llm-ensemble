@@ -115,7 +115,7 @@ class IngestRunORM(Base):
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
-    run_type = Column(SQLEnum(RunType), nullable=False, default=RunType.TEST)
+    run_type = Column(SQLEnum(RunType, schema="public"), nullable=False, default=RunType.TEST)
     io_config_name = Column(String(255), nullable=False)
     input_path = Column(String(1024), nullable=False)
     limit = Column(Integer, nullable=True)
@@ -145,7 +145,7 @@ class JudgingSampleORM(Base):
     query_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.queries.id"), nullable=False)
     document_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.documents.id"), nullable=False)
     ingest_run_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.ingest_runs.id"), nullable=False)
-    gold_score = Column(SQLEnum(RelevanceScore), nullable=False)
+    gold_score = Column(SQLEnum(RelevanceScore, schema="public"), nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships

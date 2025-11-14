@@ -74,6 +74,7 @@ class ModelSpecORM(Base):
     __tablename__ = "model_specs"
     __natural_key__ = "name"
     __uuid_function__ = "compute_model_spec_uuid"
+    __table_args__ = {"schema": "infer"}
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
@@ -103,13 +104,12 @@ class ModelSpecORM(Base):
     provider = relationship("ProviderORM", back_populates="model_specs")
     infer_runs = relationship("InferRunORM", back_populates="model_spec")
 
-    __table_args__ = {"schema": "infer"}
-
 
 class InferRunORM(Base):
     __tablename__ = "infer_runs"
     __natural_key__ = "run_name"
     __uuid_function__ = "compute_infer_run_uuid"
+    __table_args__ = {"schema": "infer"}
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
@@ -144,8 +144,6 @@ class InferRunORM(Base):
     prompt_template = relationship("PromptTemplateORM", back_populates="infer_runs")
     parser_spec = relationship("ParserSpecORM", back_populates="infer_runs")
     calls = relationship("LLMCallORM", back_populates="infer_run")
-
-    __table_args__ = {"schema": "infer"}
 
 
 class ParserSpecORM(Base):

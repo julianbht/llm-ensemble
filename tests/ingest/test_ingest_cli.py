@@ -52,13 +52,13 @@ def sample_llm_judge_dataset(tmp_path: Path, write_file):
 class TestIngestCLIEndToEnd:
     """Test CLI end-to-end with real I/O."""
 
-    def test_cli_ndjson_output(
+    def test_cli_json_output(
         self,
         sample_llm_judge_dataset: Path,
         tmp_runs_dir,
         mock_git_info,
     ):
-        """Test that CLI produces correct NDJSON output with full provenance."""
+        """Test that CLI produces correct JSON output with full provenance."""
         artifacts_dir, get_run_dir = tmp_runs_dir
 
         # Invoke CLI
@@ -66,8 +66,8 @@ class TestIngestCLIEndToEnd:
             app,
             [
                 "--input", str(sample_llm_judge_dataset),
-                "--io-cfg", "llm_judge_challenge_ndjson",
-                "--run-name", "ndjson_test",
+                "--io-cfg", "llm_judge_challenge_json",
+                "--run-name", "json_test",
             ],
         )
 
@@ -79,21 +79,22 @@ class TestIngestCLIEndToEnd:
         assert "INGEST_COMPLETE" in result.stderr or "ingest_complete" in result.stderr.lower()
 
         # Get run directory
-        run_dir = get_run_dir("ingest", "ndjson_test", official=False)
+        run_dir = get_run_dir("ingest", "json_test", official=False)
         assert run_dir.exists(), f"Run directory not found: {run_dir}"
 
         # Verify output files exist (samples + manifest)
-        samples_file = run_dir / "judging_samples.ndjson"
+        samples_file = run_dir / "judging_samples.json"
         manifest_file = run_dir / "ingest_run_info.json"
         assert samples_file.exists(), f"Samples file not found: {samples_file}"
         assert manifest_file.exists(), f"Manifest file not found: {manifest_file}"
 
-        # Read and verify NDJSON content (samples should NOT have run_info embedded)
-        lines = [line for line in samples_file.read_text().strip().split("\n") if line]
-        assert len(lines) == 2, f"Expected 2 samples, got {len(lines)}"
+        # Read and verify JSON content (samples should NOT have run_info embedded)
+        with open(samples_file) as f:
+            samples = json.load(f)
+        assert len(samples) == 2, f"Expected 2 samples, got {len(samples)}"
 
         # Parse first record
-        sample1 = json.loads(lines[0])
+        sample1 = samples[0]
 
         # Verify sample structure (pure domain entity without run_info)
         assert "id" in sample1, "Missing 'id' field"
@@ -105,8 +106,8 @@ class TestIngestCLIEndToEnd:
         # Verify run_info is in separate manifest file
         with open(manifest_file) as f:
             run_info = json.load(f)
-            assert run_info["run_name"] == "ndjson_test"
-            assert run_info["io_config_name"] == "llm_judge_challenge_ndjson"
+            assert run_info["run_name"] == "json_test"
+            assert run_info["io_config_name"] == "llm_judge_challenge_json"
             assert run_info["input_path"] == str(sample_llm_judge_dataset)
 
             # Verify git info from mock (or actual git if not mocked)
@@ -144,7 +145,7 @@ class TestIngestCLIEndToEnd:
             app,
             [
                 "--input", str(sample_llm_judge_dataset),
-                "--io-cfg", "llm_judge_challenge_ndjson",
+                "--io-cfg", "llm_judge_challenge_json",
                 "--run-name", "multi_override_test",
                 "--override", "io.writer_module=llm_ensemble.ingest.adapters.io.fully_populated_json_writer",
                 "--override", "io.writer_class=FullyPopulatedJsonWriter",
@@ -163,7 +164,7 @@ class TestIngestCLIEndToEnd:
         assert json_file.exists(), f"Samples file not found: {json_file}"
         assert manifest_file.exists(), f"Manifest file not found: {manifest_file}"
 
-        # Verify writer module override worked (JSON writer instead of NDJSON)
+        # Verify writer module override worked (JSON writer)
         with open(manifest_file) as f:
             run_info = json.load(f)
             assert run_info["io_config"]["writer_module"] == "llm_ensemble.ingest.adapters.io.fully_populated_json_writer"
@@ -187,7 +188,7 @@ class TestIngestCLIErrorHandling:
             [
                 "ingest",
                 "--input", "/nonexistent/directory",
-                "--io-cfg", "llm_judge_challenge_ndjson",
+                "--io-cfg", "llm_judge_challenge_json",
                 "--run-name", "error_test",
             ],
         )

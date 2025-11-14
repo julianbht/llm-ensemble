@@ -48,7 +48,7 @@ def run_ingest(
     Args:
         io_config: Ingest-specific I/O configuration (already loaded and validated with overrides applied)
         logging_config: Logging configuration (controls pretty printing and log saving)
-        io_config_name: Name of the I/O config file (e.g., "llm_judge_challenge_ndjson")
+        io_config_name: Name of the I/O config file (e.g., "llm_judge_challenge_json")
         input_path: Path to input directory containing raw dataset files
         run_name: Custom run ID (auto-generates if not provided)
         limit: Process at most N samples

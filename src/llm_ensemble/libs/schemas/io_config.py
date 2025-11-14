@@ -1,7 +1,7 @@
 """I/O configuration schema.
 
 Defines the Pydantic schema for I/O format configurations that bundle
-reader and writer adapters together (e.g., ndjson, parquet).
+reader and writer adapters together (e.g., json, parquet).
 
 This is a shared schema used across all CLIs.
 
@@ -26,10 +26,10 @@ class IOConfig(BaseConfig):
     """
 
     description: str = Field(description="Human-readable description of the format")
-    reader_module: str = Field(description="Full Python module path to reader (e.g., 'llm_ensemble.infer.adapters.io.ndjson_example_reader')")
-    reader_class: str = Field(description="Reader class name in UpperCamelCase (e.g., 'NdjsonExampleReader')")
-    writer_module: str = Field(description="Full Python module path to writer (e.g., 'llm_ensemble.infer.adapters.io.ndjson_judgement_writer')")
-    writer_class: str = Field(description="Writer class name in UpperCamelCase (e.g., 'NdjsonJudgementWriter')")
+    reader_module: str = Field(description="Full Python module path to reader (e.g., 'llm_ensemble.infer.adapters.io.fully_populated_json_reader')")
+    reader_class: str = Field(description="Reader class name in UpperCamelCase (e.g., 'FullyPopulatedJsonReader')")
+    writer_module: str = Field(description="Full Python module path to writer (e.g., 'llm_ensemble.infer.adapters.io.fully_populated_json_writer')")
+    writer_class: str = Field(description="Writer class name in UpperCamelCase (e.g., 'FullyPopulatedJsonWriter')")
 
     model_config = ConfigDict(extra="forbid")
 

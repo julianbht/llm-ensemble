@@ -66,7 +66,7 @@ def run_inference(
         model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
         prompt_config_name: Name of the prompt config file (e.g., "thomas-et-al-prompt")
         retry_config_name: Name of the retry config file (e.g., "standard")
-        io_config_name: Name of the I/O config file (e.g., "ndjson")
+        io_config_name: Name of the I/O config file (e.g., "json")
         run_name: Custom run ID (auto-generates if not provided)
         limit: Process at most N examples
         official: Mark as official run (saved to official/ subdirectory for git tracking)

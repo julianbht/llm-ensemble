@@ -52,8 +52,8 @@ class BaseConfig(BaseModel):
 
         Args:
             module_path: Full Python module path in snake_case
-                        (e.g., 'llm_ensemble.infer.adapters.io.ndjson_example_reader')
-            class_name: Class name in UpperCamelCase (e.g., 'NdjsonExampleReader')
+                        (e.g., 'llm_ensemble.infer.adapters.io.fully_populated_json_reader')
+            class_name: Class name in UpperCamelCase (e.g., 'FullyPopulatedJsonReader')
             **kwargs: Additional arguments to pass to the class constructor
 
         Returns:
@@ -66,8 +66,8 @@ class BaseConfig(BaseModel):
         Example:
             >>> config = IOConfig(...)
             >>> reader = config._instantiate_adapter(
-            ...     'llm_ensemble.infer.adapters.io.ndjson_example_reader',
-            ...     'NdjsonExampleReader'
+            ...     'llm_ensemble.infer.adapters.io.fully_populated_json_reader',
+            ...     'FullyPopulatedJsonReader'
             ... )
         """
         try:

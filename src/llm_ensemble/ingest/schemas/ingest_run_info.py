@@ -50,7 +50,7 @@ class IngestRunInfo(RunInfo):
     # Configuration name 
     io_config_name: str = Field(
         ...,
-        description="Name of the I/O config used (e.g., 'llm_judge_challenge_ndjson')"
+        description="Name of the I/O config used (e.g., 'llm_judge_challenge_json')"
     )
 
     # Full configuration object (for reproducibility)
@@ -98,7 +98,7 @@ class IngestRunInfo(RunInfo):
         Example:
             >>> run_info = IngestRunInfo.create(
             ...     run_name="20250128_120000_abc123",
-            ...     io_config_name="llm_judge_challenge_ndjson",
+            ...     io_config_name="llm_judge_challenge_json",
             ...     io_config=config,
             ...     input_path="/data/llmjudge"
             ... )

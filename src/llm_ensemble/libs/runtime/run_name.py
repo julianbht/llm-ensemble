@@ -19,15 +19,15 @@ def generate_run_name(name_hints: Optional[list[str]] = None) -> str:
     Hints are joined with underscores.
 
     Args:
-        name_hints: Optional list of hints from configs (e.g., ['gpt20b', 'thomas', 'ndjson']).
+        name_hints: Optional list of hints from configs (e.g., ['gpt20b', 'thomas', 'json']).
                    Only hints explicitly provided by configs should be included (no fallbacks).
 
     Returns:
         Unique run ID string
 
     Examples:
-        >>> generate_run_name(['gpt20b', 'thomas', 'ndjson'])
-        '20250128_143022_gpt20b_thomas_ndjson'
+        >>> generate_run_name(['gpt20b', 'thomas', 'json'])
+        '20250128_143022_gpt20b_thomas_json'
         >>> generate_run_name(['llmjudge'])
         '20250128_143022_llmjudge'
         >>> generate_run_name([])

@@ -37,7 +37,7 @@ class FullyPopulatedJsonWriter(JudgementWriter):
         ]
 
     Note: This adapter accumulates all judgements in memory before writing.
-    For very large datasets, consider using the NDJSON adapter instead.
+    For very large datasets, consider streaming approaches or batch processing.
     """
 
     def __init__(self):

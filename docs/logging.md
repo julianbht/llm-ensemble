@@ -83,7 +83,7 @@ ingest --adapter llm-judge --data-dir ./data --limit 100
 **Output (stderr):**
 ```
 Run ID: 20251015_134402_llm-judge
-Output: artifacts/runs/ingest/20251015_134402_llm-judge/samples.ndjson
+Output: artifacts/runs/ingest/20251015_134402_llm-judge/samples.json
 {"event": "ingest_started", "cli": "ingest", "run_name": "20251015_134402_llm-judge", ...}
 Wrote 100 examples
 {"event": "ingest_completed", "sample_count": 100, ...}
@@ -101,7 +101,7 @@ Wrote 100 examples
 
 **Example:**
 ```bash
-infer --model phi3-mini --input artifacts/runs/ingest/xyz/samples.ndjson
+infer --model phi3-mini --input artifacts/runs/ingest/xyz/samples.json
 ```
 
 **Log file:** `artifacts/runs/infer/<run_name>/logs.jsonl`

@@ -83,7 +83,7 @@ def test_cli_output(tmp_artifacts):
 
     # Verify output in temp directory
     run_dir = get_run_dir("test_run", "ingest")
-    assert (run_dir / "samples.ndjson").exists()
+    assert (run_dir / "samples.json").exists()
 
     # Cleanup happens automatically after test
 ```
@@ -95,7 +95,7 @@ def test_cli_output(tmp_artifacts):
 
 ### `mock_samples`
 
-Creates a mock `samples.ndjson` file with 2 JudgingExample records:
+Creates a mock `samples.json` file with 2 JudgingExample records:
 
 ```python
 def test_infer(mock_samples):
@@ -105,11 +105,11 @@ def test_infer(mock_samples):
 
 ### `mock_judgements`
 
-Creates a mock `judgements.ndjson` file with 2 valid Judgement records:
+Creates a mock `judgements.json` file with 2 valid Judgement records:
 
 ```python
 def test_schema_validation(mock_judgements):
-    valid, invalid, errors = validate_ndjson_file(mock_judgements, "judgement")
+    valid, invalid, errors = validate_json_file(mock_judgements, "judgement")
     assert valid == 2
     assert invalid == 0
 ```
@@ -231,7 +231,7 @@ class TestIngestCLI:
 
         # Verify output file (uses tmp_artifacts via fixture)
         run_dir = get_run_dir("test_run", "ingest")
-        output_file = run_dir / "samples.ndjson"
+        output_file = run_dir / "samples.json"
         assert output_file.exists()
 ```
 

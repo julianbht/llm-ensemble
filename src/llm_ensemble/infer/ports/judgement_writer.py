@@ -1,7 +1,7 @@
 """Port interface for writing LLM judgements.
 
 Defines the abstract contract for writing judgements to various sinks
-(NDJSON files, Parquet, databases, etc.). This allows the orchestrator
+(JSON files, Parquet, databases, etc.). This allows the orchestrator
 to work with any output format without coupling to a specific implementation.
 """
 
@@ -19,7 +19,7 @@ from llm_ensemble.libs.schemas.write_result import WriteResult
 class JudgementWriter(ABC):
     """Abstract base class for writing LLM judgements with streaming support.
 
-    Implementations can write to different sinks (NDJSON, Parquet, etc.)
+    Implementations can write to different sinks (JSON, Parquet, etc.)
     while providing a consistent interface to the domain service.
 
     Uses context manager pattern for proper resource lifecycle management.

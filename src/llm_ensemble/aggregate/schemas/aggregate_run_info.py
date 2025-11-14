@@ -42,7 +42,7 @@ class AggregateRunInfo(RunInfo):
     
     io_config_name: str = Field(
         ...,
-        description="Name of the I/O config used (e.g., 'ndjson')"
+        description="Name of the I/O config used (e.g., 'json')"
     )
     
     # Full configuration objects (for reproducibility)

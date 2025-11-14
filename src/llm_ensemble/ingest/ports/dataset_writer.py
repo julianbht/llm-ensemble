@@ -47,7 +47,7 @@ class DatasetWriter(ABC):
         - Database writers: Write to centralized database
 
         Filenames should be derived using get_entity_filename() for consistency
-        with other CLIs (e.g., INFER uses llm_judgements.ndjson + infer_run_info.json).
+        with other CLIs (e.g., INFER uses llm_judgements.json + infer_run_info.json).
 
         Args:
             normalized_dataset: Complete normalized dataset with samples and metadata

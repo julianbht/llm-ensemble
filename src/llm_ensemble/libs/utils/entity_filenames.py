@@ -6,7 +6,7 @@ deriving filenames from Pydantic model class names instead of hardcoding strings
 Examples:
     LLMJudgement + json → llm_judgements.json
     InferRunInfo + json → infer_run_info.json
-    JudgingSample + ndjson → judging_samples.ndjson
+    JudgingSample + json → judging_samples.json
 """
 
 from __future__ import annotations
@@ -77,7 +77,7 @@ def get_entity_filename(
 
     Args:
         entity_class: Pydantic model class (e.g., LLMJudgement)
-        file_format: File extension without dot (e.g., "json", "ndjson")
+        file_format: File extension without dot (e.g., "json")
         plural: Whether to pluralize the entity name (default: True)
                 Set to False for singleton entities like run metadata
 
@@ -94,8 +94,8 @@ def get_entity_filename(
         'infer_run_info.json'
 
         >>> from llm_ensemble.infer.schemas.llm_judgement import JudgingSample
-        >>> get_entity_filename(JudgingSample, "ndjson")
-        'judging_samples.ndjson'
+        >>> get_entity_filename(JudgingSample, "json")
+        'judging_samples.json'
     """
     # Get class name and convert to snake_case
     class_name = entity_class.__name__

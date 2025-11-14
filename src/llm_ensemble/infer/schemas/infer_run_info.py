@@ -67,7 +67,7 @@ class InferRunInfo(RunInfo):
 
     io_config_name: str = Field(
         ...,
-        description="Name of the I/O config used (e.g., 'ndjson')"
+        description="Name of the I/O config used (e.g., 'json')"
     )
 
     # Full configuration objects (for reproducibility)
@@ -146,7 +146,7 @@ class InferRunInfo(RunInfo):
             ...     model_config_name="gpt-oss-20b",
             ...     prompt_config_name="thomas-et-al-prompt",
             ...     retry_config_name="standard",
-            ...     io_config_name="ndjson",
+            ...     io_config_name="json",
             ...     model_cfg=model_config,
             ...     prompt_config=prompt_config,
             ...     retry_config=retry_config,

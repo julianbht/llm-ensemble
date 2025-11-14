@@ -1,7 +1,7 @@
 """Port interface for reading judging examples.
 
 Defines the abstract contract for reading examples from various sources
-(NDJSON files, Parquet, databases, etc.). This allows the orchestrator
+(JSON files, Parquet, databases, etc.). This allows the orchestrator
 to work with any input format without coupling to a specific implementation.
 """
 
@@ -16,11 +16,11 @@ from llm_ensemble.ingest.schemas import JudgingSample
 class ExampleReader(ABC):
     """Abstract base class for reading judging examples.
 
-    Implementations can read from different sources (NDJSON, Parquet, etc.)
+    Implementations can read from different sources (JSON, Parquet, etc.)
     while providing a consistent interface to the orchestrator.
 
     Example:
-        >>> class NdjsonExampleReader(ExampleReader):
+        >>> class JsonExampleReader(ExampleReader):
         ...     def read(self, input_path, limit=None):
         ...         examples = []
         ...         with open(input_path) as f:

@@ -13,13 +13,13 @@ from llm_ensemble.aggregate.schemas import AggregatedJudgement
 class AggregatedJudgementWriter(ABC):
     """Abstract base class for writing AggregatedJudgement records.
     
-    Implementations can write to different formats (NDJSON, Parquet, etc.)
+    Implementations can write to different formats (JSON, Parquet, etc.)
     while providing a consistent interface.
     
     Uses context manager pattern for proper resource management.
     
     Example:
-        >>> writer = NdjsonAggregatedJudgementWriter()
+        >>> writer = JsonAggregatedJudgementWriter()
         >>> with writer.open(run_dir) as w:
         ...     for agg_judgement in aggregated_judgements:
         ...         w.write_one(agg_judgement)

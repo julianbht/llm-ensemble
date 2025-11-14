@@ -86,10 +86,10 @@ def tmp_artifacts(tmp_path: Path, monkeypatch) -> Path:
 def mock_samples(write_file, tmp_path: Path) -> Path:
     """Fixture providing mock JudgingExample samples for inference tests.
 
-    Creates a samples.ndjson file with 2 sample records.
+    Creates a samples.json file with 2 sample records.
 
     Returns:
-        Path to samples.ndjson file
+        Path to samples.json file
 
     Example:
         >>> def test_infer(mock_samples):
@@ -114,10 +114,9 @@ def mock_samples(write_file, tmp_path: Path) -> Path:
         },
     ]
 
-    samples_file = tmp_path / "samples.ndjson"
+    samples_file = tmp_path / "samples.json"
     with open(samples_file, "w", encoding="utf-8") as f:
-        for sample in samples:
-            f.write(json.dumps(sample) + "\n")
+        json.dump(samples, f, indent=2)
 
     return samples_file
 
@@ -161,14 +160,14 @@ def mock_llm_judge_dataset(write_file, tmp_path: Path) -> Path:
 def mock_judgements(tmp_path: Path) -> Path:
     """Fixture providing mock Judgement records for testing schema validation.
 
-    Creates a judgements.ndjson file with 2 valid judgement records.
+    Creates a judgements.json file with 2 valid judgement records.
 
     Returns:
-        Path to judgements.ndjson file
+        Path to judgements.json file
 
     Example:
         >>> def test_schema(mock_judgements):
-        ...     valid, invalid, errors = validate_ndjson_file(mock_judgements, "judgement")
+        ...     valid, invalid, errors = validate_json_file(mock_judgements, "judgement")
         ...     assert valid == 2
     """
     judgements = [
@@ -206,9 +205,9 @@ def mock_judgements(tmp_path: Path) -> Path:
         },
     ]
 
-    judgements_file = tmp_path / "judgements.ndjson"
+    judgements_file = tmp_path / "judgements.json"
     judgements_file.write_text(
-        "\n".join(json.dumps(j) for j in judgements) + "\n",
+        json.dumps(judgements, indent=2),
         encoding="utf-8"
     )
 

@@ -13,13 +13,13 @@ from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 class JudgementReader(ABC):
     """Abstract base class for reading LLMJudgement records.
     
-    Implementations can read from different formats (NDJSON, Parquet, etc.)
+    Implementations can read from different formats (JSON, Parquet, etc.)
     while providing a consistent interface.
     
     Example:
-        >>> class NdjsonJudgementReader(JudgementReader):
+        >>> class JsonJudgementReader(JudgementReader):
         ...     def read(self, input_paths):
-        ...         # Read from NDJSON files
+        ...         # Read from JSON files
         ...         return judgements
     """
     

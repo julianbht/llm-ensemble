@@ -1,7 +1,7 @@
 """Shared I/O configuration loader.
 
 Loads I/O YAML configurations from CLI-specific configs/io/{cli_name}/ directories.
-These configs bundle reader and writer adapters for specific formats (ndjson, parquet, etc.).
+These configs bundle reader and writer adapters for specific formats (json, parquet, etc.).
 
 This is a shared loader used by all CLIs.
 """
@@ -17,7 +17,7 @@ def load_io_config(io_format: str, cli_name: str) -> IOConfig:
     """Load an I/O configuration from YAML file.
 
     Args:
-        io_format: I/O format identifier (e.g., "ndjson", "json", "llm_judge_json")
+        io_format: I/O format identifier (e.g., "json", "llm_judge_json")
         cli_name: CLI name (e.g., "ingest", "infer", "aggregate", "evaluate")
 
     Returns:
@@ -28,9 +28,9 @@ def load_io_config(io_format: str, cli_name: str) -> IOConfig:
         ValueError: If YAML is invalid or missing required fields
 
     Example:
-        >>> config = load_io_config("ndjson", "infer")
+        >>> config = load_io_config("json", "infer")
         >>> config.reader_module
-        'llm_ensemble.infer.adapters.io.ndjson_example_reader'
+        'llm_ensemble.infer.adapters.io.fully_populated_json_reader'
     """
     return load_yaml_config(
         config_name=io_format,

@@ -3,7 +3,7 @@ description: |
   JSON array format for infer CLI.
   Reads JudgingSample records from a single JSON array (output from ingest CLI).
   Writes LLMJudgement records to a single JSON array (output from infer CLI).
-  Note: Accumulates all data in memory - use NDJSON for very large datasets.
+  Note: Accumulates all data in memory.
 
 # Adapter specifications (loaded dynamically)
 # Format: module paths are snake_case, class names are UpperCamelCase

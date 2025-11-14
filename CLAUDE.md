@@ -57,7 +57,6 @@ Orchestrator (orchestrator.py) - loads configs, creates run dir, sets up logging
 Domain Service (InferenceService) - coordinates: reader.read() → provider.infer() → writer.write()
   ↓
 Adapters - concrete implementations:
-  • NdjsonExampleReader (io/)
   • OpenRouterAdapter (providers/)
 ```
 
@@ -87,7 +86,7 @@ Adapters return Pydantic summary objects instead of handling their own logging (
 
 **Examples:**
 - ✅ `--model gpt-oss-20b` (loads `configs/models/gpt-oss-20b.yaml` which explicitly specifies `provider: openrouter`)
-- ✅ `--io ndjson` (loads `configs/io/ndjson.yaml` which explicitly specifies reader and writer adapters)
+- ✅ `--io json` (loads `configs/io/json.yaml` which explicitly specifies reader and writer adapters)
 - ✅ Missing `provider` field in model config → **ValidationError** (not silent default)
 - ❌ Don't silently default to a specific provider or I/O format without user knowledge
 
@@ -120,16 +119,16 @@ ingest --io llm_judge_ingest --limit 100
 ingest --io llm_judge_ingest --override data_dir=/custom/path --limit 100
 
 # Infer - Run LLM judge inference
-# Uses configs: configs/models/gpt-oss-20b.yaml, configs/prompts/thomas-et-al-prompt.yaml, configs/io/ndjson.yaml
-infer --model gpt-oss-20b --prompt thomas-et-al-prompt --io ndjson --input artifacts/runs/ingest/<run_name>/samples.ndjson
+# Uses configs: configs/models/gpt-oss-20b.yaml, configs/prompts/thomas-et-al-prompt.yaml, configs/io/json.yaml
+infer --model gpt-oss-20b --prompt thomas-et-al-prompt --io json --input artifacts/runs/ingest/<run_name>/samples.json
 
 # Aggregate - Combine model judgements using ensemble strategies
-# Uses configs: configs/ensembles/weighted_majority.yaml, configs/io/ndjson.yaml
-aggregate --ensemble weighted_majority --io ndjson --input artifacts/runs/infer/<run_name>/judgements.ndjson
+# Uses configs: configs/ensembles/weighted_majority.yaml, configs/io/json.yaml
+aggregate --ensemble weighted_majority --io json --input artifacts/runs/infer/<run_name>/judgements.json
 
 # Evaluate - Compute metrics and generate reports
-# Uses config: configs/io/ndjson.yaml
-evaluate --io ndjson --input artifacts/runs/aggregate/<run_name>/ensemble.ndjson
+# Uses config: configs/io/json.yaml
+evaluate --io json --input artifacts/runs/aggregate/<run_name>/ensemble.json
 
 # Alternative: run via python module
 python3 -m llm_ensemble.ingest_cli --help
@@ -257,7 +256,7 @@ All system behavior is controlled via YAML configuration files in `configs/`. CL
   - Schema: `infer/schemas/prompt_config_schema.py`
 
 - **I/O Formats** (`configs/io/*.yaml`) — Bundled reader + writer adapters, dataset paths
-  - Example: `--io ndjson` loads `configs/io/ndjson.yaml`
+  - Example: `--io json` loads `configs/io/json.yaml`
   - For ingest: `--io llm_judge_ingest` loads `configs/io/llm_judge_ingest.yaml` (includes dataset adapter and paths)
   - Schema: `infer/schemas/io_config_schema.py`
   - All CLIs now use the `--io` flag for consistent I/O configuration
@@ -282,7 +281,7 @@ src/llm_ensemble/
 │   ├── domain/      # Pure logic: inference service
 │   ├── ports/       # Abstract interfaces (ABCs)
 │   ├── adapters/    # Concrete implementations
-│   │   ├── io/      # NDJSON reader/writer
+│   │   ├── io/      # JSON reader/writer
 │   │   └── providers/ # OpenRouter, Ollama, HF
 ├── aggregate/       # Aggregate logic
 ├── evaluate/        # Evaluate logic

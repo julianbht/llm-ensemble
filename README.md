@@ -4,7 +4,7 @@ CLI-first research system for evaluating LLM-as-judge ensembles on information r
 
 ## Four Core CLIs
 
-1. **ingest** — Normalize raw IR datasets into `JudgingExample` records (NDJSON)
+1. **ingest** — Normalize raw IR datasets into `JudgingExample` records (JSON)
 2. **infer** — Run multiple LLM judges over samples, writing per-model judgements
 3. **aggregate** — Combine judgements using ensemble strategies (e.g., weighted majority vote)
 4. **evaluate** — Compute metrics and generate HTML reports
@@ -24,7 +24,7 @@ make test
 
 # Run individual CLIs
 ingest --adapter llm-judge --data-dir ./data --limit 100
-infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_name>/samples.ndjson
+infer --model gpt-oss-20b --input artifacts/runs/ingest/<run_name>/samples.json
 ```
 
 ## Development

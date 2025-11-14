@@ -31,7 +31,7 @@ def load_yaml_config(
     4. Provides helpful error messages with available configs
 
     Args:
-        config_name: Configuration identifier (e.g., "gpt-oss-20b", "ndjson")
+        config_name: Configuration identifier (e.g., "gpt-oss-20b", "json")
         config_dir: Directory containing config files
         schema: Pydantic model class to parse into
         config_type: Human-readable type name for error messages (e.g., "model", "prompt")

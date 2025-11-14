@@ -37,7 +37,7 @@ class LlmJudgePaths:
         return self.base_dir / "llm4eval_test_qrel_2024.txt"
 
 
-class LlmJudgeDatasetReader(DatasetReader):
+class LLMJudgeDatasetReader(DatasetReader):
     """Reader for LLM Judge Challenge 2024 dataset.
 
     Reads queries (TSV), documents (JSONL), and relevance judgements (TSV)

@@ -4,7 +4,7 @@ This package contains concrete implementations of DatasetReader and DatasetWrite
 for different input and output formats.
 """
 
-from llm_ensemble.ingest.adapters.io.llm_judge_sample_reader import LlmJudgeDatasetReader
+from llm_ensemble.ingest.adapters.io.llm_judge_dataset_reader import LLMJudgeDatasetReader
 from llm_ensemble.ingest.adapters.io.fully_populated_ndjson_writer import FullyPopulatedNdjsonWriter
 
-__all__ = ["LlmJudgeDatasetReader", "FullyPopulatedNdjsonWriter"]
+__all__ = ["LLMJudgeDatasetReader", "FullyPopulatedNdjsonWriter"]

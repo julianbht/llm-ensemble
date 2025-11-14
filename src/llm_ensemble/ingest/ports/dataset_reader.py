@@ -34,7 +34,7 @@ class DatasetReader(ABC):
     - Packaging everything as NormalizedDataset
 
     Example:
-        >>> class LlmJudgeDatasetReader(DatasetReader):
+        >>> class LLMJudgeDatasetReader(DatasetReader):
         ...     def read(self, input_path, limit=None):
         ...         # Extract dataset name from files
         ...         dataset = Dataset.create("llmjudge", "LLM Judge Challenge 2024")

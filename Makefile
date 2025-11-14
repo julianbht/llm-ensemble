@@ -27,7 +27,7 @@ help:
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make schemas       - Generate JSON schemas from Pydantic models"
-	@echo "  make clean         - Remove artifacts and cached files"
+	@echo "  make clean         - Remove cached files"
 
 install:
 	pip install -e .
@@ -102,7 +102,6 @@ schemas:
 	fi
 
 clean:
-	rm -rf artifacts/runs/*/test/*
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "*.egg-info" -exec rm -rf {} +

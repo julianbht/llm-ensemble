@@ -7,7 +7,7 @@ description: |
 
 # Adapter specifications (loaded dynamically)
 # Format: module paths are snake_case, class names are UpperCamelCase
-reader_module: llm_ensemble.ingest.adapters.io.llm_judge_sample_reader
-reader_class: LlmJudgeSampleReader
+reader_module: llm_ensemble.ingest.adapters.io.llm_judge_dataset_reader
+reader_class: LLMJudgeDatasetReader
 writer_module: llm_ensemble.ingest.adapters.io.sql_writer
 writer_class: SqlWriter

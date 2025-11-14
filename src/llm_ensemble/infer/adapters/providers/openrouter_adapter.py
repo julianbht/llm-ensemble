@@ -10,12 +10,14 @@ ResponseParser's job). The InferenceService orchestrates all port interactions.
 
 from __future__ import annotations
 import os
+import random
 import time
 from typing import Optional
-from openai import OpenAI
+from openai import OpenAI, APIError
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMResponse
 from llm_ensemble.infer.schemas import ModelConfig
+from llm_ensemble.infer.schemas.warnings import ProviderWarning, ProviderWarningCode
 from llm_ensemble.infer.ports import LLMProvider
 
 
@@ -110,15 +112,75 @@ class OpenRouterAdapter(LLMProvider):
             timeout=self.timeout,
         )
 
-        # Track timing
+        # Track timing and retries
         warnings: list = []  # Will be populated with ProviderWarning objects if needed
         start_time = time.time()
+        retry_count = 0
 
-        # Send request with all configured parameters
-        response = client.chat.completions.create(
-            messages=[{"role": "user", "content": prompt}],
-            **api_params
-        )
+        # Hardcoded retry configuration
+        max_retries = 5
+        base_delay = 1.0  # seconds
+        max_delay = 60.0  # seconds
+
+        # Retry loop with exponential backoff
+        last_error = None
+        for attempt in range(max_retries + 1):
+            try:
+                # Send request with all configured parameters
+                response = client.chat.completions.create(
+                    messages=[{"role": "user", "content": prompt}],
+                    **api_params
+                )
+
+                # Success! Break out of retry loop
+                break
+
+            except APIError as e:
+                last_error = e
+                retry_count = attempt
+
+                # Check if we should retry
+                is_retryable = False
+                if hasattr(e, 'status_code'):
+                    # Retry on rate limits (429) and server errors (503, 504)
+                    is_retryable = e.status_code in [429, 503, 504]
+
+                # If not retryable or out of retries, raise
+                if not is_retryable or attempt >= max_retries:
+                    warnings.append(
+                        ProviderWarning(
+                            code=ProviderWarningCode.RETRY_FAILED,
+                            message=f"Request failed after {retry_count} retries: {str(e)}",
+                            metadata={
+                                "retry_count": retry_count,
+                                "error_type": type(e).__name__,
+                                "status_code": getattr(e, 'status_code', None),
+                            }
+                        )
+                    )
+                    raise
+
+                # Calculate exponential backoff with jitter
+                delay = min(base_delay * (2 ** attempt), max_delay)
+                jitter = random.uniform(0, delay * 0.1)  # 10% jitter
+                total_delay = delay + jitter
+
+                # Log retry warning
+                warnings.append(
+                    ProviderWarning(
+                        code=ProviderWarningCode.API_ERROR,
+                        message=f"Rate limited (attempt {attempt + 1}/{max_retries + 1}), retrying after {total_delay:.2f}s",
+                        metadata={
+                            "attempt": attempt + 1,
+                            "backoff_seconds": total_delay,
+                            "error_type": type(e).__name__,
+                            "status_code": getattr(e, 'status_code', None),
+                        }
+                    )
+                )
+
+                # Sleep before retry
+                time.sleep(total_delay)
 
         latency_ms = (time.time() - start_time) * 1000
 
@@ -132,6 +194,7 @@ class OpenRouterAdapter(LLMProvider):
             latency_ms=latency_ms,
             cost_estimate_usd=None,  # Could be added later
             warnings=warnings,
+            retries=retry_count,  # Track retry count
         )
 
         return llm_response

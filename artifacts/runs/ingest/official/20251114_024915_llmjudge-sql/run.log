@@ -1,0 +1,80 @@
+{
+  "event": "ingest_started",
+  "input_path": "data",
+  "io_format": "llm_judge_challenge_sql",
+  "level": "info",
+  "limit": null,
+  "timestamp": "2025-11-14T07:49:15.045576Z"
+}
+{
+  "event": "run_directory_created",
+  "level": "info",
+  "path": "/home/donista/dev/llm-ensemble/artifacts/runs/ingest/official/20251114_024915_llmjudge-sql",
+  "timestamp": "2025-11-14T07:49:15.045750Z"
+}
+{
+  "dataset": "llmjudge",
+  "event": "dataset_read_complete",
+  "level": "info",
+  "sample_count": 7263,
+  "timestamp": "2025-11-14T07:49:15.213379Z"
+}
+{
+  "created": 1,
+  "event": "write_datasets",
+  "level": "info",
+  "skipped": 0,
+  "timestamp": "2025-11-14T07:49:23.883490Z"
+}
+{
+  "created": 1,
+  "event": "write_runs",
+  "level": "info",
+  "skipped": 0,
+  "timestamp": "2025-11-14T07:49:23.884124Z"
+}
+{
+  "created": 25,
+  "event": "write_queries",
+  "level": "info",
+  "skipped": 0,
+  "timestamp": "2025-11-14T07:49:23.884339Z"
+}
+{
+  "created": 7224,
+  "event": "write_documents",
+  "level": "info",
+  "skipped": 0,
+  "timestamp": "2025-11-14T07:49:23.884585Z"
+}
+{
+  "created": 7263,
+  "event": "write_judging_samples",
+  "level": "info",
+  "skipped": 0,
+  "timestamp": "2025-11-14T07:49:23.884856Z"
+}
+{
+  "event": "write_complete",
+  "level": "info",
+  "timestamp": "2025-11-14T07:49:23.884993Z",
+  "total_created": 14514,
+  "total_skipped": 0
+}
+{
+  "event": "ingest_summary_written",
+  "level": "info",
+  "path": "/home/donista/dev/llm-ensemble/artifacts/runs/ingest/official/20251114_024915_llmjudge-sql/summary.json",
+  "timestamp": "2025-11-14T07:49:23.889094Z"
+}
+{
+  "event": "ingest_complete",
+  "level": "info",
+  "timestamp": "2025-11-14T07:49:23.889499Z"
+}
+{
+  "event": "logs_saved",
+  "level": "info",
+  "path": "/home/donista/dev/llm-ensemble/artifacts/runs/ingest/official/20251114_024915_llmjudge-sql/run.log",
+  "timestamp": "2025-11-14T07:49:23.889660Z"
+}

@@ -3,20 +3,35 @@
 Defines the abstract contract that all LLM provider adapters must implement.
 This allows the orchestrator to depend on an abstraction rather than concrete
 provider implementations (OpenRouter, Ollama, HuggingFace, etc.).
+
+Template Method Pattern:
+- infer() is a concrete method implementing retry logic (template method)
+- _do_infer() is abstract - providers implement the actual API call
+- Retry logic is centralized in the base class, applied to all providers
 """
 
 from __future__ import annotations
+import random
+import time
 from abc import ABC, abstractmethod
+from typing import Optional
+from openai import APIError
+import structlog
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMResponse
 from llm_ensemble.infer.schemas import ModelConfig
+from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.infer.schemas.warnings import ProviderWarning, ProviderWarningCode
+from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
 class LLMProvider(ABC):
-    """Abstract base class for LLM inference providers.
+    """Abstract base class for LLM inference providers with retry logic.
 
-    All provider adapters (OpenRouter, Ollama, HuggingFace) must inherit
-    from this class and implement the infer() method.
+    Template Method Pattern:
+    - infer() is a CONCRETE method with retry logic (implemented in base class)
+    - _do_infer() is ABSTRACT - subclasses implement the actual API call
+    - All providers automatically get exponential backoff with jitter
 
     Providers are PURE API clients - they accept pre-built prompts and return
     raw responses. They do NOT build prompts or parse responses. The domain
@@ -27,20 +42,147 @@ class LLMProvider(ABC):
 
     Example:
         >>> class OpenRouterAdapter(LLMProvider):
-        ...     def __init__(self, api_key, ...):
+        ...     def __init__(self, api_key, retry_config, logger=None):
+        ...         super().__init__(retry_config, logger)
         ...         self.api_key = api_key
-        ...     def infer(self, prompt, model_config):
+        ...     def _do_infer(self, prompt, model_config):
         ...         response = self._call_api(prompt)  # Just send text to API
         ...         return response
     """
 
-    @abstractmethod
+    def __init__(
+        self,
+        retry_config: RetryConfig,
+        logger: Optional[structlog.stdlib.BoundLogger] = None,
+    ):
+        """Initialize provider with retry configuration.
+
+        Args:
+            retry_config: Retry configuration for exponential backoff
+            logger: Optional logger for retry events (if None, no logging)
+        """
+        self.retry_config = retry_config
+        self.logger = logger
+
     def infer(
         self,
         prompt: str,
         model_config: ModelConfig,
     ) -> LLMResponse:
-        """Run inference on a single pre-built prompt.
+        """Run inference with automatic retry logic (template method).
+
+        This concrete method implements exponential backoff with jitter.
+        It calls the abstract _do_infer() method for the actual API call.
+
+        Args:
+            prompt: Pre-built prompt string (from PromptBuilder)
+            model_config: Model configuration with provider and settings
+
+        Returns:
+            LLMResponse with raw response text, metadata, and retry count
+
+        Raises:
+            ValueError: If configuration is invalid
+            Exception: If provider API fails after all retries exhausted
+        """
+        start_time = time.time()
+        retry_count = 0
+        warnings: list[ProviderWarning] = []
+
+        # Retry loop with exponential backoff
+        for attempt in range(self.retry_config.max_retries + 1):
+            try:
+                # Call the provider-specific implementation
+                response = self._do_infer(prompt, model_config)
+
+                # Success! Update retry count and warnings
+                response.retries = retry_count
+                response.warnings.extend(warnings)
+
+                return response
+
+            except APIError as e:
+                retry_count = attempt
+
+                # Check if we should retry
+                is_retryable = False
+                if hasattr(e, 'status_code'):
+                    is_retryable = e.status_code in self.retry_config.retryable_status_codes
+
+                # If not retryable or out of retries, raise
+                if not is_retryable or attempt >= self.retry_config.max_retries:
+                    warning = ProviderWarning(
+                        code=ProviderWarningCode.RETRY_FAILED,
+                        message=f"Request failed after {retry_count} retries: {str(e)}",
+                        metadata={
+                            "retry_count": retry_count,
+                            "error_type": type(e).__name__,
+                            "status_code": getattr(e, 'status_code', None),
+                        }
+                    )
+                    warnings.append(warning)
+
+                    # Log the final failure if logger available
+                    if self.logger:
+                        self.logger.warning(
+                            InferLogEvent.RETRY_EXHAUSTED,
+                            retry_count=retry_count,
+                            error_type=type(e).__name__,
+                            status_code=getattr(e, 'status_code', None),
+                        )
+
+                    raise
+
+                # Calculate exponential backoff with jitter
+                delay = min(
+                    self.retry_config.base_delay_seconds * (2 ** attempt),
+                    self.retry_config.max_delay_seconds
+                )
+                jitter = random.uniform(0, delay * 0.1)  # 10% jitter
+                total_delay = delay + jitter
+
+                # Create warning for this retry attempt
+                warning = ProviderWarning(
+                    code=ProviderWarningCode.API_ERROR,
+                    message=f"Rate limited (attempt {attempt + 1}/{self.retry_config.max_retries + 1}), retrying after {total_delay:.2f}s",
+                    metadata={
+                        "attempt": attempt + 1,
+                        "backoff_seconds": total_delay,
+                        "error_type": type(e).__name__,
+                        "status_code": getattr(e, 'status_code', None),
+                    }
+                )
+                warnings.append(warning)
+
+                # Log retry attempt if logger available
+                if self.logger:
+                    self.logger.info(
+                        InferLogEvent.RETRY_ATTEMPT,
+                        attempt=attempt + 1,
+                        max_retries=self.retry_config.max_retries + 1,
+                        backoff_seconds=round(total_delay, 2),
+                        error_type=type(e).__name__,
+                        status_code=getattr(e, 'status_code', None),
+                    )
+
+                # Sleep before retry
+                time.sleep(total_delay)
+
+        # Should never reach here, but for type safety
+        raise RuntimeError("Retry loop exited unexpectedly")
+
+    @abstractmethod
+    def _do_infer(
+        self,
+        prompt: str,
+        model_config: ModelConfig,
+    ) -> LLMResponse:
+        """Perform the actual inference API call (implemented by subclasses).
+
+        This is the method that provider adapters must implement.
+        It should make the API call and return an LLMResponse.
+
+        The base class infer() method handles retries and wraps this call.
 
         Args:
             prompt: Pre-built prompt string (from PromptBuilder)
@@ -50,7 +192,7 @@ class LLMProvider(ABC):
             LLMResponse with raw response text and metadata
 
         Raises:
+            APIError: If API call fails (will trigger retry in base class)
             ValueError: If configuration is invalid
-            Exception: If provider API fails
         """
         pass

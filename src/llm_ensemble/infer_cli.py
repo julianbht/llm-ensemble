@@ -2,7 +2,7 @@ from __future__ import annotations
 import typer
 
 from llm_ensemble.infer.orchestrator import run_inference
-from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_config
+from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_config, load_retry_config
 from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.config.logging_config_loader import load_logging_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
@@ -37,6 +37,11 @@ def infer(
         help=f"Prompt config name. Configs in {PathManager.get_prompts_dir().relative_to(PathManager.get_project_root())}"
     ),
     # Optional parameters
+    retry_cfg: str = typer.Option(
+        "standard",
+        "--retry-cfg",
+        help=f"Retry config name. Configs in {PathManager.get_retries_dir().relative_to(PathManager.get_project_root())}"
+    ),
     limit: Limit = None,
     run_name: RunName = None,
     log_cfg: LogCfg = None,
@@ -51,6 +56,7 @@ def infer(
     # Load configurations
     model_config = load_model_config(model_cfg)
     prompt_config = load_prompt_config(prompt_cfg)
+    retry_config = load_retry_config(retry_cfg)
     io_config = load_io_config(io_cfg, cli_name="infer")
     logging_config = load_logging_config(log_cfg or "default")
 
@@ -70,11 +76,13 @@ def infer(
     run_inference(
         model_config=model_config,
         prompt_config=prompt_config,
+        retry_config=retry_config,
         io_config=io_config,
         logging_config=logging_config,
         input_file=input_path,
         model_config_name=model_cfg,
         prompt_config_name=prompt_cfg,
+        retry_config_name=retry_cfg,
         io_config_name=io_cfg,
         run_name=run_name,
         limit=limit,

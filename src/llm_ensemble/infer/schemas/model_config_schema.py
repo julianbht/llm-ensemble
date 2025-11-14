@@ -102,12 +102,20 @@ class ModelConfig(BaseConfig):
         description="OpenRouter model ID (e.g., 'openai/gpt-4')"
     )
 
-    def get_provider(self, api_key: Optional[str] = None, timeout: int = 30) -> Any:
+    def get_provider(
+        self,
+        retry_config: "RetryConfig",
+        logger: Optional[Any] = None,
+        api_key: Optional[str] = None,
+        timeout: int = 30,
+    ) -> Any:
         """Instantiate and return the provider adapter.
 
         Dynamically imports the provider module and instantiates the provider class.
 
         Args:
+            retry_config: Retry configuration for exponential backoff
+            logger: Optional logger for retry events
             api_key: Optional API key (if not provided, adapter will use env vars)
             timeout: Request timeout in seconds (default: 30)
 
@@ -119,12 +127,18 @@ class ModelConfig(BaseConfig):
             AttributeError: If the provider class doesn't exist in the module
 
         Example:
-            >>> config = ModelConfig(...)
-            >>> provider = config.get_provider(api_key="...", timeout=30)
+            >>> from llm_ensemble.infer.config_loaders import load_retry_config
+            >>> retry_config = load_retry_config("standard")
+            >>> provider = config.get_provider(retry_config=retry_config, api_key="...", timeout=30)
         """
         # Build kwargs based on what the provider needs
-        kwargs = {"timeout": timeout}
+        # Note: retry_config and logger are REQUIRED for all providers (base class requires them)
+        kwargs = {
+            "retry_config": retry_config,
+            "logger": logger,
+            "timeout": timeout,
+        }
         if api_key is not None:
             kwargs["api_key"] = api_key
-        
+
         return self._instantiate_adapter(self.provider_module, self.provider_class, **kwargs)

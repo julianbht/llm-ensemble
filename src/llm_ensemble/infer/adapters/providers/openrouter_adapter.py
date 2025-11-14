@@ -10,14 +10,14 @@ ResponseParser's job). The InferenceService orchestrates all port interactions.
 
 from __future__ import annotations
 import os
-import random
 import time
 from typing import Optional
-from openai import OpenAI, APIError
+from openai import OpenAI
+import structlog
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMResponse
 from llm_ensemble.infer.schemas import ModelConfig
-from llm_ensemble.infer.schemas.warnings import ProviderWarning, ProviderWarningCode
+from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.ports import LLMProvider
 
 
@@ -37,15 +37,21 @@ class OpenRouterAdapter(LLMProvider):
 
     def __init__(
         self,
+        retry_config: RetryConfig,
         api_key: Optional[str] = None,
         timeout: int = 30,
+        logger: Optional[structlog.stdlib.BoundLogger] = None,
     ):
         """Initialize OpenRouter adapter.
 
         Args:
+            retry_config: Retry configuration for exponential backoff
             api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
             timeout: Request timeout in seconds (default: 30)
+            logger: Optional logger for retry events
         """
+        super().__init__(retry_config, logger)
+
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         self.timeout = timeout
 
@@ -55,12 +61,12 @@ class OpenRouterAdapter(LLMProvider):
                 "or pass api_key parameter."
             )
 
-    def infer(
+    def _do_infer(
         self,
         prompt: str,
         model_config: ModelConfig,
     ) -> LLMResponse:
-        """Run inference on a single pre-built prompt using OpenRouter API.
+        """Perform the actual OpenRouter API call (called by base class retry logic).
 
         Args:
             prompt: Pre-built prompt string (from PromptBuilder)
@@ -71,7 +77,7 @@ class OpenRouterAdapter(LLMProvider):
 
         Raises:
             ValueError: If openrouter_model_id is not configured
-            Exception: If API request fails
+            APIError: If API request fails (triggers retry in base class)
         """
         if not model_config.openrouter_model_id:
             raise ValueError(
@@ -112,75 +118,15 @@ class OpenRouterAdapter(LLMProvider):
             timeout=self.timeout,
         )
 
-        # Track timing and retries
-        warnings: list = []  # Will be populated with ProviderWarning objects if needed
+        # Track timing
         start_time = time.time()
-        retry_count = 0
 
-        # Hardcoded retry configuration
-        max_retries = 5
-        base_delay = 1.0  # seconds
-        max_delay = 60.0  # seconds
-
-        # Retry loop with exponential backoff
-        last_error = None
-        for attempt in range(max_retries + 1):
-            try:
-                # Send request with all configured parameters
-                response = client.chat.completions.create(
-                    messages=[{"role": "user", "content": prompt}],
-                    **api_params
-                )
-
-                # Success! Break out of retry loop
-                break
-
-            except APIError as e:
-                last_error = e
-                retry_count = attempt
-
-                # Check if we should retry
-                is_retryable = False
-                if hasattr(e, 'status_code'):
-                    # Retry on rate limits (429) and server errors (503, 504)
-                    is_retryable = e.status_code in [429, 503, 504]
-
-                # If not retryable or out of retries, raise
-                if not is_retryable or attempt >= max_retries:
-                    warnings.append(
-                        ProviderWarning(
-                            code=ProviderWarningCode.RETRY_FAILED,
-                            message=f"Request failed after {retry_count} retries: {str(e)}",
-                            metadata={
-                                "retry_count": retry_count,
-                                "error_type": type(e).__name__,
-                                "status_code": getattr(e, 'status_code', None),
-                            }
-                        )
-                    )
-                    raise
-
-                # Calculate exponential backoff with jitter
-                delay = min(base_delay * (2 ** attempt), max_delay)
-                jitter = random.uniform(0, delay * 0.1)  # 10% jitter
-                total_delay = delay + jitter
-
-                # Log retry warning
-                warnings.append(
-                    ProviderWarning(
-                        code=ProviderWarningCode.API_ERROR,
-                        message=f"Rate limited (attempt {attempt + 1}/{max_retries + 1}), retrying after {total_delay:.2f}s",
-                        metadata={
-                            "attempt": attempt + 1,
-                            "backoff_seconds": total_delay,
-                            "error_type": type(e).__name__,
-                            "status_code": getattr(e, 'status_code', None),
-                        }
-                    )
-                )
-
-                # Sleep before retry
-                time.sleep(total_delay)
+        # Send request with all configured parameters
+        # Note: APIError exceptions will be caught and handled by base class retry logic
+        response = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            **api_params
+        )
 
         latency_ms = (time.time() - start_time) * 1000
 
@@ -189,12 +135,12 @@ class OpenRouterAdapter(LLMProvider):
 
         # Build LLMResponse with RAW output only (no parsing)
         # The InferenceService will handle parsing via ResponseParser
+        # Note: retry count and warnings will be added by base class
         llm_response = LLMResponse(
             raw_response=raw_response,
             latency_ms=latency_ms,
             cost_estimate_usd=None,  # Could be added later
-            warnings=warnings,
-            retries=retry_count,  # Track retry count
+            warnings=[],  # Base class will add retry warnings
         )
 
         return llm_response

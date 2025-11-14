@@ -11,10 +11,11 @@ from typing import Optional
 from uuid import UUID
 from pydantic import ConfigDict, Field
 
-from llm_ensemble.libs.runtime.run_info import RunInfo, RunType
+from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
+from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.db import compute_infer_run_uuid
 
 
@@ -59,6 +60,11 @@ class InferRunInfo(RunInfo):
         description="Name of the prompt config used (e.g., 'thomas-et-al-prompt')"
     )
 
+    retry_config_name: str = Field(
+        ...,
+        description="Name of the retry config used (e.g., 'standard')"
+    )
+
     io_config_name: str = Field(
         ...,
         description="Name of the I/O config used (e.g., 'ndjson')"
@@ -74,6 +80,11 @@ class InferRunInfo(RunInfo):
     prompt_config: PromptConfig = Field(
         ...,
         description="Prompt configuration used for this run"
+    )
+
+    retry_config: RetryConfig = Field(
+        ...,
+        description="Retry configuration used for this run"
     )
 
     io_config: IOConfig = Field(
@@ -100,39 +111,45 @@ class InferRunInfo(RunInfo):
         run_name: str,
         model_config_name: str,
         prompt_config_name: str,
+        retry_config_name: str,
         io_config_name: str,
         model_cfg: ModelConfig,
         prompt_config: PromptConfig,
+        retry_config: RetryConfig,
         io_config: IOConfig,
         input_file: Optional[str] = None,
         limit: Optional[int] = None,
         **kwargs
     ) -> "InferRunInfo":
         """Create an InferRunInfo with computed deterministic UUID.
-        
+
         Args:
             run_name: Run identifier (timestamp-based)
             model_config_name: Model config name
             prompt_config_name: Prompt config name
+            retry_config_name: Retry config name
             io_config_name: I/O config name
             model_cfg: Full model configuration
             prompt_config: Full prompt configuration
+            retry_config: Full retry configuration
             io_config: Full I/O configuration
             input_file: Optional input file path
             limit: Optional example limit
             **kwargs: Additional fields from base RunInfo (git_sha, etc.)
-        
+
         Returns:
             InferRunInfo instance with computed id
-        
+
         Example:
             >>> run_info = InferRunInfo.create(
             ...     run_name="20250128_120000_gpt-oss",
             ...     model_config_name="gpt-oss-20b",
             ...     prompt_config_name="thomas-et-al-prompt",
+            ...     retry_config_name="standard",
             ...     io_config_name="ndjson",
             ...     model_cfg=model_config,
             ...     prompt_config=prompt_config,
+            ...     retry_config=retry_config,
             ...     io_config=io_config
             ... )
         """
@@ -142,9 +159,11 @@ class InferRunInfo(RunInfo):
             run_name=run_name,
             model_config_name=model_config_name,
             prompt_config_name=prompt_config_name,
+            retry_config_name=retry_config_name,
             io_config_name=io_config_name,
             model_cfg=model_cfg,
             prompt_config=prompt_config,
+            retry_config=retry_config,
             io_config=io_config,
             input_file=input_file,
             limit=limit,

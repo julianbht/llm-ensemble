@@ -89,6 +89,15 @@ class PathManager:
         return PathManager.get_configs_dir() / "ensembles"
 
     @staticmethod
+    def get_retries_dir() -> Path:
+        """Get the configs/retries/ directory.
+
+        Returns:
+            Path to retry configs directory
+        """
+        return PathManager.get_configs_dir() / "retries"
+
+    @staticmethod
     def get_generated_schemas_dir() -> Path:
         """Get the libs/generated_schemas/ directory.
 

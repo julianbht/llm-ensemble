@@ -17,6 +17,7 @@ from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
+from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
 from llm_ensemble.libs.schemas.write_result import WriteResult
@@ -32,11 +33,13 @@ from llm_ensemble.libs.logging.log_events import InferLogEvent
 def run_inference(
     model_config: ModelConfig,
     prompt_config: PromptConfig,
+    retry_config: RetryConfig,
     io_config: IOConfig,
     logging_config: LoggingConfig,
     input_file: Optional[Path],
     model_config_name: str,
     prompt_config_name: str,
+    retry_config_name: str,
     io_config_name: str,
     run_name: Optional[str] = None,
     limit: Optional[int] = None,
@@ -56,11 +59,13 @@ def run_inference(
     Args:
         model_config: Model configuration (already loaded and validated with overrides applied)
         prompt_config: Prompt configuration (already loaded and validated with overrides applied)
+        retry_config: Retry configuration (already loaded and validated)
         io_config: I/O configuration (already loaded and validated with overrides applied)
         logging_config: Logging configuration (controls pretty printing and log saving)
         input_file: Input file with JudgingExample records (optional for database-backed readers)
         model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
         prompt_config_name: Name of the prompt config file (e.g., "thomas-et-al-prompt")
+        retry_config_name: Name of the retry config file (e.g., "standard")
         io_config_name: Name of the I/O config file (e.g., "ndjson")
         run_name: Custom run ID (auto-generates if not provided)
         limit: Process at most N examples
@@ -88,9 +93,11 @@ def run_inference(
         run_name=run_name,
         model_config_name=model_config_name,
         prompt_config_name=prompt_config_name,
+        retry_config_name=retry_config_name,
         io_config_name=io_config_name,
         model_cfg=model_config,
         prompt_config=prompt_config,
+        retry_config=retry_config,
         io_config=io_config,
         input_file=str(input_file) if input_file else None,
         limit=limit,
@@ -135,7 +142,7 @@ def run_inference(
     writer = io_config.get_writer()
     prompt_builder = prompt_config.get_prompt_builder()
     response_parser = prompt_config.get_response_parser(score_field="O")
-    provider = model_config.get_provider()
+    provider = model_config.get_provider(retry_config=retry_config, logger=logger)
 
     # Create domain service by injecting adapters- it orchestrates ALL port interactions
     service = InferenceService(

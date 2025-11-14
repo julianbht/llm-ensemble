@@ -194,4 +194,4 @@ if __name__ == "__main__":
     test_uuid_alignment_for_all_orms()
     test_uuid_function_naming_convention()
     test_natural_key_columns_exist()
-    print("✓ All UUID alignment tests passed!")
+    print("All UUID alignment tests passed!")

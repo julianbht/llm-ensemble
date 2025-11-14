@@ -111,19 +111,16 @@ class InferenceService:
         Raises:
             Exception: If any step in the pipeline fails
         """
-        # Create run summary builder (for timing and collection of metrics)
-        # Note: run_info is persisted separately by writer, not included in summary
         summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
 
-        # Read JudgingSample objects (which include ingest manifest)
+        # Read JudgingSample objects
         samples = self.example_reader.read(input_path, limit=limit)
 
-        # Collect judgements for summary statistics (persisted immediately to disk as well)
+        # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
         # Open writer for streaming (context manager ensures proper cleanup)
-        # Pass run_info to writer - it's a persistence concern, not part of judgements
         with self.judgement_writer.open(run_dir, run_info) as writer:
             # Process each sample individually (streaming loop)
             for sample in samples:
@@ -134,13 +131,13 @@ class InferenceService:
                 if on_request_start:
                     on_request_start()
 
-                # Run inference for this sample (simple, synchronous call)
+                # Run inference for this sample 
                 response = self.llm_provider.infer(prompt, model_config)
 
                 # Parse response to extract structured score
                 score = self.response_parser.parse(response.raw_response)
 
-                # Create judgement immediately (pure domain object - no run context)
+                # Create judgement immediately 
                 judgement = LLMJudgement(
                     judging_sample=sample,
                     prompt=prompt,
@@ -165,7 +162,7 @@ class InferenceService:
         # Retrieve aggregate write summary after context manager closes
         write_summary = self.judgement_writer.get_summary()
 
-        # Invoke callback after all writes complete (aggregate logging)
+        # Invoke callback after all writes complete
         if on_write_complete:
             on_write_complete(write_summary)
 
@@ -192,7 +189,7 @@ class InferenceService:
         summary_builder.add("total_latency_ms", total_latency_ms)
         summary_builder.add("avg_latency_ms", avg_latency)
 
-        # Add warnings summary to builder (only if there are warnings)
+        # Add warnings summary to builder
         if warnings_summary:
             summary_builder.add("warnings_summary", warnings_summary)
 

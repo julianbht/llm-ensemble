@@ -19,7 +19,7 @@ need to run this once unless you:
 """
 
 from llm_ensemble.libs.runtime.env import load_runtime_config
-from llm_ensemble.libs.db import get_engine, create_all_tables
+from llm_ensemble.libs.db import get_engine, create_schemas, create_all_tables
 
 # Load runtime configuration (reads .env and runtime configs)
 load_runtime_config()
@@ -50,7 +50,7 @@ from llm_ensemble.infer.schemas.orms_normalized import (
 
 
 def main():
-    """Create all database tables."""
+    """Create all database schemas and tables."""
     print("Initializing database schema...")
     print("Reading DATABASE_URL from environment...")
 
@@ -58,6 +58,11 @@ def main():
     engine = get_engine()
 
     print(f"Connected to: {engine.url}")
+    print("Creating PostgreSQL schemas...")
+
+    # Create schemas first (ingest, infer, aggregate, evaluate)
+    create_schemas(engine)
+
     print("Creating tables...")
 
     # Create all tables (idempotent - safe to run multiple times)
@@ -65,9 +70,9 @@ def main():
 
     print("Database schema initialized successfully!")
     print("")
-    print("Tables created:")
-    print("  Ingest: datasets, queries, documents, ingest_runs, judging_samples")
-    print("  Infer: providers, prompt_templates, model_specs, parser_specs,")
+    print("Schemas and tables created:")
+    print("  ingest: datasets, queries, documents, ingest_runs, judging_samples")
+    print("  infer: providers, prompt_templates, model_specs, parser_specs,")
     print("         infer_runs, llm_requests, llm_calls, llm_responses")
 
 

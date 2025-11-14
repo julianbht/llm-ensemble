@@ -38,6 +38,7 @@ class DatasetORM(Base):
     Uses deterministic UUID based on dataset name.
     """
     __tablename__ = "datasets"
+    __table_args__ = {"schema": "ingest"}
     __natural_key__ = ("name",)
     __uuid_function__ = "compute_dataset_uuid"
 
@@ -61,7 +62,7 @@ class QueryORM(Base):
     __uuid_function__ = "compute_query_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    dataset_id = Column(PG_UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
+    dataset_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.datasets.id"), nullable=False)
     external_id = Column(String(255), nullable=False)
     query_text = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
@@ -72,6 +73,7 @@ class QueryORM(Base):
     
     __table_args__ = (
         UniqueConstraint("dataset_id", "external_id", name="uq_query_dataset_external_id"),
+        {"schema": "ingest"},
     )
 
 
@@ -85,7 +87,7 @@ class DocumentORM(Base):
     __uuid_function__ = "compute_document_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    dataset_id = Column(PG_UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
+    dataset_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.datasets.id"), nullable=False)
     external_id = Column(String(255), nullable=False)
     doc_text = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
@@ -93,9 +95,10 @@ class DocumentORM(Base):
     # Relationships
     dataset = relationship("DatasetORM", back_populates="documents")
     judging_samples = relationship("JudgingSampleORM", back_populates="document")
-    
+
     __table_args__ = (
         UniqueConstraint("dataset_id", "external_id", name="uq_document_dataset_external_id"),
+        {"schema": "ingest"},
     )
 
 
@@ -106,6 +109,7 @@ class IngestRunORM(Base):
     Tracks run_type using RunType enum for proper typing and validation.
     """
     __tablename__ = "ingest_runs"
+    __table_args__ = {"schema": "ingest"}
     __natural_key__ = ("run_name",)
     __uuid_function__ = "compute_ingest_run_uuid"
 
@@ -138,9 +142,9 @@ class JudgingSampleORM(Base):
     __uuid_function__ = "compute_judging_sample_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    query_id = Column(PG_UUID(as_uuid=True), ForeignKey("queries.id"), nullable=False)
-    document_id = Column(PG_UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
-    ingest_run_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest_runs.id"), nullable=False)
+    query_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.queries.id"), nullable=False)
+    document_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.documents.id"), nullable=False)
+    ingest_run_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.ingest_runs.id"), nullable=False)
     gold_score = Column(SQLEnum(RelevanceScore), nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
@@ -148,7 +152,8 @@ class JudgingSampleORM(Base):
     query = relationship("QueryORM", back_populates="judging_samples")
     document = relationship("DocumentORM", back_populates="judging_samples")
     ingest_run = relationship("IngestRunORM", back_populates="judging_samples")
-    
+
     __table_args__ = (
         UniqueConstraint("query_id", "document_id", name="uq_query_doc"),
+        {"schema": "ingest"},
     )

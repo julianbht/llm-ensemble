@@ -57,16 +57,16 @@ class SqlWriter(DatasetWriter):
     - Maps pure domain entities (Query, Document, JudgingSample) to ORM models
     - Handles foreign key relationships at persistence time
 
-    Database URL is read from DATABASE_URL environment variable.
-    Defaults to sqlite:///artifacts/llm_ensemble.db if not set.
+    Database URL is read from DATABASE_URL environment variable (required).
+    Example: postgresql://user:password@localhost:5432/llm_ensemble
     """
 
     def __init__(self, database_url: str | None = None):
         """Initialize SQL writer.
 
         Args:
-            database_url: Database connection URL. If None, reads from DATABASE_URL env var
-                         or defaults to sqlite:///artifacts/llm_ensemble.db
+            database_url: PostgreSQL connection URL. If None, reads from DATABASE_URL env var (required).
+                         Example: postgresql://user:password@localhost:5432/llm_ensemble
         """
         self.database_url = database_url
         self.engine = get_engine(database_url)

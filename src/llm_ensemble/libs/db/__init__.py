@@ -7,6 +7,7 @@ and UUID computation helpers for deterministic entity identification.
 from llm_ensemble.libs.db.base import (
     Base,
     get_engine,
+    create_schemas,
     create_all_tables,
 )
 
@@ -37,6 +38,7 @@ __all__ = [
     # Base and engine
     "Base",
     "get_engine",
+    "create_schemas",
     "create_all_tables",
     # Session management
     "get_session",

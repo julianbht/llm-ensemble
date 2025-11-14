@@ -34,6 +34,7 @@ class ProviderORM(Base):
     One row per provider (openrouter, ollama, hf).
     """
     __tablename__ = "providers"
+    __table_args__ = {"schema": "infer"}
     __natural_key__ = "name"
     __uuid_function__ = "compute_provider_uuid"
 
@@ -53,6 +54,7 @@ class PromptTemplateORM(Base):
     even if template text is similar. This ensures we know exactly what was used.
     """
     __tablename__ = "prompt_templates"
+    __table_args__ = {"schema": "infer"}
     __natural_key__ = "name"
     __uuid_function__ = "compute_prompt_template_uuid"
 
@@ -78,7 +80,7 @@ class ModelSpecORM(Base):
     model_id = Column(String(255), nullable=False)
     provider_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("providers.id"),
+        ForeignKey("infer.providers.id"),
         nullable=False
     )
     context_window = Column(Integer, nullable=False)
@@ -101,6 +103,8 @@ class ModelSpecORM(Base):
     provider = relationship("ProviderORM", back_populates="model_specs")
     infer_runs = relationship("InferRunORM", back_populates="model_spec")
 
+    __table_args__ = {"schema": "infer"}
+
 
 class InferRunORM(Base):
     __tablename__ = "infer_runs"
@@ -113,17 +117,17 @@ class InferRunORM(Base):
 
     model_spec_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("model_specs.id"),
+        ForeignKey("infer.model_specs.id"),
         nullable=False,
     )
     prompt_template_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("prompt_templates.id"),
+        ForeignKey("infer.prompt_templates.id"),
         nullable=False,
     )
     parser_spec_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("parser_specs.id"),
+        ForeignKey("infer.parser_specs.id"),
         nullable=False,
     )
 
@@ -140,6 +144,8 @@ class InferRunORM(Base):
     prompt_template = relationship("PromptTemplateORM", back_populates="infer_runs")
     parser_spec = relationship("ParserSpecORM", back_populates="infer_runs")
     calls = relationship("LLMCallORM", back_populates="infer_run")
+
+    __table_args__ = {"schema": "infer"}
 
 
 class ParserSpecORM(Base):
@@ -161,6 +167,7 @@ class ParserSpecORM(Base):
             "code_hash",
             name="uq_parser_spec_identity",
         ),
+        {"schema": "infer"},
     )
 
     infer_runs = relationship("InferRunORM", back_populates="parser_spec")
@@ -177,7 +184,7 @@ class LLMRequestORM(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     judging_sample_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("judging_samples.id"),
+        ForeignKey("ingest.judging_samples.id"),  # Cross-schema FK
         nullable=False,
     )
     prompt = Column(Text, nullable=False)
@@ -189,6 +196,7 @@ class LLMRequestORM(Base):
             "judging_sample_id",
             name="uq_prompt_judging_sample",
         ),
+        {"schema": "infer"},
     )
 
     calls = relationship("LLMCallORM", back_populates="llm_request")
@@ -203,19 +211,19 @@ class LLMCallORM(Base):
 
     llm_request_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("llm_requests.id"),
+        ForeignKey("infer.llm_requests.id"),
         nullable=False,
     )
     infer_run_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer_runs.id"),
+        ForeignKey("infer.infer_runs.id"),
         nullable=False,
     )
 
     # Each call has at most one (possibly shared) response
     response_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("llm_responses.id"),
+        ForeignKey("infer.llm_responses.id"),
         nullable=True,
     )
 
@@ -229,6 +237,7 @@ class LLMCallORM(Base):
             "infer_run_id",
             name="uq_call_per_run_and_request",
         ),
+        {"schema": "infer"},
     )
 
     llm_request = relationship("LLMRequestORM", back_populates="calls")
@@ -245,7 +254,7 @@ class LLMResponseORM(Base):
 
     parser_spec_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("parser_specs.id"),
+        ForeignKey("infer.parser_specs.id"),
         nullable=False,
     )
     raw_response = Column(Text, nullable=False)
@@ -263,6 +272,7 @@ class LLMResponseORM(Base):
             "raw_response",
             name="uq_response_parser_raw",
         ),
+        {"schema": "infer"},
     )
 
     # One response can be reused by many calls

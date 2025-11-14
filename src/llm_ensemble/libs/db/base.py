@@ -2,7 +2,7 @@
 
 import os
 from typing import Optional
-from sqlalchemy import create_engine, Engine
+from sqlalchemy import create_engine, Engine, text
 from sqlalchemy.orm import declarative_base
 
 # SQLAlchemy declarative base for ORM models
@@ -50,17 +50,41 @@ def get_engine(database_url: Optional[str] = None, echo: bool = False) -> Engine
     return engine
 
 
-def create_all_tables(engine: Engine) -> None:
-    """Create all database tables from SQLAlchemy metadata.
-    
-    This creates tables for all SQLAlchemy ORM models that inherit from Base.
+def create_schemas(engine: Engine) -> None:
+    """Create PostgreSQL schemas if they don't exist.
+
+    Creates the schemas used by the application: ingest, infer, aggregate, evaluate.
     Safe to call multiple times (idempotent).
-    
+
     Args:
         engine: SQLAlchemy engine to use
-    
+
     Example:
         >>> engine = get_engine()
+        >>> create_schemas(engine)
+    """
+    schemas = ["ingest", "infer", "aggregate", "evaluate"]
+
+    with engine.connect() as conn:
+        for schema in schemas:
+            conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+        conn.commit()
+
+
+def create_all_tables(engine: Engine) -> None:
+    """Create all database tables from SQLAlchemy metadata.
+
+    This creates tables for all SQLAlchemy ORM models that inherit from Base.
+    Safe to call multiple times (idempotent).
+
+    IMPORTANT: You must call create_schemas() first to create the schemas.
+
+    Args:
+        engine: SQLAlchemy engine to use
+
+    Example:
+        >>> engine = get_engine()
+        >>> create_schemas(engine)  # Create schemas first
         >>> create_all_tables(engine)
     """
     Base.metadata.create_all(engine)

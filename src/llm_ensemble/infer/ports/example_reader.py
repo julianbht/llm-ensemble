@@ -45,7 +45,7 @@ class ExampleReader(ABC):
             List of JudgingSample objects
 
         Raises:
-            FileNotFoundError: If input_path doesn't exist
-            ValueError: If file format is invalid
+            FileNotFoundError: If input_path doesn't exist (file-based readers)
+            ValueError: If input is invalid (e.g., invalid run name for DB readers, malformed data)
         """
         pass

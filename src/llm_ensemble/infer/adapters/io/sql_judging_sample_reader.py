@@ -98,7 +98,9 @@ class SqlJudgingSampleReader(ExampleReader):
             )
 
             if not ingest_run:
-                raise FileNotFoundError(f"Ingest run not found: {run_name}")
+                raise ValueError(
+                    f"Ingest run '{run_name}' not found in database. "
+                )
 
             # 2. Query judging samples with eager loading of relationships
             query = (

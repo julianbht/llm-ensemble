@@ -19,7 +19,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Enum as SQLEnum,
 )
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 
 from llm_ensemble.libs.db import Base, utcnow
@@ -226,6 +226,7 @@ class LLMCallORM(Base):
     )
 
     latency_ms = Column(Float, nullable=False)
+    retries = Column(Integer, nullable=False, default=0)
     cost_estimate_usd = Column(Float, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
@@ -261,6 +262,10 @@ class LLMResponseORM(Base):
     label = Column(SQLEnum(RelevanceScore, schema="public"), nullable=False)
     confidence = Column(Float, nullable=True)
     rationale = Column(Text, nullable=True)
+
+    # Parser warnings as JSONB array (data quality issues during parsing)
+    # Example: [{"type": "ParserWarning", "code": "field_error", "message": "...", "metadata": {...}}]
+    parser_warnings = Column(ARRAY(JSONB), nullable=False, default=[])
 
     created_at = Column(DateTime, nullable=False, default=utcnow)
 

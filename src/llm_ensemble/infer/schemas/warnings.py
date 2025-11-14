@@ -9,7 +9,8 @@ should be captured in the message and metadata fields, not as separate codes.
 Design principles:
 - Reader port: Excluded (failures should crash before inference starts)
 - Writer port: Excluded (failures should raise exceptions)
-- Provider/Parser/Prompt: Full warning coverage for observability
+- Provider port: Excluded (operational metadata tracked in LLMCall.retries, crashes on unretryable errors)
+- Parser port: Full warning coverage for data quality issues
 - Codes enable grouping, filtering, and analytics in downstream analysis
 - Keep codes GENERAL - use metadata for specifics
 """
@@ -60,42 +61,6 @@ class BaseWarning(BaseModel, ABC):
             "message": self.message,
             "metadata": self.metadata,
         }
-
-
-# ============================================================================
-# Provider Warnings (LLMProvider port)
-# ============================================================================
-
-
-class ProviderWarningCode(str, Enum):
-    """Warning codes for LLM provider issues.
-
-    General categories to avoid taxonomy explosion. Use metadata for specifics.
-    """
-
-    # not sure about this one as its not descriptive / analytical
-    API_ERROR = "api_error"  # Network, timeout, rate limit, API failures 
-    EMPTY_RESPONSE = "empty_response"
-    MALFORMED_RESPONSE = "malformed_response"
-    RETRY_FAILED = "retry_failed"  # Exhausted retries or fallback used
-    INVALID_PARAMETER = "invalid_parameter"  # Invalid parameters, unsupported features
-    OTHER = "other"
-
-
-class ProviderWarning(BaseWarning):
-    """Warning from LLM provider adapter.
-
-    Tracks issues during API communication, retries, and response generation.
-
-    Example:
-        >>> ProviderWarning(
-        ...     code=ProviderWarningCode.API_ERROR,
-        ...     message="Rate limited, retried after 2s backoff",
-        ...     metadata={"retry_count": 3, "backoff_seconds": 2}
-        ... )
-    """
-
-    code: ProviderWarningCode  # Override base type with specific enum
 
 
 # ============================================================================
@@ -169,7 +134,7 @@ def warnings_to_dict_list(warnings: list[BaseWarning]) -> list[dict[str, Any]]:
     Example:
         >>> warnings = [
         ...     ParserWarning(code=ParserWarningCode.FIELD_ERROR, message="Missing field"),
-        ...     ProviderWarning(code=ProviderWarningCode.API_ERROR, message="Timeout")
+        ...     ParserWarning(code=ParserWarningCode.PARSE_ERROR, message="Bad JSON")
         ... ]
         >>> warnings_to_dict_list(warnings)
         [{'type': 'ParserWarning', 'code': 'field_error', ...}, ...]
@@ -190,10 +155,10 @@ def warnings_summary(warnings: list[BaseWarning]) -> dict[str, int]:
         >>> warnings = [
         ...     ParserWarning(code=ParserWarningCode.FIELD_ERROR, message="Missing field"),
         ...     ParserWarning(code=ParserWarningCode.PARSE_ERROR, message="Bad JSON"),
-        ...     ProviderWarning(code=ProviderWarningCode.API_ERROR, message="Timeout")
+        ...     ParserWarning(code=ParserWarningCode.VALIDATION_ERROR, message="Invalid score")
         ... ]
         >>> warnings_summary(warnings)
-        {'ParserWarning': 2, 'ProviderWarning': 1}
+        {'ParserWarning': 3}
     """
     summary: dict[str, int] = {}
     for warning in warnings:

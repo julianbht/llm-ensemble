@@ -135,12 +135,11 @@ class OpenRouterAdapter(LLMProvider):
 
         # Build LLMResponse with RAW output only (no parsing)
         # The InferenceService will handle parsing via ResponseParser
-        # Note: retry count and warnings will be added by base class
+        # Note: retry count will be added by base class
         llm_response = LLMResponse(
             raw_response=raw_response,
             latency_ms=latency_ms,
             cost_estimate_usd=None,  # Could be added later
-            warnings=[],  # Base class will add retry warnings
         )
 
         return llm_response

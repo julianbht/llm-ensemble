@@ -23,13 +23,16 @@ class LLMResponse(BaseModel):
 
     This represents the raw output from calling an LLM API:
     - raw_response: The unparsed text returned by the model
-    - Observability metadata: latency, retries, cost, warnings
+    - Observability metadata: latency, retries, cost
 
     This schema contains NO parsed/structured data. The ResponseParser
     is responsible for extracting structured LLMScore from raw_response.
 
     The domain service coordinates: Provider returns LLMResponse →
     Parser extracts LLMScore → Service combines into LLMJudgement.
+
+    Note: Warnings are only tracked at the parser level (LLMScore.warnings).
+    Provider-level operational metadata (retries) is tracked as structured fields.
     """
 
     raw_response: str = Field(
@@ -54,11 +57,6 @@ class LLMResponse(BaseModel):
         None,
         ge=0.0,
         description="Estimated cost in USD for this inference call"
-    )
-
-    warnings: list[BaseWarning] = Field(
-        default_factory=list,
-        description="Provider-level warnings: API errors, fallbacks, network issues, etc."
     )
 
 

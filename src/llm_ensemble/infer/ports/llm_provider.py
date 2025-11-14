@@ -21,7 +21,6 @@ import structlog
 from llm_ensemble.infer.schemas.llm_judgement import LLMResponse
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.infer.schemas.warnings import ProviderWarning, ProviderWarningCode
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
@@ -87,7 +86,6 @@ class LLMProvider(ABC):
         """
         start_time = time.time()
         retry_count = 0
-        warnings: list[ProviderWarning] = []
 
         # Retry loop with exponential backoff
         for attempt in range(self.retry_config.max_retries + 1):
@@ -95,9 +93,8 @@ class LLMProvider(ABC):
                 # Call the provider-specific implementation
                 response = self._do_infer(prompt, model_config)
 
-                # Success! Update retry count and warnings
+                # Success! Update retry count
                 response.retries = retry_count
-                response.warnings.extend(warnings)
 
                 return response
 
@@ -111,17 +108,6 @@ class LLMProvider(ABC):
 
                 # If not retryable or out of retries, raise
                 if not is_retryable or attempt >= self.retry_config.max_retries:
-                    warning = ProviderWarning(
-                        code=ProviderWarningCode.RETRY_FAILED,
-                        message=f"Request failed after {retry_count} retries: {str(e)}",
-                        metadata={
-                            "retry_count": retry_count,
-                            "error_type": type(e).__name__,
-                            "status_code": getattr(e, 'status_code', None),
-                        }
-                    )
-                    warnings.append(warning)
-
                     # Log the final failure if logger available
                     if self.logger:
                         self.logger.warning(
@@ -140,19 +126,6 @@ class LLMProvider(ABC):
                 )
                 jitter = random.uniform(0, delay * 0.1)  # 10% jitter
                 total_delay = delay + jitter
-
-                # Create warning for this retry attempt
-                warning = ProviderWarning(
-                    code=ProviderWarningCode.API_ERROR,
-                    message=f"Rate limited (attempt {attempt + 1}/{self.retry_config.max_retries + 1}), retrying after {total_delay:.2f}s",
-                    metadata={
-                        "attempt": attempt + 1,
-                        "backoff_seconds": total_delay,
-                        "error_type": type(e).__name__,
-                        "status_code": getattr(e, 'status_code', None),
-                    }
-                )
-                warnings.append(warning)
 
                 # Log retry attempt if logger available
                 if self.logger:

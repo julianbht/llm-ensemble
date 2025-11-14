@@ -133,8 +133,6 @@ class OpenRouterAdapter(LLMProvider):
         # Extract response text
         raw_response = response.choices[0].message.content
 
-        # Build LLMResponse with RAW output only (no parsing)
-        # The InferenceService will handle parsing via ResponseParser
         # Note: retry count will be added by base class
         llm_response = LLMResponse(
             raw_response=raw_response,

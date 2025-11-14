@@ -84,7 +84,6 @@ class LLMProvider(ABC):
             ValueError: If configuration is invalid
             Exception: If provider API fails after all retries exhausted
         """
-        start_time = time.time()
 
         # Retry loop with exponential backoff
         for attempt in range(self.retry_config.max_retries + 1):

@@ -7,9 +7,9 @@ It depends only on port abstractions, has no knowledge of infrastructure details
 
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional, Callable, Any
+from typing import Optional, Callable
 
-from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement, LLMResponse, LLMScore
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
@@ -132,12 +132,12 @@ class InferenceService:
                     on_request_start()
 
                 # Run inference for this sample 
-                response = self.llm_provider.infer(prompt, model_config)
+                response : LLMResponse = self.llm_provider.infer(prompt, model_config)
 
                 # Parse response to extract structured score
-                score = self.response_parser.parse(response.raw_response)
+                score : LLMScore = self.response_parser.parse(response.raw_response)
 
-                # Create judgement immediately 
+                # Create judgement 
                 judgement = LLMJudgement(
                     judging_sample=sample,
                     prompt=prompt,

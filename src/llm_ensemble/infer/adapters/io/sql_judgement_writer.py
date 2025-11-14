@@ -434,6 +434,11 @@ class SqlJudgementWriter(JudgementWriter):
         confidence = judgement.llm_score.confidence if judgement.llm_score else None
         rationale = judgement.llm_score.rationale if judgement.llm_score else None
 
+        # Extract parser warnings (convert to dict format for JSONB array)
+        parser_warnings = []
+        if judgement.llm_score:
+            parser_warnings = [w.to_dict() for w in judgement.llm_score.warnings]
+
         # Handle case where label is None (parsing failed) - need default for non-nullable column
         # The ORM defines label as non-nullable, so we need a default
         # Use RelevanceScore.NOT_RELEVANT as a safe default for failed parsing
@@ -449,6 +454,7 @@ class SqlJudgementWriter(JudgementWriter):
             label=label,
             confidence=confidence,
             rationale=rationale,
+            parser_warnings=parser_warnings,
         )
         self._session.add(response)
         self._responses_created += 1  # Track new responses
@@ -482,6 +488,7 @@ class SqlJudgementWriter(JudgementWriter):
             infer_run_id=self._infer_run_id,
             response_id=response_id,
             latency_ms=judgement.llm_response.latency_ms,
+            retries=judgement.llm_response.retries,
             cost_estimate_usd=judgement.llm_response.cost_estimate_usd,
         )
         self._session.add(call)

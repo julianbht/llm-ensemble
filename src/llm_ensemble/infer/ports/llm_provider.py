@@ -85,7 +85,6 @@ class LLMProvider(ABC):
             Exception: If provider API fails after all retries exhausted
         """
         start_time = time.time()
-        retry_count = 0
 
         # Retry loop with exponential backoff
         for attempt in range(self.retry_config.max_retries + 1):
@@ -93,13 +92,13 @@ class LLMProvider(ABC):
                 # Call the provider-specific implementation
                 response = self._do_infer(prompt, model_config)
 
-                # Success! Update retry count
-                response.retries = retry_count
+                # Success! Set retry count
+                # attempt = 0 means first try (no retries), attempt = 1 means one retry, etc.
+                response.retries = attempt
 
                 return response
 
             except APIError as e:
-                retry_count = attempt
 
                 # Check if we should retry
                 is_retryable = False
@@ -112,7 +111,7 @@ class LLMProvider(ABC):
                     if self.logger:
                         self.logger.warning(
                             InferLogEvent.RETRY_EXHAUSTED,
-                            retry_count=retry_count,
+                            retry_count=attempt,
                             error_type=type(e).__name__,
                             status_code=getattr(e, 'status_code', None),
                         )

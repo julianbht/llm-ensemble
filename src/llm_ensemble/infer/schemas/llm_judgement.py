@@ -30,9 +30,6 @@ class LLMResponse(BaseModel):
 
     The domain service coordinates: Provider returns LLMResponse →
     Parser extracts LLMScore → Service combines into LLMJudgement.
-
-    Note: Warnings are only tracked at the parser level (LLMScore.warnings).
-    Provider-level operational metadata (retries) is tracked as structured fields.
     """
 
     raw_response: str = Field(

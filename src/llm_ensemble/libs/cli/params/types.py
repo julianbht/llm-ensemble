@@ -1,4 +1,4 @@
-"""Custom Click parameter types used by Typer CLIs."""
+"""Param type helpers for CLI options."""
 
 from __future__ import annotations
 
@@ -13,11 +13,17 @@ from llm_ensemble.libs.cli.error_messages import (
     format_missing_config_error,
     format_missing_io_config_error,
 )
-from llm_ensemble.libs.cli.validation_callbacks import list_available_configs
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 MissingFactory = Callable[[Path, List[str], str], str]
 InvalidFactory = Callable[[str, Path, List[str], str], str]
+
+
+def list_available_configs(config_dir: Path) -> list[str]:
+    """List available YAML configs in directory."""
+    if not config_dir.exists():
+        return []
+    return sorted([p.stem for p in config_dir.glob("*.yaml")])
 
 
 class ConfigParamType(click.ParamType):

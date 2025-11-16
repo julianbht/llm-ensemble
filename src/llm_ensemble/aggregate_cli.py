@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 from pathlib import Path
-from typing import Annotated, Optional
 import typer
 
 from llm_ensemble.aggregate.orchestrator import run_aggregation
@@ -10,10 +9,16 @@ from llm_ensemble.aggregate.config_loaders import load_ensemble_config
 from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.config.logging_config_loader import load_logging_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
-from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
-from llm_ensemble.libs.cli.common_params import RunName, LogCfg, Official, Notes, Override, EnsembleCfg
-from llm_ensemble.libs.cli.param_types import IOConfigParamType
+from llm_ensemble.libs.cli.params import (
+    RunName,
+    LogCfg,
+    Official,
+    Notes,
+    Override,
+    EnsembleCfg,
+    AggregateIoCfg,
+)
 
 # Load runtime configuration early
 load_runtime_config()
@@ -29,15 +34,7 @@ app = typer.Typer(
 def aggregate(
     # Required parameters
     ensemble_cfg: EnsembleCfg,
-    io_cfg: Annotated[
-        str,
-        typer.Option(
-            ...,
-            "--io-cfg",
-            click_type=IOConfigParamType("aggregate"),
-            help=f"I/O config name. Configs in {(PathManager.get_configs_dir() / 'io' / 'aggregate').relative_to(PathManager.get_project_root())}"
-        )
-    ],
+    io_cfg: AggregateIoCfg,
     input_paths: list[Path] = typer.Argument(
         ...,
         help="Input files containing LLMJudgement records (from infer runs)",

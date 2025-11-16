@@ -45,7 +45,6 @@ class SqlWriter(DatasetWriter):
 
     Features:
     - Auto-creates tables on first write
-    - Deterministic UUIDs for all entities (computed in domain layer)
     - Central shared database across all runs for data accumulation
     - Idempotent writes via merge (insert or update if exists)
     - Uses session_context() for transaction management

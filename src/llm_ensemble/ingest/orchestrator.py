@@ -3,9 +3,8 @@
 This module handles infrastructure concerns for the ingestion pipeline:
 - Loading configurations
 - Setting up run directories and logging
-- Building manifests with git info and execution parameters
+- Building run info objects with git info and execution parameters
 - Instantiating adapters via factories
-- Delegating business logic to domain service (which sets timing and finalizes manifest)
 It is separated from the CLI entry point (ingest_cli.py) for testability.
 """
 from __future__ import annotations

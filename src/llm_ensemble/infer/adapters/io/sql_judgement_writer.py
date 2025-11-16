@@ -70,7 +70,6 @@ class SqlJudgementWriter(JudgementWriter):
     impedance mismatch between domain objects and relational entities.
 
     Architecture:
-    - Implements same interface as NdjsonJudgementWriter (unified port)
     - Data mapper logic lives inside this adapter (preserves domain purity)
     - Run metadata initialized once in open()
     - Per-judgement decomposition in write_one()

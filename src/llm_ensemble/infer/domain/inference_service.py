@@ -31,19 +31,6 @@ class InferenceService:
     Pure business logic that orchestrates reading examples, running inference,
     and writing judgements. Depends only on port abstractions, enabling complete
     independence from infrastructure concerns.
-
-    Example:
-        >>> reader = NdjsonExampleReader()
-        >>> writer = NdjsonJudgementWriter(output_path)
-        >>> provider = OpenRouterAdapter()
-        >>> service = InferenceService(reader, writer, provider)
-        >>> stats = service.run_inference(
-        ...     input_path,
-        ...     model_config,
-        ...     "thomas-et-al-prompt",
-        ...     limit=100
-        ... )
-        >>> print(f"Processed {stats['judgement_count']} judgements")
     """
 
     def __init__(

@@ -2,12 +2,6 @@
 
 Defines the abstract contract for reading raw IR datasets and converting them
 to NormalizedDataset objects containing both metadata and samples.
-
-The reader is responsible for:
-- Extracting dataset metadata from data
-- Creating all domain objects (Dataset, Query, Document, JudgingSample)
-- Computing deterministic UUIDs
-- Returning a complete NormalizedDataset
 """
 
 from __future__ import annotations
@@ -32,15 +26,6 @@ class DatasetReader(ABC):
     - Creating Query and Document entities with UUIDs
     - Creating complete JudgingSample objects
     - Packaging everything as NormalizedDataset
-
-    Example:
-        >>> class LLMJudgeDatasetReader(DatasetReader):
-        ...     def read(self, input_path, limit=None):
-        ...         # Extract dataset name from files
-        ...         dataset = Dataset.create("llmjudge", "LLM Judge Challenge 2024")
-        ...         # Read and normalize queries, documents, qrels
-        ...         samples = [JudgingSample.create(...), ...]
-        ...         return NormalizedDataset(dataset, samples)
     """
 
     @abstractmethod

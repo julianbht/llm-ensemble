@@ -20,11 +20,6 @@ def load_ensemble_config(config_name: str) -> EnsembleConfig:
     Raises:
         FileNotFoundError: If config file doesn't exist
         ValueError: If config is invalid
-        
-    Example:
-        >>> config = load_ensemble_config("majority_vote")
-        >>> config.strategy
-        'majority_vote'
     """
     # Get ensembles config directory
     config_dir = PathManager.get_project_root() / "configs" / "ensembles"

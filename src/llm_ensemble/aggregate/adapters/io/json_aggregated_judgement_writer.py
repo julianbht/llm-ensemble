@@ -17,13 +17,6 @@ class JsonAggregatedJudgementWriter(AggregatedJudgementWriter):
     
     Buffers all judgements in memory and writes them as a single JSON array
     when the writer is closed. Simple and human-readable.
-    
-    Example:
-        >>> writer = JsonAggregatedJudgementWriter()
-        >>> with writer.open(run_dir) as w:
-        ...     for agg_judgement in aggregated_judgements:
-        ...         w.write_one(agg_judgement)
-        >>> # File written as JSON array on close
     """
     
     def __init__(self):

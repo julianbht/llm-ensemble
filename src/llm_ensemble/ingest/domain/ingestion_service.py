@@ -1,27 +1,27 @@
 """Domain service for data ingestion pipeline.
 
-This module contains pure business logic for orchestrating the ingestion process.
-It depends only on port abstractions, has no knowledge of infrastructure details
-(file formats, I/O operations), and can be tested in complete isolation.
+This module contains business logic for coordinating the ingestion process.
+It depends only on port abstractions and handles its own logging.
 """
 
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional, Callable
+from typing import Optional
+import structlog
 
-from llm_ensemble.ingest.schemas import WriteSummary, NormalizedDataset
+from llm_ensemble.ingest.schemas import NormalizedDataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
 from llm_ensemble.ingest.ports import DatasetReader, DatasetWriter
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
+from llm_ensemble.libs.logging.log_events import IngestLogEvent
 
 
 class IngestionService:
     """Domain service for coordinating data ingestion pipeline.
 
-    Pure business logic that orchestrates reading raw datasets and writing output.
-    Depends only on port abstractions, enabling complete independence from
-    infrastructure concerns.
+    Business logic that orchestrates reading raw datasets and writing output.
+    Handles its own logging - no callback injection needed.
     """
 
     def __init__(
@@ -37,29 +37,26 @@ class IngestionService:
         """
         self.dataset_reader = dataset_reader
         self.dataset_writer = dataset_writer
+        self.logger = structlog.get_logger().bind(component="ingestion_service")
 
     def ingest_dataset(
         self,
         data_dir: Path,
         run_info: IngestRunInfo,
         limit: Optional[int] = None,
-        on_read_complete: Optional[Callable[[NormalizedDataset], None]] = None,
-        on_write: Optional[Callable[[WriteSummary], None]] = None,
     ) -> IngestRunSummary:
         """Execute the ingestion pipeline.
 
-        Pure business logic that coordinates:
+        Coordinates:
         1. Creating run summary builder with timing
-        2. Reading complete NormalizedDataset via DatasetReader port (reader handles normalization)
-        3. Writing samples via DatasetWriter port (writer derives output path from run_info)
+        2. Reading complete NormalizedDataset via DatasetReader port
+        3. Writing samples via DatasetWriter port
         4. Calculating summary statistics and finalizing
 
         Args:
             data_dir: Directory containing raw dataset files
             run_info: Immutable runtime context (contains run_dir property for writers)
             limit: Optional maximum number of samples to process
-            on_read_complete: Optional callback invoked after reading completes (for logging)
-            on_write: Optional callback invoked after batch write completes (for logging)
 
         Returns:
             Finalized IngestRunSummary with sample_count and timing information
@@ -79,19 +76,22 @@ class IngestionService:
             limit=limit
         )
 
-        # Invoke callback after read completes (for logging)
-        if on_read_complete:
-            on_read_complete(normalized_dataset)
+        # Log read completion
+        self.logger.info(
+            IngestLogEvent.DATASET_READ_COMPLETE,
+            dataset=normalized_dataset.dataset.name,
+            sample_count=normalized_dataset.sample_count,
+        )
 
-        # Write normalized dataset 
+        # Write normalized dataset
         write_summary = self.dataset_writer.write(
             normalized_dataset,
             run_info
         )
 
-        # Invoke callback after write (for logging)
-        if on_write:
-            on_write(write_summary)
+        # Log write completion using summary
+        for log_entry in write_summary.get_log_entries():
+            self.logger.info(**log_entry)
 
         # Add write summary to builder for inclusion in final summary
         summary_builder.add("write_summary", write_summary)

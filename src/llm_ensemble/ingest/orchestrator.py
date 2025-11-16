@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.ingest.domain import IngestionService
-from llm_ensemble.ingest.schemas import WriteSummary
 from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
@@ -114,35 +113,18 @@ def run_ingest(
     dataset_reader = io_config.get_reader()
     dataset_writer = io_config.get_writer()
 
-    # Create domain service
+    # Create domain service (it handles its own logging)
     service = IngestionService(
         dataset_reader=dataset_reader,
         dataset_writer=dataset_writer,
     )
 
-    # Define logging callbacks (infrastructure concerns)
-    def on_read_complete(normalized_dataset) -> None:
-        """Log read completion with sample count."""
-        logger.info(
-            IngestLogEvent.DATASET_READ_COMPLETE,
-            dataset=normalized_dataset.dataset.name,
-            sample_count=normalized_dataset.sample_count,
-        )
-
-    def on_write(write_summary: WriteSummary) -> None:
-        """Log write results using WriteSummary from writer."""
-        # Use the WriteSummary returned by the writer for consistent logging
-        for log_entry in write_summary.get_log_entries():
-            logger.info(**log_entry)
-
-    # Run ingestion pipeline (pure business logic)
+    # Run ingestion pipeline
     try:
         summary = service.ingest_dataset(
             data_dir=input_path,
             run_info=run_info,
             limit=limit,
-            on_read_complete=on_read_complete,
-            on_write=on_write,
         )
 
         # Write standalone summary.json for convenience (not source of truth)

@@ -13,14 +13,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
-from llm_ensemble.libs.schemas.write_result import WriteResult
 from llm_ensemble.infer.domain import InferenceService
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
@@ -144,7 +141,7 @@ def run_inference(
     response_parser = prompt_config.get_response_parser(score_field="O")
     provider = model_config.get_provider(retry_config=retry_config, logger=logger)
 
-    # Create domain service by injecting adapters- it orchestrates ALL port interactions
+    # Create domain service (it handles its own logging)
     service = InferenceService(
         example_reader=reader,
         judgement_writer=writer,
@@ -153,53 +150,7 @@ def run_inference(
         response_parser=response_parser,
     )
 
-    # Define logging callbacks (infrastructure concern)
-    def on_request_start() -> None:
-        """Log when request is being sent."""
-        logger.info(InferLogEvent.SENDING_REQUEST)
-
-    def on_judgement(judgement: LLMJudgement) -> None:
-        """Log each completed judgement."""
-        extracted_score = judgement.llm_score.label.value if judgement.llm_score.label else "null"
-        gold_score = judgement.judging_sample.gold_score.value
-        latency_s = judgement.llm_response.latency_ms / 1000
-
-        # Info to console
-        logger.info(
-            InferLogEvent.RESPONSE_PARSED,
-            extracted_score=extracted_score,
-            gold_score=gold_score,
-            latency_s=f"{latency_s:.1f}",
-        )
-
-        # Full details (DEBUG level)
-        logger.debug(
-            "judgement_details",
-            query=judgement.judging_sample.query.query_text,
-            doc=judgement.judging_sample.document.doc_text,
-            prompt=judgement.prompt,
-            raw_response=judgement.llm_response.raw_response,
-            extracted_score=extracted_score,
-            gold_score=gold_score,
-            latency_ms=judgement.llm_response.latency_ms,
-            warnings=[str(w) for w in judgement.get_all_warnings()],
-        )
-
-    def on_write_one(write_result: WriteResult) -> None:
-        """Log individual write operations using WriteResult from writer."""
-        logger.info(
-            InferLogEvent.JUDGEMENT_PERSISTED,
-            sample_id=str(write_result.item_id),
-            item_type=write_result.item_type,
-        )
-
-    def on_write_complete(write_summary: WriteSummary) -> None:
-        """Log aggregate write statistics using WriteSummary from writer."""
-        # Use the WriteSummary returned by the writer for consistent logging
-        for log_entry in write_summary.get_log_entries():
-            logger.info(**log_entry)
-
-    # Run inference pipeline (pure business logic)
+    # Run inference pipeline
     try:
         summary = service.run_inference(
             input_path=input_file,
@@ -207,10 +158,6 @@ def run_inference(
             run_info=run_info,
             run_dir=run_dir,
             limit=limit,
-            on_request_start=on_request_start,
-            on_response=on_judgement,
-            on_write_one=on_write_one,
-            on_write_complete=on_write_complete,
         )
         judgement_count = summary.judgement_count
         logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=judgement_count)

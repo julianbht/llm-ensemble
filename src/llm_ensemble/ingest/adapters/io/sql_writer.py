@@ -115,7 +115,7 @@ class SqlWriter(DatasetWriter):
                     session, samples, run_info
                 )
 
-            # Return summary for orchestrator to log
+            # Return summary with write results
             return WriteSummary(
                 datasets_created=datasets_created,
                 datasets_skipped=datasets_skipped,

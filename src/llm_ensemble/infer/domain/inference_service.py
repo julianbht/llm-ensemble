@@ -1,19 +1,18 @@
 """Domain service for LLM inference pipeline.
 
-This module contains pure business logic for orchestrating the inference process.
-It depends only on port abstractions, has no knowledge of infrastructure details
-(APIs, file formats, databases), and can be tested in complete isolation.
+This module contains business logic for coordinating the inference process.
+It depends only on port abstractions and handles its own logging.
 """
 
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional, Callable
+from typing import Optional
+import structlog
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement, LLMResponse, LLMScore
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
-from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import (
     LLMProvider,
     ExampleReader,
@@ -22,15 +21,14 @@ from llm_ensemble.infer.ports import (
     PromptBuilder,
 )
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
-from llm_ensemble.libs.schemas.write_result import WriteResult
+from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
 class InferenceService:
     """Domain service for coordinating LLM inference pipeline.
 
-    Pure business logic that orchestrates reading examples, running inference,
-    and writing judgements. Depends only on port abstractions, enabling complete
-    independence from infrastructure concerns.
+    Business logic that orchestrates reading examples, running inference,
+    and writing judgements. Handles its own logging - no callback injection needed.
     """
 
     def __init__(
@@ -55,6 +53,7 @@ class InferenceService:
         self.prompt_builder = prompt_builder
         self.llm_provider = llm_provider
         self.response_parser = response_parser
+        self.logger = structlog.get_logger().bind(component="inference_service")
 
     def run_inference(
         self,
@@ -63,21 +62,17 @@ class InferenceService:
         run_info: InferRunInfo,
         run_dir: Path,
         limit: Optional[int] = None,
-        on_request_start: Optional[Callable[[], None]] = None,
-        on_response: Optional[Callable[[LLMJudgement], None]] = None,
-        on_write_one: Optional[Callable[[WriteResult], None]] = None,
-        on_write_complete: Optional[Callable[[WriteSummary], None]] = None,
     ) -> InferRunSummary:
         """Execute the inference pipeline with streaming and immediate persistence.
 
-        Pure business logic that coordinates:
+        Coordinates:
         1. Reading JudgingSample objects via ExampleReader port
         2. For each sample (streaming loop):
            a. Building prompt via PromptBuilder port → str (rendered prompt)
            b. Running inference via LLMProvider port → LLMResponse (raw response + provider warnings)
            c. Parsing response via ResponseParser port → LLMScore (parsed score + parser warnings)
            d. Creating LLMJudgement object (sample + prompt + response + score + run_info)
-           e. Invoking callback for progress tracking
+           e. Logging progress
            f. Writing judgement immediately to disk (fault tolerance)
         3. Calculating statistics including warnings summary from all stages
 
@@ -87,10 +82,6 @@ class InferenceService:
             run_info: Immutable runtime context (created by orchestrator, attached to each judgement)
             run_dir: Run directory where output should be written (writer determines file structure)
             limit: Optional maximum number of examples to process
-            on_request_start: Optional callback invoked before sending request
-            on_response: Optional callback for each completed judgement (for logging/progress)
-            on_write_one: Optional callback invoked after each judgement is written (per-write logging)
-            on_write_complete: Optional callback invoked after all writes complete (aggregate logging)
 
         Returns:
             Finalized InferRunSummary with statistics, timing, and warnings summary
@@ -114,17 +105,16 @@ class InferenceService:
                 # Build prompt for this sample
                 prompt = self.prompt_builder.build(sample)
 
-                # Invoke callback before sending request
-                if on_request_start:
-                    on_request_start()
+                # Log before sending request
+                self.logger.info(InferLogEvent.SENDING_REQUEST)
 
-                # Run inference for this sample 
+                # Run inference for this sample
                 response : LLMResponse = self.llm_provider.infer(prompt, model_config)
 
                 # Parse response to extract structured score
                 score : LLMScore = self.response_parser.parse(response.raw_response)
 
-                # Create judgement 
+                # Create judgement
                 judgement = LLMJudgement(
                     judging_sample=sample,
                     prompt=prompt,
@@ -132,16 +122,41 @@ class InferenceService:
                     llm_score=score,
                 )
 
-                # Invoke callback for progress tracking
-                if on_response:
-                    on_response(judgement)
+                # Log each completed judgement
+                extracted_score = judgement.llm_score.label.value if judgement.llm_score.label else "null"
+                gold_score = judgement.judging_sample.gold_score.value
+                latency_s = judgement.llm_response.latency_ms / 1000
+
+                # Info to console
+                self.logger.info(
+                    InferLogEvent.RESPONSE_PARSED,
+                    extracted_score=extracted_score,
+                    gold_score=gold_score,
+                    latency_s=f"{latency_s:.1f}",
+                )
+
+                # Full details (DEBUG level)
+                self.logger.debug(
+                    "judgement_details",
+                    query=judgement.judging_sample.query.query_text,
+                    doc=judgement.judging_sample.document.doc_text,
+                    prompt=judgement.prompt,
+                    raw_response=judgement.llm_response.raw_response,
+                    extracted_score=extracted_score,
+                    gold_score=gold_score,
+                    latency_ms=judgement.llm_response.latency_ms,
+                    warnings=[str(w) for w in judgement.get_all_warnings()],
+                )
 
                 # Write judgement immediately to disk (fault tolerance!)
                 write_result = writer.write_one(judgement)
 
-                # Invoke callback after write (per-write logging)
-                if on_write_one:
-                    on_write_one(write_result)
+                # Log individual write operation
+                self.logger.info(
+                    InferLogEvent.JUDGEMENT_PERSISTED,
+                    sample_id=str(write_result.item_id),
+                    item_type=write_result.item_type,
+                )
 
                 # Collect for summary statistics
                 llm_judgements.append(judgement)
@@ -149,9 +164,9 @@ class InferenceService:
         # Retrieve aggregate write summary after context manager closes
         write_summary = self.judgement_writer.get_summary()
 
-        # Invoke callback after all writes complete
-        if on_write_complete:
-            on_write_complete(write_summary)
+        # Log aggregate write statistics using summary
+        for log_entry in write_summary.get_log_entries():
+            self.logger.info(**log_entry)
 
         # Calculate aggregate statistics from judgements (for summary)
         count = len(llm_judgements)

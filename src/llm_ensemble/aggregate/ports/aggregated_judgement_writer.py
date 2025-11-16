@@ -17,12 +17,6 @@ class AggregatedJudgementWriter(ABC):
     while providing a consistent interface.
     
     Uses context manager pattern for proper resource management.
-    
-    Example:
-        >>> writer = JsonAggregatedJudgementWriter()
-        >>> with writer.open(run_dir) as w:
-        ...     for agg_judgement in aggregated_judgements:
-        ...         w.write_one(agg_judgement)
     """
     
     @abstractmethod

@@ -65,16 +65,6 @@ def configure_logger(
 
     Raises:
         ValueError: If save_logs=True but log_file_path is None
-
-    Example:
-        >>> logger = configure_logger(
-        ...     cli_name="infer",
-        ...     run_name="20250115_143022_phi3",
-        ...     pretty_print=True,
-        ...     save_logs=True,
-        ...     log_file_path=Path("artifacts/runs/infer/20250115_143022_phi3/run.log"),
-        ... )
-        >>> logger.info("inference_started", model="phi3-mini", num_samples=100)
     """
     # Validate log file path if save_logs is True
     if save_logs and log_file_path is None:

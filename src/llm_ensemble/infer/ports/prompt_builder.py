@@ -18,14 +18,6 @@ class PromptBuilder(ABC):
     while providing a consistent interface to the LLM provider adapters.
 
     Returns the rendered prompt string directly (no wrapper needed).
-
-    Example:
-        >>> class JinjaPromptBuilder(PromptBuilder):
-        ...     def build(self, example):
-        ...         return self.template.render(
-        ...             query=example.query.query_text,
-        ...             document=example.document.doc_text
-        ...         )
     """
 
     @abstractmethod
@@ -52,10 +44,5 @@ class PromptBuilder(ABC):
 
         Returns:
             Raw template text (before variable substitution)
-
-        Example:
-            >>> builder = JinjaPromptBuilder()
-            >>> builder.get_template_text()
-            'Query: {{ query }}\\nDocument: {{ document }}'
         """
         pass

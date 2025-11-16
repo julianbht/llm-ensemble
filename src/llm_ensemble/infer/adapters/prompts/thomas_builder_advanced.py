@@ -22,22 +22,6 @@ class ThomasBuilderAdvanced(PromptBuilder):
     - aspects: True (enables aspects-based evaluation with M, T, O scores)
 
     Passes query and document text directly to the template.
-
-    Example:
-        >>> builder = ThomasBuilderAdvanced()
-        >>> from llm_ensemble.ingest.schemas import Query, Document, JudgingSample
-        >>> from llm_ensemble.libs.schemas import RelevanceScore
-        >>> query = Query(external_id="q1", query_text="python")
-        >>> doc = Document(external_id="d1", doc_text="Python is a programming language")
-        >>> example = JudgingSample(
-        ...     query=query,
-        ...     document=doc,
-        ...     gold_score=RelevanceScore.HIGHLY_RELEVANT,
-        ...     run_info=...
-        ... )
-        >>> request = builder.build(example)
-        >>> "You are a search quality rater" in request.prompt
-        True
     """
 
     def __init__(self):

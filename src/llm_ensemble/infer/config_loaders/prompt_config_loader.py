@@ -22,11 +22,6 @@ def load_prompt_config(prompt_name: str) -> PromptConfig:
     Raises:
         FileNotFoundError: If config file doesn't exist
         ValueError: If YAML is invalid or missing required fields
-
-    Example:
-        >>> config = load_prompt_config("thomas-et-al-prompt")
-        >>> config.variables
-        {'role': True, 'aspects': False}
     """
     return load_yaml_config(
         config_name=prompt_name,

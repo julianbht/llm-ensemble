@@ -14,10 +14,6 @@ def get_git_sha() -> str:
 
     Returns:
         Git commit SHA (short 7-char format), or "unknown" if not in a git repo
-
-    Example:
-        >>> get_git_sha()
-        '4fd2136'
     """
     try:
         result = subprocess.run(
@@ -37,10 +33,6 @@ def get_git_status_clean() -> bool:
 
     Returns:
         True if working tree is clean, False if there are uncommitted changes
-
-    Example:
-        >>> get_git_status_clean()
-        True
     """
     try:
         result = subprocess.run(
@@ -60,10 +52,6 @@ def get_git_info() -> dict:
 
     Returns:
         Dict with git_sha, git_clean, and git_branch
-
-    Example:
-        >>> get_git_info()
-        {'git_sha': '4fd2136', 'git_clean': True, 'git_branch': 'master'}
     """
     sha = get_git_sha()
     clean = get_git_status_clean()

@@ -26,11 +26,6 @@ class NormalizedDataset:
     Attributes:
         dataset: Dataset metadata (name, description, id)
         samples: List of complete JudgingSample objects
-
-    Example:
-        >>> dataset = Dataset.create("llmjudge", "LLM Judge Challenge 2024")
-        >>> samples = [JudgingSample.create(...), ...]
-        >>> normalized = NormalizedDataset(dataset, samples)
     """
 
     dataset: Dataset

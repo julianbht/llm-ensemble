@@ -83,12 +83,6 @@ class SqlJudgementWriter(JudgementWriter):
     - Deterministic UUIDs ensure same logical entity → same UUID
     - Unique constraints on natural keys prevent duplicates
     - merge() handles insert-or-ignore logic
-
-    Example:
-        >>> writer = SqlJudgementWriter()
-        >>> with writer.open(run_dir) as w:
-        ...     for judgement in judgements:
-        ...         w.write_one(judgement)  # Decomposed and persisted immediately
     """
 
     def __init__(self):

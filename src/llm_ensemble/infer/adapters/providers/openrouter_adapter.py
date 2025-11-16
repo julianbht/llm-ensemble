@@ -26,13 +26,6 @@ class OpenRouterAdapter(LLMProvider):
 
     Pure API client that sends pre-built prompts to OpenRouter and returns raw responses.
     Does NOT build prompts or parse responses - that's orchestrated by InferenceService.
-
-    Example:
-        >>> from llm_ensemble.infer.config_loaders import load_model_config
-        >>> config = load_model_config("gpt-oss-20b")
-        >>> adapter = OpenRouterAdapter(api_key="...")
-        >>> response = adapter.infer("pre-built prompt", config)
-        >>> print(response.raw_response)  # Unparsed text
     """
 
     def __init__(

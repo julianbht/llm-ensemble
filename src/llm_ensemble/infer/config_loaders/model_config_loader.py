@@ -22,13 +22,6 @@ def load_model_config(model_id: str) -> ModelConfig:
     Raises:
         FileNotFoundError: If config file doesn't exist
         ValueError: If YAML is invalid or missing required fields
-
-    Example:
-        >>> config = load_model_config("gpt-oss-20b")
-        >>> config.provider
-        'openrouter'
-        >>> config.openrouter_model_id
-        'openai/gpt-oss-20b:free'
     """
     return load_yaml_config(
         config_name=model_id,

@@ -94,14 +94,6 @@ class IngestRunInfo(RunInfo):
         
         Returns:
             IngestRunInfo instance with computed id
-        
-        Example:
-            >>> run_info = IngestRunInfo.create(
-            ...     run_name="20250128_120000_abc123",
-            ...     io_config_name="llm_judge_challenge_json",
-            ...     io_config=config,
-            ...     input_path="/data/llmjudge"
-            ... )
         """
         run_info_id = compute_ingest_run_uuid(run_name)
         return cls(

@@ -18,12 +18,6 @@ class AggregationStrategy(ABC):
     Implementations can use different aggregation methods (majority vote,
     weighted vote, soft voting, etc.) while providing a consistent interface
     to combine multiple model judgements into a consensus decision.
-    
-    Example:
-        >>> class MajorityVoteStrategy(AggregationStrategy):
-        ...     def aggregate(self, judgements):
-        ...         # Count votes, pick winner
-        ...         return AggregatedScore(...)
     """
     
     @abstractmethod

@@ -89,11 +89,6 @@ class RunInfo(BaseModel):
 
         Returns:
             Path to run directory (e.g., artifacts/runs/{cli_name}/{test|official}/{run_name})
-
-        Example:
-            >>> run_info = IngestRunInfo(run_name="20250128_120000_test", cli_name="ingest", ...)
-            >>> run_info.run_dir
-            PosixPath('artifacts/runs/ingest/test/20250128_120000_test')
         """
         return PathManager.get_run_dir(
             cli_name=self.cli_name,

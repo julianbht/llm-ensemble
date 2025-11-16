@@ -31,13 +31,6 @@ class JudgementWriter(ABC):
 
     Run context (InferRunInfo) is provided once during open() rather than
     being embedded in every judgement, keeping the domain model clean.
-
-    Example:
-        >>> writer = NdjsonJudgementWriter()
-        >>> with writer.open(run_dir, run_info) as w:
-        ...     for judgement in judgements:
-        ...         w.write_one(judgement)  # Written immediately to disk
-        >>> summary = writer.get_summary()  # Get write summary
     """
 
     def __init__(self):

@@ -125,11 +125,6 @@ class ModelConfig(BaseConfig):
         Raises:
             ImportError: If the provider module cannot be imported
             AttributeError: If the provider class doesn't exist in the module
-
-        Example:
-            >>> from llm_ensemble.infer.config_loaders import load_retry_config
-            >>> retry_config = load_retry_config("standard")
-            >>> provider = config.get_provider(retry_config=retry_config, api_key="...", timeout=30)
         """
         # Build kwargs based on what the provider needs
         # Note: retry_config and logger are REQUIRED for all providers (base class requires them)

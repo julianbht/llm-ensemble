@@ -44,10 +44,6 @@ class IOConfig(BaseConfig):
         Raises:
             ImportError: If the reader module cannot be imported
             AttributeError: If the reader class doesn't exist in the module
-
-        Example:
-            >>> config = IOConfig(...)
-            >>> reader = config.get_reader()
         """
         return self._instantiate_adapter(self.reader_module, self.reader_class)
 
@@ -62,9 +58,5 @@ class IOConfig(BaseConfig):
         Raises:
             ImportError: If the writer module cannot be imported
             AttributeError: If the writer class doesn't exist in the module
-
-        Example:
-            >>> config = IOConfig(...)
-            >>> writer = config.get_writer()
         """
         return self._instantiate_adapter(self.writer_module, self.writer_class)

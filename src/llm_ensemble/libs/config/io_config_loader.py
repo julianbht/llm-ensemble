@@ -26,11 +26,6 @@ def load_io_config(io_format: str, cli_name: str) -> IOConfig:
     Raises:
         FileNotFoundError: If config file doesn't exist
         ValueError: If YAML is invalid or missing required fields
-
-    Example:
-        >>> config = load_io_config("json", "infer")
-        >>> config.reader_module
-        'llm_ensemble.infer.adapters.io.fully_populated_json_reader'
     """
     return load_yaml_config(
         config_name=io_format,

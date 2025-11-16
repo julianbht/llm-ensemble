@@ -40,10 +40,6 @@ def dataset_to_orm(dataset: Dataset) -> DatasetORM:
 
     Returns:
         DatasetORM model ready for persistence
-
-    Example:
-        >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
-        >>> dataset_orm = dataset_to_orm(dataset)
     """
     return DatasetORM(
         id=dataset.id,
@@ -60,10 +56,6 @@ def dataset_from_orm(dataset_orm: DatasetORM) -> Dataset:
 
     Returns:
         Dataset domain object
-
-    Example:
-        >>> dataset_orm = session.get(DatasetORM, dataset_id)
-        >>> dataset = dataset_from_orm(dataset_orm)
     """
     return Dataset(
         id=dataset_orm.id,
@@ -89,11 +81,6 @@ def query_to_orm(query: Query, dataset_id: UUID) -> QueryORM:
 
     Returns:
         QueryORM model ready for persistence
-
-    Example:
-        >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
-        >>> query = Query.create(dataset, "q123", "what is python?")
-        >>> query_orm = query_to_orm(query, dataset.id)
     """
     return QueryORM(
         id=query.id,
@@ -114,10 +101,6 @@ def query_from_orm(query_orm: QueryORM) -> Query:
 
     Returns:
         Query domain object (without dataset reference)
-
-    Example:
-        >>> query_orm = session.get(QueryORM, query_id)
-        >>> query = query_from_orm(query_orm)
     """
     return Query(
         id=query_orm.id,
@@ -143,11 +126,6 @@ def document_to_orm(document: Document, dataset_id: UUID) -> DocumentORM:
 
     Returns:
         DocumentORM model ready for persistence
-
-    Example:
-        >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
-        >>> doc = Document.create(dataset, "d456", "Python is a programming language.")
-        >>> doc_orm = document_to_orm(doc, dataset.id)
     """
     return DocumentORM(
         id=document.id,
@@ -168,10 +146,6 @@ def document_from_orm(document_orm: DocumentORM) -> Document:
 
     Returns:
         Document domain object (without dataset reference)
-
-    Example:
-        >>> doc_orm = session.get(DocumentORM, doc_id)
-        >>> doc = document_from_orm(doc_orm)
     """
     return Document(
         id=document_orm.id,
@@ -197,10 +171,6 @@ def judging_sample_to_orm(sample: JudgingSample, ingest_run_id: UUID) -> Judging
 
     Returns:
         JudgingSampleORM model ready for persistence
-
-    Example:
-        >>> sample = JudgingSample.create(query, doc, RelevanceScore.RELEVANT)
-        >>> sample_orm = judging_sample_to_orm(sample, run_info.id)
     """
     return JudgingSampleORM(
         id=sample.id,
@@ -231,12 +201,6 @@ def judging_sample_from_orm(
 
     Returns:
         JudgingSample domain object with embedded query and document
-
-    Example:
-        >>> sample_orm = session.get(JudgingSampleORM, sample_id)
-        >>> query = query_from_orm(sample_orm.query)
-        >>> doc = document_from_orm(sample_orm.document)
-        >>> sample = judging_sample_from_orm(sample_orm, query, doc)
     """
     return JudgingSample(
         id=sample_orm.id,
@@ -261,10 +225,6 @@ def ingest_run_info_to_orm(run_info: IngestRunInfo) -> IngestRunORM:
 
     Returns:
         IngestRunORM model ready for persistence
-
-    Example:
-        >>> run_info = IngestRunInfo.create(...)
-        >>> run_orm = ingest_run_info_to_orm(run_info)
     """
     return IngestRunORM(
         id=run_info.id,

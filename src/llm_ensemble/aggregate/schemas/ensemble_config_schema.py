@@ -55,13 +55,5 @@ class EnsembleConfig(BaseConfig):
         Raises:
             ImportError: If the strategy module cannot be imported
             AttributeError: If the strategy class doesn't exist in the module
-            
-        Example:
-            >>> config = EnsembleConfig(
-            ...     strategy="majority_vote",
-            ...     strategy_module="llm_ensemble.aggregate.adapters.strategies.majority_vote_adapter",
-            ...     strategy_class="MajorityVoteAdapter"
-            ... )
-            >>> strategy = config.get_strategy()
         """
         return self._instantiate_adapter(self.strategy_module, self.strategy_class)

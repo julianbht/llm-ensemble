@@ -27,11 +27,6 @@ class DatasetWriter(ABC):
 
     Unlike INFER CLI which uses streaming writes (write_one in a loop), INGEST uses
     batch writes (write all samples at once), so no context manager pattern is needed.
-
-    Example:
-        >>> writer = FullyPopulatedNdjsonWriter()
-        >>> summary = writer.write(normalized_dataset, run_info)
-        >>> logger.info("write_complete", created=summary.total_created)
     """
 
     @abstractmethod

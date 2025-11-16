@@ -38,15 +38,6 @@ class LLMProvider(ABC):
 
     Providers handle single inference requests. If a provider's API supports
     batching, the adapter can implement internal buffering transparently.
-
-    Example:
-        >>> class OpenRouterAdapter(LLMProvider):
-        ...     def __init__(self, api_key, retry_config, logger=None):
-        ...         super().__init__(retry_config, logger)
-        ...         self.api_key = api_key
-        ...     def _do_infer(self, prompt, model_config):
-        ...         response = self._call_api(prompt)  # Just send text to API
-        ...         return response
     """
 
     def __init__(

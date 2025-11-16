@@ -25,10 +25,6 @@ def load_runtime_config(app_env: Optional[str] = None) -> None:
     Args:
         app_env: Environment name (dev, prod, ci). Defaults to APP_ENV env var or "dev"
 
-    Example:
-        >>> load_runtime_config()  # Loads .env + configs/runtime/dev.env
-        >>> load_runtime_config("prod")  # Loads .env + configs/runtime/prod.env
-
     Environment precedence (highest to lowest):
         1. Already-set shell environment variables
         2. Root .env file (secrets, local overrides)
@@ -62,10 +58,6 @@ def get_app_env() -> str:
 
     Returns:
         Current environment name (dev, prod, ci, etc.)
-
-    Example:
-        >>> get_app_env()
-        'dev'
     """
     return os.getenv("APP_ENV", "dev")
 
@@ -75,10 +67,6 @@ def is_production() -> bool:
 
     Returns:
         True if APP_ENV is "prod", False otherwise
-
-    Example:
-        >>> is_production()
-        False
     """
     return get_app_env() == "prod"
 
@@ -88,9 +76,5 @@ def is_ci() -> bool:
 
     Returns:
         True if APP_ENV is "ci", False otherwise
-
-    Example:
-        >>> is_ci()
-        False
     """
     return get_app_env() == "ci"

@@ -23,13 +23,6 @@ def load_logging_config(config_name: str) -> LoggingConfig:
     Raises:
         FileNotFoundError: If config file doesn't exist
         ValueError: If config validation fails
-
-    Example:
-        >>> config = load_logging_config("default")
-        >>> config.pretty_print
-        True
-        >>> config.save_logs
-        True
     """
     # Get logging configs directory
     configs_dir = PathManager.get_configs_dir() / "logging"

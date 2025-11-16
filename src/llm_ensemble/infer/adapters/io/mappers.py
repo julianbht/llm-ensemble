@@ -47,9 +47,6 @@ def provider_name_to_orm(provider_name: str) -> ProviderORM:
 
     Returns:
         ProviderORM model ready for persistence
-
-    Example:
-        >>> provider_orm = provider_name_to_orm("openrouter")
     """
     provider_id = compute_provider_uuid(provider_name)
     return ProviderORM(
@@ -74,10 +71,6 @@ def model_config_to_orm(model_cfg: ModelConfig, provider_id: UUID) -> ModelSpecO
 
     Returns:
         ModelSpecORM model ready for persistence
-
-    Example:
-        >>> provider_id = compute_provider_uuid(model_cfg.provider)
-        >>> model_orm = model_config_to_orm(model_cfg, provider_id)
     """
     # Prepare additional_params (catch-all for non-explicit fields)
     additional_params = model_cfg.additional_params.copy() if model_cfg.additional_params else {}
@@ -119,11 +112,6 @@ def prompt_config_to_template_orm(prompt_cfg: PromptConfig, template_text: str) 
 
     Returns:
         PromptTemplateORM model ready for persistence
-
-    Example:
-        >>> builder = prompt_cfg.get_prompt_builder()
-        >>> template_text = getattr(builder, "template_text", "")
-        >>> template_orm = prompt_config_to_template_orm(prompt_cfg, template_text)
     """
     return PromptTemplateORM(
         id=compute_prompt_template_uuid(prompt_cfg.name),
@@ -147,10 +135,6 @@ def prompt_config_to_parser_orm(prompt_cfg: PromptConfig, code_hash: str) -> Par
 
     Returns:
         ParserSpecORM model ready for persistence
-
-    Example:
-        >>> code_hash = "0" * 64  # Placeholder
-        >>> parser_orm = prompt_config_to_parser_orm(prompt_cfg, code_hash)
     """
     return ParserSpecORM(
         id=compute_parser_spec_uuid(
@@ -187,14 +171,6 @@ def infer_run_info_to_orm(
 
     Returns:
         InferRunORM model ready for persistence
-
-    Example:
-        >>> run_orm = infer_run_info_to_orm(
-        ...     run_info,
-        ...     model_spec_id,
-        ...     prompt_template_id,
-        ...     parser_spec_id
-        ... )
     """
     return InferRunORM(
         id=run_info.id,

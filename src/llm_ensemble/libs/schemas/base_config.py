@@ -62,13 +62,6 @@ class BaseConfig(BaseModel):
         Raises:
             ImportError: If the module cannot be imported
             AttributeError: If the class doesn't exist in the module
-
-        Example:
-            >>> config = IOConfig(...)
-            >>> reader = config._instantiate_adapter(
-            ...     'llm_ensemble.infer.adapters.io.fully_populated_json_reader',
-            ...     'FullyPopulatedJsonReader'
-            ... )
         """
         try:
             module = import_module(module_path)

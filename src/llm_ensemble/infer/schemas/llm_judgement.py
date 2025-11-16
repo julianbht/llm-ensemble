@@ -142,12 +142,6 @@ class LLMJudgement(BaseModel):
 
         Returns:
             List of all warnings from this judgement (provider + parser)
-
-        Example:
-            >>> judgement = LLMJudgement(...)
-            >>> all_warnings = judgement.get_all_warnings()
-            >>> len(all_warnings)  # Total warnings
-            3
         """
         warnings = []
 

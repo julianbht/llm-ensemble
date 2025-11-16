@@ -48,10 +48,6 @@ class WriteSummary(BaseModel):
 
         Yields:
             Dict with 'event' key and judgement-specific counts
-
-        Example:
-            >>> for entry in write_summary.get_log_entries():
-            ...     logger.info(**entry)
         """
         # Only log if judgements were written
         if self.judgements_written > 0:

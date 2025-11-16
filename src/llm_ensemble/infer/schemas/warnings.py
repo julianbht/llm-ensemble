@@ -85,13 +85,6 @@ class ParserWarning(BaseWarning):
     """Warning from response parser adapter.
 
     Tracks issues during parsing of raw LLM responses into structured LLMScore.
-
-    Example:
-        >>> ParserWarning(
-        ...     code=ParserWarningCode.FIELD_ERROR,
-        ...     message="Missing 'confidence' field in JSON response",
-        ...     metadata={"field_name": "confidence", "expected_type": "float"}
-        ... )
     """
 
     code: ParserWarningCode  # Override base type with specific enum
@@ -112,11 +105,6 @@ def warning_to_string(warning: BaseWarning) -> str:
 
     Returns:
         String representation for logging and display
-
-    Example:
-        >>> w = ParserWarning(code=ParserWarningCode.FIELD_ERROR, message="No label field")
-        >>> warning_to_string(w)
-        '[ParserWarning:field_error] No label field'
     """
     code_value = warning.code.value if isinstance(warning.code, Enum) else warning.code
     return f"[{warning.__class__.__name__}:{code_value}] {warning.message}"
@@ -130,14 +118,6 @@ def warnings_to_dict_list(warnings: list[BaseWarning]) -> list[dict[str, Any]]:
 
     Returns:
         List of dictionaries suitable for JSON serialization
-
-    Example:
-        >>> warnings = [
-        ...     ParserWarning(code=ParserWarningCode.FIELD_ERROR, message="Missing field"),
-        ...     ParserWarning(code=ParserWarningCode.PARSE_ERROR, message="Bad JSON")
-        ... ]
-        >>> warnings_to_dict_list(warnings)
-        [{'type': 'ParserWarning', 'code': 'field_error', ...}, ...]
     """
     return [w.to_dict() for w in warnings]
 
@@ -150,15 +130,6 @@ def warnings_summary(warnings: list[BaseWarning]) -> dict[str, int]:
 
     Returns:
         Dictionary mapping warning class name to count
-
-    Example:
-        >>> warnings = [
-        ...     ParserWarning(code=ParserWarningCode.FIELD_ERROR, message="Missing field"),
-        ...     ParserWarning(code=ParserWarningCode.PARSE_ERROR, message="Bad JSON"),
-        ...     ParserWarning(code=ParserWarningCode.VALIDATION_ERROR, message="Invalid score")
-        ... ]
-        >>> warnings_summary(warnings)
-        {'ParserWarning': 3}
     """
     summary: dict[str, int] = {}
     for warning in warnings:

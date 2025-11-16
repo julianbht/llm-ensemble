@@ -15,12 +15,6 @@ class JudgementReader(ABC):
     
     Implementations can read from different formats (JSON, Parquet, etc.)
     while providing a consistent interface.
-    
-    Example:
-        >>> class JsonJudgementReader(JudgementReader):
-        ...     def read(self, input_paths):
-        ...         # Read from JSON files
-        ...         return judgements
     """
     
     @abstractmethod

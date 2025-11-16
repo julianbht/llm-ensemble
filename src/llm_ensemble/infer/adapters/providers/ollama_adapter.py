@@ -23,13 +23,6 @@ class OllamaAdapter(LLMProvider):
 
     Pure API client that sends pre-built prompts to Ollama and returns raw responses.
     Does NOT build prompts or parse responses - that's orchestrated by InferenceService.
-
-    Example:
-        >>> from llm_ensemble.infer.config_loaders import load_retry_config
-        >>> retry_config = load_retry_config("standard")
-        >>> adapter = OllamaAdapter(retry_config, base_url="http://localhost:11434")
-        >>> response = adapter.infer("pre-built prompt", config)
-        >>> print(response.raw_response)
     """
 
     def __init__(

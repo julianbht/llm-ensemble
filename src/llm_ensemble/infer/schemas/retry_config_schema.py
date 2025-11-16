@@ -27,14 +27,6 @@ class RetryConfig(BaseConfig):
         base_delay_seconds: Initial delay before first retry (default: 1.0s)
         max_delay_seconds: Maximum delay cap for exponential backoff (default: 60.0s)
         retryable_status_codes: HTTP status codes that trigger retries (default: [429, 503, 504])
-
-    Example:
-        >>> config = RetryConfig(
-        ...     max_retries=3,
-        ...     base_delay_seconds=2.0,
-        ...     max_delay_seconds=30.0,
-        ...     retryable_status_codes=[429, 503]
-        ... )
     """
 
     max_retries: int = Field(

@@ -19,20 +19,6 @@ class ResponseParser(ABC):
 
     The parser extracts an LLMScore from raw text. If parsing fails, it should
     return an LLMScore with None fields and warnings explaining the failure.
-
-    Example:
-        >>> class JsonResponseParser(ResponseParser):
-        ...     def parse(self, raw_text):
-        ...         try:
-        ...             data = json.loads(raw_text)
-        ...             return LLMScore(
-        ...                 label=data.get("label"),
-        ...                 confidence=data.get("confidence"),
-        ...                 rationale=data.get("rationale"),
-        ...                 warnings=[]
-        ...             )
-        ...         except Exception as e:
-        ...             return LLMScore(warnings=[ParserWarning(...)])  # Parse failure with warning
     """
 
     @abstractmethod

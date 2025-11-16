@@ -57,9 +57,6 @@ class Dataset(BaseModel):
         
         Returns:
             Dataset instance with computed id
-        
-        Example:
-            >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
         """
         dataset_id = compute_dataset_uuid(name)
         return cls(
@@ -103,10 +100,6 @@ class Query(BaseModel):
 
         Returns:
             Query instance with computed id
-
-        Example:
-            >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
-            >>> query = Query.create(dataset, "q123", "what is python?")
         """
         query_id = compute_query_uuid(dataset.id, external_id)
         return cls(
@@ -150,10 +143,6 @@ class Document(BaseModel):
 
         Returns:
             Document instance with computed id
-
-        Example:
-            >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
-            >>> doc = Document.create(dataset, "d456", "Python is a programming language.")
         """
         doc_id = compute_document_uuid(dataset.id, external_id)
         return cls(
@@ -213,12 +202,6 @@ class JudgingSample(BaseModel):
 
         Returns:
             JudgingSample instance with computed id
-
-        Example:
-            >>> dataset = Dataset.create("msmarco", "Microsoft Machine Reading Comprehension")
-            >>> query = Query.create(dataset, "q123", "what is python?")
-            >>> doc = Document.create(dataset, "d456", "Python is a programming language.")
-            >>> sample = JudgingSample.create(query, doc, RelevanceScore.RELEVANT)
         """
         sample_id = compute_judging_sample_uuid(
             query.id,

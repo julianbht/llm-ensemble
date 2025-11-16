@@ -16,12 +16,6 @@ class PathManager:
     All methods are static since paths are determined by project structure,
     not runtime state. This provides a single source of truth for all
     default locations.
-
-    Example:
-        >>> PathManager.get_project_root()
-        PosixPath('/home/user/llm-ensemble')
-        >>> PathManager.get_io_configs_dir()
-        PosixPath('/home/user/llm-ensemble/configs/io')
     """
 
     @staticmethod
@@ -54,10 +48,6 @@ class PathManager:
 
         Returns:
             Path to CLI-specific I/O configs directory
-
-        Example:
-            >>> PathManager.get_io_configs_dir("ingest")
-            PosixPath('/home/user/llm-ensemble/configs/io/ingest')
         """
         return PathManager.get_configs_dir() / "io" / cli_name
 
@@ -143,12 +133,6 @@ class PathManager:
 
         Returns:
             Path to run directory
-
-        Example:
-            >>> PathManager.get_run_dir("infer", "20250128_143022_gpt", official=False)
-            PosixPath('artifacts/runs/infer/test/20250128_143022_gpt')
-            >>> PathManager.get_run_dir("ingest", "20250128_baseline", official=True)
-            PosixPath('artifacts/runs/ingest/official/20250128_baseline')
         """
         run_type = "official" if official else "test"
         return PathManager.get_artifacts_dir() / "runs" / cli_name / run_type / run_name

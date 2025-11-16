@@ -18,15 +18,6 @@ class ExampleReader(ABC):
 
     Implementations can read from different sources (JSON, Parquet, etc.)
     while providing a consistent interface to the orchestrator.
-
-    Example:
-        >>> class JsonExampleReader(ExampleReader):
-        ...     def read(self, input_path, limit=None):
-        ...         examples = []
-        ...         with open(input_path) as f:
-        ...             for line in f:
-        ...                 examples.append(JudgingSample(**json.loads(line)))
-        ...         return examples[:limit] if limit else examples
     """
 
     @abstractmethod

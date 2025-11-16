@@ -14,15 +14,6 @@ def get_session(engine: Engine) -> Session:
     
     Returns:
         New database session
-    
-    Example:
-        >>> engine = get_engine()
-        >>> session = get_session(engine)
-        >>> try:
-        ...     # Do work with session
-        ...     session.commit()
-        ... finally:
-        ...     session.close()
     """
     SessionLocal = sessionmaker(
         autocommit=False,
@@ -44,12 +35,6 @@ def session_context(engine: Engine) -> Generator[Session, None, None]:
     
     Yields:
         Database session
-    
-    Example:
-        >>> engine = get_engine()
-        >>> with session_context(engine) as session:
-        ...     query = session.query(Query).filter_by(external_id="q1")
-        ...     # Automatically commits on success, rolls back on exception
     """
     session = get_session(engine)
     try:

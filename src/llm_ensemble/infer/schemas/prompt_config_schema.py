@@ -41,14 +41,6 @@ class PromptConfig(BaseConfig):
         Raises:
             ImportError: If the builder module cannot be imported
             AttributeError: If the builder class doesn't exist in the module
-
-        Example:
-            >>> config = PromptConfig(
-            ...     builder_module="llm_ensemble.infer.adapters.prompts.jinja_prompt_builder",
-            ...     builder_class="JinjaPromptBuilder",
-            ...     ...
-            ... )
-            >>> builder = config.get_prompt_builder()
         """
         return self._instantiate_adapter(self.builder_module, self.builder_class)
 
@@ -66,9 +58,5 @@ class PromptConfig(BaseConfig):
         Raises:
             ImportError: If the parser module cannot be imported
             AttributeError: If the parser class doesn't exist in the module
-
-        Example:
-            >>> config = PromptConfig(...)
-            >>> parser = config.get_response_parser(score_field="O")
         """
         return self._instantiate_adapter(self.parser_module, self.parser_class, score_field=score_field)

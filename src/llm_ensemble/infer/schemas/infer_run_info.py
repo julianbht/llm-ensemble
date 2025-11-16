@@ -139,19 +139,6 @@ class InferRunInfo(RunInfo):
 
         Returns:
             InferRunInfo instance with computed id
-
-        Example:
-            >>> run_info = InferRunInfo.create(
-            ...     run_name="20250128_120000_gpt-oss",
-            ...     model_config_name="gpt-oss-20b",
-            ...     prompt_config_name="thomas-et-al-prompt",
-            ...     retry_config_name="standard",
-            ...     io_config_name="json",
-            ...     model_cfg=model_config,
-            ...     prompt_config=prompt_config,
-            ...     retry_config=retry_config,
-            ...     io_config=io_config
-            ... )
         """
         run_info_id = compute_infer_run_uuid(run_name)
         return cls(

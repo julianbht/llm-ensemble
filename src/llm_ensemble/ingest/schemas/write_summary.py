@@ -62,10 +62,6 @@ class WriteSummary(BaseModel):
 
         Yields:
             Dict with 'event' key and entity-specific created/skipped counts
-
-        Example:
-            >>> for entry in write_summary.get_log_entries():
-            ...     logger.info(**entry)
         """
         # Only log entity types that had activity
         if self.datasets_created > 0 or self.datasets_skipped > 0:

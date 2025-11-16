@@ -16,21 +16,6 @@ class JsonJudgementReader(JudgementReader):
     
     Reads from one or more JSON files containing arrays of judgements,
     combining all judgements into a single list for aggregation.
-    
-    Expected format per file:
-        [
-            {"judging_sample": {...}, "llm_request": {...}, "llm_response": {...}, ...},
-            {"judging_sample": {...}, "llm_request": {...}, "llm_response": {...}, ...}
-        ]
-    
-    Example:
-        >>> reader = JsonJudgementReader()
-        >>> judgements = reader.read([
-        ...     Path("run1/judgements.json"),
-        ...     Path("run2/judgements.json"),
-        ... ])
-        >>> len(judgements)
-        200
     """
     
     def read(self, input_paths: list[Path]) -> list[LLMJudgement]:

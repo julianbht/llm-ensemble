@@ -25,14 +25,6 @@ def to_snake_case(name: str) -> str:
 
     Returns:
         snake_case string (e.g., "llm_judgement")
-
-    Examples:
-        >>> to_snake_case("LLMJudgement")
-        'llm_judgement'
-        >>> to_snake_case("InferRunInfo")
-        'infer_run_info'
-        >>> to_snake_case("JudgingSample")
-        'judging_sample'
     """
     # Insert underscore before uppercase letters (except at start)
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
@@ -83,19 +75,6 @@ def get_entity_filename(
 
     Returns:
         Filename string (e.g., "llm_judgements.json")
-
-    Examples:
-        >>> from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
-        >>> get_entity_filename(LLMJudgement, "json")
-        'llm_judgements.json'
-
-        >>> from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
-        >>> get_entity_filename(InferRunInfo, "json", plural=False)
-        'infer_run_info.json'
-
-        >>> from llm_ensemble.infer.schemas.llm_judgement import JudgingSample
-        >>> get_entity_filename(JudgingSample, "json")
-        'judging_samples.json'
     """
     # Get class name and convert to snake_case
     class_name = entity_class.__name__

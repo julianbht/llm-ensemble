@@ -22,13 +22,6 @@ def load_retry_config(retry_id: str) -> RetryConfig:
     Raises:
         FileNotFoundError: If config file doesn't exist
         ValueError: If YAML is invalid or missing required fields
-
-    Example:
-        >>> config = load_retry_config("standard")
-        >>> config.max_retries
-        5
-        >>> config.base_delay_seconds
-        1.0
     """
     return load_yaml_config(
         config_name=retry_id,

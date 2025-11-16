@@ -6,12 +6,6 @@ domain objects from ORM entities using the mappers module for symmetry.
 
 The adapter follows the same database connection pattern as SqlJudgementWriter,
 using SQLAlchemy sessions from the libs/db layer.
-
-Example:
-    >>> reader = SqlJudgingSampleReader()
-    >>> samples = reader.read(Path("my_ingest_run"), limit=100)
-    >>> len(samples)
-    100
 """
 
 from __future__ import annotations
@@ -57,11 +51,6 @@ class SqlJudgingSampleReader(ExampleReader):
     - Query JudgingSampleORM records for that run
     - Eager load related Query, Document, Dataset entities (avoid N+1)
     - Reconstruct Pydantic domain models from ORM entities
-
-    Example:
-        >>> reader = SqlJudgingSampleReader()
-        >>> # input_path interpreted as run_name
-        >>> samples = reader.read(Path("my_ingest_run_2024_01_15"), limit=100)
     """
 
     def read(

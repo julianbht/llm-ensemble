@@ -21,10 +21,6 @@ class WriteResult(BaseModel):
     This is distinct from WriteSummary:
     - WriteResult: Per-operation feedback (e.g., "wrote judgement X")
     - WriteSummary: Aggregate statistics (e.g., "wrote 100 judgements total")
-
-    Example:
-        >>> writer.write_one(judgement)
-        WriteResult(item_id=UUID('...'), item_type='judgement')
     """
 
     item_id: UUID = Field(

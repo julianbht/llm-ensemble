@@ -25,15 +25,6 @@ class JsonResponseParser(ResponseParser):
 
     This implementation is based on the Thomas et al. prompt format but can
     work with any JSON format that includes an "O" field for the overall score.
-
-    Example:
-        >>> parser = JsonResponseParser()
-        >>> score = parser.parse('{"O": 2}')
-        >>> score.label
-        2
-        >>> score = parser.parse('The answer is {"O": 1} based on...')
-        >>> score.label
-        1
     """
 
     def __init__(self, score_field: str = "O"):

@@ -26,11 +26,6 @@ def get_engine(database_url: Optional[str] = None, echo: bool = False) -> Engine
 
     Raises:
         ValueError: If database_url is None and DATABASE_URL env var is not set
-
-    Example:
-        >>> engine = get_engine()  # Uses DATABASE_URL env var
-        >>> engine = get_engine("postgresql://user:pass@localhost:5432/llm_ensemble")
-        >>> engine = get_engine(echo=True)  # Enable SQL logging
     """
     if database_url is None:
         # Read from environment (required)
@@ -61,10 +56,6 @@ def create_schemas(engine: Engine) -> None:
 
     Args:
         engine: SQLAlchemy engine to use
-
-    Example:
-        >>> engine = get_engine()
-        >>> create_schemas(engine)
     """
     schemas = ["public", "ingest", "infer", "aggregate", "evaluate"]
 
@@ -90,10 +81,5 @@ def create_all_tables(engine: Engine) -> None:
 
     Args:
         engine: SQLAlchemy engine to use
-
-    Example:
-        >>> engine = get_engine()
-        >>> create_schemas(engine)  # Create schemas first
-        >>> create_all_tables(engine)
     """
     Base.metadata.create_all(engine)

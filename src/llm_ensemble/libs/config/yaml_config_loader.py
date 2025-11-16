@@ -42,18 +42,6 @@ def load_yaml_config(
     Raises:
         FileNotFoundError: If config file doesn't exist (lists available configs)
         ValueError: If YAML is invalid or fails schema validation
-
-    Example:
-        >>> from llm_ensemble.infer.schemas import ModelConfig
-        >>> from llm_ensemble.libs.runtime.path_manager import PathManager
-        >>> config = load_yaml_config(
-        ...     "gpt-oss-20b",
-        ...     PathManager.get_model_configs_dir(),
-        ...     ModelConfig,
-        ...     "model"
-        ... )
-        >>> config.provider
-        'openrouter'
     """
     # Build path to config file
     config_path = config_dir / f"{config_name}.yaml"

@@ -24,22 +24,6 @@ class JinjaPromptBuilder(PromptBuilder):
 
     If you need a different template or mapping, create a new prompt builder
     adapter with its own template.
-
-    Example:
-        >>> builder = JinjaPromptBuilder()
-        >>> from llm_ensemble.ingest.schemas import Query, Document, JudgingSample
-        >>> from llm_ensemble.libs.schemas import RelevanceScore
-        >>> query = Query(external_id="q1", query_text="python")
-        >>> doc = Document(external_id="d1", doc_text="Python is a programming language")
-        >>> example = JudgingSample(
-        ...     query=query,
-        ...     document=doc,
-        ...     gold_score=RelevanceScore.HIGHLY_RELEVANT,
-        ...     run_info=...
-        ... )
-        >>> request = builder.build(example)
-        >>> "Query: python" in request.prompt
-        True
     """
 
     def __init__(self):

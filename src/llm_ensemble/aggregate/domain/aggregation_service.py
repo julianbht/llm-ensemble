@@ -43,17 +43,6 @@ class AggregationService:
         
         This avoids artificial ID generation while handling multi-dataset scenarios
         correctly. Defers database surrogate keys until persistence layer is needed.
-    
-    Example:
-        >>> reader = JsonJudgementReader()
-        >>> writer = JsonAggregatedJudgementWriter()
-        >>> strategy = MajorityVoteAdapter()
-        >>> service = AggregationService(reader, writer, strategy)
-        >>> summary = service.run_aggregation(
-        ...     input_paths=[Path("judgements.json")],
-        ...     run_info=run_info,
-        ...     run_dir=run_dir,
-        ... )
     """
     
     def __init__(
@@ -93,10 +82,6 @@ class AggregationService:
             
         Returns:
             Tuple of (dataset, query_id, doc_id) serving as natural composite key
-            
-        Example:
-            >>> key = AggregationService._get_sample_identity(judgement)
-            >>> # key = ('llm_judge_ingest', 'q123', 'd456')
         """
         dataset = judgement.judging_sample.run_info.io_config_name
         query_id = judgement.judging_sample.query.external_id

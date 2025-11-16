@@ -29,16 +29,6 @@ def parse_overrides(override_list: list[str]) -> dict[str, Any]:
 
     Raises:
         ValueError: If override format is invalid
-
-    Examples:
-        >>> parse_overrides(["temperature=0.7", "max_tokens=512"])
-        {'temperature': 0.7, 'max_tokens': 512}
-
-        >>> parse_overrides(["additional_params.top_k=50"])
-        {'additional_params': {'top_k': 50}}
-
-        >>> parse_overrides(["variables.role=false", "variables.aspects=true"])
-        {'variables': {'role': False, 'aspects': True}}
     """
     result = {}
 
@@ -80,15 +70,8 @@ def apply_overrides(config: BaseModel, overrides: dict[str, Any]) -> BaseModel:
     Returns:
         New config instance with overrides applied and validated
 
-Raises:
+    Raises:
         ValidationError: If overrides result in invalid config
-
-    Example:
-        >>> model_config = load_model_config("gpt-oss-20b")
-        >>> overrides = parse_overrides(["temperature=0.7", "seed=123"])
-        >>> new_config = apply_overrides(model_config, overrides)
-        >>> new_config.temperature
-        0.7
     """
     # Convert to dict
     config_dict = config.model_dump()
@@ -108,20 +91,6 @@ def _parse_value(value: str) -> Any:
 
     Returns:
         Parsed value as bool, None, int, float, or str
-
-    Examples:
-        >>> _parse_value("true")
-        True
-        >>> _parse_value("false")
-        False
-        >>> _parse_value("null")
-        None
-        >>> _parse_value("42")
-        42
-        >>> _parse_value("3.14")
-        3.14
-        >>> _parse_value("hello")
-        'hello'
     """
     # Boolean
     if value.lower() in ("true", "false"):
@@ -149,12 +118,6 @@ def _deep_update(base: dict, updates: dict) -> None:
     Args:
         base: Base dictionary to update
         updates: Updates to merge in
-
-    Example:
-        >>> base = {"a": 1, "b": {"c": 2}}
-        >>> _deep_update(base, {"b": {"d": 3}})
-        >>> base
-        {'a': 1, 'b': {'c': 2, 'd': 3}}
     """
     for key, value in updates.items():
         if isinstance(value, dict) and key in base and isinstance(base[key], dict):
@@ -182,13 +145,6 @@ def parse_and_route_overrides(
 
     Raises:
         ValueError: If override format is invalid or uses unknown prefix
-
-    Examples:
-        >>> parse_and_route_overrides(["model.temperature=0.7", "prompt.variables.role=false"])
-        {'model': {'temperature': 0.7}, 'prompt': {'variables': {'role': False}}, 'io': {}}
-
-        >>> parse_and_route_overrides(["model.default_params.temperature=0.7"])
-        {'model': {'default_params': {'temperature': 0.7}}, 'prompt': {}, 'io': {}}
     """
     if valid_prefixes is None:
         valid_prefixes = ['model', 'prompt', 'io']

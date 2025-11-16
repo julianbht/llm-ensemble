@@ -44,29 +44,15 @@ class SqlWriter(DatasetWriter):
     and handles ORM relationships.
 
     Features:
-    - Auto-creates tables on first write
-    - Central shared database across all runs for data accumulation
     - Idempotent writes via merge (insert or update if exists)
     - Uses session_context() for transaction management
-    - Returns WriteSummary for transparent logging (separation of concerns)
-
-    Mapping responsibilities:
-    - Receives run_info alongside samples (contains dataset config)
-    - Reconstructs Dataset entity from config for persistence
-    - Maps pure domain entities (Query, Document, JudgingSample) to ORM models
-    - Handles foreign key relationships at persistence time
 
     Database URL is read from DATABASE_URL environment variable (required).
     Example: postgresql://user:password@localhost:5432/llm_ensemble
     """
 
     def __init__(self, database_url: str | None = None):
-        """Initialize SQL writer.
-
-        Args:
-            database_url: PostgreSQL connection URL. If None, reads from DATABASE_URL env var (required).
-                         Example: postgresql://user:password@localhost:5432/llm_ensemble
-        """
+        """Initialize SQL writer"""
         self.database_url = database_url
         self.engine = get_engine(database_url)
 

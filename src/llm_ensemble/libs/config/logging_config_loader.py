@@ -15,7 +15,7 @@ def load_logging_config(config_name: str) -> LoggingConfig:
 
     Args:
         config_name: Name of the logging config file (without .yaml extension)
-                    e.g., "default", "json", "console-only"
+                    e.g., "standard", "json", "console-only"
 
     Returns:
         Validated LoggingConfig instance

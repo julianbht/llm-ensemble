@@ -33,7 +33,7 @@ def ingest(
     io_cfg: IngestIoCfg,
     limit: Limit = None,
     run_name: RunName = None,
-    log_cfg: LogCfg = None,
+    log_cfg: LogCfg = "standard",
     official: Official = False,
     notes: Notes = None,
     override: Override = [],
@@ -42,7 +42,7 @@ def ingest(
     
     # Load configurations
     io_config = load_io_config(io_cfg, cli_name="ingest")
-    logging_config = load_logging_config(log_cfg or "default")
+    logging_config = load_logging_config(log_cfg or "standard")
 
     # Parse and route overrides if provided
     if override:

@@ -10,6 +10,7 @@ import typer
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.cli.params.types import (
     EnsembleConfigParamType,
+    LogConfigParamType,
     ModelConfigParamType,
     PromptConfigParamType,
     RetryConfigParamType,
@@ -36,10 +37,10 @@ LogCfg = Annotated[
     Optional[str],
     typer.Option(
         "--log-cfg",
+        click_type=LogConfigParamType(),
         help=(
             "Logging config name. Configs located in "
-            f"{(PathManager.get_configs_dir() / 'logging').relative_to(PathManager.get_project_root())}. "
-            "Defaults to 'default' (pretty printing + log saving enabled)."
+            f"{(PathManager.get_configs_dir() / 'logging').relative_to(PathManager.get_project_root())}."
         ),
     ),
 ]

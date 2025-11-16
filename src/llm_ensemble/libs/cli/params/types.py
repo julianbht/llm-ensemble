@@ -40,6 +40,7 @@ class ConfigParamType(click.ParamType):
         example_fallback: str,
         missing_factory: MissingFactory | None = None,
         invalid_factory: InvalidFactory | None = None,
+        allow_empty: bool = False,
     ) -> None:
         self.param_name = param_name
         self.config_type_label = config_type_label
@@ -47,6 +48,7 @@ class ConfigParamType(click.ParamType):
         self.example_fallback = example_fallback
         self._missing_factory = missing_factory
         self._invalid_factory = invalid_factory
+        self.allow_empty = allow_empty
 
     def _config_dir(self) -> Path:
         return self._config_dir_provider()
@@ -90,7 +92,9 @@ class ConfigParamType(click.ParamType):
         return self._format_missing(config_dir, available)
 
     def convert(self, value, param, ctx):  # type: ignore[override]
-        if not value:
+        if value in (None, ""):
+            if self.allow_empty:
+                return None
             self.fail(self.get_missing_message(param, ctx), param, ctx)
 
         config_dir = self._config_dir()
@@ -153,6 +157,17 @@ class EnsembleConfigParamType(ConfigParamType):
             config_type_label="ensemble",
             config_dir_provider=PathManager.get_ensembles_dir,
             example_fallback="weighted_majority_v1",
+        )
+
+
+class LogConfigParamType(ConfigParamType):
+    def __init__(self) -> None:
+        super().__init__(
+            param_name="--log-cfg",
+            config_type_label="logging",
+            config_dir_provider=lambda: PathManager.get_configs_dir() / "logging",
+            example_fallback="standard",
+            allow_empty=True,
         )
 
 

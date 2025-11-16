@@ -49,7 +49,7 @@ class InferRunInfo(RunInfo):
         description="Name of the CLI that generated this run (always 'infer' for InferRunInfo)"
     )
 
-    # Configuration names (what user requested)
+    # Configuration names
     model_config_name: str = Field(
         ...,
         description="Name of the model config used (e.g., 'gpt-oss-20b')"

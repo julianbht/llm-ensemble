@@ -122,7 +122,7 @@ class LLMJudgement(BaseModel):
 
     llm_response: LLMResponse = Field(
         ...,
-        description="The raw LLM output (unparsed text + observability metadata + provider warnings)"
+        description="The raw LLM output (unparsed text + observability metadata)"
     )
 
     llm_score: Optional[LLMScore] = Field(
@@ -134,22 +134,15 @@ class LLMJudgement(BaseModel):
     )
 
     def get_all_warnings(self) -> list[BaseWarning]:
-        """Aggregate all warnings from response and score.
+        """Get all warnings from parsing stage.
 
-        Combines warnings from both stages:
-        - LLM inference (in llm_response)
-        - Response parsing (in llm_score)
+        Returns parser warnings from llm_score (if score exists).
 
         Returns:
-            List of all warnings from this judgement (provider + parser)
+            List of parser warnings from this judgement
         """
-        warnings = []
-
-        # Provider warnings from llm_response
-        warnings.extend(self.llm_response.warnings)
-
         # Parser warnings from llm_score (if score exists)
         if self.llm_score is not None:
-            warnings.extend(self.llm_score.warnings)
+            return list(self.llm_score.warnings)
 
-        return warnings
+        return []

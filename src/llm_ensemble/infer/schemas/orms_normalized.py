@@ -264,7 +264,6 @@ class LLMResponseORM(Base):
     rationale = Column(Text, nullable=True)
 
     # Parser warnings as JSONB array (data quality issues during parsing)
-    # Example: [{"type": "ParserWarning", "code": "field_error", "message": "...", "metadata": {...}}]
     parser_warnings = Column(ARRAY(JSONB), nullable=False, default=[])
 
     created_at = Column(DateTime, nullable=False, default=utcnow)

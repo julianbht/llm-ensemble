@@ -2,11 +2,13 @@
 
 Parses JSON-formatted LLM judge outputs to extract relevance labels.
 Supports both simple and multi-aspect formats.
+Handles its own logging.
 """
 
 from __future__ import annotations
 import json
 import re
+import structlog
 
 from llm_ensemble.infer.ports import ResponseParser
 from llm_ensemble.infer.schemas.llm_judgement import LLMScore
@@ -28,12 +30,13 @@ class JsonResponseParser(ResponseParser):
     """
 
     def __init__(self, score_field: str = "O"):
-        """Initialize JSON response parser.
+        """Initialize JSON response parser with its own logger.
 
         Args:
             score_field: Name of the JSON field containing the relevance score (default: "O")
         """
         self.score_field = score_field
+        self.logger = structlog.get_logger().bind(component="json_response_parser")
 
     def parse(self, raw_text: str) -> LLMScore:
         """Parse JSON response to extract relevance label.
@@ -52,11 +55,13 @@ class JsonResponseParser(ResponseParser):
         json_match = re.search(json_pattern, raw_text)
 
         if not json_match:
-            warnings.append(ParserWarning(
+            warning = ParserWarning(
                 code=ParserWarningCode.PARSE_ERROR,
                 message=f"No JSON object with '{self.score_field}' field found in response",
                 metadata={"score_field": self.score_field}
-            ))
+            )
+            warnings.append(warning)
+            self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
             return LLMScore(warnings=warnings)
 
         json_str = json_match.group(0)
@@ -64,42 +69,50 @@ class JsonResponseParser(ResponseParser):
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError as e:
-            warnings.append(ParserWarning(
+            warning = ParserWarning(
                 code=ParserWarningCode.PARSE_ERROR,
                 message=f"Failed to parse JSON: {e}",
                 metadata={"error_type": type(e).__name__}
-            ))
+            )
+            warnings.append(warning)
+            self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
             return LLMScore(warnings=warnings)
 
         # Extract the score
         score = data.get(self.score_field)
 
         if score is None:
-            warnings.append(ParserWarning(
+            warning = ParserWarning(
                 code=ParserWarningCode.FIELD_ERROR,
                 message=f"Missing '{self.score_field}' field in parsed JSON",
                 metadata={"field_name": self.score_field}
-            ))
+            )
+            warnings.append(warning)
+            self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
             return LLMScore(warnings=warnings)
 
         # Validate the score is 0, 1, 2, or 3
         if not isinstance(score, int) or score not in [0, 1, 2, 3]:
-            warnings.append(ParserWarning(
+            warning = ParserWarning(
                 code=ParserWarningCode.VALIDATION_ERROR,
                 message=f"Invalid {self.score_field} score: {score} (expected 0, 1, 2, or 3)",
                 metadata={"field_name": self.score_field, "actual_value": str(score)}
-            ))
+            )
+            warnings.append(warning)
+            self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
             return LLMScore(warnings=warnings)
 
         # Convert to RelevanceScore enum
         try:
             relevance_label = RelevanceScore(score)
         except ValueError:
-            warnings.append(ParserWarning(
+            warning = ParserWarning(
                 code=ParserWarningCode.VALIDATION_ERROR,
                 message=f"Invalid score value: {score}",
                 metadata={"value": score}
-            ))
+            )
+            warnings.append(warning)
+            self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
             return LLMScore(warnings=warnings)
 
         return LLMScore(label=relevance_label, warnings=warnings)

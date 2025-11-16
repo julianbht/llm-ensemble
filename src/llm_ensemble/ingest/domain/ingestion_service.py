@@ -89,10 +89,8 @@ class IngestionService:
             run_info
         )
 
-        # Add write summary to builder for inclusion in final summary
+        # Add to write summary to builder for inclusion in final summary
         summary_builder.add("write_summary", write_summary)
-
-        # Add statistics to summary builder
         summary_builder.add("sample_count", normalized_dataset.sample_count)
 
         # Finalize summary (sets end_time and creates immutable Pydantic object)

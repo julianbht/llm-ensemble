@@ -30,7 +30,6 @@ from sqlalchemy.exc import IntegrityError
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
-from llm_ensemble.libs.schemas.write_result import WriteResult
 from llm_ensemble.libs.db import (
     get_engine,
     get_session,
@@ -63,7 +62,7 @@ from llm_ensemble.infer.adapters.io.mappers import (
     prompt_config_to_parser_orm,
     infer_run_info_to_orm,
 )
-from llm_ensemble.libs.logging.log_events import InferWriteEvent
+from llm_ensemble.libs.logging.log_events import InferWriteEvent, InferLogEvent
 
 
 class SqlJudgementWriter(JudgementWriter):
@@ -144,7 +143,7 @@ class SqlJudgementWriter(JudgementWriter):
 
         return self
 
-    def write_one(self, judgement: LLMJudgement) -> WriteResult:
+    def write_one(self, judgement: LLMJudgement) -> None:
         """Write a single judgement to database.
 
         Decomposes LLMJudgement into normalized ORM entities:
@@ -152,14 +151,12 @@ class SqlJudgementWriter(JudgementWriter):
         2. Upsert LLMResponseORM (deduplicated by parser + raw_response)
         3. Create LLMCallORM (links request + response + run)
         4. Commit transaction immediately
+        5. Log all entities written in one line
 
         Run metadata was already initialized in open().
 
         Args:
             judgement: LLMJudgement object to write
-
-        Returns:
-            WriteResult with the LLMCall UUID
 
         Raises:
             RuntimeError: If called outside of context manager
@@ -181,10 +178,13 @@ class SqlJudgementWriter(JudgementWriter):
         # Commit transaction (fault tolerance - each judgement is persisted immediately)
         self._session.commit()
 
-        # Return result for this specific write
-        return WriteResult(
-            item_id=call_id,
-            item_type="llm_call"
+        # Log all entities written in one line
+        self.logger.info(
+            InferLogEvent.JUDGEMENT_PERSISTED,
+            sample_id=str(judgement.judging_sample.id),
+            request="created" if req_created else "skipped",
+            response="created" if resp_created else "skipped",
+            call="created",
         )
 
     def close(self) -> WriteSummary:

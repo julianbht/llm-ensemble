@@ -39,6 +39,57 @@ def _drop_stdlib_fields(_, __, event_dict):
     return event_dict
 
 
+class CustomConsoleRenderer:
+    """Custom console renderer for cleaner component display.
+
+    Formats log entries with component as a bracket prefix instead of key=value.
+    Example: [sql_writer] write_datasets created=1 skipped=0
+    """
+
+    def __init__(self):
+        """Initialize the custom console renderer."""
+        self._pad_event = 30  # Padding for event names
+
+    def __call__(self, _, __, event_dict):
+        """Render log entry with custom formatting.
+
+        Args:
+            event_dict: Dictionary containing log event data
+
+        Returns:
+            Formatted log string
+        """
+        # Extract standard fields
+        timestamp = event_dict.pop("timestamp", "")
+        level = event_dict.pop("level", "info")
+        event = event_dict.pop("event", "")
+        component = event_dict.pop("component", None)
+
+        # Build output parts
+        parts = []
+
+        # Timestamp
+        if timestamp:
+            parts.append(timestamp)
+
+        # Level in brackets
+        parts.append(f"[{level:8s}]")
+
+        # Component in brackets if present
+        if component:
+            parts.append(f"[{component}]")
+
+        # Event name (padded for alignment)
+        parts.append(f"{event:{self._pad_event}s}")
+
+        # Remaining key-value pairs
+        for key, value in event_dict.items():
+            parts.append(f"{key}={value}")
+
+        return " ".join(parts)
+
+
+
 def configure_logger(
     cli_name: str,
     run_name: Optional[str] = None,
@@ -86,11 +137,8 @@ def configure_logger(
         _convert_enums_to_values,  # Convert enums to their string values automatically
     ]
 
-    # Console renderer - always human-readable one-line format
-    console_renderer = structlog.dev.ConsoleRenderer(
-        colors=False,
-        exception_formatter=structlog.dev.plain_traceback,
-    )
+    # Console renderer - custom renderer for cleaner component display
+    console_renderer = CustomConsoleRenderer()
     # Add processor to drop stdlib fields before rendering
     console_processors = shared_processors + [_drop_stdlib_fields, console_renderer]
 

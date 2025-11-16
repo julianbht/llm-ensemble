@@ -149,14 +149,8 @@ class InferenceService:
                 )
 
                 # Write judgement immediately to disk (fault tolerance!)
-                write_result = writer.write_one(judgement)
-
-                # Log individual write operation
-                self.logger.info(
-                    InferLogEvent.JUDGEMENT_PERSISTED,
-                    sample_id=str(write_result.item_id),
-                    item_type=write_result.item_type,
-                )
+                # Adapter handles logging of what entities were persisted
+                writer.write_one(judgement)
 
                 # Collect for summary statistics
                 llm_judgements.append(judgement)

@@ -14,7 +14,6 @@ from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
-from llm_ensemble.libs.schemas.write_result import WriteResult
 from llm_ensemble.libs.utils.entity_filenames import get_entity_filename
 
 
@@ -75,16 +74,13 @@ class FullyPopulatedJsonWriter(JudgementWriter):
 
         return self
 
-    def write_one(self, judgement: LLMJudgement) -> WriteResult:
+    def write_one(self, judgement: LLMJudgement) -> None:
         """Accumulate a single judgement in memory.
 
         Judgement will be written to disk when close() is called.
 
         Args:
             judgement: LLMJudgement object to write
-
-        Returns:
-            WriteResult for this specific write operation (contains judgement ID)
 
         Raises:
             RuntimeError: If called outside of context manager
@@ -94,23 +90,15 @@ class FullyPopulatedJsonWriter(JudgementWriter):
 
         self.judgements.append(judgement)
 
-        # Return result for this specific write (per-operation feedback)
-        return WriteResult(
-            item_id=judgement.judging_sample.id,
-            item_type="judgement"
-        )
-
     def close(self) -> WriteSummary:
         """Write all accumulated judgements to a single JSON file.
 
         Returns:
-            WriteSummary tracking number of judgements written
+            WriteSummary (empty for JSON writer - no entity tracking needed)
 
         Raises:
             IOError: If write operation fails
         """
-        judgements_count = len(self.judgements)
-
         if self.output_path is not None:
             # Convert to JSON-ready dicts so UUIDs and datetimes serialize correctly
             judgements_data = [judgement.model_dump(mode="json") for judgement in self.judgements]
@@ -123,4 +111,5 @@ class FullyPopulatedJsonWriter(JudgementWriter):
             self.output_path = None
             self.judgements = []
 
-        return WriteSummary(judgements_written=judgements_count)
+        # Return empty summary (JSON writer doesn't track entity creation/skipping)
+        return WriteSummary()

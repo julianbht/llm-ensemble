@@ -154,3 +154,13 @@ class EnsembleConfigParamType(ConfigParamType):
             config_dir_provider=PathManager.get_ensembles_dir,
             example_fallback="weighted_majority_v1",
         )
+
+
+class RetryConfigParamType(ConfigParamType):
+    def __init__(self) -> None:
+        super().__init__(
+            param_name="--retry-cfg",
+            config_type_label="retry",
+            config_dir_provider=PathManager.get_retries_dir,
+            example_fallback="standard",
+        )

@@ -12,6 +12,7 @@ from llm_ensemble.libs.cli.params.types import (
     EnsembleConfigParamType,
     ModelConfigParamType,
     PromptConfigParamType,
+    RetryConfigParamType,
 )
 
 InputPath = Annotated[
@@ -76,6 +77,15 @@ Limit = Annotated[
     typer.Option(
         "--limit",
         help="Process at most N examples (None = no limit)",
+    ),
+]
+
+RetryCfg = Annotated[
+    str,
+    typer.Option(
+        "--retry-cfg",
+        click_type=RetryConfigParamType(),
+        help=f"Retry config name. Configs in {PathManager.get_retries_dir().relative_to(PathManager.get_project_root())}",
     ),
 ]
 

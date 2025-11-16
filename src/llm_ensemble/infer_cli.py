@@ -6,7 +6,6 @@ from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_con
 from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.config.logging_config_loader import load_logging_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
-from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
 from llm_ensemble.libs.cli.params import (
     InputPath,
@@ -19,6 +18,7 @@ from llm_ensemble.libs.cli.params import (
     ModelCfg,
     PromptCfg,
     InferIoCfg,
+    RetryCfg,
 )
 
 # Load runtime configuration early
@@ -39,11 +39,7 @@ def infer(
     io_cfg: InferIoCfg,
     input_path: InputPath,
     # Optional parameters
-    retry_cfg: str = typer.Option(
-        "standard",
-        "--retry-cfg",
-        help=f"Retry config name. Configs in {PathManager.get_retries_dir().relative_to(PathManager.get_project_root())}"
-    ),
+    retry_cfg: RetryCfg = "standard",
     limit: Limit = None,
     run_name: RunName = None,
     log_cfg: LogCfg = None,

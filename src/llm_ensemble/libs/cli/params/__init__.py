@@ -11,6 +11,7 @@ from .shared_params import (
     ModelCfg,
     PromptCfg,
     EnsembleCfg,
+    RetryCfg,
 )
 from .aggregate import AggregateIoCfg
 from .ingest import IngestIoCfg
@@ -27,6 +28,7 @@ __all__ = [
     "ModelCfg",
     "PromptCfg",
     "EnsembleCfg",
+    "RetryCfg",
     "AggregateIoCfg",
     "IngestIoCfg",
     "InferIoCfg",

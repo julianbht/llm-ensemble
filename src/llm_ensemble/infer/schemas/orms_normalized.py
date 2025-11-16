@@ -228,6 +228,12 @@ class LLMCallORM(Base):
     latency_ms = Column(Float, nullable=False)
     retries = Column(Integer, nullable=False, default=0)
     cost_estimate_usd = Column(Float, nullable=True)
+
+    generation_id = Column(String(255), nullable=True)
+    prompt_tokens = Column(Integer, nullable=True)
+    completion_tokens = Column(Integer, nullable=True)
+    total_tokens = Column(Integer, nullable=True)
+
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     __table_args__ = (

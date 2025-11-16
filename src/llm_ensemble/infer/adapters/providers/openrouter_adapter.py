@@ -126,11 +126,34 @@ class OpenRouterAdapter(LLMProvider):
         # Extract response text
         raw_response = response.choices[0].message.content
 
+        # Extract generation ID for async cost queries
+        generation_id = getattr(response, "id", None)
+
+        # Extract token usage
+        prompt_tokens = None
+        completion_tokens = None
+        total_tokens = None
+        if hasattr(response, "usage") and response.usage:
+            prompt_tokens = getattr(response.usage, "prompt_tokens", None)
+            completion_tokens = getattr(response.usage, "completion_tokens", None)
+            total_tokens = getattr(response.usage, "total_tokens", None)
+
+        # Calculate cost estimate from token usage and pricing config
+        cost_estimate_usd = None
+        if model_config.pricing and prompt_tokens is not None and completion_tokens is not None:
+            prompt_cost = (prompt_tokens / 1_000_000) * model_config.pricing.prompt_cost_per_1m_tokens
+            completion_cost = (completion_tokens / 1_000_000) * model_config.pricing.completion_cost_per_1m_tokens
+            cost_estimate_usd = prompt_cost + completion_cost
+
         # Note: retry count will be added by base class
         llm_response = LLMResponse(
             raw_response=raw_response,
             latency_ms=latency_ms,
-            cost_estimate_usd=None,  # Could be added later
+            cost_estimate_usd=cost_estimate_usd,
+            generation_id=generation_id,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
         )
 
         return llm_response

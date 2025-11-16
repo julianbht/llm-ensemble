@@ -20,12 +20,16 @@ from uuid import UUID
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
+from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.orms_normalized import (
     ProviderORM,
     ModelSpecORM,
     PromptTemplateORM,
     ParserSpecORM,
     InferRunORM,
+    LLMRequestORM,
+    LLMResponseORM,
+    LLMCallORM,
 )
 from llm_ensemble.libs.db import (
     compute_provider_uuid,
@@ -33,6 +37,7 @@ from llm_ensemble.libs.db import (
     compute_prompt_template_uuid,
     compute_parser_spec_uuid,
 )
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 # ============================================================================
@@ -185,4 +190,107 @@ def infer_run_info_to_orm(
         git_branch=run_info.git_branch,
         git_is_dirty=not run_info.git_clean,
         notes=run_info.notes,
+    )
+
+
+# ============================================================================
+# LLMRequest Mappers
+# ============================================================================
+
+def llm_judgement_to_request_orm(judgement: LLMJudgement, request_id: UUID) -> LLMRequestORM:
+    """Convert LLMJudgement to LLMRequestORM.
+
+    Args:
+        judgement: LLMJudgement domain object
+        request_id: Pre-computed request UUID
+
+    Returns:
+        LLMRequestORM model ready for persistence
+    """
+    return LLMRequestORM(
+        id=request_id,
+        judging_sample_id=judgement.judging_sample.id,
+        prompt=judgement.prompt,
+    )
+
+
+# ============================================================================
+# LLMResponse Mappers
+# ============================================================================
+
+def llm_judgement_to_response_orm(
+    judgement: LLMJudgement,
+    response_id: UUID,
+    parser_spec_id: UUID
+) -> LLMResponseORM:
+    """Convert LLMJudgement to LLMResponseORM.
+
+    Args:
+        judgement: LLMJudgement domain object
+        response_id: Pre-computed response UUID
+        parser_spec_id: Parser spec UUID (for foreign key)
+
+    Returns:
+        LLMResponseORM model ready for persistence
+    """
+    # Extract parsed fields from llm_score (may be None if parsing failed)
+    label = judgement.llm_score.label if judgement.llm_score else None
+    confidence = judgement.llm_score.confidence if judgement.llm_score else None
+    rationale = judgement.llm_score.rationale if judgement.llm_score else None
+
+    # Extract parser warnings (convert to dict format for JSONB array)
+    parser_warnings = []
+    if judgement.llm_score:
+        parser_warnings = [w.to_dict() for w in judgement.llm_score.warnings]
+
+    # Handle case where label is None (parsing failed) - need default for non-nullable column
+    if label is None:
+        label = RelevanceScore.NOT_RELEVANT
+
+    return LLMResponseORM(
+        id=response_id,
+        parser_spec_id=parser_spec_id,
+        raw_response=judgement.llm_response.raw_response,
+        label=label,
+        confidence=confidence,
+        rationale=rationale,
+        parser_warnings=parser_warnings,
+    )
+
+
+# ============================================================================
+# LLMCall Mappers
+# ============================================================================
+
+def llm_judgement_to_call_orm(
+    judgement: LLMJudgement,
+    call_id: UUID,
+    request_id: UUID,
+    infer_run_id: UUID,
+    response_id: UUID
+) -> LLMCallORM:
+    """Convert LLMJudgement to LLMCallORM.
+
+    Args:
+        judgement: LLMJudgement domain object
+        call_id: Pre-computed call UUID
+        request_id: Request UUID (for foreign key)
+        infer_run_id: Infer run UUID (for foreign key)
+        response_id: Response UUID (for foreign key)
+
+    Returns:
+        LLMCallORM model ready for persistence
+    """
+    return LLMCallORM(
+        id=call_id,
+        llm_request_id=request_id,
+        infer_run_id=infer_run_id,
+        response_id=response_id,
+        latency_ms=judgement.llm_response.latency_ms,
+        retries=judgement.llm_response.retries,
+        cost_estimate_usd=judgement.llm_response.cost_estimate_usd,
+        generation_id=judgement.llm_response.generation_id,
+        prompt_tokens=judgement.llm_response.prompt_tokens,
+        completion_tokens=judgement.llm_response.completion_tokens,
+        total_tokens=judgement.llm_response.total_tokens,
     )

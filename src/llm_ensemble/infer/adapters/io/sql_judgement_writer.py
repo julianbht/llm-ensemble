@@ -61,6 +61,9 @@ from llm_ensemble.infer.adapters.io.mappers import (
     prompt_config_to_template_orm,
     prompt_config_to_parser_orm,
     infer_run_info_to_orm,
+    llm_judgement_to_request_orm,
+    llm_judgement_to_response_orm,
+    llm_judgement_to_call_orm,
 )
 from llm_ensemble.libs.logging.log_events import InferWriteEvent, InferLogEvent
 
@@ -397,7 +400,7 @@ class SqlJudgementWriter(JudgementWriter):
         return (infer_run_id, 1, 0)
 
     def _upsert_request(self, judgement: LLMJudgement) -> Tuple[UUID, int, int]:
-        """Upsert LLM request entity.
+        """Upsert LLM request entity using mapper.
 
         Args:
             judgement: LLMJudgement object
@@ -415,18 +418,14 @@ class SqlJudgementWriter(JudgementWriter):
         if existing:
             return (request_id, 0, 1)
 
-        # Create new request
-        request = LLMRequestORM(
-            id=request_id,
-            judging_sample_id=judgement.judging_sample.id,
-            prompt=judgement.prompt,
-        )
+        # Create new request using mapper
+        request = llm_judgement_to_request_orm(judgement, request_id)
         self._session.add(request)
 
         return (request_id, 1, 0)
 
     def _upsert_response(self, judgement: LLMJudgement) -> Tuple[UUID, int, int]:
-        """Upsert LLM response entity.
+        """Upsert LLM response entity using mapper.
 
         Deduplicates by (parser_spec_id, raw_response).
         Parsed fields (label, confidence, rationale) are functionally dependent
@@ -448,39 +447,18 @@ class SqlJudgementWriter(JudgementWriter):
         if existing:
             return (response_id, 0, 1)
 
-        # Extract parsed fields from llm_score (may be None if parsing failed)
-        label = judgement.llm_score.label if judgement.llm_score else None
-        confidence = judgement.llm_score.confidence if judgement.llm_score else None
-        rationale = judgement.llm_score.rationale if judgement.llm_score else None
-
-        # Extract parser warnings (convert to dict format for JSONB array)
-        parser_warnings = []
-        if judgement.llm_score:
-            parser_warnings = [w.to_dict() for w in judgement.llm_score.warnings]
-
-        # Handle case where label is None (parsing failed) - need default for non-nullable column
-        # The ORM defines label as non-nullable, so we need a default
-        # Use RelevanceScore.NOT_RELEVANT as a safe default for failed parsing
-        if label is None:
-            from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
-            label = RelevanceScore.NOT_RELEVANT  # Default for parsing failures
-
-        # Create new response
-        response = LLMResponseORM(
-            id=response_id,
-            parser_spec_id=self._parser_spec_id,
-            raw_response=judgement.llm_response.raw_response,
-            label=label,
-            confidence=confidence,
-            rationale=rationale,
-            parser_warnings=parser_warnings,
+        # Create new response using mapper
+        response = llm_judgement_to_response_orm(
+            judgement,
+            response_id,
+            self._parser_spec_id
         )
         self._session.add(response)
 
         return (response_id, 1, 0)
 
     def _create_call(self, judgement: LLMJudgement, request_id: UUID, response_id: UUID) -> UUID:
-        """Create LLM call entity.
+        """Create LLM call entity using mapper.
 
         Links request + run + response with observability metadata.
 
@@ -499,15 +477,13 @@ class SqlJudgementWriter(JudgementWriter):
         if existing:
             return call_id
 
-        # Create new call
-        call = LLMCallORM(
-            id=call_id,
-            llm_request_id=request_id,
-            infer_run_id=self._infer_run_id,
-            response_id=response_id,
-            latency_ms=judgement.llm_response.latency_ms,
-            retries=judgement.llm_response.retries,
-            cost_estimate_usd=judgement.llm_response.cost_estimate_usd,
+        # Create new call using mapper
+        call = llm_judgement_to_call_orm(
+            judgement,
+            call_id,
+            request_id,
+            self._infer_run_id,
+            response_id
         )
         self._session.add(call)
 

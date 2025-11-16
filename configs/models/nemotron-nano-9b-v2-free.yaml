@@ -36,4 +36,4 @@ openrouter_model_id: google/gemma-3n-e2b-it:free
 pricing:
   prompt_cost_per_1m_tokens: 0.0
   completion_cost_per_1m_tokens: 0.0
-  last_updated: "2025-11-16T14:41:23.575742+00:00"
+  last_updated: "2025-11-16T14:59:21.945392+00:00"

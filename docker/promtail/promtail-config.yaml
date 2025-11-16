@@ -1,0 +1,162 @@
+# Promtail configuration for LLM Ensemble
+# Collects logs from artifacts/runs/ and ships them to Loki
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Scrape all run.log files from ingest CLI
+  - job_name: ingest
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: ingest
+          cli: ingest
+          __path__: /var/log/llm-ensemble/ingest/*/*/run.log
+    
+    pipeline_stages:
+      # Parse JSON logs
+      - json:
+          expressions:
+            level: level
+            event: event
+            timestamp: timestamp
+            run_name: run_name
+            run_type: run_type
+      
+      # Extract additional labels from JSON
+      - labels:
+          level:
+          event:
+      
+      # Use the timestamp from the log entry
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+      
+      # Extract run metadata from file path
+      - regex:
+          expression: '/var/log/llm-ensemble/ingest/(?P<run_type>[^/]+)/(?P<run_name>[^/]+)/'
+          source: filename
+      
+      - labels:
+          run_type:
+          run_name:
+
+  # Scrape all run.log files from infer CLI
+  - job_name: infer
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: infer
+          cli: infer
+          __path__: /var/log/llm-ensemble/infer/*/*/run.log
+    
+    pipeline_stages:
+      # Parse JSON logs
+      - json:
+          expressions:
+            level: level
+            event: event
+            timestamp: timestamp
+            model_id: model_id
+            provider: provider
+      
+      # Extract additional labels from JSON
+      - labels:
+          level:
+          event:
+      
+      # Use the timestamp from the log entry
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+      
+      # Extract run metadata from file path
+      - regex:
+          expression: '/var/log/llm-ensemble/infer/(?P<run_type>[^/]+)/(?P<run_name>[^/]+)/'
+          source: filename
+      
+      - labels:
+          run_type:
+          run_name:
+      
+      # Extract model info if available
+      - labels:
+          model_id:
+          provider:
+
+  # Scrape all run.log files from aggregate CLI
+  - job_name: aggregate
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: aggregate
+          cli: aggregate
+          __path__: /var/log/llm-ensemble/aggregate/*/*/run.log
+    
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            event: event
+            timestamp: timestamp
+      
+      - labels:
+          level:
+          event:
+      
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+      
+      - regex:
+          expression: '/var/log/llm-ensemble/aggregate/(?P<run_type>[^/]+)/(?P<run_name>[^/]+)/'
+          source: filename
+      
+      - labels:
+          run_type:
+          run_name:
+
+  # Scrape all run.log files from evaluate CLI
+  - job_name: evaluate
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: evaluate
+          cli: evaluate
+          __path__: /var/log/llm-ensemble/evaluate/*/*/run.log
+    
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            event: event
+            timestamp: timestamp
+      
+      - labels:
+          level:
+          event:
+      
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+      
+      - regex:
+          expression: '/var/log/llm-ensemble/evaluate/(?P<run_type>[^/]+)/(?P<run_name>[^/]+)/'
+          source: filename
+      
+      - labels:
+          run_type:
+          run_name:

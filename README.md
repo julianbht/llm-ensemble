@@ -36,4 +36,20 @@ make test-infer        # Run infer tests only
 make clean             # Remove test artifacts and cache
 ```
 
+## Observability
+
+The project includes a full observability stack (Grafana + Loki + Promtail) for monitoring CLI logs:
+
+```bash
+# Start observability stack
+docker-compose up -d loki promtail grafana
+
+# Access Grafana at http://localhost:3000 (admin/admin)
+# View logs in real-time with automatic JSON parsing and filtering
+```
+
+See [docker/README.md](./docker/README.md) for detailed observability setup and usage.
+
+## Documentation
+
 See [CLAUDE.md](./CLAUDE.md) for detailed architecture and development guidelines.

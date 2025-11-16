@@ -1,11 +1,21 @@
-# Docker Compose for LLM Ensemble PostgreSQL database
+# Docker Compose for LLM Ensemble Infrastructure
+#
+# Services:
+#   - postgres: PostgreSQL database for persistent storage
+#   - loki: Log aggregation system (stores logs)
+#   - promtail: Log shipper (reads log files and sends to Loki)
+#   - grafana: Visualization and dashboards
 #
 # Quick start:
-#   1. Start database:    docker-compose up -d
-#   2. Check status:      docker-compose ps
-#   3. View logs:         docker-compose logs -f postgres
-#   4. Stop database:     docker-compose down
-#   5. Reset data:        docker-compose down -v  (deletes all data!)
+#   1. Start all services:     docker-compose up -d
+#   2. Check status:           docker-compose ps
+#   3. View logs:              docker-compose logs -f <service>
+#   4. Stop all services:      docker-compose down
+#   5. Reset all data:         docker-compose down -v  (deletes all data!)
+#
+# Access URLs:
+#   - Grafana:   http://localhost:3000 (admin/admin)
+#   - Loki API:  http://localhost:3100
 #
 # Database credentials (matches .env.example):
 #   - User:     llm_ensemble
@@ -17,7 +27,7 @@
 #   docker-compose exec postgres psql -U llm_ensemble -d llm_ensemble
 #
 # Data persistence:
-#   Data is stored in Docker volume 'postgres_data' and persists across restarts
+#   All data is stored in Docker volumes and persists across restarts
 
 services:
   postgres:
@@ -36,6 +46,63 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - llm-ensemble
+
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: llm-ensemble-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./docker/loki/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    networks:
+      - llm-ensemble
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  promtail:
+    image: grafana/promtail:2.9.3
+    container_name: llm-ensemble-promtail
+    volumes:
+      - ./docker/promtail/promtail-config.yaml:/etc/promtail/config.yaml
+      - ./artifacts/runs:/var/log/llm-ensemble:ro
+    command: -config.file=/etc/promtail/config.yaml
+    networks:
+      - llm-ensemble
+    depends_on:
+      loki:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: llm-ensemble-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - llm-ensemble
+    depends_on:
+      loki:
+        condition: service_healthy
+
+networks:
+  llm-ensemble:
+    driver: bridge
 
 volumes:
   postgres_data:
+  loki_data:
+  grafana_data:

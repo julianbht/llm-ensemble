@@ -1,0 +1,24 @@
+# Grafana datasource provisioning
+# Automatically configures Loki as a data source on Grafana startup
+
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: true
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        # Extract run_name as a clickable field
+        - datasourceUid: loki
+          matcherRegex: '"run_name":"([^"]+)"'
+          name: run_name
+          url: ''
+        # Extract model_id as a clickable field
+        - datasourceUid: loki
+          matcherRegex: '"model_id":"([^"]+)"'
+          name: model_id
+          url: ''

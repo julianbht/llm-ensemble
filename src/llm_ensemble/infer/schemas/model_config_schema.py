@@ -6,9 +6,29 @@ Based on OpenRouter API specification for maximum compatibility.
 
 from __future__ import annotations
 from typing import Optional, Literal, Any, Union
-from pydantic import Field
+from pydantic import BaseModel, Field
 
+from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.schemas.base_config import BaseConfig
+
+
+class PricingInfo(BaseModel):
+    """Pricing information for LLM model (cost per 1M tokens)."""
+
+    prompt_cost_per_1m_tokens: float = Field(
+        ...,
+        ge=0.0,
+        description="Cost in USD per 1 million prompt tokens"
+    )
+    completion_cost_per_1m_tokens: float = Field(
+        ...,
+        ge=0.0,
+        description="Cost in USD per 1 million completion tokens"
+    )
+    last_updated: str = Field(
+        ...,
+        description="ISO 8601 timestamp of when pricing was last updated"
+    )
 
 
 class ModelConfig(BaseConfig):
@@ -102,9 +122,15 @@ class ModelConfig(BaseConfig):
         description="OpenRouter model ID (e.g., 'openai/gpt-4')"
     )
 
+    # Pricing information
+    pricing: Optional[PricingInfo] = Field(
+        None,
+        description="Cost information for this model (typically auto-updated via update_model_pricing.py)"
+    )
+
     def get_provider(
         self,
-        retry_config: "RetryConfig",
+        retry_config: RetryConfig,
         logger: Optional[Any] = None,
         api_key: Optional[str] = None,
         timeout: int = 30,

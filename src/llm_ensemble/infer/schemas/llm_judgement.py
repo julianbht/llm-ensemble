@@ -56,6 +56,30 @@ class LLMResponse(BaseModel):
         description="Estimated cost in USD for this inference call"
     )
 
+    # Token usage information
+    generation_id: Optional[str] = Field(
+        None,
+        description="Provider-specific generation ID (e.g., OpenRouter gen-xxx) for async cost queries"
+    )
+
+    prompt_tokens: Optional[int] = Field(
+        None,
+        ge=0,
+        description="Number of tokens in the prompt"
+    )
+
+    completion_tokens: Optional[int] = Field(
+        None,
+        ge=0,
+        description="Number of tokens in the completion"
+    )
+
+    total_tokens: Optional[int] = Field(
+        None,
+        ge=0,
+        description="Total tokens used (prompt + completion)"
+    )
+
 
 class LLMScore(BaseModel):
     """Parsed relevance assessment extracted from LLM response.

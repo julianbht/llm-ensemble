@@ -161,12 +161,8 @@ class InferenceService:
                 # Collect for summary statistics
                 llm_judgements.append(judgement)
 
-        # Retrieve aggregate write summary after context manager closes
+        # Retrieve aggregate write summary after context manager closes (writer logged directly)
         write_summary = self.judgement_writer.get_summary()
-
-        # Log aggregate write statistics using summary
-        for log_entry in write_summary.get_log_entries():
-            self.logger.info(**log_entry)
 
         # Calculate aggregate statistics from judgements (for summary)
         count = len(llm_judgements)

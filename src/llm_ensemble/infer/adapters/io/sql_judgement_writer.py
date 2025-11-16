@@ -15,12 +15,14 @@ Key features:
 - Per-judgement data (LLMRequest, LLMResponse, LLMCall) is upserted in write_one()
 - Deduplication via unique constraints + deterministic UUIDs
 - Immediate commit per judgement for fault tolerance
+- Handles its own logging and builds WriteSummary incrementally
 """
 
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 from uuid import UUID
+import structlog
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -61,6 +63,7 @@ from llm_ensemble.infer.adapters.io.mappers import (
     prompt_config_to_parser_orm,
     infer_run_info_to_orm,
 )
+from llm_ensemble.libs.logging.log_events import InferWriteEvent
 
 
 class SqlJudgementWriter(JudgementWriter):
@@ -86,7 +89,7 @@ class SqlJudgementWriter(JudgementWriter):
     """
 
     def __init__(self):
-        """Initialize SQL writer."""
+        """Initialize SQL writer with its own logger."""
         super().__init__()
         self._session: Optional[Session] = None
         self._run_dir: Optional[Path] = None
@@ -98,9 +101,11 @@ class SqlJudgementWriter(JudgementWriter):
         self._parser_spec_id: Optional[UUID] = None
         self._infer_run_id: Optional[UUID] = None
 
-        # Tracking for WriteSummary
-        self._judgements_written: int = 0
-        self._responses_created: int = 0  # Track new vs deduplicated responses
+        # Incremental write summary builder
+        self._write_summary: Optional[WriteSummary] = None
+
+        # Logger for this adapter
+        self.logger = structlog.get_logger().bind(component="sql_judgement_writer")
 
     def open(self, run_dir: Path, run_info: InferRunInfo) -> "SqlJudgementWriter":
         """Open database session and initialize run metadata.
@@ -131,11 +136,10 @@ class SqlJudgementWriter(JudgementWriter):
         # Cache run_dir (not used for DB, but kept for consistency)
         self._run_dir = run_dir
 
-        # Reset counters
-        self._judgements_written = 0
-        self._responses_created = 0
+        # Initialize WriteSummary builder
+        self._write_summary = WriteSummary()
 
-        # Initialize run metadata immediately using run_info
+        # Initialize run metadata immediately using run_info (logs and adds to summary)
         self._initialize_run_metadata(run_info)
 
         return self
@@ -164,16 +168,18 @@ class SqlJudgementWriter(JudgementWriter):
         if self._session is None:
             raise RuntimeError("Writer is not open - must call within context manager")
 
-        # Decompose judgement into ORM entities
-        request_id = self._upsert_request(judgement)
-        response_id = self._upsert_response(judgement)
+        # Decompose judgement into ORM entities with tracking
+        request_id, req_created, req_skipped = self._upsert_request(judgement)
+        self._write_summary.add_llm_requests(created=req_created, skipped=req_skipped)
+
+        response_id, resp_created, resp_skipped = self._upsert_response(judgement)
+        self._write_summary.add_llm_responses(created=resp_created, skipped=resp_skipped)
+
         call_id = self._create_call(judgement, request_id, response_id)
+        self._write_summary.add_llm_calls(created=1)
 
         # Commit transaction (fault tolerance - each judgement is persisted immediately)
         self._session.commit()
-
-        # Track write
-        self._judgements_written += 1
 
         # Return result for this specific write
         return WriteResult(
@@ -190,8 +196,16 @@ class SqlJudgementWriter(JudgementWriter):
         Raises:
             IOError: If close operation fails
         """
-        # Create aggregate summary
-        summary = WriteSummary(judgements_written=self._judgements_written)
+        # Get summary before cleanup
+        summary = self._write_summary
+
+        # Log final totals
+        if summary and (summary.total_created > 0 or summary.total_skipped > 0):
+            self.logger.info(
+                InferWriteEvent.WRITE_COMPLETE,
+                total_created=summary.total_created,
+                total_skipped=summary.total_skipped,
+            )
 
         if self._session is not None:
             self._session.close()
@@ -204,6 +218,7 @@ class SqlJudgementWriter(JudgementWriter):
             self._prompt_template_id = None
             self._parser_spec_id = None
             self._infer_run_id = None
+            self._write_summary = None
 
         return summary
 
@@ -212,7 +227,7 @@ class SqlJudgementWriter(JudgementWriter):
     # ========================================================================
 
     def _initialize_run_metadata(self, run_info: InferRunInfo) -> None:
-        """Initialize run metadata from run context.
+        """Initialize run metadata from run context with logging and tracking.
 
         Creates/upserts shared entities that remain constant across all judgements:
         - Provider (e.g., openrouter, ollama)
@@ -226,82 +241,97 @@ class SqlJudgementWriter(JudgementWriter):
         """
 
         # 1. Upsert Provider
-        self._provider_id = self._upsert_provider(run_info.model_cfg.provider)
+        self._provider_id, created, skipped = self._upsert_provider(run_info.model_cfg.provider)
+        self._write_summary.add_providers(created=created, skipped=skipped)
+        if created > 0 or skipped > 0:
+            self.logger.info("write_providers", created=created, skipped=skipped)
 
         # 2. Upsert ModelSpec (depends on Provider)
-        self._model_spec_id = self._upsert_model_spec(run_info.model_cfg)
+        self._model_spec_id, created, skipped = self._upsert_model_spec(run_info.model_cfg)
+        self._write_summary.add_model_specs(created=created, skipped=skipped)
+        if created > 0 or skipped > 0:
+            self.logger.info("write_model_specs", created=created, skipped=skipped)
 
         # 3. Upsert PromptTemplate
-        self._prompt_template_id = self._upsert_prompt_template(run_info.prompt_config)
+        self._prompt_template_id, created, skipped = self._upsert_prompt_template(run_info.prompt_config)
+        self._write_summary.add_prompt_templates(created=created, skipped=skipped)
+        if created > 0 or skipped > 0:
+            self.logger.info("write_prompt_templates", created=created, skipped=skipped)
 
         # 4. Upsert ParserSpec
-        self._parser_spec_id = self._upsert_parser_spec(run_info.prompt_config)
+        self._parser_spec_id, created, skipped = self._upsert_parser_spec(run_info.prompt_config)
+        self._write_summary.add_parser_specs(created=created, skipped=skipped)
+        if created > 0 or skipped > 0:
+            self.logger.info("write_parser_specs", created=created, skipped=skipped)
 
         # 5. Create InferRun (depends on all above)
-        self._infer_run_id = self._create_infer_run(run_info)
+        self._infer_run_id, created, skipped = self._create_infer_run(run_info)
+        self._write_summary.add_infer_runs(created=created, skipped=skipped)
+        if created > 0 or skipped > 0:
+            self.logger.info("write_infer_runs", created=created, skipped=skipped)
 
         # Commit run metadata
         self._session.commit()
 
-    def _upsert_provider(self, provider_name: str) -> UUID:
+    def _upsert_provider(self, provider_name: str) -> Tuple[UUID, int, int]:
         """Upsert provider entity using mapper.
 
         Args:
             provider_name: Provider name (e.g., 'openrouter', 'ollama', 'hf')
 
         Returns:
-            Provider UUID (deterministic)
+            Tuple of (provider_id, created_count, skipped_count)
         """
         provider_id = compute_provider_uuid(provider_name)
 
         # Check if exists
         existing = self._session.get(ProviderORM, provider_id)
         if existing:
-            return provider_id
+            return (provider_id, 0, 1)
 
         # Create new provider using mapper
         provider_orm = provider_name_to_orm(provider_name)
         self._session.add(provider_orm)
 
-        return provider_id
+        return (provider_id, 1, 0)
 
-    def _upsert_model_spec(self, model_cfg: ModelConfig) -> UUID:
+    def _upsert_model_spec(self, model_cfg: ModelConfig) -> Tuple[UUID, int, int]:
         """Upsert model spec entity using mapper.
 
         Args:
             model_cfg: ModelConfig object from InferRunInfo
 
         Returns:
-            ModelSpec UUID (deterministic)
+            Tuple of (model_spec_id, created_count, skipped_count)
         """
         model_spec_id = compute_model_spec_uuid(model_cfg.name)
 
         # Check if exists
         existing = self._session.get(ModelSpecORM, model_spec_id)
         if existing:
-            return model_spec_id
+            return (model_spec_id, 0, 1)
 
         # Create new model spec using mapper
         model_spec_orm = model_config_to_orm(model_cfg, self._provider_id)
         self._session.add(model_spec_orm)
 
-        return model_spec_id
+        return (model_spec_id, 1, 0)
 
-    def _upsert_prompt_template(self, prompt_cfg: PromptConfig) -> UUID:
+    def _upsert_prompt_template(self, prompt_cfg: PromptConfig) -> Tuple[UUID, int, int]:
         """Upsert prompt template entity using mapper.
 
         Args:
             prompt_cfg: PromptConfig object from InferRunInfo
 
         Returns:
-            PromptTemplate UUID (deterministic)
+            Tuple of (prompt_template_id, created_count, skipped_count)
         """
         prompt_template_id = compute_prompt_template_uuid(prompt_cfg.name)
 
         # Check if exists
         existing = self._session.get(PromptTemplateORM, prompt_template_id)
         if existing:
-            return prompt_template_id
+            return (prompt_template_id, 0, 1)
 
         # Load template text from the builder
         # The builder knows where to find its template
@@ -312,16 +342,16 @@ class SqlJudgementWriter(JudgementWriter):
         prompt_template_orm = prompt_config_to_template_orm(prompt_cfg, template_text)
         self._session.add(prompt_template_orm)
 
-        return prompt_template_id
+        return (prompt_template_id, 1, 0)
 
-    def _upsert_parser_spec(self, prompt_cfg: PromptConfig) -> UUID:
+    def _upsert_parser_spec(self, prompt_cfg: PromptConfig) -> Tuple[UUID, int, int]:
         """Upsert parser spec entity using mapper.
 
         Args:
             prompt_cfg: PromptConfig object from InferRunInfo
 
         Returns:
-            ParserSpec UUID (deterministic)
+            Tuple of (parser_spec_id, created_count, skipped_count)
         """
         # Use dummy code_hash for now (as agreed with user)
         code_hash = "0" * 64  # Placeholder - will be computed properly later
@@ -335,29 +365,29 @@ class SqlJudgementWriter(JudgementWriter):
         # Check if exists
         existing = self._session.get(ParserSpecORM, parser_spec_id)
         if existing:
-            return parser_spec_id
+            return (parser_spec_id, 0, 1)
 
         # Create new parser spec using mapper
         parser_spec_orm = prompt_config_to_parser_orm(prompt_cfg, code_hash)
         self._session.add(parser_spec_orm)
 
-        return parser_spec_id
+        return (parser_spec_id, 1, 0)
 
-    def _create_infer_run(self, run_info: InferRunInfo) -> UUID:
+    def _create_infer_run(self, run_info: InferRunInfo) -> Tuple[UUID, int, int]:
         """Create infer run entity using mapper.
 
         Args:
             run_info: InferRunInfo object from judgement
 
         Returns:
-            InferRun UUID (deterministic)
+            Tuple of (infer_run_id, created_count, skipped_count)
         """
         infer_run_id = compute_infer_run_uuid(run_info.run_name)
 
         # Check if exists (should not happen, but defensive)
         existing = self._session.get(InferRunORM, infer_run_id)
         if existing:
-            return infer_run_id
+            return (infer_run_id, 0, 1)
 
         # Create new infer run using mapper
         infer_run_orm = infer_run_info_to_orm(
@@ -368,16 +398,16 @@ class SqlJudgementWriter(JudgementWriter):
         )
         self._session.add(infer_run_orm)
 
-        return infer_run_id
+        return (infer_run_id, 1, 0)
 
-    def _upsert_request(self, judgement: LLMJudgement) -> UUID:
+    def _upsert_request(self, judgement: LLMJudgement) -> Tuple[UUID, int, int]:
         """Upsert LLM request entity.
 
         Args:
             judgement: LLMJudgement object
 
         Returns:
-            LLMRequest UUID (deterministic, deduplicated)
+            Tuple of (request_id, created_count, skipped_count)
         """
         request_id = compute_llm_request_uuid(
             judgement.prompt,
@@ -387,7 +417,7 @@ class SqlJudgementWriter(JudgementWriter):
         # Check if exists (deduplication)
         existing = self._session.get(LLMRequestORM, request_id)
         if existing:
-            return request_id
+            return (request_id, 0, 1)
 
         # Create new request
         request = LLMRequestORM(
@@ -397,9 +427,9 @@ class SqlJudgementWriter(JudgementWriter):
         )
         self._session.add(request)
 
-        return request_id
+        return (request_id, 1, 0)
 
-    def _upsert_response(self, judgement: LLMJudgement) -> UUID:
+    def _upsert_response(self, judgement: LLMJudgement) -> Tuple[UUID, int, int]:
         """Upsert LLM response entity.
 
         Deduplicates by (parser_spec_id, raw_response).
@@ -410,7 +440,7 @@ class SqlJudgementWriter(JudgementWriter):
             judgement: LLMJudgement object
 
         Returns:
-            LLMResponse UUID (deterministic, deduplicated)
+            Tuple of (response_id, created_count, skipped_count)
         """
         response_id = compute_llm_response_uuid(
             self._parser_spec_id,
@@ -420,7 +450,7 @@ class SqlJudgementWriter(JudgementWriter):
         # Check if exists (deduplication)
         existing = self._session.get(LLMResponseORM, response_id)
         if existing:
-            return response_id
+            return (response_id, 0, 1)
 
         # Extract parsed fields from llm_score (may be None if parsing failed)
         label = judgement.llm_score.label if judgement.llm_score else None
@@ -450,9 +480,8 @@ class SqlJudgementWriter(JudgementWriter):
             parser_warnings=parser_warnings,
         )
         self._session.add(response)
-        self._responses_created += 1  # Track new responses
 
-        return response_id
+        return (response_id, 1, 0)
 
     def _create_call(self, judgement: LLMJudgement, request_id: UUID, response_id: UUID) -> UUID:
         """Create LLM call entity.

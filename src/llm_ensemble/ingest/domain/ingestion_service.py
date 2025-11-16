@@ -83,15 +83,11 @@ class IngestionService:
             sample_count=normalized_dataset.sample_count,
         )
 
-        # Write normalized dataset
+        # Write normalized dataset (writer logs directly)
         write_summary = self.dataset_writer.write(
             normalized_dataset,
             run_info
         )
-
-        # Log write completion using summary
-        for log_entry in write_summary.get_log_entries():
-            self.logger.info(**log_entry)
 
         # Add write summary to builder for inclusion in final summary
         summary_builder.add("write_summary", write_summary)

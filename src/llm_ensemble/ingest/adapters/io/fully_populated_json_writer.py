@@ -1,15 +1,18 @@
 """Fully populated JSON adapter for judging samples.
 
 Writes judging samples to a single JSON array with all objects fully populated (no references).
+Handles its own logging.
 """
 
 from __future__ import annotations
 import json
+import structlog
 
 from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, NormalizedDataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.ports import DatasetWriter
 from llm_ensemble.libs.utils.entity_filenames import get_entity_filename
+from llm_ensemble.libs.logging.log_events import IngestWriteEvent
 
 
 class FullyPopulatedJsonWriter(DatasetWriter):
@@ -17,6 +20,7 @@ class FullyPopulatedJsonWriter(DatasetWriter):
 
     Writes all samples as a single JSON array with full objects embedded.
     Each sample is self-contained with all nested objects fully populated.
+    Logs write operations directly.
 
     Outputs:
     - run_dir / "ingest_run_info.json" - IngestRunInfo (written once as separate manifest)
@@ -32,19 +36,23 @@ class FullyPopulatedJsonWriter(DatasetWriter):
     duplication. Downstream CLIs can read samples without parsing run_info on each record.
     """
 
+    def __init__(self):
+        """Initialize JSON writer with its own logger."""
+        self.logger = structlog.get_logger().bind(component="json_writer")
+
     def write(
         self,
         normalized_dataset: NormalizedDataset,
         run_info: IngestRunInfo,
     ) -> WriteSummary:
-        """Write fully populated judging samples to a single JSON file.
+        """Write fully populated judging samples to JSON with direct logging.
 
         Args:
             normalized_dataset: Complete normalized dataset with samples and metadata
             run_info: Immutable runtime context (written to separate manifest, contains run_dir)
 
         Returns:
-            WriteSummary tracking write operations (file writes always create all samples)
+            WriteSummary as pure data (metadata for run summary)
 
         Raises:
             IOError: If writing fails
@@ -73,5 +81,19 @@ class FullyPopulatedJsonWriter(DatasetWriter):
         with samples_file.open("w", encoding="utf-8") as f:
             json.dump(samples_data, f, indent=2, ensure_ascii=False)
 
-        # File writes always create all samples (no skipping)
-        return WriteSummary(samples_created=len(samples))
+        # Build summary and log (file writes always create all samples, no skipping)
+        summary = WriteSummary()
+        summary.add_samples(created=len(samples))
+
+        self.logger.info(
+            IngestWriteEvent.WRITE_JUDGING_SAMPLES,
+            created=len(samples),
+            skipped=0,
+        )
+        self.logger.info(
+            IngestWriteEvent.WRITE_COMPLETE,
+            total_created=summary.total_created,
+            total_skipped=summary.total_skipped,
+        )
+
+        return summary

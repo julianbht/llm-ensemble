@@ -1,7 +1,7 @@
 """SQL writer adapter for persisting judging samples to database.
 
 Uses pure SQLAlchemy ORM models with deterministic UUIDs.
-Auto-creates tables on first write and returns write summary for transparent logging.
+Handles its own logging and returns write summary as metadata.
 
 This adapter delegates ORM mapping to the mappers module for bidirectional symmetry.
 """
@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Dict, Tuple
 from uuid import UUID
+import structlog
 
 from sqlalchemy.orm import Session
 
@@ -34,6 +35,7 @@ from llm_ensemble.libs.db import (
     get_engine,
     session_context,
 )
+from llm_ensemble.libs.logging.log_events import IngestWriteEvent
 
 
 class SqlWriter(DatasetWriter):
@@ -46,31 +48,34 @@ class SqlWriter(DatasetWriter):
     Features:
     - Idempotent writes via merge (insert or update if exists)
     - Uses session_context() for transaction management
+    - Logs write operations directly
 
     Database URL is read from DATABASE_URL environment variable (required).
     Example: postgresql://user:password@localhost:5432/llm_ensemble
     """
 
     def __init__(self, database_url: str | None = None):
-        """Initialize SQL writer"""
+        """Initialize SQL writer with its own logger."""
         self.database_url = database_url
         self.engine = get_engine(database_url)
+        self.logger = structlog.get_logger().bind(component="sql_writer")
 
     def write(
         self,
         normalized_dataset: NormalizedDataset,
         run_info: IngestRunInfo,
     ) -> WriteSummary:
-        """Write judging samples to SQL database.
+        """Write judging samples to SQL database with direct logging.
 
         Idempotent operation - merges entities (insert if new, update if exists).
+        Logs each entity type write and summary.
 
         Args:
             normalized_dataset: Complete normalized dataset with samples and metadata
             run_info: Immutable runtime context
 
         Returns:
-            WriteSummary tracking what was created vs. skipped
+            WriteSummary as pure data (metadata for run summary)
 
         Raises:
             IOError: If database write fails
@@ -83,51 +88,50 @@ class SqlWriter(DatasetWriter):
             return WriteSummary()
 
         # Note: Tables must be created via `make db-init` before first write
-        # Track counts
-        datasets_created = 0
-        datasets_skipped = 0
-        runs_created = 0
-        runs_skipped = 0
-        queries_created = 0
-        queries_skipped = 0
-        documents_created = 0
-        documents_skipped = 0
-        samples_created = 0
-        samples_skipped = 0
+        # Create summary builder
+        summary = WriteSummary()
 
         # Write to database in transaction
         try:
             with session_context(self.engine) as session:
-                # Save entities in dependency order
-                datasets_created, datasets_skipped = self._save_dataset(session, dataset)
-                runs_created, runs_skipped = self._save_ingest_run(session, run_info)
+                # Save entities in dependency order, adding to summary as we go
+                created, skipped = self._save_dataset(session, dataset)
+                summary.add_datasets(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(IngestWriteEvent.WRITE_DATASETS, created=created, skipped=skipped)
+
+                created, skipped = self._save_ingest_run(session, run_info)
+                summary.add_runs(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(IngestWriteEvent.WRITE_RUNS, created=created, skipped=skipped)
 
                 # Collect unique queries and documents from batch
                 unique_queries, unique_documents = self._collect_unique_entities(samples)
 
-                queries_created, queries_skipped = self._save_queries(
-                    session, unique_queries, dataset.id
-                )
-                documents_created, documents_skipped = self._save_documents(
-                    session, unique_documents, dataset.id
-                )
-                samples_created, samples_skipped = self._save_samples(
-                    session, samples, run_info
+                created, skipped = self._save_queries(session, unique_queries, dataset.id)
+                summary.add_queries(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(IngestWriteEvent.WRITE_QUERIES, created=created, skipped=skipped)
+
+                created, skipped = self._save_documents(session, unique_documents, dataset.id)
+                summary.add_documents(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(IngestWriteEvent.WRITE_DOCUMENTS, created=created, skipped=skipped)
+
+                created, skipped = self._save_samples(session, samples, run_info)
+                summary.add_samples(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(IngestWriteEvent.WRITE_JUDGING_SAMPLES, created=created, skipped=skipped)
+
+            # Log totals
+            if summary.total_created > 0 or summary.total_skipped > 0:
+                self.logger.info(
+                    IngestWriteEvent.WRITE_COMPLETE,
+                    total_created=summary.total_created,
+                    total_skipped=summary.total_skipped,
                 )
 
-            # Return summary with write results
-            return WriteSummary(
-                datasets_created=datasets_created,
-                datasets_skipped=datasets_skipped,
-                runs_created=runs_created,
-                runs_skipped=runs_skipped,
-                queries_created=queries_created,
-                queries_skipped=queries_skipped,
-                documents_created=documents_created,
-                documents_skipped=documents_skipped,
-                samples_created=samples_created,
-                samples_skipped=samples_skipped,
-            )
+            return summary
 
         except Exception as e:
             raise IOError(f"Failed to write samples to database: {e}") from e

@@ -37,7 +37,7 @@ def infer(
     model_cfg: ModelCfg,
     prompt_cfg: PromptCfg,
     io_cfg: InferIoCfg,
-    input_path: InputPath = None,
+    input_path: InputPath,
     # Optional parameters
     retry_cfg: str = typer.Option(
         "standard",

@@ -32,9 +32,8 @@ hf_model_name: null
 
 # OpenRouter configuration (required for OpenRouter provider)
 openrouter_model_id: microsoft/mai-ds-r1:free
-
 # Pricing information (auto-updated from OpenRouter API)
 pricing:
   prompt_cost_per_1m_tokens: 0.0
   completion_cost_per_1m_tokens: 0.0
-  last_updated: "2025-11-16T14:19:39.241563+00:00"
+  last_updated: "2025-11-16T14:41:23.573748+00:00"

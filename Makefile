@@ -1,6 +1,6 @@
 SHELL := /usr/bin/env bash
 .PHONY: help install install-dev test test-ingest test-infer test-schema schemas clean
-.PHONY: db db-down db-init db-logs db-status autocomplete
+.PHONY: db db-down db-init db-logs db-status autocomplete update-pricing
 
 export PYTHONUNBUFFERED=1
 
@@ -27,6 +27,7 @@ help:
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make schemas       - Generate JSON schemas from Pydantic models"
+	@echo "  make update-pricing - Update model configs with latest OpenRouter pricing"
 	@echo "  make clean         - Remove cached files"
 
 install:
@@ -99,6 +100,13 @@ schemas:
 		. .venv/bin/activate && python scripts/generate_schemas.py; \
 	else \
 		python3 scripts/generate_schemas.py; \
+	fi
+
+update-pricing:
+	@if [ -d .venv ]; then \
+		. .venv/bin/activate && python scripts/update_model_pricing.py $(ARGS); \
+	else \
+		python3 scripts/update_model_pricing.py $(ARGS); \
 	fi
 
 clean:

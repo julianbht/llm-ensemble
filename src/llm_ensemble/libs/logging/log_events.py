@@ -54,11 +54,19 @@ class InferLogEvent(str, Enum):
 
 
 class InferWriteEvent(str, Enum):
-    """Log events for judgement write operations.
+    """Log events for judgement write operations."""
 
-    Used by WriteSummary.get_log_entries() to generate structured logs.
-    """
+    # Run metadata entities (written once during open)
+    WRITE_PROVIDERS = "write_providers"
+    WRITE_MODEL_SPECS = "write_model_specs"
+    WRITE_PROMPT_TEMPLATES = "write_prompt_templates"
+    WRITE_PARSER_SPECS = "write_parser_specs"
+    WRITE_INFER_RUNS = "write_infer_runs"
 
-    WRITE_JUDGEMENT_COMPLETE = "write_judgement_complete"
+    # Per-judgement entities (written during write_one)
+    WRITE_LLM_REQUESTS = "write_llm_requests"
+    WRITE_LLM_RESPONSES = "write_llm_responses"
+    WRITE_LLM_CALLS = "write_llm_calls"
+
+    # Final summary
     WRITE_COMPLETE = "write_complete"
-    ENTITIES_WRITTEN = "entities_written"

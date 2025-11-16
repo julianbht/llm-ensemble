@@ -165,28 +165,23 @@ class SqlJudgementWriter(JudgementWriter):
         if self._session is None:
             raise RuntimeError("Writer is not open - must call within context manager")
 
-        # Decompose judgement into ORM entities with tracking
+        # Decompose judgement into ORM entities with tracking and logging
         request_id, req_created, req_skipped = self._upsert_request(judgement)
         self._write_summary.add_llm_requests(created=req_created, skipped=req_skipped)
+        if req_created > 0 or req_skipped > 0:
+            self.logger.info(InferWriteEvent.WRITE_LLM_REQUESTS, created=req_created, skipped=req_skipped)
 
         response_id, resp_created, resp_skipped = self._upsert_response(judgement)
         self._write_summary.add_llm_responses(created=resp_created, skipped=resp_skipped)
+        if resp_created > 0 or resp_skipped > 0:
+            self.logger.info(InferWriteEvent.WRITE_LLM_RESPONSES, created=resp_created, skipped=resp_skipped)
 
         call_id = self._create_call(judgement, request_id, response_id)
         self._write_summary.add_llm_calls(created=1)
+        self.logger.info(InferWriteEvent.WRITE_LLM_CALLS, created=1, skipped=0)
 
         # Commit transaction (fault tolerance - each judgement is persisted immediately)
         self._session.commit()
-
-        # Log ORM entities written with full class names
-        self.logger.info(
-            InferWriteEvent.ENTITIES_WRITTEN,
-            **{
-                LLMRequestORM.__name__: "created" if req_created else "skipped",
-                LLMResponseORM.__name__: "created" if resp_created else "skipped",
-                LLMCallORM.__name__: "created",
-            }
-        )
 
     def close(self) -> WriteSummary:
         """Close database session and release resources.
@@ -245,31 +240,31 @@ class SqlJudgementWriter(JudgementWriter):
         self._provider_id, created, skipped = self._upsert_provider(run_info.model_cfg.provider)
         self._write_summary.add_providers(created=created, skipped=skipped)
         if created > 0 or skipped > 0:
-            self.logger.info("write_providers", created=created, skipped=skipped)
+            self.logger.info(InferWriteEvent.WRITE_PROVIDERS, created=created, skipped=skipped)
 
         # 2. Upsert ModelSpec (depends on Provider)
         self._model_spec_id, created, skipped = self._upsert_model_spec(run_info.model_cfg)
         self._write_summary.add_model_specs(created=created, skipped=skipped)
         if created > 0 or skipped > 0:
-            self.logger.info("write_model_specs", created=created, skipped=skipped)
+            self.logger.info(InferWriteEvent.WRITE_MODEL_SPECS, created=created, skipped=skipped)
 
         # 3. Upsert PromptTemplate
         self._prompt_template_id, created, skipped = self._upsert_prompt_template(run_info.prompt_config)
         self._write_summary.add_prompt_templates(created=created, skipped=skipped)
         if created > 0 or skipped > 0:
-            self.logger.info("write_prompt_templates", created=created, skipped=skipped)
+            self.logger.info(InferWriteEvent.WRITE_PROMPT_TEMPLATES, created=created, skipped=skipped)
 
         # 4. Upsert ParserSpec
         self._parser_spec_id, created, skipped = self._upsert_parser_spec(run_info.prompt_config)
         self._write_summary.add_parser_specs(created=created, skipped=skipped)
         if created > 0 or skipped > 0:
-            self.logger.info("write_parser_specs", created=created, skipped=skipped)
+            self.logger.info(InferWriteEvent.WRITE_PARSER_SPECS, created=created, skipped=skipped)
 
         # 5. Create InferRun (depends on all above)
         self._infer_run_id, created, skipped = self._create_infer_run(run_info)
         self._write_summary.add_infer_runs(created=created, skipped=skipped)
         if created > 0 or skipped > 0:
-            self.logger.info("write_infer_runs", created=created, skipped=skipped)
+            self.logger.info(InferWriteEvent.WRITE_INFER_RUNS, created=created, skipped=skipped)
 
         # Commit run metadata
         self._session.commit()

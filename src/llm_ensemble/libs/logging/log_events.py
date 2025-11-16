@@ -61,3 +61,4 @@ class InferWriteEvent(str, Enum):
 
     WRITE_JUDGEMENT_COMPLETE = "write_judgement_complete"
     WRITE_COMPLETE = "write_complete"
+    ENTITIES_WRITTEN = "entities_written"

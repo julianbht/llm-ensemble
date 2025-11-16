@@ -178,13 +178,14 @@ class SqlJudgementWriter(JudgementWriter):
         # Commit transaction (fault tolerance - each judgement is persisted immediately)
         self._session.commit()
 
-        # Log all entities written in one line
+        # Log ORM entities written with full class names
         self.logger.info(
-            InferLogEvent.JUDGEMENT_PERSISTED,
-            sample_id=str(judgement.judging_sample.id),
-            request="created" if req_created else "skipped",
-            response="created" if resp_created else "skipped",
-            call="created",
+            InferWriteEvent.ENTITIES_WRITTEN,
+            **{
+                LLMRequestORM.__name__: "created" if req_created else "skipped",
+                LLMResponseORM.__name__: "created" if resp_created else "skipped",
+                LLMCallORM.__name__: "created",
+            }
         )
 
     def close(self) -> WriteSummary:

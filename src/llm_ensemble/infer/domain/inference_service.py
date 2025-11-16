@@ -149,7 +149,7 @@ class InferenceService:
                 )
 
                 # Write judgement immediately to disk (fault tolerance!)
-                # Adapter handles logging of what entities were persisted
+                # Adapter handles its own logging
                 writer.write_one(judgement)
 
                 # Collect for summary statistics

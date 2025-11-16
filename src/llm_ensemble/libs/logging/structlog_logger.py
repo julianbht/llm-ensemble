@@ -59,25 +59,17 @@ class CustomConsoleRenderer:
         Returns:
             Formatted log string
         """
-        # Extract standard fields
-        timestamp = event_dict.pop("timestamp", "")
+        # Extract and remove standard fields that we don't want to display
         level = event_dict.pop("level", "info")
         event = event_dict.pop("event", "")
-        component = event_dict.pop("component", None)
+        event_dict.pop("timestamp", None)  # Remove timestamp from output
+        event_dict.pop("component", None)  # Remove component from output
 
         # Build output parts
         parts = []
 
-        # Timestamp
-        if timestamp:
-            parts.append(timestamp)
-
         # Level in brackets
         parts.append(f"[{level:8s}]")
-
-        # Component in brackets if present
-        if component:
-            parts.append(f"[{component}]")
 
         # Event name (padded for alignment)
         parts.append(f"{event:{self._pad_event}s}")

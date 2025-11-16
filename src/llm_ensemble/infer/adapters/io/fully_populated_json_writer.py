@@ -9,12 +9,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Optional
+import structlog
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
 from llm_ensemble.libs.utils.entity_filenames import get_entity_filename
+from llm_ensemble.libs.logging.log_events import InferWriteEvent
 
 
 class FullyPopulatedJsonWriter(JudgementWriter):
@@ -45,6 +47,7 @@ class FullyPopulatedJsonWriter(JudgementWriter):
         self.output_path: Optional[Path] = None
         self.manifest_path: Optional[Path] = None
         self.judgements: list[LLMJudgement] = []
+        self.logger = structlog.get_logger().bind(component="json_writer")
 
     def open(self, run_dir: Path, run_info: InferRunInfo) -> "FullyPopulatedJsonWriter":
         """Initialize writer, write manifest, and prepare for streaming.
@@ -99,6 +102,8 @@ class FullyPopulatedJsonWriter(JudgementWriter):
         Raises:
             IOError: If write operation fails
         """
+        judgements_count = len(self.judgements)
+
         if self.output_path is not None:
             # Convert to JSON-ready dicts so UUIDs and datetimes serialize correctly
             judgements_data = [judgement.model_dump(mode="json") for judgement in self.judgements]
@@ -106,6 +111,13 @@ class FullyPopulatedJsonWriter(JudgementWriter):
             # Write as a single JSON array
             with self.output_path.open("w", encoding="utf-8") as f:
                 json.dump(judgements_data, f, indent=2, ensure_ascii=False)
+
+            # Log write operation
+            self.logger.info(
+                InferWriteEvent.WRITE_COMPLETE,
+                judgements_written=judgements_count,
+                output_file=str(self.output_path.name),
+            )
 
             # Reset state
             self.output_path = None

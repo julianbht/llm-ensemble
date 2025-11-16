@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Annotated, Optional
 import typer
 from llm_ensemble.libs.runtime.path_manager import PathManager
+from llm_ensemble.libs.cli.param_types import (
+    ModelConfigParamType,
+    PromptConfigParamType,
+    EnsembleConfigParamType,
+)
 
 # Common parameters shared by all CLIs
 # Note: Defaults are specified in function signatures, not here
@@ -76,5 +81,37 @@ Limit = Annotated[
     typer.Option(
         "--limit",
         help="Process at most N examples (None = no limit)"
+    )
+]
+
+# CLI-specific parameters with validation callbacks
+
+ModelCfg = Annotated[
+    str,  # Required - non-optional type
+    typer.Option(
+        ...,  # Required marker
+        "--model-cfg",
+        click_type=ModelConfigParamType(),
+        help=f"Model config name. Configs in {PathManager.get_model_configs_dir().relative_to(PathManager.get_project_root())}"
+    )
+]
+
+PromptCfg = Annotated[
+    str,  # Required - non-optional type
+    typer.Option(
+        ...,  # Required marker
+        "--prompt-cfg",
+        click_type=PromptConfigParamType(),
+        help=f"Prompt config name. Configs in {PathManager.get_prompts_dir().relative_to(PathManager.get_project_root())}"
+    )
+]
+
+EnsembleCfg = Annotated[
+    str,  # Required - non-optional type
+    typer.Option(
+        ...,  # Required marker
+        "--ensemble-cfg",
+        click_type=EnsembleConfigParamType(),
+        help=f"Ensemble config name. Configs in {PathManager.get_ensembles_dir().relative_to(PathManager.get_project_root())}"
     )
 ]

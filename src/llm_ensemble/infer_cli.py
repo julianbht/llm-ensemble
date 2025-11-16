@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Annotated, Optional
 import typer
 
 from llm_ensemble.infer.orchestrator import run_inference
@@ -8,7 +9,11 @@ from llm_ensemble.libs.config.logging_config_loader import load_logging_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
-from llm_ensemble.libs.cli.common_params import InputPath, IoCfg, RunName, LogCfg, Official, Notes, Override, Limit
+from llm_ensemble.libs.cli.common_params import (
+    InputPath, RunName, LogCfg, Official, Notes, Override, Limit,
+    ModelCfg, PromptCfg,
+)
+from llm_ensemble.libs.cli.param_types import IOConfigParamType
 
 # Load runtime configuration early
 load_runtime_config()
@@ -22,20 +27,19 @@ app = typer.Typer(
 
 @app.command("infer")
 def infer(
-    # Required parameters
-    io_cfg: IoCfg,
+    # Required parameters with validation
+    model_cfg: ModelCfg,
+    prompt_cfg: PromptCfg,
+    io_cfg: Annotated[
+        str,
+        typer.Option(
+            ...,
+            "--io-cfg",
+            click_type=IOConfigParamType("infer"),
+            help=f"I/O config name. Configs in {(PathManager.get_configs_dir() / 'io' / 'infer').relative_to(PathManager.get_project_root())}"
+        )
+    ],
     input_path: InputPath = None,
-    model_cfg: str = typer.Option(
-        ...,
-        "--model-cfg",
-        help=f"Model config name. Configs in {PathManager.get_model_configs_dir().relative_to(PathManager.get_project_root())}"
-    ),
-    # Required parameters (continued)
-    prompt_cfg: str = typer.Option(
-        ...,
-        "--prompt-cfg",
-        help=f"Prompt config name. Configs in {PathManager.get_prompts_dir().relative_to(PathManager.get_project_root())}"
-    ),
     # Optional parameters
     retry_cfg: str = typer.Option(
         "standard",

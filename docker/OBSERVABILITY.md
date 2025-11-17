@@ -196,6 +196,23 @@ docker compose -f docker/docker-compose.observability.yml restart alloy
 
 ## Troubleshooting
 
+### Services Not Starting (Permission Denied)
+
+If containers are restarting with "permission denied" errors:
+
+```bash
+# Fix config file permissions
+chmod 644 docker/loki/loki-config.yaml
+chmod 644 docker/alloy/alloy-config.alloy
+chmod -R 755 docker/grafana/provisioning
+find docker/grafana/provisioning -type f -exec chmod 644 {} \;
+
+# Restart services
+docker compose -f docker/docker-compose.observability.yml restart
+```
+
+This can happen if the config files are created with restrictive permissions (mode 600). Docker containers run as specific users (UID 10001) and need read access.
+
 ### No Logs Appearing in Grafana
 
 1. Check if CLIs are writing logs:

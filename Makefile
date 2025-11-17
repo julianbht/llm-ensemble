@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 .PHONY: help install install-dev test test-ingest test-infer test-schema schemas clean
 .PHONY: db db-down db-init db-logs db-status autocomplete update-pricing
-.PHONY: observability observability-down observability-logs observability-status infra infra-down
+.PHONY: observability observability-down observability-reset observability-logs observability-status infra infra-down
 
 export PYTHONUNBUFFERED=1
 
@@ -23,6 +23,7 @@ help:
 	@echo "Observability (Grafana/Loki/Alloy):"
 	@echo "  make observability        - Start observability stack (Grafana, Loki, Alloy)"
 	@echo "  make observability-down   - Stop observability stack"
+	@echo "  make observability-reset  - Reset observability stack (clear all data and restart)"
 	@echo "  make observability-status - Check observability services status"
 	@echo "  make observability-logs   - View observability logs (all services)"
 	@echo ""
@@ -134,6 +135,17 @@ observability-down:
 	@echo "Stopping observability stack..."
 	@docker compose -p llm-ensemble-observability -f docker/docker-compose.observability.yml down
 	@echo "Observability stack stopped (data preserved in volumes)"
+
+observability-reset:
+	@echo "Resetting observability stack (clearing all data)..."
+	@docker compose -p llm-ensemble-observability -f docker/docker-compose.observability.yml down -v
+	@echo "All observability data cleared (Loki logs, Grafana dashboards)"
+	@echo "Restarting with fresh volumes..."
+	@docker compose -p llm-ensemble-observability -f docker/docker-compose.observability.yml up -d
+	@sleep 3
+	@echo ""
+	@echo "Observability stack reset complete!"
+	@echo "Grafana: http://localhost:3000"
 
 observability-status:
 	@echo "Observability Services Status:"

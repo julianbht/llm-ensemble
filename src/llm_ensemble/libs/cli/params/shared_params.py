@@ -14,7 +14,7 @@ from llm_ensemble.libs.cli.params.types import (
     ModelConfigParamType,
     PromptConfigParamType,
     RetryConfigParamType,
-    TaggedRunParamType,
+    RunInputParamType,
 )
 
 InputPath = Annotated[

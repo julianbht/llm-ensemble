@@ -20,6 +20,7 @@ from llm_ensemble.libs.cli.params import (
     InferIoCfg,
     RetryCfg,
     Tag,
+    IngestRunInput,
 )
 
 # Load runtime configuration early
@@ -38,14 +39,7 @@ def infer(
     model_cfg: ModelCfg,
     prompt_cfg: PromptCfg,
     io_cfg: InferIoCfg,
-    input_run_name: Annotated[
-        str,
-        typer.Option(
-            "--input",
-            "-i",
-            help="Ingest run name to read samples from (e.g., 'my_ingest_run' or '@my-tag')",
-        ),
-    ],
+    input_run_name: IngestRunInput,
     # Optional parameters
     retry_cfg: RetryCfg = "standard",
     limit: Limit = None,
@@ -60,7 +54,7 @@ def infer(
         OPENROUTER_API_KEY: OpenRouter API key (required for OpenRouter models)
         HF_TOKEN: HuggingFace API token (required for HF models)
     """
-    # Resolve tag if input starts with @
+    # Resolve tag if input starts with @ (already validated by RunInputParamType)
     from llm_ensemble.libs.runtime.tag_manager import TagManager
     input_run_name = TagManager.resolve_input(input_run_name, "ingest")
     

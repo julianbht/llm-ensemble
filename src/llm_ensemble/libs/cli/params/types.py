@@ -181,21 +181,25 @@ class RetryConfigParamType(ConfigParamType):
         )
 
 
-class TaggedRunParamType(click.ParamType):
-    """Click parameter type for tagged run references.
+class RunInputParamType(click.ParamType):
+    """Click parameter type for run inputs that support both run names and @tags.
     
-    Validates that a tag exists for the source CLI and displays available
-    tags with helpful error messages. Tags are resolved to run names at
-    runtime via TagManager.
+    Accepts either:
+    - Direct run name: "20251117_102232_llmjudge-json"
+    - Tagged reference: "@my-experiment"
+    
+    Validates tagged references and provides helpful error messages with
+    available tags when a tag doesn't exist.
     
     Example:
-        infer --input-tag my-experiment  # Resolves to ingest run tagged "my-experiment"
+        infer --input @my-experiment  # Resolves to ingest run tagged "my-experiment"
+        infer --input 20251117_102232_llmjudge-json  # Uses run name directly
     """
     
-    name = "TAG"
+    name = "RUN"
     
     def __init__(self, source_cli: str) -> None:
-        """Initialize tagged run parameter type.
+        """Initialize run input parameter type.
         
         Args:
             source_cli: The CLI that created the runs (e.g., "ingest" for infer's input)
@@ -203,7 +207,7 @@ class TaggedRunParamType(click.ParamType):
         self.source_cli = source_cli
     
     def get_metavar(self, param):  # type: ignore[override]
-        return "TAG"
+        return "RUN"
     
     def convert(self, value, param, ctx):  # type: ignore[override]
         if value in (None, ""):
@@ -212,36 +216,45 @@ class TaggedRunParamType(click.ParamType):
         # Import here to avoid circular dependency
         from llm_ensemble.libs.runtime.tag_manager import TagManager
         
-        # Check if tag exists
-        if not TagManager.tag_exists(value, self.source_cli):
-            available = TagManager.list_tags(self.source_cli)
-            
-            if available:
-                self.fail(
-                    f"Tag '{value}' not found for CLI '{self.source_cli}'.\n"
-                    f"Available tags: {', '.join(available)}\n"
-                    f"Tip: Use --input <run_name> to specify run directly.",
-                    param,
-                    ctx,
-                )
-            else:
-                self.fail(
-                    f"Tag '{value}' not found. No tagged runs exist for CLI '{self.source_cli}'.\n"
-                    f"Tip: Tag a run using: {self.source_cli} --tag <tag_name>\n"
-                    f"Or use --input <run_name> to specify run directly.",
-                    param,
-                    ctx,
-                )
+        # If it starts with @, validate the tag exists
+        if value.startswith("@"):
+            tag_name = value[1:]
+            if not TagManager.tag_exists(tag_name, self.source_cli):
+                available = TagManager.list_tags(self.source_cli)
+                
+                if available:
+                    self.fail(
+                        f"Tag '{tag_name}' not found for CLI '{self.source_cli}'.\n"
+                        f"Available tags: {', '.join(available)}\n"
+                        f"Tip: You can also use --input <run_name> to specify run directly.",
+                        param,
+                        ctx,
+                    )
+                else:
+                    self.fail(
+                        f"Tag '{tag_name}' not found. No tagged runs exist for CLI '{self.source_cli}'.\n"
+                        f"Tip: Tag a run using: {self.source_cli} --tag <tag_name>\n"
+                        f"Or use --input <run_name> to specify run directly.",
+                        param,
+                        ctx,
+                    )
         
+        # Return as-is (will be resolved later by TagManager.resolve_input)
         return value
     
     def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
-        """Provide shell completion for available tags."""
+        """Provide shell completion for available tags (with @ prefix)."""
         from llm_ensemble.libs.runtime.tag_manager import TagManager
         
-        available = TagManager.list_tags(self.source_cli)
-        return [
-            click.shell_completion.CompletionItem(tag)
-            for tag in available
-            if tag.startswith(incomplete)
-        ]
+        # If user is typing @, complete with tags
+        if incomplete.startswith("@"):
+            tag_prefix = incomplete[1:]
+            available = TagManager.list_tags(self.source_cli)
+            return [
+                click.shell_completion.CompletionItem(f"@{tag}")
+                for tag in available
+                if tag.startswith(tag_prefix)
+            ]
+        
+        # Otherwise, could complete with run names (future enhancement)
+        return []

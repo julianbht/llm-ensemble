@@ -16,7 +16,7 @@ from .shared_params import (
 )
 from .aggregate import AggregateIoCfg
 from .ingest import IngestIoCfg
-from .infer import InferIoCfg
+from .infer import InferIoCfg, IngestRunInput
 
 __all__ = [
     "InputPath",
@@ -34,4 +34,5 @@ __all__ = [
     "AggregateIoCfg",
     "IngestIoCfg",
     "InferIoCfg",
+    "IngestRunInput",
 ]

@@ -9,7 +9,6 @@ This adapter delegates ORM mapping to the mappers module for bidirectional symme
 from __future__ import annotations
 from typing import List, Dict, Tuple
 from uuid import UUID
-import structlog
 
 from sqlalchemy.orm import Session
 
@@ -30,6 +29,7 @@ from llm_ensemble.ingest.adapters.io.mappers import (
     judging_sample_to_orm,
     ingest_run_info_to_orm,
 )
+from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.db import (
     get_engine,
     session_context,
@@ -57,7 +57,7 @@ class SqlWriter(DatasetWriter):
         """Initialize SQL writer with its own logger."""
         self.database_url = database_url
         self.engine = get_engine(database_url)
-        self.logger = structlog.get_logger().bind(component="sql_writer")
+        self.logger = get_logger(component="sql_writer")
 
     def write(
         self,

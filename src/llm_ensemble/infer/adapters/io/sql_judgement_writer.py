@@ -22,7 +22,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Tuple
 from uuid import UUID
-import structlog
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -30,6 +29,7 @@ from sqlalchemy.exc import IntegrityError
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
+from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.db import (
     get_engine,
     get_session,
@@ -106,8 +106,8 @@ class SqlJudgementWriter(JudgementWriter):
         # Incremental write summary builder
         self._write_summary: Optional[WriteSummary] = None
 
-        # Logger for this adapter
-        self.logger = structlog.get_logger().bind(component="sql_judgement_writer")
+        # Logger for this adapter (includes CLI context from orchestrator)
+        self.logger = get_logger(component="sql_judgement_writer")
 
     def open(self, run_dir: Path, run_info: InferRunInfo) -> "SqlJudgementWriter":
         """Open database session and initialize run metadata.

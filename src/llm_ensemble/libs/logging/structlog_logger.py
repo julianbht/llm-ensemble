@@ -202,13 +202,53 @@ def configure_logger(
         force=True,  # Override any existing config
     )
 
-    # Create logger and bind observability context
+    # Bind observability context to contextvars (process-wide)
+    # This makes the context available to all loggers in the process
     # These fields will appear in log files but are stripped from console output
-    logger = structlog.get_logger()
     bound_context = {"cli": cli_name}
     if run_name:
         bound_context["run_name"] = run_name
     if run_type:
         bound_context["run_type"] = run_type
+    
+    structlog.contextvars.bind_contextvars(**bound_context)
+    
+    # Return a logger (context is now global via contextvars)
+    return structlog.get_logger()
 
-    return logger.bind(**bound_context)
+
+def get_logger(component: Optional[str] = None) -> structlog.stdlib.BoundLogger:
+    """Get a logger with optional component binding.
+    
+    This should be called AFTER configure_logger() has been called by the orchestrator.
+    The logger will automatically include CLI context (cli, run_name, run_type) from
+    contextvars, plus any component name you provide.
+    
+    Args:
+        component: Optional component name to bind to the logger (e.g., "sql_writer")
+    
+    Returns:
+        Configured structlog logger with CLI context and optional component binding
+        
+    Example:
+        # In orchestrator
+        configure_logger(cli_name="infer", run_name="test_run")
+        
+        # In adapter/service
+        logger = get_logger(component="sql_writer")
+        logger.info("write_datasets", created=5, skipped=2)
+        # Output includes: cli=infer, run_name=test_run, component=sql_writer
+    """
+    logger = structlog.get_logger()
+    if component:
+        logger = logger.bind(component=component)
+    return logger
+
+
+def clear_logging_context() -> None:
+    """Clear the global logging context.
+    
+    This should be called at the end of a CLI run to prevent context leaking
+    between runs (especially important for testing).
+    """
+    structlog.contextvars.clear_contextvars()

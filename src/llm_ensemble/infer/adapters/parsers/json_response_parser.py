@@ -8,11 +8,11 @@ Handles its own logging.
 from __future__ import annotations
 import json
 import re
-import structlog
 
 from llm_ensemble.infer.ports import ResponseParser
 from llm_ensemble.infer.schemas.llm_judgement import LLMScore
 from llm_ensemble.infer.schemas.warnings import ParserWarning, ParserWarningCode
+from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
@@ -36,7 +36,7 @@ class JsonResponseParser(ResponseParser):
             score_field: Name of the JSON field containing the relevance score (default: "O")
         """
         self.score_field = score_field
-        self.logger = structlog.get_logger().bind(component="json_response_parser")
+        self.logger = get_logger(component="json_response_parser")
 
     def parse(self, raw_text: str) -> LLMScore:
         """Parse JSON response to extract relevance label.

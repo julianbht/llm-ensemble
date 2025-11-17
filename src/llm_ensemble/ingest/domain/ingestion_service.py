@@ -7,12 +7,12 @@ It depends only on port abstractions and handles its own logging.
 from __future__ import annotations
 from pathlib import Path
 from typing import Optional
-import structlog
 
 from llm_ensemble.ingest.schemas import NormalizedDataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
 from llm_ensemble.ingest.ports import DatasetReader, DatasetWriter
+from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 from llm_ensemble.libs.logging.log_events import IngestLogEvent
 
@@ -37,7 +37,7 @@ class IngestionService:
         """
         self.dataset_reader = dataset_reader
         self.dataset_writer = dataset_writer
-        self.logger = structlog.get_logger().bind(component="ingestion_service")
+        self.logger = get_logger(component="ingestion_service")
 
     def ingest_dataset(
         self,

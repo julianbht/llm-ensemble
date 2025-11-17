@@ -7,7 +7,6 @@ It depends only on port abstractions and handles its own logging.
 from __future__ import annotations
 from pathlib import Path
 from typing import Optional
-import structlog
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement, LLMResponse, LLMScore
 from llm_ensemble.infer.schemas import ModelConfig
@@ -20,6 +19,7 @@ from llm_ensemble.infer.ports import (
     ResponseParser,
     PromptBuilder,
 )
+from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 
@@ -53,7 +53,7 @@ class InferenceService:
         self.prompt_builder = prompt_builder
         self.llm_provider = llm_provider
         self.response_parser = response_parser
-        self.logger = structlog.get_logger().bind(component="inference_service")
+        self.logger = get_logger(component="inference_service")
 
     def run_inference(
         self,

@@ -9,12 +9,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Optional
-import structlog
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
+from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.utils.entity_filenames import get_entity_filename
 from llm_ensemble.libs.logging.log_events import InferWriteEvent
 
@@ -47,7 +47,7 @@ class FullyPopulatedJsonWriter(JudgementWriter):
         self.output_path: Optional[Path] = None
         self.manifest_path: Optional[Path] = None
         self.judgements: list[LLMJudgement] = []
-        self.logger = structlog.get_logger().bind(component="json_writer")
+        self.logger = get_logger(component="json_writer")
 
     def open(self, run_dir: Path, run_info: InferRunInfo) -> "FullyPopulatedJsonWriter":
         """Initialize writer, write manifest, and prepare for streaming.

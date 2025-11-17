@@ -6,11 +6,11 @@ Handles its own logging.
 
 from __future__ import annotations
 import json
-import structlog
 
 from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, NormalizedDataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.ports import DatasetWriter
+from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.utils.entity_filenames import get_entity_filename
 from llm_ensemble.libs.logging.log_events import IngestWriteEvent
 
@@ -38,7 +38,7 @@ class FullyPopulatedJsonWriter(DatasetWriter):
 
     def __init__(self):
         """Initialize JSON writer with its own logger."""
-        self.logger = structlog.get_logger().bind(component="json_writer")
+        self.logger = get_logger(component="json_writer")
 
     def write(
         self,

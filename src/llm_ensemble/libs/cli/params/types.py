@@ -108,6 +108,16 @@ class ConfigParamType(click.ParamType):
             )
         return value
 
+    def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
+        """Provide shell completion for available configs."""
+        config_dir = self._config_dir()
+        available = self._available(config_dir)
+        return [
+            click.shell_completion.CompletionItem(cfg)
+            for cfg in available
+            if cfg.startswith(incomplete)
+        ]
+
 
 class IOConfigParamType(ConfigParamType):
     """Click parameter type that validates CLI-specific I/O configs."""

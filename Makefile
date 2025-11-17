@@ -180,7 +180,7 @@ infra:
 
 infra-down:
 	@echo "Stopping all infrastructure services..."
-	@docker-compose down
+	@docker compose -p llm-ensemble down
 	@docker compose -p llm-ensemble-observability -f docker/docker-compose.observability.yml down
 	@echo "All services stopped (data preserved in volumes)"
 

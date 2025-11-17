@@ -206,7 +206,7 @@ class RunInputParamType(click.ParamType):
         """
         self.source_cli = source_cli
     
-    def get_metavar(self, param):  # type: ignore[override]
+    def get_metavar(self, param, ctx=None):  # type: ignore[override]
         return "RUN"
     
     def convert(self, value, param, ctx):  # type: ignore[override]

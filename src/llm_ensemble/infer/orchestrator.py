@@ -33,7 +33,7 @@ def run_inference(
     retry_config: RetryConfig,
     io_config: IOConfig,
     logging_config: LoggingConfig,
-    input_file: Optional[Path],
+    input_run_name: str,
     model_config_name: str,
     prompt_config_name: str,
     retry_config_name: str,
@@ -59,7 +59,7 @@ def run_inference(
         retry_config: Retry configuration (already loaded and validated)
         io_config: I/O configuration (already loaded and validated with overrides applied)
         logging_config: Logging configuration (controls pretty printing and log saving)
-        input_file: Input file with JudgingExample records (optional for database-backed readers)
+        input_run_name: Ingest run identifier (e.g., "my_ingest_run")
         model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
         prompt_config_name: Name of the prompt config file (e.g., "thomas-et-al-prompt")
         retry_config_name: Name of the retry config file (e.g., "standard")
@@ -70,7 +70,7 @@ def run_inference(
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
 
     Raises:
-        FileNotFoundError: If input is invalid (raised by adapter during read)
+        FileNotFoundError: If input run doesn't exist (raised by adapter during read)
         ValueError: If adapter is not recognized or config is invalid
     """
 
@@ -96,7 +96,7 @@ def run_inference(
         prompt_config=prompt_config,
         retry_config=retry_config,
         io_config=io_config,
-        input_file=str(input_file) if input_file else None,
+        input_run_name=input_run_name,
         limit=limit,
         run_type=RunType.OFFICIAL if official else RunType.TEST,
         notes=notes,
@@ -130,7 +130,7 @@ def run_inference(
         provider=model_config.provider,
         io_format=io_config_name,
         prompt=prompt_config_name,
-        input_file=str(input_file) if input_file else "database",
+        input_run_name=input_run_name,
         limit=limit,
     )
     logger.info(InferLogEvent.RUN_DIRECTORY_CREATED, path=str(run_dir))
@@ -154,7 +154,7 @@ def run_inference(
     # Run inference pipeline
     try:
         summary = service.run_inference(
-            input_path=input_file,
+            run_name=input_run_name,
             model_config=model_config,
             run_info=run_info,
             run_dir=run_dir,
@@ -164,7 +164,6 @@ def run_inference(
         logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=judgement_count)
 
         # Write standalone summary.json for convenience (not source of truth)
-        # Note: summary contains write_summary with aggregate write statistics
         write_standalone_summary(summary, run_dir)
         logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(run_dir / "summary.json"))
 

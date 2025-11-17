@@ -9,7 +9,6 @@ using SQLAlchemy sessions from the libs/db layer.
 """
 
 from __future__ import annotations
-from pathlib import Path
 from typing import Optional
 
 from sqlalchemy.orm import joinedload
@@ -37,9 +36,9 @@ class SqlJudgingSampleReader(ExampleReader):
     impedance mismatch between relational entities and domain objects.
 
     Architecture:
-    - Implements same interface as NdjsonExampleReader (unified port)
+    - Implements same interface as FullyPopulatedJsonReader (unified port)
     - Data mapper logic lives inside this adapter (preserves domain purity)
-    - Queries by ingest run name passed via input_path parameter
+    - Queries by ingest run name (string parameter)
 
     Database connection:
     - Reads DATABASE_URL from environment (.env file)
@@ -55,13 +54,14 @@ class SqlJudgingSampleReader(ExampleReader):
 
     def read(
         self,
-        input_path: Path,
+        run_name: str,
         limit: Optional[int] = None,
     ) -> list[JudgingSample]:
         """Read judging samples from database by ingest run name.
 
         Args:
-            input_path: Path object interpreted as ingest run name (string)
+            run_name: Ingest run identifier (e.g., "my_ingest_run")
+                     Queries database for samples associated with this run
             limit: Optional maximum number of samples to read
 
         Returns:
@@ -71,9 +71,6 @@ class SqlJudgingSampleReader(ExampleReader):
             FileNotFoundError: If ingest run doesn't exist in database
             ValueError: If database query fails or data is invalid
         """
-        # Extract run name from path (interpret Path as run name string)
-        run_name = str(input_path)
-
         # Get database engine and create session
         engine = get_engine()  # Reads DATABASE_URL from .env
         session = get_session(engine)
@@ -87,8 +84,8 @@ class SqlJudgingSampleReader(ExampleReader):
             )
 
             if not ingest_run:
-                raise ValueError(
-                    f"Ingest run '{run_name}' not found in database. "
+                raise FileNotFoundError(
+                    f"Ingest run '{run_name}' not found in database."
                 )
 
             # 2. Query judging samples with eager loading of relationships

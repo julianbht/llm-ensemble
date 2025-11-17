@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Annotated
 import typer
 
 from llm_ensemble.infer.orchestrator import run_inference
@@ -8,7 +9,6 @@ from llm_ensemble.libs.config.logging_config_loader import load_logging_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
 from llm_ensemble.libs.cli.params import (
-    InputPath,
     RunName,
     LogCfg,
     Official,
@@ -37,7 +37,14 @@ def infer(
     model_cfg: ModelCfg,
     prompt_cfg: PromptCfg,
     io_cfg: InferIoCfg,
-    input_path: InputPath,
+    input_run_name: Annotated[
+        str,
+        typer.Option(
+            "--input",
+            "-i",
+            help="Ingest run name to read samples from (e.g., 'my_ingest_run')",
+        ),
+    ],
     # Optional parameters
     retry_cfg: RetryCfg = "standard",
     limit: Limit = None,
@@ -77,7 +84,7 @@ def infer(
         retry_config=retry_config,
         io_config=io_config,
         logging_config=logging_config,
-        input_file=input_path,
+        input_run_name=input_run_name,
         model_config_name=model_cfg,
         prompt_config_name=prompt_cfg,
         retry_config_name=retry_cfg,

@@ -57,7 +57,7 @@ class InferenceService:
 
     def run_inference(
         self,
-        input_path: Path,
+        run_name: str,
         model_config: ModelConfig,
         run_info: InferRunInfo,
         run_dir: Path,
@@ -77,7 +77,7 @@ class InferenceService:
         3. Calculating statistics including warnings summary from all stages
 
         Args:
-            input_path: Path to input examples
+            run_name: Ingest run identifier (reader resolves to file path)
             model_config: Model configuration
             run_info: Immutable runtime context (created by orchestrator, attached to each judgement)
             run_dir: Run directory where output should be written (writer determines file structure)
@@ -92,8 +92,8 @@ class InferenceService:
         summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
 
-        # Read JudgingSample objects
-        samples = self.example_reader.read(input_path, limit=limit)
+        # Read JudgingSample objects (reader resolves run_name to path)
+        samples = self.example_reader.read(run_name, limit=limit)
 
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []

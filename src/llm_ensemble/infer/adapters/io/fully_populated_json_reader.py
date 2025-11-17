@@ -5,11 +5,11 @@ Reads judging samples from a single JSON array with all objects fully populated.
 
 from __future__ import annotations
 import json
-from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.infer.ports import ExampleReader
+from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
 class FullyPopulatedJsonReader(ExampleReader):
@@ -24,26 +24,32 @@ class FullyPopulatedJsonReader(ExampleReader):
             {"query": {...}, "document": {...}, "gold_score": 2, "run_info": {...}},
             {"query": {...}, "document": {...}, "gold_score": 1, "run_info": {...}}
         ]
+    
+    Uses PathManager to resolve run_name to file path, assuming ingest CLI output structure.
     """
 
     def read(
         self,
-        input_path: Path,
+        run_name: str,
         limit: Optional[int] = None,
     ) -> list[JudgingSample]:
-        """Read judging samples from a JSON array file.
+        """Read judging samples from an ingest run output file.
 
         Args:
-            input_path: Path to JSON file containing array of samples
+            run_name: Ingest run identifier (e.g., "my_ingest_run")
+                     Resolved to artifacts/runs/ingest/{test|official}/{run_name}/judging_samples.json
             limit: Optional maximum number of samples to read
 
         Returns:
             List of JudgingSample objects
 
         Raises:
-            FileNotFoundError: If input_path doesn't exist
+            FileNotFoundError: If run directory or judging_samples.json doesn't exist
             ValueError: If JSON is invalid or samples don't match schema
         """
+        # Resolve run_name to file path using PathManager
+        input_path = PathManager.get_ingest_output_file(run_name)
+        
         if not input_path.exists():
             raise FileNotFoundError(f"Input file not found: {input_path}")
 

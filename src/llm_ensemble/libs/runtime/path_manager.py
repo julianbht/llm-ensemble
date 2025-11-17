@@ -136,3 +136,88 @@ class PathManager:
         """
         run_type = "official" if official else "test"
         return PathManager.get_artifacts_dir() / "runs" / cli_name / run_type / run_name
+
+    @staticmethod
+    def resolve_run_dir(
+        cli_name: str,
+        run_name: str,
+    ) -> Path:
+        """Resolve a run name to its directory path by checking both test and official.
+
+        Searches for the run in this order:
+        1. test/{run_name}/
+        2. official/{run_name}/
+
+        Args:
+            cli_name: CLI name (e.g., "ingest", "infer", "aggregate", "evaluate")
+            run_name: Run identifier (e.g., "20250128_143022_gpt-oss-20b")
+
+        Returns:
+            Path to run directory
+
+        Raises:
+            FileNotFoundError: If run directory doesn't exist in either test or official
+        """
+        # Try test first (most common)
+        test_run_dir = PathManager.get_run_dir(cli_name, run_name, official=False)
+        if test_run_dir.exists():
+            return test_run_dir
+
+        # Try official
+        official_run_dir = PathManager.get_run_dir(cli_name, run_name, official=True)
+        if official_run_dir.exists():
+            return official_run_dir
+
+        # Not found
+        raise FileNotFoundError(
+            f"Run '{run_name}' not found for CLI '{cli_name}'. "
+            f"Checked:\n  - {test_run_dir}\n  - {official_run_dir}"
+        )
+
+    @staticmethod
+    def get_ingest_output_file(run_name: str) -> Path:
+        """Get the output file path for an ingest run.
+
+        Args:
+            run_name: Ingest run identifier
+
+        Returns:
+            Path to judging_samples.json file in the ingest run directory
+
+        Raises:
+            FileNotFoundError: If run directory doesn't exist
+        """
+        run_dir = PathManager.resolve_run_dir("ingest", run_name)
+        return run_dir / "judging_samples.json"
+
+    @staticmethod
+    def get_infer_output_file(run_name: str) -> Path:
+        """Get the output file path for an infer run.
+
+        Args:
+            run_name: Infer run identifier
+
+        Returns:
+            Path to llm_judgements.json file in the infer run directory
+
+        Raises:
+            FileNotFoundError: If run directory doesn't exist
+        """
+        run_dir = PathManager.resolve_run_dir("infer", run_name)
+        return run_dir / "llm_judgements.json"
+
+    @staticmethod
+    def get_aggregate_output_file(run_name: str) -> Path:
+        """Get the output file path for an aggregate run.
+
+        Args:
+            run_name: Aggregate run identifier
+
+        Returns:
+            Path to aggregated_judgements.json file in the aggregate run directory
+
+        Raises:
+            FileNotFoundError: If run directory doesn't exist
+        """
+        run_dir = PathManager.resolve_run_dir("aggregate", run_name)
+        return run_dir / "aggregated_judgements.json"

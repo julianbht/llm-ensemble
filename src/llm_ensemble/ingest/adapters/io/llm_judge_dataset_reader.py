@@ -51,13 +51,13 @@ class LLMJudgeDatasetReader(DatasetReader):
 
     def read(
         self,
-        input_path: Path,
+        input_path: str,
         limit: Optional[int] = None,
     ) -> NormalizedDataset:
         """Read and normalize LLM Judge dataset.
 
         Args:
-            input_path: Base directory containing dataset files
+            input_path: Base directory containing dataset files (as string path)
             limit: Optional maximum number of samples to return
 
         Returns:
@@ -67,7 +67,7 @@ class LLMJudgeDatasetReader(DatasetReader):
             FileNotFoundError: If required dataset files are missing
             ValueError: If dataset files are malformed or qrels reference missing queries/documents
         """
-        paths = LlmJudgePaths(input_path)
+        paths = LlmJudgePaths(Path(input_path))
 
         # Create Dataset entity (dataset metadata extracted from data context)
         dataset = Dataset.create("llmjudge", description="LLM Judge Challenge 2024")

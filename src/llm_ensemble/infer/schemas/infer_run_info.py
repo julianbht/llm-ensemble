@@ -93,9 +93,9 @@ class InferRunInfo(RunInfo):
     )
 
     # Input parameters
-    input_file: Optional[str] = Field(
-        default=None,
-        description="Path to input file containing JudgingExample records (optional for database-backed readers)"
+    input_run_name: str = Field(
+        ...,
+        description="Ingest run name to read samples from (e.g., 'my_ingest_run')"
     )
 
     limit: Optional[int] = Field(
@@ -117,7 +117,7 @@ class InferRunInfo(RunInfo):
         prompt_config: PromptConfig,
         retry_config: RetryConfig,
         io_config: IOConfig,
-        input_file: Optional[str] = None,
+        input_run_name: str,
         limit: Optional[int] = None,
         **kwargs
     ) -> "InferRunInfo":
@@ -133,7 +133,7 @@ class InferRunInfo(RunInfo):
             prompt_config: Full prompt configuration
             retry_config: Full retry configuration
             io_config: Full I/O configuration
-            input_file: Optional input file path
+            input_run_name: Ingest run name to read samples from
             limit: Optional example limit
             **kwargs: Additional fields from base RunInfo (git_sha, etc.)
 
@@ -152,7 +152,7 @@ class InferRunInfo(RunInfo):
             prompt_config=prompt_config,
             retry_config=retry_config,
             io_config=io_config,
-            input_file=input_file,
+            input_run_name=input_run_name,
             limit=limit,
             **kwargs
         )

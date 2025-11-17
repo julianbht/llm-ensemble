@@ -15,6 +15,7 @@ from llm_ensemble.libs.cli.params import (
     Limit,
     Override,
     IngestIoCfg,
+    Tag,
 )
 
 # Load runtime configuration early
@@ -37,6 +38,7 @@ def ingest(
     official: Official = False,
     notes: Notes = None,
     override: Override = [],
+    tag: Tag = None,
 ):
     """Normalize raw IR datasets into JudgingSample records."""
 
@@ -62,6 +64,7 @@ def ingest(
         limit=limit,
         official=official,
         notes=notes,
+        tag=tag,
     )
 
 

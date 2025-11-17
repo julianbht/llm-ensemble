@@ -14,6 +14,7 @@ from llm_ensemble.libs.cli.params.types import (
     ModelConfigParamType,
     PromptConfigParamType,
     RetryConfigParamType,
+    TaggedRunParamType,
 )
 
 InputPath = Annotated[
@@ -117,5 +118,13 @@ EnsembleCfg = Annotated[
         "--ensemble-cfg",
         click_type=EnsembleConfigParamType(),
         help=f"Ensemble config name. Configs in {PathManager.get_ensembles_dir().relative_to(PathManager.get_project_root())}",
+    ),
+]
+
+Tag = Annotated[
+    Optional[str],
+    typer.Option(
+        "--tag",
+        help="Tag this run for easy reference by downstream CLIs (e.g., 'my-experiment')",
     ),
 ]

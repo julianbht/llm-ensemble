@@ -179,3 +179,69 @@ class RetryConfigParamType(ConfigParamType):
             config_dir_provider=PathManager.get_retries_dir,
             example_fallback="standard",
         )
+
+
+class TaggedRunParamType(click.ParamType):
+    """Click parameter type for tagged run references.
+    
+    Validates that a tag exists for the source CLI and displays available
+    tags with helpful error messages. Tags are resolved to run names at
+    runtime via TagManager.
+    
+    Example:
+        infer --input-tag my-experiment  # Resolves to ingest run tagged "my-experiment"
+    """
+    
+    name = "TAG"
+    
+    def __init__(self, source_cli: str) -> None:
+        """Initialize tagged run parameter type.
+        
+        Args:
+            source_cli: The CLI that created the runs (e.g., "ingest" for infer's input)
+        """
+        self.source_cli = source_cli
+    
+    def get_metavar(self, param):  # type: ignore[override]
+        return "TAG"
+    
+    def convert(self, value, param, ctx):  # type: ignore[override]
+        if value in (None, ""):
+            return None
+        
+        # Import here to avoid circular dependency
+        from llm_ensemble.libs.runtime.tag_manager import TagManager
+        
+        # Check if tag exists
+        if not TagManager.tag_exists(value, self.source_cli):
+            available = TagManager.list_tags(self.source_cli)
+            
+            if available:
+                self.fail(
+                    f"Tag '{value}' not found for CLI '{self.source_cli}'.\n"
+                    f"Available tags: {', '.join(available)}\n"
+                    f"Tip: Use --input <run_name> to specify run directly.",
+                    param,
+                    ctx,
+                )
+            else:
+                self.fail(
+                    f"Tag '{value}' not found. No tagged runs exist for CLI '{self.source_cli}'.\n"
+                    f"Tip: Tag a run using: {self.source_cli} --tag <tag_name>\n"
+                    f"Or use --input <run_name> to specify run directly.",
+                    param,
+                    ctx,
+                )
+        
+        return value
+    
+    def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
+        """Provide shell completion for available tags."""
+        from llm_ensemble.libs.runtime.tag_manager import TagManager
+        
+        available = TagManager.list_tags(self.source_cli)
+        return [
+            click.shell_completion.CompletionItem(tag)
+            for tag in available
+            if tag.startswith(incomplete)
+        ]

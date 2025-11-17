@@ -42,6 +42,7 @@ def run_inference(
     limit: Optional[int] = None,
     official: bool = False,
     notes: Optional[str] = None,
+    tag: Optional[str] = None,
 ) -> None:
     """Run LLM inference on judging examples with full provenance.
 
@@ -68,6 +69,7 @@ def run_inference(
         limit: Process at most N examples
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
+        tag: Tag name for easy reference by downstream CLIs (e.g., "my-experiment")
 
     Raises:
         FileNotFoundError: If input run doesn't exist (raised by adapter during read)
@@ -108,6 +110,11 @@ def run_inference(
     # Get run directory from run_info and create it
     run_dir = run_info.run_dir
     run_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create tag file if tag provided
+    if tag:
+        from llm_ensemble.libs.runtime.tag_manager import TagManager
+        TagManager.create_tag(run_dir, tag)
 
     # Set up log file path if saving logs
     log_file_path = run_dir / "run.log" if logging_config.save_logs else None

@@ -19,6 +19,7 @@ from llm_ensemble.libs.cli.params import (
     PromptCfg,
     InferIoCfg,
     RetryCfg,
+    Tag,
 )
 
 # Load runtime configuration early
@@ -42,7 +43,7 @@ def infer(
         typer.Option(
             "--input",
             "-i",
-            help="Ingest run name to read samples from (e.g., 'my_ingest_run')",
+            help="Ingest run name to read samples from (e.g., 'my_ingest_run' or '@my-tag')",
         ),
     ],
     # Optional parameters
@@ -53,11 +54,16 @@ def infer(
     official: Official = False,
     notes: Notes = None,
     override: Override = [],
+    tag: Tag = None,
 ):
     """Run LLM inference on judging samples and output structured judgements.
         OPENROUTER_API_KEY: OpenRouter API key (required for OpenRouter models)
         HF_TOKEN: HuggingFace API token (required for HF models)
     """
+    # Resolve tag if input starts with @
+    from llm_ensemble.libs.runtime.tag_manager import TagManager
+    input_run_name = TagManager.resolve_input(input_run_name, "ingest")
+    
     # Load configurations
     model_config = load_model_config(model_cfg)
     prompt_config = load_prompt_config(prompt_cfg)
@@ -93,6 +99,7 @@ def infer(
         limit=limit,
         official=official,
         notes=notes,
+        tag=tag,
     )
 
     

@@ -65,6 +65,11 @@ class CustomConsoleRenderer:
         event_dict.pop("timestamp", None)  # Remove timestamp from output
         event_dict.pop("component", None)  # Remove component from output
 
+        # Remove observability metadata from console (keep minimal)
+        event_dict.pop("cli", None)
+        event_dict.pop("run_name", None)
+        event_dict.pop("run_type", None)
+
         # Build output parts
         parts = []
 
@@ -85,6 +90,7 @@ class CustomConsoleRenderer:
 def configure_logger(
     cli_name: str,
     run_name: Optional[str] = None,
+    run_type: Optional[str] = None,
     pretty_print: bool = True,
     save_logs: bool = False,
     log_file_path: Optional[Path] = None,
@@ -96,6 +102,7 @@ def configure_logger(
     Args:
         cli_name: Name of the CLI (e.g., "ingest", "infer", "aggregate", "evaluate")
         run_name: Optional run ID for context
+        run_type: Optional run type ("test" or "official")
         pretty_print: If True, use human-readable console output with colors.
                      If False, use structured JSON output.
         save_logs: If True, save logs to file (requires log_file_path)
@@ -195,7 +202,13 @@ def configure_logger(
         force=True,  # Override any existing config
     )
 
-    # Create logger without binding context (cli_name and run_name are not needed)
+    # Create logger and bind observability context
+    # These fields will appear in log files but are stripped from console output
     logger = structlog.get_logger()
+    bound_context = {"cli": cli_name}
+    if run_name:
+        bound_context["run_name"] = run_name
+    if run_type:
+        bound_context["run_type"] = run_type
 
-    return logger
+    return logger.bind(**bound_context)

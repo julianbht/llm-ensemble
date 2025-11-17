@@ -12,32 +12,28 @@ loki.source.file "llm_logs" {
   forward_to = [loki.process.parse_json.receiver]
 }
 
-// Process the logs: parse JSON and extract labels
+// Process the logs: parse JSON and extract labels from log content
 loki.process "parse_json" {
   forward_to = [loki.write.loki.receiver]
 
-  // Parse JSON log entries
+  // Parse JSON log entries - all metadata is in the logs themselves
   stage.json {
     expressions = {
+      cli       = "cli",
+      run_name  = "run_name",
+      run_type  = "run_type",
       level     = "level",
       event     = "event",
       timestamp = "timestamp",
     }
   }
 
-  // Extract CLI name and run name from file path
-  // Path format: /var/log/llm-ensemble/<cli>/<test|official>/<run_name>/run.log
-  stage.regex {
-    expression = "^/var/log/llm-ensemble/(?P<cli>[^/]+)/(?P<run_type>[^/]+)/(?P<run_name>[^/]+)/run.log$"
-    source     = "filename"
-  }
-
-  // Add labels
+  // Add labels from parsed JSON fields
   stage.labels {
     values = {
       cli       = "cli",
-      run_type  = "run_type",
       run_name  = "run_name",
+      run_type  = "run_type",
       level     = "level",
       event     = "event",
     }

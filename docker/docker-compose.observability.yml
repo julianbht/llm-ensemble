@@ -1,3 +1,5 @@
+name: llm-ensemble-observability
+
 services:
   # Loki - Log aggregation
   loki:

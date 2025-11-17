@@ -24,6 +24,8 @@
 # Data persistence:
 #   All data is stored in Docker volumes and persists across restarts
 
+name: llm-ensemble
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -42,10 +44,10 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - llm-ensemble
+      - db
 
 networks:
-  llm-ensemble:
+  db:
     driver: bridge
 
 volumes:

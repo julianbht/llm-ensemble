@@ -1,5 +1,9 @@
-# Default logging configuration
+# Human-readable logging configuration
 # Human-readable console output with log file saving enabled
+#
+# WARNING: This config uses pretty_print: true, which produces multi-line JSON
+# in log files. This breaks Grafana/Loki/Alloy log ingestion and dashboards.
+# For observability stack compatibility, use observability.yaml instead.
 
 pretty_print: true
 save_logs: true

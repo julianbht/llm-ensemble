@@ -1,5 +1,9 @@
 # Console-only logging configuration
 # Human-readable console output without saving logs to file
+#
+# WARNING: This config disables log file saving (save_logs: false), which means
+# no logs are sent to Grafana/Loki/Alloy. Dashboards will not show data.
+# For observability stack compatibility, use observability.yaml instead.
 
 pretty_print: true
 save_logs: false

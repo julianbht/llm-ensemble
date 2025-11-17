@@ -33,16 +33,16 @@ def ingest(
     io_cfg: IngestIoCfg,
     limit: Limit = None,
     run_name: RunName = None,
-    log_cfg: LogCfg = "standard",
+    log_cfg: LogCfg = "observability",
     official: Official = False,
     notes: Notes = None,
     override: Override = [],
 ):
     """Normalize raw IR datasets into JudgingSample records."""
-    
+
     # Load configurations
     io_config = load_io_config(io_cfg, cli_name="ingest")
-    logging_config = load_logging_config(log_cfg or "standard")
+    logging_config = load_logging_config(log_cfg or "observability")
 
     # Parse and route overrides if provided
     if override:

@@ -109,7 +109,7 @@ db-logs:
 # Observability management (Grafana, Loki, Alloy)
 observability:
 	@echo "Starting observability stack (Grafana, Loki, Alloy)..."
-	@docker compose -f docker/docker-compose.observability.yml up -d
+	@docker compose -p llm-ensemble-observability -f docker/docker-compose.observability.yml up -d
 	@echo ""
 	@echo "Waiting for services to start..."
 	@sleep 3
@@ -132,24 +132,24 @@ observability:
 
 observability-down:
 	@echo "Stopping observability stack..."
-	@docker compose -f docker/docker-compose.observability.yml down
+	@docker compose -p llm-ensemble-observability -f docker/docker-compose.observability.yml down
 	@echo "Observability stack stopped (data preserved in volumes)"
 
 observability-status:
 	@echo "Observability Services Status:"
 	@echo "=============================="
-	@docker compose -f docker/docker-compose.observability.yml ps
+	@docker compose -p llm-ensemble-observability -f docker/docker-compose.observability.yml ps
 
 observability-logs:
 	@echo "Streaming logs from observability services (Ctrl+C to exit)..."
 	@echo "=============================="
-	@docker compose -f docker/docker-compose.observability.yml logs -f
+	@docker compose -p llm-ensemble-observability -f docker/docker-compose.observability.yml logs -f
 
 # Infrastructure management (all services)
 infra:
 	@echo "Starting all infrastructure services..."
 	@docker-compose up -d
-	@docker compose -f docker/docker-compose.observability.yml up -d
+	@docker compose -p llm-ensemble-observability -f docker/docker-compose.observability.yml up -d
 	@echo ""
 	@echo "All services started!"
 	@echo ""
@@ -169,7 +169,7 @@ infra:
 infra-down:
 	@echo "Stopping all infrastructure services..."
 	@docker-compose down
-	@docker compose -f docker/docker-compose.observability.yml down
+	@docker compose -p llm-ensemble-observability -f docker/docker-compose.observability.yml down
 	@echo "All services stopped (data preserved in volumes)"
 
 schemas:

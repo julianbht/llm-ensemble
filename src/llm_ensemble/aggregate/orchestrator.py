@@ -105,6 +105,7 @@ def run_aggregation(
     logger = configure_logger(
         cli_name="aggregate",
         run_name=run_name,
+        run_type=run_info.run_type,
         pretty_print=logging_config.pretty_print,
         save_logs=logging_config.save_logs,
         log_file_path=log_file_path,

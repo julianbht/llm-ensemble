@@ -28,14 +28,13 @@ loki.process "parse_json" {
     }
   }
 
-  // Add labels from parsed JSON fields
+  // Add only low-cardinality labels (prevents label explosion)
+  // High-cardinality fields (run_name, event) remain in log content and can be queried via JSON parsing
   stage.labels {
     values = {
       cli       = "cli",
-      run_name  = "run_name",
       run_type  = "run_type",
       level     = "level",
-      event     = "event",
     }
   }
 }

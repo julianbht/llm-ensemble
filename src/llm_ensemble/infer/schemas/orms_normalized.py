@@ -130,8 +130,14 @@ class InferRunORM(Base):
         ForeignKey("infer.parser_specs.id"),
         nullable=False,
     )
+    
+    # Reference to source ingest run
+    ingest_run_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ingest.ingest_runs.id"),
+        nullable=False,
+    )
 
-    input_file = Column(String(1024), nullable=False)
     limit = Column(Integer, nullable=True)
     git_sha = Column(String(40), nullable=True)
     git_branch = Column(String(255), nullable=True)
@@ -144,6 +150,7 @@ class InferRunORM(Base):
     prompt_template = relationship("PromptTemplateORM", back_populates="infer_runs")
     parser_spec = relationship("ParserSpecORM", back_populates="infer_runs")
     calls = relationship("LLMCallORM", back_populates="infer_run")
+    # Note: No explicit relationship to IngestRunORM to avoid cross-schema circular imports
 
 
 class ParserSpecORM(Base):

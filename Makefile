@@ -1,5 +1,5 @@
 SHELL := /usr/bin/env bash
-.PHONY: help install install-dev test test-ingest test-infer test-schema schemas clean
+.PHONY: help install install-dev test test-ingest test-infer test-schema schemas clean clean-test-runs
 .PHONY: db db-down db-init db-logs db-status autocomplete update-pricing
 .PHONY: observability observability-down observability-reset observability-logs observability-status infra infra-down
 
@@ -38,9 +38,10 @@ help:
 	@echo "  make test-schema   - Run schema validation tests only"
 	@echo ""
 	@echo "Utilities:"
-	@echo "  make schemas       - Generate JSON schemas from Pydantic models"
-	@echo "  make update-pricing - Update model configs with latest OpenRouter pricing"
-	@echo "  make clean         - Remove cached files"
+	@echo "  make schemas          - Generate JSON schemas from Pydantic models"
+	@echo "  make update-pricing   - Update model configs with latest OpenRouter pricing"
+	@echo "  make clean            - Remove cached files"
+	@echo "  make clean-test-runs  - Remove all test run artifacts (keeps official runs)"
 
 install:
 	pip install -e .
@@ -203,3 +204,30 @@ clean:
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
+
+clean-test-runs:
+	@echo "Cleaning all test run artifacts..."
+	@echo ""
+	@if [ -d artifacts/runs/ingest/test ]; then \
+		echo "Removing ingest test runs..."; \
+		rm -rf artifacts/runs/ingest/test/*; \
+		echo "  Removed artifacts/runs/ingest/test/*"; \
+	fi
+	@if [ -d artifacts/runs/infer/test ]; then \
+		echo "Removing infer test runs..."; \
+		rm -rf artifacts/runs/infer/test/*; \
+		echo "  Removed artifacts/runs/infer/test/*"; \
+	fi
+	@if [ -d artifacts/runs/aggregate/test ]; then \
+		echo "Removing aggregate test runs..."; \
+		rm -rf artifacts/runs/aggregate/test/*; \
+		echo "  Removed artifacts/runs/aggregate/test/*"; \
+	fi
+	@if [ -d artifacts/runs/evaluate/test ]; then \
+		echo "Removing evaluate test runs..."; \
+		rm -rf artifacts/runs/evaluate/test/*; \
+		echo "  Removed artifacts/runs/evaluate/test/*"; \
+	fi
+	@echo ""
+	@echo "Test runs cleaned! Official runs preserved."
+	@echo "Note: Official runs in artifacts/runs/*/official/ were not touched."

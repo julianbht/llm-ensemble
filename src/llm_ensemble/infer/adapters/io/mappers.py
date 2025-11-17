@@ -36,6 +36,7 @@ from llm_ensemble.libs.db import (
     compute_model_spec_uuid,
     compute_prompt_template_uuid,
     compute_parser_spec_uuid,
+    compute_ingest_run_uuid,
 )
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
@@ -167,6 +168,8 @@ def infer_run_info_to_orm(
 
     Note: Foreign key IDs must be provided explicitly as they're derived from
     the related entities (ModelSpec, PromptTemplate, ParserSpec).
+    
+    The ingest_run_id is computed deterministically from the input_run_name.
 
     Args:
         run_info: InferRunInfo context object
@@ -177,6 +180,9 @@ def infer_run_info_to_orm(
     Returns:
         InferRunORM model ready for persistence
     """
+    # Compute ingest run ID from input run name (deterministic UUID)
+    ingest_run_id = compute_ingest_run_uuid(run_info.input_run_name)
+    
     return InferRunORM(
         id=run_info.id,
         run_name=run_info.run_name,
@@ -184,7 +190,7 @@ def infer_run_info_to_orm(
         model_spec_id=model_spec_id,
         prompt_template_id=prompt_template_id,
         parser_spec_id=parser_spec_id,
-        input_file=run_info.input_file or "",
+        ingest_run_id=ingest_run_id,
         limit=run_info.limit,
         git_sha=run_info.git_sha,
         git_branch=run_info.git_branch,

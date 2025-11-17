@@ -20,8 +20,8 @@ help:
 	@echo "  make db-status     - Check database status"
 	@echo "  make db-logs       - View database logs"
 	@echo ""
-	@echo "Observability (Grafana/Loki/Promtail):"
-	@echo "  make observability        - Start observability stack (Grafana, Loki, Promtail)"
+	@echo "Observability (Grafana/Loki/Alloy):"
+	@echo "  make observability        - Start observability stack (Grafana, Loki, Alloy)"
 	@echo "  make observability-down   - Stop observability stack"
 	@echo "  make observability-status - Check observability services status"
 	@echo "  make observability-logs   - View observability logs (all services)"
@@ -106,10 +106,10 @@ db-init:
 db-logs:
 	docker-compose logs -f postgres
 
-# Observability management (Grafana, Loki, Promtail)
+# Observability management (Grafana, Loki, Alloy)
 observability:
-	@echo "Starting observability stack (Grafana, Loki, Promtail)..."
-	docker-compose up -d loki promtail grafana
+	@echo "Starting observability stack (Grafana, Loki, Alloy)..."
+	@docker compose -f docker/docker-compose.observability.yml up -d
 	@echo ""
 	@echo "Waiting for services to start..."
 	@sleep 3
@@ -120,34 +120,36 @@ observability:
 	@echo "   Password: admin"
 	@echo ""
 	@echo "Loki API:    http://localhost:3100"
+	@echo "Alloy UI:    http://localhost:12345"
 	@echo ""
 	@echo "Next steps:"
 	@echo "  1. Open Grafana at http://localhost:3000"
-	@echo "  2. Run a CLI to generate logs (e.g., 'ingest --io llm_judge_ingest --limit 10')"
-	@echo "  3. View logs in Grafana dashboards"
+	@echo "  2. Run a CLI to generate logs (e.g., 'infer --model gpt-oss-20b --prompt thomas-et-al-prompt --io json --input samples.json')"
+	@echo "  3. View logs in the 'LLM Ensemble Overview' dashboard"
 	@echo ""
 	@echo "Status: make observability-status"
 	@echo "Logs:   make observability-logs"
 
 observability-down:
 	@echo "Stopping observability stack..."
-	docker-compose stop loki promtail grafana
+	@docker compose -f docker/docker-compose.observability.yml down
 	@echo "Observability stack stopped (data preserved in volumes)"
 
 observability-status:
 	@echo "Observability Services Status:"
 	@echo "=============================="
-	@docker-compose ps loki promtail grafana
+	@docker compose -f docker/docker-compose.observability.yml ps
 
 observability-logs:
 	@echo "Streaming logs from observability services (Ctrl+C to exit)..."
 	@echo "=============================="
-	docker-compose logs -f loki promtail grafana
+	@docker compose -f docker/docker-compose.observability.yml logs -f
 
 # Infrastructure management (all services)
 infra:
 	@echo "Starting all infrastructure services..."
-	docker-compose up -d
+	@docker-compose up -d
+	@docker compose -f docker/docker-compose.observability.yml up -d
 	@echo ""
 	@echo "All services started!"
 	@echo ""
@@ -162,11 +164,12 @@ infra:
 	@echo "  Password: admin"
 	@echo ""
 	@echo "Initialize DB schema: make db-init"
-	@echo "Check status:         docker-compose ps"
+	@echo "Check status:         make db-status && make observability-status"
 
 infra-down:
 	@echo "Stopping all infrastructure services..."
-	docker-compose down
+	@docker-compose down
+	@docker compose -f docker/docker-compose.observability.yml down
 	@echo "All services stopped (data preserved in volumes)"
 
 schemas:

@@ -1,0 +1,61 @@
+services:
+  # Loki - Log aggregation
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: llm-ensemble-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # Grafana Alloy - Log collection agent
+  alloy:
+    image: grafana/alloy:latest
+    container_name: llm-ensemble-alloy
+    volumes:
+      - ./alloy/alloy-config.alloy:/etc/alloy/config.alloy
+      - ../artifacts/runs:/var/log/llm-ensemble:ro
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - /etc/alloy/config.alloy
+    ports:
+      - "12345:12345"
+    networks:
+      - observability
+    restart: unless-stopped
+    depends_on:
+      - loki
+
+  # Grafana - Visualization and dashboards
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: llm-ensemble-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    networks:
+      - observability
+    restart: unless-stopped
+    depends_on:
+      - loki
+
+networks:
+  observability:
+    driver: bridge
+
+volumes:
+  loki-data:
+  grafana-data:

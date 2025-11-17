@@ -1,0 +1,55 @@
+// Discover all run.log files in the artifacts/runs directory
+local.file_match "llm_logs" {
+  path_targets = [{
+    __path__ = "/var/log/llm-ensemble/**/run.log",
+    __path_exclude__ = "",
+  }]
+}
+
+// Read and tail the discovered log files
+loki.source.file "llm_logs" {
+  targets    = local.file_match.llm_logs.targets
+  forward_to = [loki.process.parse_json.receiver]
+}
+
+// Process the logs: parse JSON and extract labels
+loki.process "parse_json" {
+  forward_to = [loki.write.loki.receiver]
+
+  // Parse JSON log entries
+  stage.json {
+    expressions = {
+      level     = "level",
+      event     = "event",
+      timestamp = "timestamp",
+    }
+  }
+
+  // Extract CLI name and run name from file path
+  // Path format: /var/log/llm-ensemble/<cli>/<test|official>/<run_name>/run.log
+  stage.regex {
+    expression = "^/var/log/llm-ensemble/(?P<cli>[^/]+)/(?P<run_type>[^/]+)/(?P<run_name>[^/]+)/run.log$"
+    source     = "filename"
+  }
+
+  // Add labels
+  stage.labels {
+    values = {
+      cli       = "cli",
+      run_type  = "run_type",
+      run_name  = "run_name",
+      level     = "level",
+      event     = "event",
+    }
+  }
+}
+
+// Write logs to Loki
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+  external_labels = {
+    job = "llm-logs",
+  }
+}

@@ -1,6 +1,7 @@
 SHELL := /usr/bin/env bash
 .PHONY: help install install-dev test test-ingest test-infer test-schema schemas clean
 .PHONY: db db-down db-init db-logs db-status autocomplete update-pricing
+.PHONY: observability observability-down observability-logs observability-status infra infra-down
 
 export PYTHONUNBUFFERED=1
 
@@ -18,6 +19,16 @@ help:
 	@echo "  make db-down       - Stop PostgreSQL database"
 	@echo "  make db-status     - Check database status"
 	@echo "  make db-logs       - View database logs"
+	@echo ""
+	@echo "Observability (Grafana/Loki/Promtail):"
+	@echo "  make observability        - Start observability stack (Grafana, Loki, Promtail)"
+	@echo "  make observability-down   - Stop observability stack"
+	@echo "  make observability-status - Check observability services status"
+	@echo "  make observability-logs   - View observability logs (all services)"
+	@echo ""
+	@echo "Infrastructure (All services):"
+	@echo "  make infra         - Start all infrastructure (DB + Observability)"
+	@echo "  make infra-down    - Stop all infrastructure"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test          - Run all tests"
@@ -94,6 +105,69 @@ db-init:
 
 db-logs:
 	docker-compose logs -f postgres
+
+# Observability management (Grafana, Loki, Promtail)
+observability:
+	@echo "Starting observability stack (Grafana, Loki, Promtail)..."
+	docker-compose up -d loki promtail grafana
+	@echo ""
+	@echo "Waiting for services to start..."
+	@sleep 3
+	@echo ""
+	@echo "Grafana Dashboard:"
+	@echo "   URL:      http://localhost:3000"
+	@echo "   Username: admin"
+	@echo "   Password: admin"
+	@echo ""
+	@echo "Loki API:    http://localhost:3100"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. Open Grafana at http://localhost:3000"
+	@echo "  2. Run a CLI to generate logs (e.g., 'ingest --io llm_judge_ingest --limit 10')"
+	@echo "  3. View logs in Grafana dashboards"
+	@echo ""
+	@echo "Status: make observability-status"
+	@echo "Logs:   make observability-logs"
+
+observability-down:
+	@echo "Stopping observability stack..."
+	docker-compose stop loki promtail grafana
+	@echo "Observability stack stopped (data preserved in volumes)"
+
+observability-status:
+	@echo "Observability Services Status:"
+	@echo "=============================="
+	@docker-compose ps loki promtail grafana
+
+observability-logs:
+	@echo "Streaming logs from observability services (Ctrl+C to exit)..."
+	@echo "=============================="
+	docker-compose logs -f loki promtail grafana
+
+# Infrastructure management (all services)
+infra:
+	@echo "Starting all infrastructure services..."
+	docker-compose up -d
+	@echo ""
+	@echo "All services started!"
+	@echo ""
+	@echo "PostgreSQL Database:"
+	@echo "  Port:     5432"
+	@echo "  User:     llm_ensemble"
+	@echo "  Database: llm_ensemble"
+	@echo ""
+	@echo "Grafana Dashboard:"
+	@echo "  URL:      http://localhost:3000"
+	@echo "  Username: admin"
+	@echo "  Password: admin"
+	@echo ""
+	@echo "Initialize DB schema: make db-init"
+	@echo "Check status:         docker-compose ps"
+
+infra-down:
+	@echo "Stopping all infrastructure services..."
+	docker-compose down
+	@echo "All services stopped (data preserved in volumes)"
 
 schemas:
 	@if [ -d .venv ]; then \

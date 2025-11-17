@@ -42,6 +42,7 @@ class InferLogEvent(str, Enum):
     RUN_DIRECTORY_CREATED = "run_directory_created"
     SENDING_REQUEST = "sending_request"
     RESPONSE_PARSED = "response_parsed"
+    JUDGEMENT_METRICS = "judgement_metrics"
     RETRY_ATTEMPT = "retry_attempt"
     RETRY_EXHAUSTED = "retry_exhausted"
     JUDGEMENT_PERSISTED = "judgement_persisted"

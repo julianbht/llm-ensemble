@@ -135,6 +135,16 @@ class InferenceService:
                     latency_s=f"{latency_s:.1f}",
                 )
 
+                # Log metrics for observability dashboard (cost, agreement, latency)
+                cost_usd = judgement.llm_response.cost_estimate_usd or 0.0
+                agreement = 1 if extracted_score == str(gold_score) else 0
+                self.logger.info(
+                    InferLogEvent.JUDGEMENT_METRICS,
+                    cost_estimate_usd=cost_usd,
+                    agreement=agreement,
+                    latency_s=latency_s,
+                )
+
                 # Full details (DEBUG level)
                 self.logger.debug(
                     "judgement_details",

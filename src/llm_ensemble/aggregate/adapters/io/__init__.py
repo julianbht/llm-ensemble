@@ -1,8 +1,5 @@
 """I/O adapters for aggregate CLI."""
 
-from llm_ensemble.aggregate.adapters.io.json_judgement_reader import (
-    JsonJudgementReader,
-)
 from llm_ensemble.aggregate.adapters.io.sql_judgement_reader import (
     SqlJudgementReader,
 )
@@ -11,7 +8,6 @@ from llm_ensemble.aggregate.adapters.io.json_aggregated_judgement_writer import 
 )
 
 __all__ = [
-    "JsonJudgementReader",
     "SqlJudgementReader",
     "JsonAggregatedJudgementWriter",
 ]

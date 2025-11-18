@@ -9,25 +9,18 @@ from llm_ensemble.libs.schemas.base_config import BaseConfig
 
 class EnsembleConfig(BaseConfig):
     """Configuration for ensemble aggregation strategies.
-    
+
     Specifies which strategy to use via dynamic adapter loading.
-    
+
     Example YAML:
-        strategy: majority_vote
         strategy_module: llm_ensemble.aggregate.adapters.strategies.majority_vote_adapter
         strategy_class: MajorityVoteAdapter
-    
+
+    Note: name_hint is inherited from BaseConfig and typically derived from filename.
+
     Future enhancement: Add tie_breaking_strategy parameter for configurable tie resolution.
     """
-    
-    strategy: str = Field(
-        ...,
-        description=(
-            "Name of the aggregation strategy to use. "
-            "Supported: 'majority_vote', 'weighted_majority'"
-        )
-    )
-    
+
     # Dynamic adapter loading
     strategy_module: str = Field(
         ...,
@@ -37,13 +30,7 @@ class EnsembleConfig(BaseConfig):
         ...,
         description="Strategy adapter class name in UpperCamelCase"
     )
-    
-    # Optional name hint for run_name generation (derived from filename by loader)
-    name_hint: Optional[str] = Field(
-        default=None,
-        description="Short name hint for run_name generation"
-    )
-    
+
     def get_strategy(self) -> Any:
         """Instantiate and return the aggregation strategy adapter.
         

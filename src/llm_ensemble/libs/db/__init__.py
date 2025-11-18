@@ -23,6 +23,7 @@ from llm_ensemble.libs.db.uuid_helpers import (
     compute_judging_sample_uuid,
     compute_ingest_run_uuid,
     compute_infer_run_uuid,
+    compute_aggregate_run_uuid,
     compute_provider_uuid,
     compute_model_spec_uuid,
     compute_prompt_template_uuid,
@@ -30,6 +31,10 @@ from llm_ensemble.libs.db.uuid_helpers import (
     compute_llm_request_uuid,
     compute_llm_response_uuid,
     compute_llm_call_uuid,
+    compute_aggregation_strategy_uuid,
+    compute_aggregated_judgement_uuid,
+    compute_aggregated_score_uuid,
+    compute_judgement_group_membership_uuid,
 )
 
 from llm_ensemble.libs.db.utcnow import utcnow
@@ -43,12 +48,13 @@ __all__ = [
     # Session management
     "get_session",
     "session_context",
-    # UUID helpers
+    # UUID helpers - ingest
     "compute_dataset_uuid",
     "compute_query_uuid",
     "compute_document_uuid",
     "compute_judging_sample_uuid",
     "compute_ingest_run_uuid",
+    # UUID helpers - infer
     "compute_infer_run_uuid",
     "compute_provider_uuid",
     "compute_model_spec_uuid",
@@ -57,6 +63,12 @@ __all__ = [
     "compute_llm_request_uuid",
     "compute_llm_response_uuid",
     "compute_llm_call_uuid",
+    # UUID helpers - aggregate
+    "compute_aggregate_run_uuid",
+    "compute_aggregation_strategy_uuid",
+    "compute_aggregated_judgement_uuid",
+    "compute_aggregated_score_uuid",
+    "compute_judgement_group_membership_uuid",
     # Other db helpers
     "utcnow",
 ]

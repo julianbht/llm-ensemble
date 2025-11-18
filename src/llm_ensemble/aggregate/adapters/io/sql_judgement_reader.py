@@ -99,11 +99,11 @@ class SqlJudgementReader(JudgementReader):
                     .options(
                         # Load request and its judging sample with query/document
                         joinedload(LLMCallORM.llm_request)
-                        .joinedload(LLMRequestORM.judging_sample)
+                        .joinedload(LLMRequestORM.judging_sample_id)
                         .joinedload(JudgingSampleORM.query)
                         .joinedload(QueryORM.dataset),
                         joinedload(LLMCallORM.llm_request)
-                        .joinedload(LLMRequestORM.judging_sample)
+                        .joinedload(LLMRequestORM.judging_sample_id)
                         .joinedload(JudgingSampleORM.document)
                         .joinedload(DocumentORM.dataset),
                         # Load response with parser spec

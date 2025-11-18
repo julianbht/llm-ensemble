@@ -36,8 +36,11 @@ NAMESPACE_MODEL_SPEC = uuid.UUID('4d5e6f78-9012-3456-7890-1abcdef12345')
 NAMESPACE_PROVIDER = uuid.UUID('5e6f7890-1234-5678-9012-3abcdef12346')
 NAMESPACE_PARSER_SPEC = uuid.UUID('6f789012-3456-7890-abcd-1234def56789')
 NAMESPACE_LLM_CALL = uuid.UUID('789012ab-cdef-1234-5678-90abcdef1234')
-NAMESPACE_AGGREGATED_SCORE = uuid.UUID('e4f56789-0abc-def1-2345-67890abcdef1')
-NAMESPACE_AGGREGATED_JUDGEMENT = uuid.UUID('f5678901-abcd-ef12-3456-7890abcdef12')
+
+# Aggregate namespace UUIDs
+NAMESPACE_AGGREGATION_STRATEGY = uuid.UUID('890123bc-def1-2345-6789-0abcdef12345')
+NAMESPACE_AGGREGATED_SCORE = uuid.UUID('a12345de-f123-4567-890a-bcdef1234567')
+NAMESPACE_AGGREGATED_SCORE_LLM_CALL = uuid.UUID('b23456ef-1234-5678-9012-3456789abcde')
 
 # ========================================================================
 # Run Info UUIDs
@@ -139,3 +142,57 @@ def compute_llm_response_uuid(parser_spec_id: uuid.UUID, raw_response: str) -> u
 def compute_llm_call_uuid(llm_request_id: uuid.UUID, infer_run_id: uuid.UUID) -> uuid.UUID:
     natural_key = f"{llm_request_id}:{infer_run_id}"
     return uuid.uuid5(NAMESPACE_LLM_CALL, natural_key)
+
+# ========================================================================
+# Aggregate Entity UUIDs
+# ========================================================================
+
+def compute_aggregation_strategy_uuid(name: str) -> uuid.UUID:
+    """Compute deterministic UUID for aggregation strategy.
+
+    Args:
+        name: Strategy name (e.g., 'majority_vote', 'weighted_majority')
+
+    Returns:
+        Deterministic UUID based on strategy name
+    """
+    return uuid.uuid5(NAMESPACE_AGGREGATION_STRATEGY, name)
+
+
+def compute_aggregated_score_uuid(
+    judging_sample_id: uuid.UUID,
+    aggregate_run_id: uuid.UUID
+) -> uuid.UUID:
+    """Compute deterministic UUID for aggregated score.
+
+    One score per (judging_sample, aggregate_run) pair.
+    Strategy is determined by the aggregate_run (enforces one strategy per run).
+
+    Args:
+        judging_sample_id: UUID of the judging sample being aggregated
+        aggregate_run_id: UUID of the aggregate run
+
+    Returns:
+        Deterministic UUID based on composite key
+    """
+    natural_key = f"{judging_sample_id}:{aggregate_run_id}"
+    return uuid.uuid5(NAMESPACE_AGGREGATED_SCORE, natural_key)
+
+
+def compute_aggregated_score_llm_call_uuid(
+    aggregated_score_id: uuid.UUID,
+    llm_call_id: uuid.UUID
+) -> uuid.UUID:
+    """Compute deterministic UUID for aggregated score LLM call join table.
+
+    Join table linking aggregated scores to their constituent LLM calls.
+
+    Args:
+        aggregated_score_id: UUID of the aggregated score
+        llm_call_id: UUID of the LLM call (individual model judgement)
+
+    Returns:
+        Deterministic UUID based on composite key
+    """
+    natural_key = f"{aggregated_score_id}:{llm_call_id}"
+    return uuid.uuid5(NAMESPACE_AGGREGATED_SCORE_LLM_CALL, natural_key)

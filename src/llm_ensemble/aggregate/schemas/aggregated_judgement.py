@@ -2,6 +2,9 @@
 
 This is the canonical output schema for the aggregate CLI, representing the
 combined judgements from multiple models for a single query-document pair.
+
+Note: With the simplified schema, each run uses exactly one strategy, so this
+schema now contains a single aggregated_score instead of a list.
 """
 
 from __future__ import annotations
@@ -13,41 +16,25 @@ from llm_ensemble.aggregate.schemas.aggregated_score import AggregatedScore
 
 class AggregatedJudgement(BaseModel):
     """Ensemble consensus combining multiple model judgements for a query-document pair.
-    
+
     Contains:
     - judgements: All individual model judgements (with full provenance)
-    - aggregated_scores: Results from applying each strategy (typically one strategy per run)
-    
-    This schema enables multiple aggregation strategies to be applied to the same
-    input judgements, producing different consensus decisions in parallel.
+    - aggregated_score: Result from applying the run's aggregation strategy
+
+    Each aggregate run uses exactly one strategy, so there is one score per judgement.
+    To compare strategies, run the aggregate CLI multiple times with different strategies.
     """
-    
+
     judgements: list[LLMJudgement] = Field(
         ...,
         description=(
-            "All individual model judgements for this query-document pair. "
+            "All individual model judgements for this query-document pair."
         )
     )
-    
-    aggregated_scores: list[AggregatedScore] = Field(
+
+    aggregated_score: AggregatedScore = Field(
         ...,
         description=(
-            "Results from applying aggregation strategies. "
-            "Typically contains one entry per run, but can contain multiple "
-            "if multiple strategies are configured."
+            "Result from applying the aggregation strategy configured for this run."
         )
     )
-    
-    def get_primary_aggregated_score(self) -> AggregatedScore:
-        """Get the primary aggregated score (first strategy result).
-        
-        Convenience method for accessing the main consensus decision when only
-        one strategy is configured (common case).
-        
-        Returns:
-            First aggregated score from the list
-            
-        Raises:
-            IndexError: If no aggregated scores exist
-        """
-        return self.aggregated_scores[0]

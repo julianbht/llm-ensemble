@@ -18,20 +18,17 @@ The schema is in 3NF (Third Normal Form) with the following functional dependenc
    - Each run uses exactly ONE strategy (enforced by design)
 
 3. AggregatedScoreORM:
-   - (judging_sample_id, aggregate_run_id) → {id, final_label, final_confidence, final_reasoning, per_model_votes}
+   - (judging_sample_id, aggregate_run_id) → {id, final_label, final_confidence, final_reasoning}
    - One score per (sample, run) pair
    - judging_sample_id is denormalized (derivable from calls) but required for uniqueness constraint
    - Strategy is determined by aggregate_run.strategy_id (no per-score strategy variation)
-   - per_model_votes stored as ARRAY (not separate rows) because:
-     * Always accessed together (never individually)
-     * Order matters (corresponds to judgements list)
-     * Variable length per judgement
-     * No independent queries on individual votes
+   - Individual model votes NOT stored (derivable from llm_call.response.label via join table)
 
 4. AggregatedScoreLLMCallORM:
    - Composite primary key: (aggregated_score_id, llm_call_id)
    - Pure join table (many-to-many between AggregatedScore and LLMCall)
    - No non-key attributes - satisfies BCNF
+   - Votes derivable via llm_call.response.label (no denormalization)
 
 DESIGN RATIONALE:
 
@@ -179,10 +176,6 @@ class AggregatedScoreORM(Base):
     final_confidence = Column(Float, nullable=True)
     final_reasoning = Column(Text, nullable=False, default="")
 
-    # Per-model votes as ARRAY (ordered, corresponds to judgements list)
-    # Format: [0, 1, 2, null, 1] where null = parsing failure
-    per_model_votes = Column(ARRAY(Integer), nullable=False)
-
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     # Relationships
@@ -198,6 +191,9 @@ class AggregatedScoreLLMCallORM(Base):
 
     Uses composite primary key (aggregated_score_id, llm_call_id).
     Pure join table (BCNF) - no non-key attributes.
+
+    Note: Individual model votes are NOT stored here - they are derivable from
+    llm_call.response.label. This avoids denormalization and maintains single source of truth.
     """
     __tablename__ = "aggregated_score_llm_calls"
     __table_args__ = {"schema": "aggregate"}

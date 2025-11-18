@@ -177,8 +177,8 @@ class ParserSpecORM(Base):
 
     infer_runs = relationship("InferRunORM", back_populates="parser_spec")
 
-    # One parser spec can be used by many parsed responses
-    responses = relationship("LLMResponseORM", back_populates="parser_spec")
+    # One parser spec can be used by many parsed scores
+    scores = relationship("LLMScoreORM", back_populates="parser_spec")
 
 
 class LLMRequestORM(Base):
@@ -189,7 +189,7 @@ class LLMRequestORM(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     judging_sample_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("ingest.judging_samples.id"),  # Cross-schema FK
+        ForeignKey("ingest.judging_samples.id"),
         nullable=False,
     )
     prompt = Column(Text, nullable=False)
@@ -225,10 +225,10 @@ class LLMCallORM(Base):
         nullable=False,
     )
 
-    # Each call has at most one (possibly shared) response
-    response_id = Column(
+    # Each call has at most one (possibly shared) score
+    score_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_responses.id"),
+        ForeignKey("infer.llm_scores.id"),
         nullable=True,
     )
 
@@ -254,13 +254,13 @@ class LLMCallORM(Base):
 
     llm_request = relationship("LLMRequestORM", back_populates="calls")
     infer_run = relationship("InferRunORM", back_populates="calls")
-    response = relationship("LLMResponseORM", back_populates="calls")
+    score = relationship("LLMScoreORM", back_populates="calls")
 
 
-class LLMResponseORM(Base):
-    __tablename__ = "llm_responses"
+class LLMScoreORM(Base):
+    __tablename__ = "llm_scores"
     __natural_key__ = ("parser_spec_id", "raw_response")
-    __uuid_function__ = "compute_llm_response_uuid"
+    __uuid_function__ = "compute_llm_score_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
@@ -285,12 +285,12 @@ class LLMResponseORM(Base):
         UniqueConstraint(
             "parser_spec_id",
             "raw_response",
-            name="uq_response_parser_raw",
+            name="uq_score_parser_raw",
         ),
         {"schema": "infer"},
     )
 
-    # One response can be reused by many calls
-    calls = relationship("LLMCallORM", back_populates="response")
-    parser_spec = relationship("ParserSpecORM", back_populates="responses")
+    # One score can be reused by many calls
+    calls = relationship("LLMCallORM", back_populates="score")
+    parser_spec = relationship("ParserSpecORM", back_populates="scores")
 

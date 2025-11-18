@@ -37,9 +37,9 @@ class WriteSummary(BaseModel):
     # Per-judgement entities (streamed during write_one)
     llm_requests_created: int = Field(default=0, ge=0, description="Number of LLM requests created")
     llm_requests_skipped: int = Field(default=0, ge=0, description="Number of LLM requests skipped (already existed)")
-    llm_responses_created: int = Field(default=0, ge=0, description="Number of LLM responses created")
-    llm_responses_skipped: int = Field(default=0, ge=0, description="Number of LLM responses skipped (already existed)")
-    llm_calls_created: int = Field(default=0, ge=0, description="Number of LLM calls created (joins request+response)")
+    llm_scores_created: int = Field(default=0, ge=0, description="Number of LLM scores created")
+    llm_scores_skipped: int = Field(default=0, ge=0, description="Number of LLM scores skipped (already existed)")
+    llm_calls_created: int = Field(default=0, ge=0, description="Number of LLM calls created (joins request+score)")
 
     def add_providers(self, created: int = 0, skipped: int = 0) -> None:
         """Increment provider counts."""
@@ -71,10 +71,10 @@ class WriteSummary(BaseModel):
         self.llm_requests_created += created
         self.llm_requests_skipped += skipped
 
-    def add_llm_responses(self, created: int = 0, skipped: int = 0) -> None:
-        """Increment LLM response counts."""
-        self.llm_responses_created += created
-        self.llm_responses_skipped += skipped
+    def add_llm_scores(self, created: int = 0, skipped: int = 0) -> None:
+        """Increment LLM score counts."""
+        self.llm_scores_created += created
+        self.llm_scores_skipped += skipped
 
     def add_llm_calls(self, created: int = 1) -> None:
         """Increment LLM call count (always created, never skipped)."""
@@ -90,7 +90,7 @@ class WriteSummary(BaseModel):
             + self.parser_specs_created
             + self.infer_runs_created
             + self.llm_requests_created
-            + self.llm_responses_created
+            + self.llm_scores_created
             + self.llm_calls_created
         )
 
@@ -104,5 +104,5 @@ class WriteSummary(BaseModel):
             + self.parser_specs_skipped
             + self.infer_runs_skipped
             + self.llm_requests_skipped
-            + self.llm_responses_skipped
+            + self.llm_scores_skipped
         )

@@ -16,7 +16,7 @@ from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.orms_normalized import (
     LLMCallORM,
     LLMRequestORM,
-    LLMResponseORM,
+    LLMScoreORM,
     InferRunORM,
 )
 from llm_ensemble.ingest.schemas.orms import (
@@ -91,7 +91,7 @@ class SqlJudgementReader(JudgementReader):
                 # We need to reconstruct full LLMJudgement objects which require:
                 # - LLMCall (latency, retries, cost, tokens)
                 # - LLMRequest (prompt, judging_sample)
-                # - LLMResponse (raw_response, parsed fields, parser warnings)
+                # - LLMScore (raw_response, parsed fields, parser warnings)
                 # - JudgingSample (query, document, gold score)
                 calls_orm = (
                     session.query(LLMCallORM)
@@ -106,9 +106,9 @@ class SqlJudgementReader(JudgementReader):
                         .joinedload(LLMRequestORM.judging_sample_id)
                         .joinedload(JudgingSampleORM.document)
                         .joinedload(DocumentORM.dataset),
-                        # Load response with parser spec
-                        joinedload(LLMCallORM.response).joinedload(
-                            LLMResponseORM.parser_spec
+                        # Load score with parser spec
+                        joinedload(LLMCallORM.score).joinedload(
+                            LLMScoreORM.parser_spec
                         ),
                     )
                     .all()

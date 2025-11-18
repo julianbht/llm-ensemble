@@ -28,7 +28,7 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     ParserSpecORM,
     InferRunORM,
     LLMRequestORM,
-    LLMResponseORM,
+    LLMScoreORM,
     LLMCallORM,
 )
 from llm_ensemble.libs.db import (
@@ -221,23 +221,23 @@ def llm_judgement_to_request_orm(judgement: LLMJudgement, request_id: UUID) -> L
 
 
 # ============================================================================
-# LLMResponse Mappers
+# LLMScore Mappers
 # ============================================================================
 
-def llm_judgement_to_response_orm(
+def llm_judgement_to_score_orm(
     judgement: LLMJudgement,
-    response_id: UUID,
+    score_id: UUID,
     parser_spec_id: UUID
-) -> LLMResponseORM:
-    """Convert LLMJudgement to LLMResponseORM.
+) -> LLMScoreORM:
+    """Convert LLMJudgement to LLMScoreORM.
 
     Args:
         judgement: LLMJudgement domain object
-        response_id: Pre-computed response UUID
+        score_id: Pre-computed score UUID
         parser_spec_id: Parser spec UUID (for foreign key)
 
     Returns:
-        LLMResponseORM model ready for persistence
+        LLMScoreORM model ready for persistence
     """
     # Extract parsed fields from llm_score (may be None if parsing failed)
     label = judgement.llm_score.label if judgement.llm_score else None
@@ -253,8 +253,8 @@ def llm_judgement_to_response_orm(
     if label is None:
         label = RelevanceScore.NOT_RELEVANT
 
-    return LLMResponseORM(
-        id=response_id,
+    return LLMScoreORM(
+        id=score_id,
         parser_spec_id=parser_spec_id,
         raw_response=judgement.llm_response.raw_response,
         label=label,
@@ -273,7 +273,7 @@ def llm_judgement_to_call_orm(
     call_id: UUID,
     request_id: UUID,
     infer_run_id: UUID,
-    response_id: UUID
+    score_id: UUID
 ) -> LLMCallORM:
     """Convert LLMJudgement to LLMCallORM.
 
@@ -282,7 +282,7 @@ def llm_judgement_to_call_orm(
         call_id: Pre-computed call UUID
         request_id: Request UUID (for foreign key)
         infer_run_id: Infer run UUID (for foreign key)
-        response_id: Response UUID (for foreign key)
+        score_id: Score UUID (for foreign key)
 
     Returns:
         LLMCallORM model ready for persistence
@@ -291,7 +291,7 @@ def llm_judgement_to_call_orm(
         id=call_id,
         llm_request_id=request_id,
         infer_run_id=infer_run_id,
-        response_id=response_id,
+        score_id=score_id,
         latency_ms=judgement.llm_response.latency_ms,
         retries=judgement.llm_response.retries,
         cost_estimate_usd=judgement.llm_response.cost_estimate_usd,

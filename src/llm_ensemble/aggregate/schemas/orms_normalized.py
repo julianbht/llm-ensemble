@@ -35,7 +35,7 @@ DESIGN RATIONALE:
 - AggregatedScore is the primary output entity (no thin wrapper entity needed)
 - Semantic constraints (one score per sample per run) enforced by pipeline, not DB
 - AggregatedScoreLLMCall uses composite PK (no surrogate ID or timestamp needed)
-- Individual votes not denormalized (derivable from LLMResponseORM.label)
+- Individual votes not denormalized (derivable from LLMScoreORM.label)
 """
 
 from __future__ import annotations
@@ -132,7 +132,7 @@ class AggregatedScoreORM(Base):
     - The aggregation spec used (via aggregate_run.aggregation_spec_id)
 
     Individual model votes are NOT stored here - they're derivable from
-    llm_call.response.label via the join table (order-independent).
+    llm_call.score.label via the join table (order-independent).
 
     Semantic constraint (one score per sample per run) is enforced by the pipeline,
     not by database constraints.
@@ -174,7 +174,7 @@ class AggregatedScoreLLMCallORM(Base):
     Pure join table (BCNF) - no non-key attributes.
 
     Note: Individual model votes are NOT stored here - they are derivable from
-    llm_call.response.label. This avoids denormalization and maintains single source of truth.
+    llm_call.score.label. This avoids denormalization and maintains single source of truth.
     """
     __tablename__ = "aggregated_score_llm_calls"
     __table_args__ = {"schema": "aggregate"}

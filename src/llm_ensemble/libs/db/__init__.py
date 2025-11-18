@@ -29,7 +29,7 @@ from llm_ensemble.libs.db.uuid_helpers import (
     compute_prompt_template_uuid,
     compute_parser_spec_uuid,
     compute_llm_request_uuid,
-    compute_llm_response_uuid,
+    compute_llm_score_uuid,
     compute_llm_call_uuid,
     compute_aggregation_spec_uuid,
     compute_aggregated_score_uuid,
@@ -59,7 +59,7 @@ __all__ = [
     "compute_prompt_template_uuid",
     "compute_parser_spec_uuid",
     "compute_llm_request_uuid",
-    "compute_llm_response_uuid",
+    "compute_llm_score_uuid",
     "compute_llm_call_uuid",
     # UUID helpers - aggregate
     "compute_aggregate_run_uuid",

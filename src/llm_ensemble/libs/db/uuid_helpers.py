@@ -26,7 +26,6 @@ NAMESPACE_INGEST_RUN = uuid.UUID('d4e5f678-90ab-cdef-1234-567890abcdef')
 NAMESPACE_INFER_RUN = uuid.UUID('e5f67890-abcd-ef12-3456-7890abcdef12')
 NAMESPACE_AGGREGATE_RUN = uuid.UUID('f6789012-3456-7890-abcd-ef1234567890')
 NAMESPACE_LLM_REQUEST = uuid.UUID('a0b1c2d3-e4f5-6789-0abc-def123456789')
-NAMESPACE_LLM_RESPONSE = uuid.UUID('b1c2d3e4-f567-890a-bcde-f12345678901')
 NAMESPACE_LLM_SCORE = uuid.UUID('c2d3e4f5-6789-0abc-def1-234567890abc')
 NAMESPACE_LLM_JUDGEMENT = uuid.UUID('d3e4f567-890a-bcde-f123-4567890abcde')
 NAMESPACE_INFER_WARNING = uuid.UUID('1a2b3c4d-5e6f-7890-abcd-ef1234567890')
@@ -132,11 +131,11 @@ def compute_llm_request_uuid(prompt: str, judging_sample_id: uuid.UUID) -> uuid.
     return uuid.uuid5(NAMESPACE_LLM_REQUEST, natural_key)
 
 
-def compute_llm_response_uuid(parser_spec_id: uuid.UUID, raw_response: str) -> uuid.UUID:
+def compute_llm_score_uuid(parser_spec_id: uuid.UUID, raw_response: str) -> uuid.UUID:
     # Hash raw response to keep natural key reasonable length
     response_hash = hashlib.sha256(raw_response.encode()).hexdigest()
     natural_key = f"{parser_spec_id}:{response_hash}"
-    return uuid.uuid5(NAMESPACE_LLM_RESPONSE, natural_key)
+    return uuid.uuid5(NAMESPACE_LLM_SCORE, natural_key)
 
 
 def compute_llm_call_uuid(llm_request_id: uuid.UUID, infer_run_id: uuid.UUID) -> uuid.UUID:

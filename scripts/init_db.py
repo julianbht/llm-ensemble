@@ -36,7 +36,7 @@ from llm_ensemble.ingest.schemas.orms import (
     JudgingSampleORM,
 )
 
-# Infer CLI ORMs (providers, models, prompts, requests, responses, calls)
+# Infer CLI ORMs (providers, models, prompts, requests, scores, calls)
 from llm_ensemble.infer.schemas.orms_normalized import (
     ProviderORM,
     PromptTemplateORM,
@@ -45,7 +45,7 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     ParserSpecORM,
     LLMRequestORM,
     LLMCallORM,
-    LLMResponseORM,
+    LLMScoreORM,
 )
 
 

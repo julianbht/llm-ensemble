@@ -66,7 +66,7 @@ class InferWriteEvent(str, Enum):
 
     # Per-judgement entities (written during write_one)
     WRITE_LLM_REQUESTS = "write_llm_requests"
-    WRITE_LLM_RESPONSES = "write_llm_responses"
+    WRITE_LLM_SCORES = "write_llm_scores"
     WRITE_LLM_CALLS = "write_llm_calls"
 
     # Final summary

@@ -39,7 +39,7 @@ from llm_ensemble.libs.db import (
     compute_parser_spec_uuid,
     compute_infer_run_uuid,
     compute_llm_request_uuid,
-    compute_llm_response_uuid,
+    compute_llm_score_uuid,
     compute_llm_call_uuid,
 )
 from llm_ensemble.infer.schemas.orms_normalized import (
@@ -49,7 +49,7 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     ParserSpecORM,
     InferRunORM,
     LLMRequestORM,
-    LLMResponseORM,
+    LLMScoreORM,
     LLMCallORM,
 )
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
@@ -62,7 +62,7 @@ from llm_ensemble.infer.adapters.io.mappers_domain_to_orm import (
     prompt_config_to_parser_orm,
     infer_run_info_to_orm,
     llm_judgement_to_request_orm,
-    llm_judgement_to_response_orm,
+    llm_judgement_to_score_orm,
     llm_judgement_to_call_orm,
 )
 from llm_ensemble.libs.logging.log_events import InferWriteEvent, InferLogEvent
@@ -151,8 +151,8 @@ class SqlJudgementWriter(JudgementWriter):
 
         Decomposes LLMJudgement into normalized ORM entities:
         1. Upsert LLMRequestORM (deduplicated by prompt + sample)
-        2. Upsert LLMResponseORM (deduplicated by parser + raw_response)
-        3. Create LLMCallORM (links request + response + run)
+        2. Upsert LLMScoreORM (deduplicated by parser + raw_response)
+        3. Create LLMCallORM (links request + score + run)
         4. Commit transaction immediately
         5. Log all entities written in one line
 
@@ -174,12 +174,12 @@ class SqlJudgementWriter(JudgementWriter):
         if req_created > 0 or req_skipped > 0:
             self.logger.info(InferWriteEvent.WRITE_LLM_REQUESTS, created=req_created, skipped=req_skipped)
 
-        response_id, resp_created, resp_skipped = self._upsert_response(judgement)
-        self._write_summary.add_llm_responses(created=resp_created, skipped=resp_skipped)
-        if resp_created > 0 or resp_skipped > 0:
-            self.logger.info(InferWriteEvent.WRITE_LLM_RESPONSES, created=resp_created, skipped=resp_skipped)
+        score_id, score_created, score_skipped = self._upsert_score(judgement)
+        self._write_summary.add_llm_scores(created=score_created, skipped=score_skipped)
+        if score_created > 0 or score_skipped > 0:
+            self.logger.info(InferWriteEvent.WRITE_LLM_SCORES, created=score_created, skipped=score_skipped)
 
-        call_id = self._create_call(judgement, request_id, response_id)
+        call_id = self._create_call(judgement, request_id, score_id)
         self._write_summary.add_llm_calls(created=1)
         self.logger.info(InferWriteEvent.WRITE_LLM_CALLS, created=1, skipped=0)
 
@@ -424,48 +424,48 @@ class SqlJudgementWriter(JudgementWriter):
 
         return (request_id, 1, 0)
 
-    def _upsert_response(self, judgement: LLMJudgement) -> Tuple[UUID, int, int]:
-        """Upsert LLM response entity using mapper.
+    def _upsert_score(self, judgement: LLMJudgement) -> Tuple[UUID, int, int]:
+        """Upsert LLM score entity using mapper.
 
         Deduplicates by (parser_spec_id, raw_response).
         Parsed fields (label, confidence, rationale) are functionally dependent
-        on this key, so they're stored with the response.
+        on this key, so they're stored with the score.
 
         Args:
             judgement: LLMJudgement object
 
         Returns:
-            Tuple of (response_id, created_count, skipped_count)
+            Tuple of (score_id, created_count, skipped_count)
         """
-        response_id = compute_llm_response_uuid(
+        score_id = compute_llm_score_uuid(
             self._parser_spec_id,
             judgement.llm_response.raw_response
         )
 
         # Check if exists (deduplication)
-        existing = self._session.get(LLMResponseORM, response_id)
+        existing = self._session.get(LLMScoreORM, score_id)
         if existing:
-            return (response_id, 0, 1)
+            return (score_id, 0, 1)
 
-        # Create new response using mapper
-        response = llm_judgement_to_response_orm(
+        # Create new score using mapper
+        score = llm_judgement_to_score_orm(
             judgement,
-            response_id,
+            score_id,
             self._parser_spec_id
         )
-        self._session.add(response)
+        self._session.add(score)
 
-        return (response_id, 1, 0)
+        return (score_id, 1, 0)
 
-    def _create_call(self, judgement: LLMJudgement, request_id: UUID, response_id: UUID) -> UUID:
+    def _create_call(self, judgement: LLMJudgement, request_id: UUID, score_id: UUID) -> UUID:
         """Create LLM call entity using mapper.
 
-        Links request + run + response with observability metadata.
+        Links request + run + score with observability metadata.
 
         Args:
             judgement: LLMJudgement object
             request_id: UUID of the request
-            response_id: UUID of the response
+            score_id: UUID of the score
 
         Returns:
             LLMCall UUID (deterministic)
@@ -483,7 +483,7 @@ class SqlJudgementWriter(JudgementWriter):
             call_id,
             request_id,
             self._infer_run_id,
-            response_id
+            score_id
         )
         self._session.add(call)
 

@@ -55,7 +55,7 @@ from llm_ensemble.infer.schemas.orms_normalized import (
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
-from llm_ensemble.infer.adapters.io.mappers import (
+from llm_ensemble.infer.adapters.io.mappers_domain_to_orm import (
     provider_name_to_orm,
     model_config_to_orm,
     prompt_config_to_template_orm,

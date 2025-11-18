@@ -84,7 +84,7 @@ class SqlJudgingSampleReader(ExampleReader):
             )
 
             if not ingest_run:
-                raise FileNotFoundError(
+                raise ValueError(
                     f"Ingest run '{run_name}' not found in database."
                 )
 

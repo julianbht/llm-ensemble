@@ -1,17 +1,17 @@
-"""Bidirectional mappers between config objects and ORM models for INFER CLI.
+"""Domain to ORM mappers for INFER CLI (writing direction).
 
-This module provides conversion functions for mapping between Pydantic config objects
-(ModelConfig, PromptConfig) and SQLAlchemy ORM models.
+This module provides conversion functions for mapping from Pydantic domain objects
+to SQLAlchemy ORM models for persistence.
 
 Design principles:
-- Config objects are the domain truth (ModelConfig, PromptConfig from run_info)
-- Mappers convert configs → ORMs for SQL persistence
-- No separate domain entities needed - configs ARE the domain objects
+- Domain objects are the source of truth (LLMJudgement, ModelConfig, PromptConfig)
+- Mappers convert domain → ORMs for SQL persistence (INSERT operations)
 - Stateless pure functions
+- Used by SqlJudgementWriter for persisting inference results
 
-The domain layer works with Pydantic configs (ModelConfig, PromptConfig).
-The persistence layer works with SQLAlchemy ORMs (ProviderORM, ModelSpecORM, etc.).
-These mappers handle the impedance mismatch.
+The domain layer works with Pydantic models (LLMJudgement, configs).
+The persistence layer works with SQLAlchemy ORMs (LLMCallORM, etc.).
+These mappers handle the impedance mismatch for the write path.
 """
 
 from __future__ import annotations

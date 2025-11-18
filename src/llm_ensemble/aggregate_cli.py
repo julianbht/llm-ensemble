@@ -8,6 +8,7 @@ from llm_ensemble.aggregate.config_loaders import load_ensemble_config
 from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.config.logging_config_loader import load_logging_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
+from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
 from llm_ensemble.libs.cli.params import (
     RunName,
@@ -48,7 +49,6 @@ def aggregate(
     """Combine model judgements using ensemble strategies (e.g., majority vote)."""
     
     # Resolve tags if any input starts with @ (already validated by RunInputParamType)
-    from llm_ensemble.libs.runtime.tag_manager import TagManager
     resolved_run_names = [TagManager.resolve_input(rn, "infer") for rn in input_run_names]
     
     # Load configurations

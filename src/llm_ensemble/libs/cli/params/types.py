@@ -14,6 +14,7 @@ from llm_ensemble.libs.cli.error_messages import (
     format_missing_io_config_error,
 )
 from llm_ensemble.libs.runtime.path_manager import PathManager
+from llm_ensemble.libs.runtime.tag_manager import TagManager
 
 MissingFactory = Callable[[Path, List[str], str], str]
 InvalidFactory = Callable[[str, Path, List[str], str], str]
@@ -223,9 +224,6 @@ class RunInputParamType(click.ParamType):
         if value in (None, ""):
             return None
         
-        # Import here to avoid circular dependency
-        from llm_ensemble.libs.runtime.tag_manager import TagManager
-        
         # If it starts with @, validate the tag exists
         if value.startswith("@"):
             tag_name = value[1:]
@@ -254,8 +252,6 @@ class RunInputParamType(click.ParamType):
     
     def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
         """Provide shell completion for available tags (with @ prefix)."""
-        from llm_ensemble.libs.runtime.tag_manager import TagManager
-        
         # If user is typing @, complete with tags
         if incomplete.startswith("@"):
             tag_prefix = incomplete[1:]

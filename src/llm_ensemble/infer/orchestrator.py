@@ -23,6 +23,7 @@ from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.runtime.git_utils import get_git_info
+from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 
@@ -113,7 +114,6 @@ def run_inference(
 
     # Create tag file if tag provided
     if tag:
-        from llm_ensemble.libs.runtime.tag_manager import TagManager
         TagManager.create_tag(run_dir, tag)
 
     # Set up log file path if saving logs

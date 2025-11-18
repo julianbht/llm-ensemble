@@ -7,6 +7,7 @@ from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_con
 from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.config.logging_config_loader import load_logging_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
+from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
 from llm_ensemble.libs.cli.params import (
     RunName,
@@ -20,7 +21,7 @@ from llm_ensemble.libs.cli.params import (
     InferIoCfg,
     RetryCfg,
     Tag,
-    IngestRunInput,
+    InferIngestRunInput,
 )
 
 # Load runtime configuration early
@@ -39,7 +40,7 @@ def infer(
     model_cfg: ModelCfg,
     prompt_cfg: PromptCfg,
     io_cfg: InferIoCfg,
-    input_run_name: IngestRunInput,
+    input_run_name: InferIngestRunInput,
     # Optional parameters
     retry_cfg: RetryCfg = "standard",
     limit: Limit = None,
@@ -55,7 +56,6 @@ def infer(
         HF_TOKEN: HuggingFace API token (required for HF models)
     """
     # Resolve tag if input starts with @ (already validated by RunInputParamType)
-    from llm_ensemble.libs.runtime.tag_manager import TagManager
     input_run_name = TagManager.resolve_input(input_run_name, "ingest")
     
     # Load configurations

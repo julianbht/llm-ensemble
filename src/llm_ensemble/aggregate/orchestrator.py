@@ -22,6 +22,7 @@ from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summa
 from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
+from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
 
 
@@ -79,7 +80,6 @@ def run_aggregation(
     
     # Register tag if provided
     if tag:
-        from llm_ensemble.libs.runtime.tag_manager import TagManager
         TagManager.register_tag(tag, "aggregate", run_name)
     
     

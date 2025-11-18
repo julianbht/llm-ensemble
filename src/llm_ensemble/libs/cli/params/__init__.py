@@ -14,9 +14,9 @@ from .shared_params import (
     RetryCfg,
     Tag,
 )
-from .aggregate import AggregateIoCfg
+from .aggregate import AggregateIoCfg, InferRunInput
 from .ingest import IngestIoCfg
-from .infer import InferIoCfg, IngestRunInput
+from .infer import InferIoCfg, IngestRunInput as InferIngestRunInput
 
 __all__ = [
     "InputPath",
@@ -34,5 +34,6 @@ __all__ = [
     "AggregateIoCfg",
     "IngestIoCfg",
     "InferIoCfg",
-    "IngestRunInput",
+    "InferIngestRunInput",
+    "InferRunInput",
 ]

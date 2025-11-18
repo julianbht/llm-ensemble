@@ -26,7 +26,6 @@ class AggregatedJudgement(BaseModel):
         ...,
         description=(
             "All individual model judgements for this query-document pair. "
-            "Each contains full provenance: sample, request, response, score, run_info."
         )
     )
     

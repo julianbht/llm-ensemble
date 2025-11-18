@@ -1,7 +1,6 @@
 """Aggregate CLI - Combine judgements using ensemble strategies."""
 
 from __future__ import annotations
-from pathlib import Path
 import typer
 
 from llm_ensemble.aggregate.orchestrator import run_aggregation
@@ -18,7 +17,6 @@ from llm_ensemble.libs.cli.params import (
     Override,
     EnsembleCfg,
     AggregateIoCfg,
-    Tag,
 )
 
 # Load runtime configuration early
@@ -38,7 +36,7 @@ def aggregate(
     io_cfg: AggregateIoCfg,
     input_paths: list[str] = typer.Argument(
         ...,
-        help="Input files containing LLMJudgement records (from infer runs). Use @tag to reference tagged runs.",
+        help="Input files containing LLMJudgement records (from infer runs).",
     ),
     # Optional parameters
     run_name: RunName = None,
@@ -46,23 +44,8 @@ def aggregate(
     official: Official = False,
     notes: Notes = None,
     override: Override = [],
-    tag: Tag = None,
 ):
     """Combine model judgements using ensemble strategies (e.g., majority vote)."""
-    # Resolve tags in input paths if they start with @
-    from llm_ensemble.libs.runtime.tag_manager import TagManager
-    from llm_ensemble.libs.runtime.path_manager import PathManager
-    
-    resolved_paths = []
-    for input_path in input_paths:
-        if input_path.startswith("@"):
-            # Resolve tag to run directory and get output file
-            tag_name = input_path[1:]
-            run_name_resolved = TagManager.resolve_tag(tag_name, "infer")
-            file_path = PathManager.get_infer_output_file(run_name_resolved)
-            resolved_paths.append(file_path)
-        else:
-            resolved_paths.append(Path(input_path))
     
     # Load configurations
     ensemble_config = load_ensemble_config(ensemble_cfg)
@@ -84,13 +67,12 @@ def aggregate(
         ensemble_config=ensemble_config,
         io_config=io_config,
         logging_config=logging_config,
-        input_files=resolved_paths,
+        input_files=input_paths,
         ensemble_config_name=ensemble_cfg,
         io_config_name=io_cfg,
         run_name=run_name,
         official=official,
         notes=notes,
-        tag=tag,
     )
 
 

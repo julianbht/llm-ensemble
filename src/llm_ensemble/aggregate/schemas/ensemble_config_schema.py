@@ -31,17 +31,17 @@ class EnsembleConfig(BaseConfig):
     # Dynamic adapter loading
     strategy_module: str = Field(
         ...,
-        description="Full Python module path to strategy adapter (e.g., 'llm_ensemble.aggregate.adapters.strategies.majority_vote_adapter')"
+        description="Full Python module path to strategy adapter"
     )
     strategy_class: str = Field(
         ...,
-        description="Strategy adapter class name in UpperCamelCase (e.g., 'MajorityVoteAdapter')"
+        description="Strategy adapter class name in UpperCamelCase"
     )
     
     # Optional name hint for run_name generation (derived from filename by loader)
     name_hint: Optional[str] = Field(
         default=None,
-        description="Short name hint for run_name generation (e.g., 'majority_vote')"
+        description="Short name hint for run_name generation"
     )
     
     def get_strategy(self) -> Any:

@@ -35,7 +35,6 @@ def run_aggregation(
     run_name: Optional[str] = None,
     official: bool = False,
     notes: Optional[str] = None,
-    tag: Optional[str] = None,
 ) -> None:
     """Run ensemble aggregation with full provenance.
     
@@ -82,10 +81,6 @@ def run_aggregation(
     )
     run_dir.mkdir(parents=True, exist_ok=True)
     
-    # Create tag file if tag provided
-    if tag:
-        from llm_ensemble.libs.runtime.tag_manager import TagManager
-        TagManager.create_tag(run_dir, tag)
     
     # Get git info for reproducibility
     git_info = get_git_info()

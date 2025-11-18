@@ -15,7 +15,6 @@ from typing import Optional
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.ensemble_config_schema import EnsembleConfig
 from llm_ensemble.aggregate.domain import AggregationService
-from llm_ensemble.aggregate.schemas import AggregatedJudgement
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
@@ -136,27 +135,12 @@ def run_aggregation(
         strategy=strategy,
     )
     
-    # Define logging callback
-    def on_aggregated(aggregated_judgement: AggregatedJudgement) -> None:
-        """Log each aggregated judgement."""
-        primary_score = aggregated_judgement.get_primary_aggregated_score()
-        final_label = primary_score.final_relevance_score
-        confidence = primary_score.final_confidence
-        
-        logger.info(
-            "aggregated_pair",
-            final_label=final_label.label if final_label else "None",
-            confidence=f"{confidence:.2f}" if confidence else "0.00",
-            num_models=len(aggregated_judgement.judgements),
-        )
-    
     # Run aggregation pipeline
     try:
         summary = service.run_aggregation(
             run_names=input_run_names,
             run_info=run_info,
             run_dir=run_dir,
-            on_aggregated=on_aggregated,
         )
         
         logger.info(

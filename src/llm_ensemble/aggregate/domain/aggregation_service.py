@@ -1,12 +1,11 @@
 """Domain service for aggregation pipeline.
 
 This module contains pure business logic for orchestrating ensemble aggregation.
-It depends only on port abstractions and has no knowledge of infrastructure
-details (file formats, I/O).
+It depends only on port abstractions and handles its own logging.
 """
 
 from __future__ import annotations
-from typing import Callable, Optional
+from typing import Optional
 from collections import defaultdict
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
@@ -18,6 +17,7 @@ from llm_ensemble.aggregate.ports import (
     JudgementReader,
     AggregatedJudgementWriter,
 )
+from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 
 
@@ -31,8 +31,8 @@ class AggregationService:
     - Writing aggregated judgements via AggregatedJudgementWriter port
     - Tracking statistics (ties, no-votes)
     
-    Depends only on port abstractions, enabling complete independence from
-    infrastructure concerns.
+    Depends only on port abstractions and handles its own logging, enabling complete
+    independence from infrastructure concerns.
     
     Identity Strategy:
         Uses namespaced natural keys for grouping judgements of the same sample.
@@ -61,6 +61,7 @@ class AggregationService:
         self.judgement_reader = judgement_reader
         self.aggregated_judgement_writer = aggregated_judgement_writer
         self.strategy = strategy
+        self.logger = get_logger(component="aggregation_service")
     
     @staticmethod
     def _get_sample_identity(judgement: LLMJudgement) -> tuple[str, str, str]:
@@ -93,7 +94,6 @@ class AggregationService:
         run_names: list[str],
         run_info: AggregateRunInfo,
         run_dir,
-        on_aggregated: Optional[Callable[[AggregatedJudgement], None]] = None,
     ) -> AggregateRunSummary:
         """Execute the aggregation pipeline.
         
@@ -109,7 +109,6 @@ class AggregationService:
             run_names: List of infer run identifiers to read judgements from
             run_info: Immutable runtime context (attached to summary)
             run_dir: Run directory for output
-            on_aggregated: Optional callback invoked for each aggregated judgement
             
         Returns:
             AggregateRunSummary with statistics
@@ -154,9 +153,17 @@ class AggregationService:
                 # Write via writer port
                 writer.write_one(aggregated_judgement)
                 
-                # Invoke callback for progress tracking
-                if on_aggregated:
-                    on_aggregated(aggregated_judgement)
+                # Log progress
+                primary_score = aggregated_judgement.get_primary_aggregated_score()
+                final_label = primary_score.final_relevance_score
+                confidence = primary_score.final_confidence
+                
+                self.logger.info(
+                    "aggregated_pair",
+                    final_label=final_label.label if final_label else "None",
+                    confidence=f"{confidence:.2f}" if confidence else "0.00",
+                    num_models=len(aggregated_judgement.judgements),
+                )
                 
                 output_count += 1
         

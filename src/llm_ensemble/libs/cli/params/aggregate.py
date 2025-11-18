@@ -6,7 +6,7 @@ from typing import Annotated
 
 import typer
 
-from llm_ensemble.libs.cli.params.types import IOConfigParamType
+from llm_ensemble.libs.cli.params.types import IOConfigParamType, RunInputParamType
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 AggregateIoCfg = Annotated[
@@ -16,5 +16,16 @@ AggregateIoCfg = Annotated[
         "--io-cfg",
         click_type=IOConfigParamType("aggregate"),
         help=f"I/O config name. Configs in {(PathManager.get_configs_dir() / 'io' / 'aggregate').relative_to(PathManager.get_project_root())}",
+    ),
+]
+
+InferRunInput = Annotated[
+    list[str],
+    typer.Option(
+        ...,
+        "--input",
+        "-i",
+        click_type=RunInputParamType("infer"),
+        help="Infer runs to read judgements from. Use run names or @tags (e.g., '@my-experiment'). Can specify multiple.",
     ),
 ]

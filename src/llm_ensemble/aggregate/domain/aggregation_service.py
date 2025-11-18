@@ -90,7 +90,7 @@ class AggregationService:
     
     def run_aggregation(
         self,
-        input_paths: list,
+        run_names: list[str],
         run_info: AggregateRunInfo,
         run_dir,
         on_aggregated: Optional[Callable[[AggregatedJudgement], None]] = None,
@@ -106,7 +106,7 @@ class AggregationService:
         6. Tracks statistics (ties, no-votes, etc.)
         
         Args:
-            input_paths: List of paths to files containing LLMJudgement records
+            run_names: List of infer run identifiers to read judgements from
             run_info: Immutable runtime context (attached to summary)
             run_dir: Run directory for output
             on_aggregated: Optional callback invoked for each aggregated judgement
@@ -119,7 +119,7 @@ class AggregationService:
         summary_builder.set_start_time()
         
         # Read all judgements via reader port
-        judgements = self.judgement_reader.read(input_paths)
+        judgements = self.judgement_reader.read(run_names)
         
         # Group judgements by natural composite key (dataset, query_id, doc_id)
         grouped: dict[tuple[str, str, str], list[LLMJudgement]] = defaultdict(list)

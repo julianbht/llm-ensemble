@@ -57,9 +57,9 @@ class AggregateRunInfo(RunInfo):
     )
     
     # Input parameters
-    input_files: list[str] = Field(
+    input_run_names: list[str] = Field(
         ...,
-        description="Paths to input files containing LLMJudgement records (from infer runs)"
+        description="List of infer run identifiers to read judgements from (e.g., ['run1', 'run2'])"
     )
     
     # Pydantic-specific pattern to make this class immutable

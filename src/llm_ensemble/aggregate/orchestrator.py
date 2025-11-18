@@ -29,12 +29,13 @@ def run_aggregation(
     ensemble_config: EnsembleConfig,
     io_config: IOConfig,
     logging_config: LoggingConfig,
-    input_files: list[Path],
+    input_run_names: list[str],
     ensemble_config_name: str,
     io_config_name: str,
     run_name: Optional[str] = None,
     official: bool = False,
     notes: Optional[str] = None,
+    tag: Optional[str] = None,
 ) -> None:
     """Run ensemble aggregation with full provenance.
     
@@ -48,7 +49,7 @@ def run_aggregation(
         ensemble_config: Ensemble configuration (strategy selection)
         io_config: I/O configuration (reader/writer adapters)
         logging_config: Logging configuration
-        input_files: List of input files containing LLMJudgement records
+        input_run_names: List of infer run identifiers to read judgements from
         ensemble_config_name: Name of the ensemble config file
         io_config_name: Name of the I/O config file
         run_name: Custom run ID (auto-generates if not provided)
@@ -57,14 +58,9 @@ def run_aggregation(
         tag: Tag name for easy reference by downstream CLIs
         
     Raises:
-        FileNotFoundError: If any input file doesn't exist
+        FileNotFoundError: If any run directory doesn't exist
         ValueError: If config is invalid
     """
-    
-    # Verify all input files exist
-    for input_file in input_files:
-        if not input_file.exists():
-            raise FileNotFoundError(f"Input file does not exist: {input_file}")
     
     # Generate or use provided run_name
     if run_name is None:
@@ -80,6 +76,11 @@ def run_aggregation(
         official=official
     )
     run_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Register tag if provided
+    if tag:
+        from llm_ensemble.libs.runtime.tag_manager import TagManager
+        TagManager.register_tag(tag, "aggregate", run_name)
     
     
     # Get git info for reproducibility
@@ -97,7 +98,7 @@ def run_aggregation(
         io_config_name=io_config_name,
         ensemble_config=ensemble_config,
         io_config=io_config,
-        input_files=[str(f) for f in input_files],
+        input_run_names=input_run_names,
     )
     
     # Set up log file path if saving logs
@@ -119,7 +120,7 @@ def run_aggregation(
         "starting_aggregation",
         strategy=ensemble_config.strategy,
         io_format=io_config_name,
-        input_files=[str(f) for f in input_files],
+        input_run_names=input_run_names,
     )
     logger.info("run_directory", path=str(run_dir))
     
@@ -152,7 +153,7 @@ def run_aggregation(
     # Run aggregation pipeline
     try:
         summary = service.run_aggregation(
-            input_paths=input_files,
+            run_names=input_run_names,
             run_info=run_info,
             run_dir=run_dir,
             on_aggregated=on_aggregated,

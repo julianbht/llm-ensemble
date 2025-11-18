@@ -17,6 +17,8 @@ from llm_ensemble.libs.cli.params import (
     Override,
     EnsembleCfg,
     AggregateIoCfg,
+    InferRunInput,
+    Tag,
 )
 
 # Load runtime configuration early
@@ -34,18 +36,20 @@ def aggregate(
     # Required parameters
     ensemble_cfg: EnsembleCfg,
     io_cfg: AggregateIoCfg,
-    input_paths: list[str] = typer.Argument(
-        ...,
-        help="Input files containing LLMJudgement records (from infer runs).",
-    ),
+    input_run_names: InferRunInput,
     # Optional parameters
     run_name: RunName = None,
     log_cfg: LogCfg = "observability",
     official: Official = False,
     notes: Notes = None,
     override: Override = [],
+    tag: Tag = None,
 ):
     """Combine model judgements using ensemble strategies (e.g., majority vote)."""
+    
+    # Resolve tags if any input starts with @ (already validated by RunInputParamType)
+    from llm_ensemble.libs.runtime.tag_manager import TagManager
+    resolved_run_names = [TagManager.resolve_input(rn, "infer") for rn in input_run_names]
     
     # Load configurations
     ensemble_config = load_ensemble_config(ensemble_cfg)
@@ -67,12 +71,13 @@ def aggregate(
         ensemble_config=ensemble_config,
         io_config=io_config,
         logging_config=logging_config,
-        input_files=input_paths,
+        input_run_names=resolved_run_names,
         ensemble_config_name=ensemble_cfg,
         io_config_name=io_cfg,
         run_name=run_name,
         official=official,
         notes=notes,
+        tag=tag,
     )
 
 

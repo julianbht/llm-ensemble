@@ -18,10 +18,9 @@ The schema is in 3NF (Third Normal Form) with the following functional dependenc
    - Each run uses exactly ONE aggregation spec (enforced by design)
 
 3. AggregatedScoreORM:
-   - (judging_sample_id, aggregate_run_id) → {id, final_label, final_confidence, final_reasoning}
-   - One score per (sample, run) pair
-   - judging_sample_id is denormalized (derivable from calls) but required for uniqueness constraint
-   - Aggregation spec is determined by aggregate_run.aggregation_spec_id (no per-score variation)
+   - id → {aggregate_run_id, final_label, final_confidence, final_reasoning}
+   - Aggregation spec is determined by aggregate_run.aggregation_spec_id
+   - Result functionally dependent on: (set of llm_calls via join table, aggregation_spec)
    - Individual model votes NOT stored (derivable from llm_call.response.label via join table)
 
 4. AggregatedScoreLLMCallORM:
@@ -34,7 +33,7 @@ DESIGN RATIONALE:
 
 - Enforces one aggregation spec per run (compare specs by running multiple aggregate runs)
 - AggregatedScore is the primary output entity (no thin wrapper entity needed)
-- judging_sample_id stored in AggregatedScore for uniqueness constraint (acceptable denormalization)
+- Semantic constraints (one score per sample per run) enforced by pipeline, not DB
 - AggregatedScoreLLMCall uses composite PK (no surrogate ID or timestamp needed)
 - Individual votes not denormalized (derivable from LLMResponseORM.label)
 """
@@ -44,15 +43,13 @@ from __future__ import annotations
 from sqlalchemy import (
     Column,
     String,
-    Integer,
     Float,
     DateTime,
     Text,
     ForeignKey,
-    UniqueConstraint,
     Enum as SQLEnum,
 )
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID, ARRAY
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
 
 from llm_ensemble.libs.db import Base, utcnow
@@ -127,42 +124,25 @@ class AggregateRunORM(Base):
 
 
 class AggregatedScoreORM(Base):
-    """Consensus result from aggregating multiple LLM calls for one sample.
+    """Consensus result from aggregating multiple LLM calls.
 
     Stores the consensus decision produced by the aggregation strategy.
-    One score per (sample, run) pair. Strategy is determined by aggregate_run.strategy_id.
+    The result is functionally dependent on:
+    - The set of LLM calls aggregated (via AggregatedScoreLLMCallORM join table)
+    - The aggregation spec used (via aggregate_run.aggregation_spec_id)
 
-    Functional dependencies:
-    - (judging_sample_id, aggregate_run_id) → {id, final_label, final_confidence, final_reasoning, per_model_votes}
+    Individual model votes are NOT stored here - they're derivable from
+    llm_call.response.label via the join table (order-independent).
 
-    per_model_votes stored as ARRAY because:
-    - Always accessed together (debugging/analysis)
-    - Order matters (corresponds to judgements list)
-    - No independent queries needed on individual votes
-
-    Note: judging_sample_id is denormalized (derivable from call memberships) but required
-    for the uniqueness constraint ensuring one aggregation per sample per run.
+    Semantic constraint (one score per sample per run) is enforced by the pipeline,
+    not by database constraints.
     """
     __tablename__ = "aggregated_scores"
-    __table_args__ = (
-        UniqueConstraint(
-            "judging_sample_id",
-            "aggregate_run_id",
-            name="uq_aggregated_score_sample_run"
-        ),
-        {"schema": "aggregate"},
-    )
-    __natural_key__ = ("judging_sample_id", "aggregate_run_id")
-    __uuid_function__ = "compute_aggregated_score_uuid"
+    __table_args__ = {"schema": "aggregate"}
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
-    # References to judging sample (from ingest) and aggregate run
-    judging_sample_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("ingest.judging_samples.id"),
-        nullable=False
-    )
+    # Reference to aggregate run
     aggregate_run_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("aggregate.aggregate_runs.id"),

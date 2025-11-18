@@ -160,22 +160,24 @@ def compute_aggregation_spec_uuid(name: str) -> uuid.UUID:
 
 
 def compute_aggregated_score_uuid(
-    judging_sample_id: uuid.UUID,
-    aggregate_run_id: uuid.UUID
+    aggregate_run_id: uuid.UUID,
+    llm_call_ids: tuple[uuid.UUID, ...]
 ) -> uuid.UUID:
     """Compute deterministic UUID for aggregated score.
 
-    One score per (judging_sample, aggregate_run) pair.
-    Strategy is determined by the aggregate_run (enforces one strategy per run).
+    The score is uniquely identified by the aggregate run and the set of LLM calls
+    being aggregated (order-independent set, sorted for determinism).
 
     Args:
-        judging_sample_id: UUID of the judging sample being aggregated
         aggregate_run_id: UUID of the aggregate run
+        llm_call_ids: Tuple of LLM call UUIDs being aggregated (will be sorted)
 
     Returns:
         Deterministic UUID based on composite key
     """
-    natural_key = f"{judging_sample_id}:{aggregate_run_id}"
+    # Sort for deterministic ordering (set of calls, not ordered list)
+    sorted_call_ids = ":".join(str(cid) for cid in sorted(llm_call_ids))
+    natural_key = f"{aggregate_run_id}:{sorted_call_ids}"
     return uuid.uuid5(NAMESPACE_AGGREGATED_SCORE, natural_key)
 
 

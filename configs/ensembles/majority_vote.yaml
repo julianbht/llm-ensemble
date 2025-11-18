@@ -1,3 +1,3 @@
-strategy: majority_vote
+name_hint: majority-vote # used for run_name generation
 strategy_module: llm_ensemble.aggregate.adapters.strategies.majority_vote_adapter
 strategy_class: MajorityVoteAdapter

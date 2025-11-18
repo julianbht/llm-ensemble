@@ -31,7 +31,7 @@ class BaseConfig(BaseModel):
         description=(
             "Configuration name, derived from filename (without extension). "
             "This field is injected by config loaders and should NOT be set in YAML files. "
-            "Used for identity/UUID generation. Example: 'gpt-oss-20b' from 'gpt-oss-20b.yaml'"
+            "Used for identity/UUID generation. Example: 'gpt-oss-20b' from 'gpt-oss-20b.yaml'"p
         ),
     )
 

@@ -8,20 +8,20 @@ FUNCTIONAL DEPENDENCIES & NORMALIZATION:
 
 The schema is in 3NF (Third Normal Form) with the following functional dependencies:
 
-1. AggregationStrategyORM:
+1. AggregationSpecORM:
    - name → id (deterministic UUID)
-   - name → description, strategy_module, strategy_class (strategy spec defines implementation)
+   - name → description, strategy_module, strategy_class (spec defines implementation)
 
 2. AggregateRunORM:
-   - run_name → {id, run_type, strategy_id, git_sha, git_branch, git_is_dirty, notes, created_at}
+   - run_name → {id, run_type, aggregation_spec_id, git_sha, git_branch, git_is_dirty, notes, created_at}
    - id → run_name (bidirectional via deterministic UUID)
-   - Each run uses exactly ONE strategy (enforced by design)
+   - Each run uses exactly ONE aggregation spec (enforced by design)
 
 3. AggregatedScoreORM:
    - (judging_sample_id, aggregate_run_id) → {id, final_label, final_confidence, final_reasoning}
    - One score per (sample, run) pair
    - judging_sample_id is denormalized (derivable from calls) but required for uniqueness constraint
-   - Strategy is determined by aggregate_run.strategy_id (no per-score strategy variation)
+   - Aggregation spec is determined by aggregate_run.aggregation_spec_id (no per-score variation)
    - Individual model votes NOT stored (derivable from llm_call.response.label via join table)
 
 4. AggregatedScoreLLMCallORM:
@@ -32,10 +32,11 @@ The schema is in 3NF (Third Normal Form) with the following functional dependenc
 
 DESIGN RATIONALE:
 
-- Enforces one strategy per run (compare strategies by running multiple aggregate runs)
+- Enforces one aggregation spec per run (compare specs by running multiple aggregate runs)
 - AggregatedScore is the primary output entity (no thin wrapper entity needed)
 - judging_sample_id stored in AggregatedScore for uniqueness constraint (acceptable denormalization)
 - AggregatedScoreLLMCall uses composite PK (no surrogate ID or timestamp needed)
+- Individual votes not denormalized (derivable from LLMResponseORM.label)
 """
 
 from __future__ import annotations
@@ -59,19 +60,19 @@ from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
-class AggregationStrategyORM(Base):
-    """Aggregation strategy entity - catalog of available ensemble methods.
+class AggregationSpecORM(Base):
+    """Aggregation spec entity - catalog of available ensemble methods.
 
-    Uses deterministic UUID based on strategy name.
-    One row per strategy type (majority_vote, weighted_majority, etc.).
+    Uses deterministic UUID based on spec name.
+    One row per spec (majority_vote, weighted_majority, etc.).
 
     Functional dependencies:
     - name → {description, strategy_module, strategy_class}
     """
-    __tablename__ = "aggregation_strategies"
+    __tablename__ = "aggregation_specs"
     __table_args__ = {"schema": "aggregate"}
     __natural_key__ = "name"
-    __uuid_function__ = "compute_aggregation_strategy_uuid"
+    __uuid_function__ = "compute_aggregation_spec_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
@@ -84,17 +85,17 @@ class AggregationStrategyORM(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     # Relationships
-    aggregate_runs = relationship("AggregateRunORM", back_populates="strategy")
+    aggregate_runs = relationship("AggregateRunORM", back_populates="aggregation_spec")
 
 
 class AggregateRunORM(Base):
     """Aggregate run metadata - execution context for ensemble aggregation.
-    
+
     Uses deterministic UUID based on run_name.
-    Captures which strategy was used and git provenance for reproducibility.
-    
+    Captures which aggregation spec was used and git provenance for reproducibility.
+
     Functional dependencies:
-    - run_name → {id, run_type, strategy_id, git_sha, git_branch, git_is_dirty, notes}
+    - run_name → {id, run_type, aggregation_spec_id, git_sha, git_branch, git_is_dirty, notes}
     - id → run_name (bidirectional via deterministic UUID)
     """
     __tablename__ = "aggregate_runs"
@@ -105,14 +106,14 @@ class AggregateRunORM(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType, schema="public"), nullable=False)
-    
-    # Strategy used for this run
-    strategy_id = Column(
+
+    # Aggregation spec used for this run
+    aggregation_spec_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("aggregate.aggregation_strategies.id"),
+        ForeignKey("aggregate.aggregation_specs.id"),
         nullable=False
     )
-    
+
     # Metadata
     git_sha = Column(String(40), nullable=False)
     git_branch = Column(String(255), nullable=True)
@@ -121,7 +122,7 @@ class AggregateRunORM(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     # Relationships
-    strategy = relationship("AggregationStrategyORM", back_populates="aggregate_runs")
+    aggregation_spec = relationship("AggregationSpecORM", back_populates="aggregate_runs")
     aggregated_scores = relationship("AggregatedScoreORM", back_populates="aggregate_run")
 
 

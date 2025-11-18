@@ -38,7 +38,7 @@ NAMESPACE_PARSER_SPEC = uuid.UUID('6f789012-3456-7890-abcd-1234def56789')
 NAMESPACE_LLM_CALL = uuid.UUID('789012ab-cdef-1234-5678-90abcdef1234')
 
 # Aggregate namespace UUIDs
-NAMESPACE_AGGREGATION_STRATEGY = uuid.UUID('890123bc-def1-2345-6789-0abcdef12345')
+NAMESPACE_AGGREGATION_SPEC = uuid.UUID('890123bc-def1-2345-6789-0abcdef12345')
 NAMESPACE_AGGREGATED_SCORE = uuid.UUID('a12345de-f123-4567-890a-bcdef1234567')
 NAMESPACE_AGGREGATED_SCORE_LLM_CALL = uuid.UUID('b23456ef-1234-5678-9012-3456789abcde')
 
@@ -147,16 +147,16 @@ def compute_llm_call_uuid(llm_request_id: uuid.UUID, infer_run_id: uuid.UUID) ->
 # Aggregate Entity UUIDs
 # ========================================================================
 
-def compute_aggregation_strategy_uuid(name: str) -> uuid.UUID:
-    """Compute deterministic UUID for aggregation strategy.
+def compute_aggregation_spec_uuid(name: str) -> uuid.UUID:
+    """Compute deterministic UUID for aggregation spec.
 
     Args:
-        name: Strategy name (e.g., 'majority_vote', 'weighted_majority')
+        name: Spec name (e.g., 'majority_vote', 'weighted_majority')
 
     Returns:
-        Deterministic UUID based on strategy name
+        Deterministic UUID based on spec name
     """
-    return uuid.uuid5(NAMESPACE_AGGREGATION_STRATEGY, name)
+    return uuid.uuid5(NAMESPACE_AGGREGATION_SPEC, name)
 
 
 def compute_aggregated_score_uuid(

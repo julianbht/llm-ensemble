@@ -31,10 +31,8 @@ from llm_ensemble.libs.db.uuid_helpers import (
     compute_llm_request_uuid,
     compute_llm_response_uuid,
     compute_llm_call_uuid,
-    compute_aggregation_strategy_uuid,
-    compute_aggregated_judgement_uuid,
+    compute_aggregation_spec_uuid,
     compute_aggregated_score_uuid,
-    compute_judgement_group_membership_uuid,
 )
 
 from llm_ensemble.libs.db.utcnow import utcnow
@@ -65,10 +63,8 @@ __all__ = [
     "compute_llm_call_uuid",
     # UUID helpers - aggregate
     "compute_aggregate_run_uuid",
-    "compute_aggregation_strategy_uuid",
-    "compute_aggregated_judgement_uuid",
+    "compute_aggregation_spec_uuid",
     "compute_aggregated_score_uuid",
-    "compute_judgement_group_membership_uuid",
     # Other db helpers
     "utcnow",
 ]

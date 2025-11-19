@@ -108,6 +108,11 @@ class ModelSpecORM(Base):
 class InferredDatasetORM(Base):
     """InferredDataset ORM - set of samples actually processed by infer run.
 
+    Represents the working set for inference. Multiple infer runs can produce
+    the same InferredDataset (same fingerprint), enabling idempotency.
+
+    Provenance to NormalizedDataset is tracked via InferRun → IngestRun → NormalizedDataset.
+
     Uses deterministic UUID based on fingerprint (SHA256 of sorted sample IDs).
     """
     __tablename__ = "inferred_datasets"
@@ -117,11 +122,6 @@ class InferredDatasetORM(Base):
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     fingerprint = Column(CHAR(64), nullable=False, unique=True)
-    normalized_dataset_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("ingest.normalized_datasets.id"),
-        nullable=False
-    )
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships

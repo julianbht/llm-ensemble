@@ -21,7 +21,6 @@ from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
-from llm_ensemble.infer.schemas.inferred_dataset import InferredDataset
 from llm_ensemble.infer.schemas.orms_normalized import (
     ProviderORM,
     ModelSpecORM,
@@ -157,29 +156,6 @@ def prompt_config_to_parser_orm(prompt_cfg: PromptConfig, code_hash: str) -> Par
 
 
 # ============================================================================
-# InferredDataset Mappers
-# ============================================================================
-
-def inferred_dataset_to_orm(inferred_dataset: InferredDataset) -> InferredDatasetORM:
-    """Convert InferredDataset domain object to InferredDatasetORM.
-
-    Note: This only creates the InferredDatasetORM entity itself.
-    The junction table records (linking to samples) must be created separately.
-
-    Args:
-        inferred_dataset: InferredDataset domain object
-
-    Returns:
-        InferredDatasetORM model ready for persistence
-    """
-    return InferredDatasetORM(
-        id=inferred_dataset.id,
-        fingerprint=inferred_dataset.fingerprint,
-        normalized_dataset_id=inferred_dataset.normalized_dataset_id,
-    )
-
-
-# ============================================================================
 # InferRun Mappers
 # ============================================================================
 
@@ -188,7 +164,6 @@ def infer_run_info_to_orm(
     model_spec_id: UUID,
     prompt_template_id: UUID,
     parser_spec_id: UUID,
-    inferred_dataset_id: UUID,
 ) -> InferRunORM:
     """Convert InferRunInfo to InferRunORM.
 
@@ -202,7 +177,6 @@ def infer_run_info_to_orm(
         model_spec_id: ModelSpec UUID (for foreign key)
         prompt_template_id: PromptTemplate UUID (for foreign key)
         parser_spec_id: ParserSpec UUID (for foreign key)
-        inferred_dataset_id: InferredDataset UUID (for foreign key)
 
     Returns:
         InferRunORM model ready for persistence
@@ -217,7 +191,6 @@ def infer_run_info_to_orm(
         model_spec_id=model_spec_id,
         prompt_template_id=prompt_template_id,
         parser_spec_id=parser_spec_id,
-        inferred_dataset_id=inferred_dataset_id,
         ingest_run_id=ingest_run_id,
         limit=run_info.limit,
         git_sha=run_info.git_sha,

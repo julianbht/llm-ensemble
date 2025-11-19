@@ -108,9 +108,6 @@ class ModelSpecORM(Base):
 class InferredDatasetORM(Base):
     """InferredDataset ORM - set of samples actually processed by infer run.
 
-    Represents the working set for inference. Multiple infer runs can produce
-    the same InferredDataset (same fingerprint), enabling idempotency.
-
     Uses deterministic UUID based on fingerprint (SHA256 of sorted sample IDs).
     """
     __tablename__ = "inferred_datasets"

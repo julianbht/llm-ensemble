@@ -26,7 +26,6 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     ModelSpecORM,
     PromptTemplateORM,
     ParserSpecORM,
-    InferredDatasetORM,
     InferRunORM,
     LLMRequestORM,
     LLMScoreORM,
@@ -168,7 +167,7 @@ def infer_run_info_to_orm(
     """Convert InferRunInfo to InferRunORM.
 
     Note: Foreign key IDs must be provided explicitly as they're derived from
-    the related entities (ModelSpec, PromptTemplate, ParserSpec, InferredDataset).
+    the related entities (ModelSpec, PromptTemplate, ParserSpec).
 
     The ingest_run_id is computed deterministically from the input_run_name.
 

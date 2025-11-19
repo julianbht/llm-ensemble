@@ -7,12 +7,11 @@ waiting for the run to complete.
 """
 
 from __future__ import annotations
-from pathlib import Path
 from typing import Optional
 from uuid import UUID
 from pydantic import ConfigDict, Field
 
-from llm_ensemble.libs.runtime.run_info import RunInfo, RunType
+from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.libs.db import compute_ingest_run_uuid
 

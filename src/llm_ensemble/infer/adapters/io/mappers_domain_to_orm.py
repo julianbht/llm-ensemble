@@ -163,8 +163,13 @@ def infer_run_info_to_orm(
     model_spec_id: UUID,
     prompt_template_id: UUID,
     parser_spec_id: UUID,
+    start_sample_id: Optional[UUID] = None,
+    end_sample_id: Optional[UUID] = None,
 ) -> InferRunORM:
     """Convert InferRunInfo to InferRunORM.
+
+    Creates InferRun with intent fields (what user requested) but without
+    inferred_dataset_id (actual result), which is set later in close().
 
     Note: Foreign key IDs must be provided explicitly as they're derived from
     the related entities (ModelSpec, PromptTemplate, ParserSpec).
@@ -176,9 +181,11 @@ def infer_run_info_to_orm(
         model_spec_id: ModelSpec UUID (for foreign key)
         prompt_template_id: PromptTemplate UUID (for foreign key)
         parser_spec_id: ParserSpec UUID (for foreign key)
+        start_sample_id: Optional first sample ID user intended to process
+        end_sample_id: Optional last sample ID user intended to process
 
     Returns:
-        InferRunORM model ready for persistence
+        InferRunORM model ready for persistence (without inferred_dataset_id)
     """
     # Compute ingest run ID from input run name (deterministic UUID)
     ingest_run_id = compute_ingest_run_uuid(run_info.input_run_name)
@@ -191,7 +198,10 @@ def infer_run_info_to_orm(
         prompt_template_id=prompt_template_id,
         parser_spec_id=parser_spec_id,
         ingest_run_id=ingest_run_id,
+        start_sample_id=start_sample_id,
+        end_sample_id=end_sample_id,
         limit=run_info.limit,
+        inferred_dataset_id=None,  # Set in close() after computing actual dataset
         git_sha=run_info.git_sha,
         git_branch=run_info.git_branch,
         git_is_dirty=not run_info.git_clean,

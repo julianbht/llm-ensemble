@@ -19,6 +19,7 @@ Key features:
 """
 
 from __future__ import annotations
+import hashlib
 from pathlib import Path
 from typing import Optional, Tuple
 from uuid import UUID
@@ -41,6 +42,7 @@ from llm_ensemble.libs.db import (
     compute_llm_request_uuid,
     compute_llm_score_uuid,
     compute_llm_call_uuid,
+    compute_normalized_dataset_uuid,
 )
 from llm_ensemble.infer.schemas.orms_normalized import (
     ProviderORM,
@@ -48,6 +50,8 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     PromptTemplateORM,
     ParserSpecORM,
     InferRunORM,
+    InferredDatasetORM,
+    InferredDatasetJudgingSampleORM,
     LLMRequestORM,
     LLMScoreORM,
     LLMCallORM,
@@ -102,6 +106,9 @@ class SqlJudgementWriter(JudgementWriter):
         self._prompt_template_id: Optional[UUID] = None
         self._parser_spec_id: Optional[UUID] = None
         self._infer_run_id: Optional[UUID] = None
+
+        # Accumulate sample IDs for InferredDataset fingerprint computation
+        self._sample_ids: list[UUID] = []
 
         # Incremental write summary builder
         self._write_summary: Optional[WriteSummary] = None
@@ -168,6 +175,9 @@ class SqlJudgementWriter(JudgementWriter):
         if self._session is None:
             raise RuntimeError("Writer is not open - must call within context manager")
 
+        # Accumulate sample ID for InferredDataset fingerprint computation
+        self._sample_ids.append(judgement.judging_sample.id)
+
         # Decompose judgement into ORM entities with tracking and logging
         request_id, req_created, req_skipped = self._upsert_request(judgement)
         self._write_summary.add_llm_requests(created=req_created, skipped=req_skipped)
@@ -189,12 +199,28 @@ class SqlJudgementWriter(JudgementWriter):
     def close(self) -> WriteSummary:
         """Close database session and release resources.
 
+        Finalizes the inference run by:
+        1. Computing InferredDataset fingerprint from accumulated sample IDs
+        2. Upserting InferredDataset entity and junction records
+        3. Updating InferRun with inferred_dataset_id (marks run as complete)
+        4. Committing final transaction
+
         Returns:
             WriteSummary with aggregate statistics
 
         Raises:
             IOError: If close operation fails
         """
+        # Finalize InferredDataset before cleanup
+        if self._session is not None and self._sample_ids:
+            inferred_dataset_id = self._finalize_inferred_dataset()
+            
+            # Update InferRun with actual inferred_dataset_id (marks completion)
+            infer_run = self._session.get(InferRunORM, self._infer_run_id)
+            if infer_run:
+                infer_run.inferred_dataset_id = inferred_dataset_id
+                self._session.commit()
+
         # Get summary before cleanup
         summary = self._write_summary
 
@@ -217,6 +243,7 @@ class SqlJudgementWriter(JudgementWriter):
             self._prompt_template_id = None
             self._parser_spec_id = None
             self._infer_run_id = None
+            self._sample_ids = []
             self._write_summary = None
 
         return summary
@@ -488,3 +515,101 @@ class SqlJudgementWriter(JudgementWriter):
         self._session.add(call)
 
         return call_id
+
+    def _finalize_inferred_dataset(self) -> UUID:
+        """Finalize InferredDataset after all judgements written.
+
+        Computes fingerprint from accumulated sample IDs, creates/upserts
+        InferredDataset entity and junction records.
+
+        Returns:
+            UUID of the InferredDataset
+
+        Raises:
+            ValueError: If no samples were processed
+        """
+        if not self._sample_ids:
+            raise ValueError("Cannot finalize InferredDataset - no samples processed")
+
+        # Sort sample IDs for deterministic fingerprint
+        sorted_sample_ids = sorted(self._sample_ids)
+
+        # Compute fingerprint from sorted UUIDs (same logic as compute_normalized_dataset_fingerprint)
+        id_string = ",".join(str(sid) for sid in sorted_sample_ids)
+        fingerprint = hashlib.sha256(id_string.encode()).hexdigest()
+
+        # Compute deterministic UUID from fingerprint
+        dataset_id = compute_normalized_dataset_uuid(fingerprint)
+
+        # Upsert InferredDataset entity
+        created, skipped = self._upsert_inferred_dataset_entity(dataset_id, fingerprint)
+        self._write_summary.add_inferred_datasets(created=created, skipped=skipped)
+        if created > 0 or skipped > 0:
+            self.logger.info(InferWriteEvent.WRITE_INFERRED_DATASETS, created=created, skipped=skipped)
+
+        # Create junction records linking dataset to samples (with sequence numbers)
+        junction_created = self._create_inferred_dataset_junctions(dataset_id, sorted_sample_ids)
+        self._write_summary.add_inferred_dataset_junctions(created=junction_created)
+        if junction_created > 0:
+            self.logger.info(InferWriteEvent.WRITE_INFERRED_DATASET_JUNCTIONS, created=junction_created)
+
+        return dataset_id
+
+    def _upsert_inferred_dataset_entity(self, dataset_id: UUID, fingerprint: str) -> Tuple[int, int]:
+        """Upsert InferredDataset entity.
+
+        Args:
+            dataset_id: Deterministic UUID for this dataset
+            fingerprint: SHA256 hash of sorted sample IDs
+
+        Returns:
+            Tuple of (created_count, skipped_count)
+        """
+        # Check if exists
+        existing = self._session.get(InferredDatasetORM, dataset_id)
+        if existing:
+            return (0, 1)
+
+        # Create new dataset
+        dataset_orm = InferredDatasetORM(
+            id=dataset_id,
+            fingerprint=fingerprint,
+        )
+        self._session.add(dataset_orm)
+
+        return (1, 0)
+
+    def _create_inferred_dataset_junctions(
+        self, dataset_id: UUID, sorted_sample_ids: list[UUID]
+    ) -> int:
+        """Create junction records linking InferredDataset to JudgingSamples.
+
+        Args:
+            dataset_id: InferredDataset UUID
+            sorted_sample_ids: Sorted list of sample UUIDs
+
+        Returns:
+            Number of junction records created
+        """
+        created = 0
+        for seq_num, sample_id in enumerate(sorted_sample_ids):
+            # Check if junction already exists
+            existing = (
+                self._session.query(InferredDatasetJudgingSampleORM)
+                .filter_by(
+                    inferred_dataset_id=dataset_id,
+                    judging_sample_id=sample_id,
+                )
+                .first()
+            )
+
+            if not existing:
+                junction = InferredDatasetJudgingSampleORM(
+                    inferred_dataset_id=dataset_id,
+                    judging_sample_id=sample_id,
+                    sequence_number=seq_num,
+                )
+                self._session.add(junction)
+                created += 1
+
+        return created

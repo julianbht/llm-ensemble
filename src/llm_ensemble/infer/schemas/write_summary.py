@@ -34,6 +34,11 @@ class WriteSummary(BaseModel):
     infer_runs_created: int = Field(default=0, ge=0, description="Number of infer runs created")
     infer_runs_skipped: int = Field(default=0, ge=0, description="Number of infer runs skipped (already existed)")
 
+    # Dataset finalization (created in close)
+    inferred_datasets_created: int = Field(default=0, ge=0, description="Number of inferred datasets created")
+    inferred_datasets_skipped: int = Field(default=0, ge=0, description="Number of inferred datasets skipped (already existed)")
+    inferred_dataset_junctions_created: int = Field(default=0, ge=0, description="Number of dataset-sample junction records created")
+
     # Per-judgement entities (streamed during write_one)
     llm_requests_created: int = Field(default=0, ge=0, description="Number of LLM requests created")
     llm_requests_skipped: int = Field(default=0, ge=0, description="Number of LLM requests skipped (already existed)")
@@ -80,6 +85,15 @@ class WriteSummary(BaseModel):
         """Increment LLM call count (always created, never skipped)."""
         self.llm_calls_created += created
 
+    def add_inferred_datasets(self, created: int = 0, skipped: int = 0) -> None:
+        """Increment inferred dataset counts."""
+        self.inferred_datasets_created += created
+        self.inferred_datasets_skipped += skipped
+
+    def add_inferred_dataset_junctions(self, created: int = 0) -> None:
+        """Increment inferred dataset junction counts."""
+        self.inferred_dataset_junctions_created += created
+
     @property
     def total_created(self) -> int:
         """Total entities created across all types."""
@@ -89,6 +103,8 @@ class WriteSummary(BaseModel):
             + self.prompt_templates_created
             + self.parser_specs_created
             + self.infer_runs_created
+            + self.inferred_datasets_created
+            + self.inferred_dataset_junctions_created
             + self.llm_requests_created
             + self.llm_scores_created
             + self.llm_calls_created
@@ -103,6 +119,7 @@ class WriteSummary(BaseModel):
             + self.prompt_templates_skipped
             + self.parser_specs_skipped
             + self.infer_runs_skipped
+            + self.inferred_datasets_skipped
             + self.llm_requests_skipped
             + self.llm_scores_skipped
         )

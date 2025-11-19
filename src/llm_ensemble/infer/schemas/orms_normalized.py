@@ -159,10 +159,21 @@ class InferredDatasetJudgingSampleORM(Base):
 class InferRunORM(Base):
     """InferRun ORM - metadata for infer runs.
 
-    Each infer run produces exactly one InferredDataset.
-    Multiple runs can produce the same InferredDataset (idempotency).
-
-    Keeps ingest_run_id for explicit provenance tracking.
+    Separates user intent (what was requested) from actual result (what was inferred):
+    
+    Intent (set in open()):
+    - start_sample_id, end_sample_id: Requested sample range to process
+    - limit: Optional limit on number of samples
+    - ingest_run_id: Source dataset
+    
+    Actual result (set in close()):
+    - inferred_dataset_id: What samples actually got judgements
+    - NULL if run incomplete/failed, populated when run completes successfully
+    
+    This design enables:
+    - Fault tolerance: partial runs persist with incomplete state
+    - Resumability: compare intent vs actual to find missing samples
+    - Validation: aggregate CLI checks all runs share same inferred_dataset_id
     """
     __tablename__ = "infer_runs"
     __natural_key__ = "run_name"
@@ -189,13 +200,6 @@ class InferRunORM(Base):
         nullable=False,
     )
 
-    # Reference to InferredDataset (what was actually inferred)
-    inferred_dataset_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.inferred_datasets.id"),
-        nullable=False,
-    )
-
     # Reference to source ingest run (provenance)
     ingest_run_id = Column(
         PG_UUID(as_uuid=True),
@@ -203,7 +207,29 @@ class InferRunORM(Base):
         nullable=False,
     )
 
-    limit = Column(Integer, nullable=True)
+    # INTENT: What user requested to process (set in open())
+    start_sample_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ingest.judging_samples.id"),
+        nullable=True,
+        comment="First sample user intended to process (NULL = start from beginning)"
+    )
+    end_sample_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ingest.judging_samples.id"),
+        nullable=True,
+        comment="Last sample user intended to process (NULL = process until end)"
+    )
+    limit = Column(Integer, nullable=True, comment="Maximum number of samples to process")
+
+    # ACTUAL RESULT: What was actually inferred (set in close())
+    inferred_dataset_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.inferred_datasets.id"),
+        nullable=True,
+        comment="What samples actually got judgements (NULL = run incomplete/failed)"
+    )
+
     git_sha = Column(String(40), nullable=True)
     git_branch = Column(String(255), nullable=True)
     git_is_dirty = Column(Boolean, nullable=True)

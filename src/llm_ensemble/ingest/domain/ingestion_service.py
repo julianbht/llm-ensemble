@@ -79,7 +79,6 @@ class IngestionService:
         # Log read completion
         self.logger.info(
             IngestLogEvent.DATASET_READ_COMPLETE,
-            dataset=normalized_dataset.dataset.name,
             sample_count=normalized_dataset.sample_count,
         )
 

@@ -21,6 +21,8 @@ from llm_ensemble.libs.db.uuid_helpers import (
     compute_query_uuid,
     compute_document_uuid,
     compute_judging_sample_uuid,
+    compute_normalized_dataset_fingerprint,
+    compute_normalized_dataset_uuid,
     compute_ingest_run_uuid,
     compute_infer_run_uuid,
     compute_aggregate_run_uuid,
@@ -51,6 +53,8 @@ __all__ = [
     "compute_query_uuid",
     "compute_document_uuid",
     "compute_judging_sample_uuid",
+    "compute_normalized_dataset_fingerprint",
+    "compute_normalized_dataset_uuid",
     "compute_ingest_run_uuid",
     # UUID helpers - infer
     "compute_infer_run_uuid",

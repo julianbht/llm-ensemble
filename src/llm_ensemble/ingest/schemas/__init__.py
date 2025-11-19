@@ -11,6 +11,8 @@ from llm_ensemble.ingest.schemas.orms import (
     DatasetORM,
     QueryORM,
     DocumentORM,
+    NormalizedDatasetORM,
+    NormalizedDatasetJudgingSampleORM,
     IngestRunORM,
     JudgingSampleORM,
 )
@@ -29,6 +31,8 @@ __all__ = [
     "DatasetORM",
     "QueryORM",
     "DocumentORM",
+    "NormalizedDatasetORM",
+    "NormalizedDatasetJudgingSampleORM",
     "IngestRunORM",
     "JudgingSampleORM",
 ]

@@ -75,8 +75,8 @@ class Query(BaseModel):
 
     The id field is a mandatory deterministic UUID computed from dataset + external_id.
 
-    Note: The dataset relationship is NOT stored on this entity - it's only used
-    during creation for UUID computation and later handled at the persistence layer.
+    The dataset is embedded as a full value object to ensure dataset context flows
+    through the entire pipeline (ingest → infer → aggregate).
     """
 
     id: UUID = Field(
@@ -88,13 +88,17 @@ class Query(BaseModel):
         description="Query identifier from the original dataset (e.g., 'q123', 'msmarco_42')"
     )
     query_text: str = Field(..., description="The natural language query text")
+    dataset: Dataset = Field(
+        ...,
+        description="The dataset this query belongs to"
+    )
 
     @classmethod
     def create(cls, dataset: Dataset, external_id: str, query_text: str) -> "Query":
         """Create a Query with computed deterministic UUID.
 
         Args:
-            dataset: Dataset entity (used for UUID computation only, not stored)
+            dataset: Dataset entity
             external_id: Query's external identifier
             query_text: Query text
 
@@ -106,6 +110,7 @@ class Query(BaseModel):
             id=query_id,
             external_id=external_id,
             query_text=query_text,
+            dataset=dataset,
         )
 
 
@@ -118,8 +123,8 @@ class Document(BaseModel):
 
     The id field is a mandatory deterministic UUID computed from dataset + external_id.
 
-    Note: The dataset relationship is NOT stored on this entity - it's only used
-    during creation for UUID computation and later handled at the persistence layer.
+    The dataset is embedded as a full value object to ensure dataset context flows
+    through the entire pipeline (ingest → infer → aggregate).
     """
 
     id: UUID = Field(
@@ -131,13 +136,17 @@ class Document(BaseModel):
         description="Document identifier from the original dataset (e.g., 'd456', 'doc_abc')"
     )
     doc_text: str = Field(..., description="The document text content")
+    dataset: Dataset = Field(
+        ...,
+        description="The dataset this document belongs to"
+    )
 
     @classmethod
     def create(cls, dataset: Dataset, external_id: str, doc_text: str) -> "Document":
         """Create a Document with computed deterministic UUID.
 
         Args:
-            dataset: Dataset entity (used for UUID computation only, not stored)
+            dataset: Dataset entity
             external_id: Document's external identifier
             doc_text: Document text
 
@@ -149,6 +158,7 @@ class Document(BaseModel):
             id=doc_id,
             external_id=external_id,
             doc_text=doc_text,
+            dataset=dataset,
         )
 
 

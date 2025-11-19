@@ -104,7 +104,7 @@ class LLMJudgeDatasetReader(DatasetReader):
             if limit is not None and len(samples) >= limit:
                 break
 
-        return NormalizedDataset(dataset=dataset, samples=samples)
+        return NormalizedDataset.create(samples=samples)
 
     def _read_queries(self, path: Path, dataset: Dataset) -> Dict[str, Query]:
         """Read TSV of (query_id, query_text) into a dict.

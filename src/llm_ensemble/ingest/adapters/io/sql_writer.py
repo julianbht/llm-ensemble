@@ -20,6 +20,8 @@ from llm_ensemble.ingest.schemas.orms import (
     DocumentORM,
     IngestRunORM,
     JudgingSampleORM,
+    NormalizedDatasetORM,
+    NormalizedDatasetJudgingSampleORM,
 )
 from llm_ensemble.ingest.ports import DatasetWriter
 from llm_ensemble.ingest.adapters.io.mappers import (
@@ -27,6 +29,7 @@ from llm_ensemble.ingest.adapters.io.mappers import (
     query_to_orm,
     document_to_orm,
     judging_sample_to_orm,
+    normalized_dataset_to_orm,
     ingest_run_info_to_orm,
 )
 from llm_ensemble.libs.logging import get_logger
@@ -64,13 +67,13 @@ class SqlWriter(DatasetWriter):
         normalized_dataset: NormalizedDataset,
         run_info: IngestRunInfo,
     ) -> WriteSummary:
-        """Write judging samples to SQL database with direct logging.
+        """Write normalized dataset to SQL database with direct logging.
 
         Idempotent operation - merges entities (insert if new, update if exists).
         Logs each entity type write and summary.
 
         Args:
-            normalized_dataset: Complete normalized dataset with samples and metadata
+            normalized_dataset: Complete normalized dataset with fingerprint and samples
             run_info: Immutable runtime context
 
         Returns:
@@ -79,12 +82,13 @@ class SqlWriter(DatasetWriter):
         Raises:
             IOError: If database write fails
         """
-        # Extract samples and dataset from normalized dataset
         samples = normalized_dataset.samples
-        dataset = normalized_dataset.dataset
 
         if not samples:
             return WriteSummary()
+
+        # Extract dataset from first sample (all samples have same dataset)
+        dataset = samples[0].query.dataset
 
         # Note: Tables must be created via `make db-init` before first write
         # Create summary builder
@@ -99,28 +103,34 @@ class SqlWriter(DatasetWriter):
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_DATASETS, created=created, skipped=skipped)
 
-                created, skipped = self._save_ingest_run(session, run_info)
-                summary.add_runs(created=created, skipped=skipped)
-                if created > 0 or skipped > 0:
-                    self.logger.info(IngestWriteEvent.WRITE_RUNS, created=created, skipped=skipped)
-
                 # Collect unique queries and documents from batch
                 unique_queries, unique_documents = self._collect_unique_entities(samples)
 
-                created, skipped = self._save_queries(session, unique_queries, dataset.id)
+                created, skipped = self._save_queries(session, unique_queries)
                 summary.add_queries(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_QUERIES, created=created, skipped=skipped)
 
-                created, skipped = self._save_documents(session, unique_documents, dataset.id)
+                created, skipped = self._save_documents(session, unique_documents)
                 summary.add_documents(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_DOCUMENTS, created=created, skipped=skipped)
 
-                created, skipped = self._save_samples(session, samples, run_info)
+                created, skipped = self._save_samples(session, samples)
                 summary.add_samples(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_JUDGING_SAMPLES, created=created, skipped=skipped)
+
+                # Save NormalizedDataset entity
+                created, skipped = self._save_normalized_dataset(session, normalized_dataset)
+                if created > 0 or skipped > 0:
+                    self.logger.info("write_normalized_dataset", created=created, skipped=skipped)
+
+                # Save IngestRun (references NormalizedDataset)
+                created, skipped = self._save_ingest_run(session, run_info, normalized_dataset.id)
+                summary.add_runs(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(IngestWriteEvent.WRITE_RUNS, created=created, skipped=skipped)
 
             # Log totals
             if summary.total_created > 0 or summary.total_skipped > 0:
@@ -153,12 +163,15 @@ class SqlWriter(DatasetWriter):
         session.add(dataset_orm)
         return (1, 0)
 
-    def _save_ingest_run(self, session: Session, run_info: IngestRunInfo) -> Tuple[int, int]:
+    def _save_ingest_run(
+        self, session: Session, run_info: IngestRunInfo, normalized_dataset_id: UUID
+    ) -> Tuple[int, int]:
         """Save ingest run entity to database using mapper.
 
         Args:
             session: SQLAlchemy session
             run_info: IngestRunInfo context object
+            normalized_dataset_id: UUID of the NormalizedDataset this run produced
 
         Returns:
             Tuple of (created_count, skipped_count)
@@ -167,7 +180,7 @@ class SqlWriter(DatasetWriter):
         if existing:
             return (0, 1)
 
-        ingest_run_orm = ingest_run_info_to_orm(run_info)
+        ingest_run_orm = ingest_run_info_to_orm(run_info, normalized_dataset_id)
         session.add(ingest_run_orm)
         return (1, 0)
 
@@ -194,14 +207,13 @@ class SqlWriter(DatasetWriter):
         return unique_queries, unique_documents
 
     def _save_queries(
-        self, session: Session, queries: Dict[UUID, Query], dataset_id: UUID
+        self, session: Session, queries: Dict[UUID, Query]
     ) -> Tuple[int, int]:
         """Save query entities to database using mapper.
 
         Args:
             session: SQLAlchemy session
             queries: Dictionary of Query domain objects keyed by ID
-            dataset_id: Parent dataset UUID (for foreign key)
 
         Returns:
             Tuple of (created_count, skipped_count)
@@ -215,21 +227,20 @@ class SqlWriter(DatasetWriter):
                 skipped += 1
                 continue
 
-            query_orm = query_to_orm(query, dataset_id)
+            query_orm = query_to_orm(query)
             session.merge(query_orm)
             created += 1
 
         return (created, skipped)
 
     def _save_documents(
-        self, session: Session, documents: Dict[UUID, Document], dataset_id: UUID
+        self, session: Session, documents: Dict[UUID, Document]
     ) -> Tuple[int, int]:
         """Save document entities to database using mapper.
 
         Args:
             session: SQLAlchemy session
             documents: Dictionary of Document domain objects keyed by ID
-            dataset_id: Parent dataset UUID (for foreign key)
 
         Returns:
             Tuple of (created_count, skipped_count)
@@ -243,21 +254,22 @@ class SqlWriter(DatasetWriter):
                 skipped += 1
                 continue
 
-            doc_orm = document_to_orm(document, dataset_id)
+            doc_orm = document_to_orm(document)
             session.merge(doc_orm)
             created += 1
 
         return (created, skipped)
 
     def _save_samples(
-        self, session: Session, samples: List[JudgingSample], run_info: IngestRunInfo
+        self, session: Session, samples: List[JudgingSample]
     ) -> Tuple[int, int]:
-        """Save judging sample entities to database using mapper.
+        """Save judging sample entities to database.
+
+        Idempotent operation - reuses existing samples with same ID.
 
         Args:
             session: SQLAlchemy session
             samples: List of JudgingSample domain objects
-            run_info: IngestRunInfo for foreign key reference
 
         Returns:
             Tuple of (created_count, skipped_count)
@@ -267,12 +279,46 @@ class SqlWriter(DatasetWriter):
 
         for sample in samples:
             existing = session.get(JudgingSampleORM, sample.id)
-            if existing:
+            if not existing:
+                sample_orm = judging_sample_to_orm(sample)
+                session.add(sample_orm)
+                created += 1
+            else:
                 skipped += 1
-                continue
-
-            sample_orm = judging_sample_to_orm(sample, run_info.id)
-            session.merge(sample_orm)
-            created += 1
 
         return (created, skipped)
+
+    def _save_normalized_dataset(
+        self, session: Session, normalized_dataset: NormalizedDataset
+    ) -> Tuple[int, int]:
+        """Save NormalizedDataset entity and junction table records.
+
+        Idempotent operation - reuses existing NormalizedDataset with same fingerprint.
+        Creates junction records linking samples with sequence numbers.
+
+        Args:
+            session: SQLAlchemy session
+            normalized_dataset: NormalizedDataset domain object
+
+        Returns:
+            Tuple of (created_count, skipped_count)
+        """
+        # Check if NormalizedDataset already exists (idempotency via fingerprint)
+        existing = session.get(NormalizedDatasetORM, normalized_dataset.id)
+        if existing:
+            return (0, 1)
+
+        # Create NormalizedDataset entity
+        normalized_dataset_orm = normalized_dataset_to_orm(normalized_dataset)
+        session.add(normalized_dataset_orm)
+
+        # Create junction records with sequence numbers
+        for seq_num, sample in enumerate(normalized_dataset.samples):
+            junction = NormalizedDatasetJudgingSampleORM(
+                normalized_dataset_id=normalized_dataset.id,
+                judging_sample_id=sample.id,
+                sequence_number=seq_num,
+            )
+            session.add(junction)
+
+        return (1, 0)

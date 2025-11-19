@@ -1,35 +1,90 @@
-"""NormalizedDataset - container for dataset metadata and samples.
+"""NormalizedDataset - internal dataset with deterministic fingerprint.
 
-This is the output of the DatasetReader - a complete, normalized dataset
-ready for persistence. The reader handles all normalization and UUID computation.
+This is the output of the DatasetReader and represents the "internal dataset" -
+a specific collection of judging samples. Multiple ingest runs can produce the
+same NormalizedDataset (same fingerprint) enabling idempotent re-runs.
+
+Samples are always stored in deterministic order (sorted by sample.id) to support
+reproducible slicing via future start_sample/end_sample parameters.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
+from uuid import UUID
+from pydantic import BaseModel, Field, field_validator
 
-from llm_ensemble.ingest.schemas import Dataset, JudgingSample
+from llm_ensemble.ingest.schemas import JudgingSample
+from llm_ensemble.libs.db import compute_normalized_dataset_uuid
 
 
-@dataclass(frozen=True)
-class NormalizedDataset:
-    """Container for complete normalized dataset.
+class NormalizedDataset(BaseModel):
+    """Internal dataset with deterministic fingerprint.
 
-    Combines dataset metadata with fully-formed judging samples.
-    This is what DatasetReader returns after normalizing raw IR data.
+    Represents a specific collection of judging samples with a deterministic
+    fingerprint computed from sorted sample IDs. This enables:
+    - Idempotent ingest runs (same samples = same fingerprint = same entity)
+    - Reproducible sample ordering for start/end slicing
+    - Efficient validation in aggregate CLI (compare fingerprints)
 
-    The reader is responsible for:
-    - Extracting dataset metadata from data
-    - Creating Query and Document entities with computed UUIDs
-    - Creating complete JudgingSample objects
-    - Returning everything as a cohesive unit
+    The fingerprint is computed from the sorted list of sample IDs (UUIDs).
+    Samples are always stored sorted by sample.id to ensure reproducibility.
 
-    Attributes:
-        dataset: Dataset metadata (name, description, id)
-        samples: List of complete JudgingSample objects
+    Note: Does not store Dataset entity - each sample already has dataset embedded
+    in query.dataset and document.dataset.
     """
 
-    dataset: Dataset
-    samples: list[JudgingSample]
+    id: UUID = Field(
+        ...,
+        description="Deterministic UUID computed from fingerprint"
+    )
+    fingerprint: str = Field(
+        ...,
+        description="SHA256 hash of sorted sample IDs (deterministic identifier)"
+    )
+    samples: list[JudgingSample] = Field(
+        ...,
+        description="Judging samples, always sorted by sample.id for reproducibility"
+    )
+
+    @field_validator('samples')
+    @classmethod
+    def validate_samples_sorted(cls, v: list[JudgingSample]) -> list[JudgingSample]:
+        """Ensure samples are sorted by ID for deterministic ordering."""
+        if not v:
+            return v
+
+        # Check if already sorted
+        sample_ids = [s.id for s in v]
+        if sample_ids != sorted(sample_ids):
+            raise ValueError("Samples must be sorted by sample.id for deterministic ordering")
+
+        return v
+
+    @classmethod
+    def create(cls, samples: list[JudgingSample]) -> "NormalizedDataset":
+        """Create NormalizedDataset with computed fingerprint and ID.
+
+        Args:
+            samples: List of judging samples (will be sorted by ID)
+
+        Returns:
+            NormalizedDataset with computed fingerprint and deterministic ID
+        """
+        from llm_ensemble.libs.db import compute_normalized_dataset_fingerprint
+
+        # Sort samples by ID for deterministic ordering
+        sorted_samples = sorted(samples, key=lambda s: s.id)
+
+        # Compute fingerprint from sorted sample IDs
+        fingerprint = compute_normalized_dataset_fingerprint(sorted_samples)
+
+        # Compute deterministic UUID from fingerprint
+        dataset_id = compute_normalized_dataset_uuid(fingerprint)
+
+        return cls(
+            id=dataset_id,
+            fingerprint=fingerprint,
+            samples=sorted_samples,
+        )
 
     @property
     def sample_count(self) -> int:

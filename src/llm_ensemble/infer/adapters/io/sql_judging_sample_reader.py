@@ -19,6 +19,8 @@ from llm_ensemble.ingest.schemas.orms import (
     QueryORM,
     DocumentORM,
     IngestRunORM,
+    NormalizedDatasetORM,
+    NormalizedDatasetJudgingSampleORM,
 )
 from llm_ensemble.ingest.adapters.io.mappers import (
     query_from_orm,
@@ -88,16 +90,22 @@ class SqlJudgingSampleReader(ExampleReader):
                     f"Ingest run '{run_name}' not found in database."
                 )
 
-            # 2. Query judging samples with eager loading of relationships
+            # 2. Query judging samples via NormalizedDataset with eager loading
+            # Join through NormalizedDataset to get samples in deterministic order
             query = (
                 session.query(JudgingSampleORM)
-                .filter_by(ingest_run_id=ingest_run.id)
+                .join(
+                    NormalizedDatasetJudgingSampleORM,
+                    NormalizedDatasetJudgingSampleORM.judging_sample_id == JudgingSampleORM.id
+                )
+                .filter(NormalizedDatasetJudgingSampleORM.normalized_dataset_id == ingest_run.normalized_dataset_id)
                 .options(
                     # Eager load query and its dataset
                     joinedload(JudgingSampleORM.query).joinedload(QueryORM.dataset),
                     # Eager load document and its dataset
                     joinedload(JudgingSampleORM.document).joinedload(DocumentORM.dataset),
                 )
+                .order_by(NormalizedDatasetJudgingSampleORM.sequence_number)
             )
 
             # Apply limit if specified

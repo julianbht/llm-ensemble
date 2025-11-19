@@ -143,10 +143,7 @@ def fake_reader_factory():
             # Apply limit if specified
             if limit is not None:
                 limited_samples = self.normalized_dataset.samples[:limit]
-                return NormalizedDataset(
-                    dataset=self.normalized_dataset.dataset,
-                    samples=limited_samples
-                )
+                return NormalizedDataset.create(samples=limited_samples)
             return self.normalized_dataset
 
     return FakeReader

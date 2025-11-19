@@ -80,14 +80,15 @@ class AggregationService:
         
         Args:
             judgement: LLM judgement to extract identity from
-            
+
         Returns:
             Tuple of (dataset, query_id, doc_id) serving as natural composite key
         """
-        dataset = judgement.judging_sample.run_info.io_config_name
+        # Extract dataset from embedded query (dataset now flows through pipeline)
+        dataset_name = judgement.judging_sample.query.dataset.name
         query_id = judgement.judging_sample.query.external_id
         doc_id = judgement.judging_sample.document.external_id
-        return (dataset, query_id, doc_id)
+        return (dataset_name, query_id, doc_id)
     
     def run_aggregation(
         self,

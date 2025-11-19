@@ -22,6 +22,7 @@ NAMESPACE_DATASET = uuid.UUID('f0e1d2c3-b4a5-9687-7654-321fedcba098')
 NAMESPACE_QUERY = uuid.UUID('a1b2c3d4-e5f6-7890-abcd-ef1234567890')
 NAMESPACE_DOCUMENT = uuid.UUID('b2c3d4e5-f678-90ab-cdef-123456789012')
 NAMESPACE_JUDGING_SAMPLE = uuid.UUID('c3d4e5f6-7890-abcd-ef12-34567890abcd')
+NAMESPACE_NORMALIZED_DATASET = uuid.UUID('c4d5e6f7-8901-bcde-f234-567890abcdef')
 NAMESPACE_INGEST_RUN = uuid.UUID('d4e5f678-90ab-cdef-1234-567890abcdef')
 NAMESPACE_INFER_RUN = uuid.UUID('e5f67890-abcd-ef12-3456-7890abcdef12')
 NAMESPACE_AGGREGATE_RUN = uuid.UUID('f6789012-3456-7890-abcd-ef1234567890')
@@ -79,6 +80,41 @@ def compute_judging_sample_uuid(
 ) -> uuid.UUID:
     natural_key = f"{query_id}:{document_id}"
     return uuid.uuid5(NAMESPACE_JUDGING_SAMPLE, natural_key)
+
+
+def compute_normalized_dataset_fingerprint(samples: list) -> str:
+    """Compute deterministic SHA256 fingerprint from sorted sample IDs.
+
+    The fingerprint uniquely identifies a specific set of judging samples,
+    enabling idempotent ingest runs and efficient validation in aggregate CLI.
+
+    Args:
+        samples: List of JudgingSample objects (must be sorted by ID)
+
+    Returns:
+        SHA256 hash (64 character hex string) of sorted sample IDs
+    """
+    # Extract and sort sample IDs (already sorted, but ensure determinism)
+    sorted_ids = sorted([str(s.id) for s in samples])
+
+    # Create comma-separated string of UUIDs
+    id_string = ",".join(sorted_ids)
+
+    # Compute SHA256 hash
+    return hashlib.sha256(id_string.encode()).hexdigest()
+
+
+def compute_normalized_dataset_uuid(fingerprint: str) -> uuid.UUID:
+    """Compute deterministic UUID for NormalizedDataset from fingerprint.
+
+    Args:
+        fingerprint: SHA256 hash of sorted sample IDs
+
+    Returns:
+        Deterministic UUID based on fingerprint
+    """
+    return uuid.uuid5(NAMESPACE_NORMALIZED_DATASET, fingerprint)
+
 
 # ========================================================================
 # Infer Entity UUIDs

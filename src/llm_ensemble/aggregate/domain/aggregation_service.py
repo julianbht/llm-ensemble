@@ -9,6 +9,7 @@ from typing import Optional
 from collections import defaultdict
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.inferred_dataset import InferredDataset
 from llm_ensemble.aggregate.schemas import AggregatedJudgement
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.aggregate_run_summary import AggregateRunSummary
@@ -117,10 +118,33 @@ class AggregationService:
         # Initialize summary builder with run_info
         summary_builder = RunSummaryBuilder(run_info)
         summary_builder.set_start_time()
-        
-        # Read all judgements via reader port
-        judgements = self.judgement_reader.read(run_names)
-        
+
+        # Read InferredDatasets (one per run) via reader port
+        inferred_datasets = self.judgement_reader.read(run_names)
+
+        # Validate all datasets share the same fingerprint
+        fingerprints = {dataset.fingerprint for dataset in inferred_datasets}
+        if len(fingerprints) > 1:
+            fingerprint_list = "\n".join(f"  - {fp[:16]}..." for fp in fingerprints)
+            raise ValueError(
+                f"Cannot aggregate runs with different InferredDataset fingerprints.\n"
+                f"All runs must have processed the same samples.\n"
+                f"Fingerprints found:\n{fingerprint_list}"
+            )
+
+        self.logger.info(
+            "validated_inferred_datasets",
+            num_datasets=len(inferred_datasets),
+            shared_fingerprint=list(fingerprints)[0][:16] + "..." if fingerprints else "N/A"
+        )
+
+        # Extract all judgements from all datasets
+        judgements = [
+            judgement
+            for dataset in inferred_datasets
+            for judgement in dataset.judgements
+        ]
+
         # Group judgements by natural composite key (dataset, query_id, doc_id)
         grouped: dict[tuple[str, str, str], list[LLMJudgement]] = defaultdict(list)
         for judgement in judgements:

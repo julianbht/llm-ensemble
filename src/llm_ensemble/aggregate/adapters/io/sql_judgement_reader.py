@@ -13,6 +13,7 @@ from __future__ import annotations
 from sqlalchemy.orm import joinedload
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.inferred_dataset import InferredDataset
 from llm_ensemble.infer.schemas.orms_normalized import (
     LLMCallORM,
     LLMRequestORM,
@@ -52,32 +53,35 @@ class SqlJudgementReader(JudgementReader):
     - Reconstruct Pydantic LLMJudgement models from ORM entities
     """
 
-    def read(self, run_names: list[str]) -> list[LLMJudgement]:
-        """Read LLM judgements from database by infer run name(s).
+    def read(self, run_names: list[str]) -> list[InferredDataset]:
+        """Read InferredDataset from database by infer run name(s).
+
+        Loads one InferredDataset per run, each containing the fingerprint
+        and all judgements from that run.
 
         Args:
             run_names: List of infer run identifiers (e.g., ["run1", "run2"])
                       Queries database for judgements from these runs
 
         Returns:
-            List of all LLMJudgement objects from all specified runs
+            List of InferredDataset objects, one per run
 
         Raises:
             LookupError: If any infer run doesn't exist in database
-            ValueError: If database query fails or data is invalid
         """
         # Get database engine and create session
         engine = get_engine()  # Reads DATABASE_URL from .env
         session = get_session(engine)
 
         try:
-            all_judgements = []
+            inferred_datasets = []
 
             for run_name in run_names:
-                # 1. Find infer run by name
+                # Find infer run by name with eager loading of inferred_dataset
                 infer_run = (
                     session.query(InferRunORM)
                     .filter_by(run_name=run_name)
+                    .options(joinedload(InferRunORM.inferred_dataset))
                     .one_or_none()
                 )
 
@@ -87,7 +91,7 @@ class SqlJudgementReader(JudgementReader):
                         f"Available runs can be queried with: SELECT run_name FROM infer.infer_runs"
                     )
 
-                # 2. Query LLM calls for this run with comprehensive eager loading
+                # Query LLM calls for this run with comprehensive eager loading
                 # We need to reconstruct full LLMJudgement objects which require:
                 # - LLMCall (latency, retries, cost, tokens)
                 # - LLMRequest (prompt, judging_sample)
@@ -114,12 +118,18 @@ class SqlJudgementReader(JudgementReader):
                     .all()
                 )
 
-                # 3. Convert ORM entities to Pydantic domain models
+                # Convert ORM entities to Pydantic domain models
+                judgements = []
                 for call_orm in calls_orm:
                     judgement = llm_judgement_from_orm(call_orm)
-                    all_judgements.append(judgement)
+                    judgements.append(judgement)
 
-            return all_judgements
+                # Create InferredDataset from judgements
+                inferred_dataset = InferredDataset.create(judgements)
+
+                inferred_datasets.append(inferred_dataset)
+
+            return inferred_datasets
 
         finally:
             # Always close session (resource cleanup)

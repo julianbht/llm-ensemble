@@ -105,7 +105,68 @@ class ModelSpecORM(Base):
     infer_runs = relationship("InferRunORM", back_populates="model_spec")
 
 
+class InferredDatasetORM(Base):
+    """InferredDataset ORM - set of samples actually processed by infer run.
+
+    Represents the working set for inference. Multiple infer runs can produce
+    the same InferredDataset (same fingerprint), enabling idempotency.
+
+    Uses deterministic UUID based on fingerprint (SHA256 of sorted sample IDs).
+    """
+    __tablename__ = "inferred_datasets"
+    __table_args__ = {"schema": "infer"}
+    __natural_key__ = ("fingerprint",)
+    __uuid_function__ = "compute_normalized_dataset_uuid"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    fingerprint = Column(CHAR(64), nullable=False, unique=True)
+    normalized_dataset_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ingest.normalized_datasets.id"),
+        nullable=False
+    )
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    # Relationships
+    judging_samples = relationship(
+        "JudgingSampleORM",
+        secondary="infer.inferred_dataset_judging_samples",
+        order_by="InferredDatasetJudgingSampleORM.sequence_number"
+    )
+    infer_runs = relationship("InferRunORM", back_populates="inferred_dataset")
+
+
+class InferredDatasetJudgingSampleORM(Base):
+    """Junction table linking InferredDataset to JudgingSample with sequence.
+
+    Preserves deterministic ordering of samples via sequence_number.
+    This enables reproducible aggregation across multiple infer runs.
+    """
+    __tablename__ = "inferred_dataset_judging_samples"
+    __table_args__ = {"schema": "infer"}
+
+    inferred_dataset_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.inferred_datasets.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    judging_sample_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ingest.judging_samples.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    sequence_number = Column(Integer, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+
 class InferRunORM(Base):
+    """InferRun ORM - metadata for infer runs.
+
+    Each infer run produces exactly one InferredDataset.
+    Multiple runs can produce the same InferredDataset (idempotency).
+
+    Keeps ingest_run_id for explicit provenance tracking.
+    """
     __tablename__ = "infer_runs"
     __natural_key__ = "run_name"
     __uuid_function__ = "compute_infer_run_uuid"
@@ -130,8 +191,15 @@ class InferRunORM(Base):
         ForeignKey("infer.parser_specs.id"),
         nullable=False,
     )
-    
-    # Reference to source ingest run
+
+    # Reference to InferredDataset (what was actually inferred)
+    inferred_dataset_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.inferred_datasets.id"),
+        nullable=False,
+    )
+
+    # Reference to source ingest run (provenance)
     ingest_run_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("ingest.ingest_runs.id"),
@@ -148,6 +216,7 @@ class InferRunORM(Base):
     # Relationships (many runs, one spec/template/model)
     model_spec = relationship("ModelSpecORM", back_populates="infer_runs")
     prompt_template = relationship("PromptTemplateORM", back_populates="infer_runs")
+    inferred_dataset = relationship("InferredDatasetORM", back_populates="infer_runs")
     parser_spec = relationship("ParserSpecORM", back_populates="infer_runs")
     calls = relationship("LLMCallORM", back_populates="infer_run")
     # Note: No explicit relationship to IngestRunORM to avoid cross-schema circular imports

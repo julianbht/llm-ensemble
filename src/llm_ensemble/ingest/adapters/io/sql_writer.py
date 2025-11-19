@@ -97,7 +97,18 @@ class SqlWriter(DatasetWriter):
         # Write to database in transaction
         try:
             with session_context(self.engine) as session:
-                # Save entities in dependency order, adding to summary as we go
+                # Save entities in strict dependency order to satisfy foreign key constraints
+                # Order matters! Each step depends on previous steps being persisted.
+                #
+                # Dependency graph:
+                #   1. Dataset (no dependencies)
+                #   2. Query, Document (depend on Dataset)
+                #   3. JudgingSample (depends on Query, Document)
+                #   4. NormalizedDataset entity (no FK dependencies - just id + fingerprint)
+                #   5. NormalizedDataset junction (depends on NormalizedDataset + JudgingSample)
+                #   6. IngestRun (depends on NormalizedDataset)
+
+                # 1. Dataset
                 created, skipped = self._save_dataset(session, dataset)
                 summary.add_datasets(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
@@ -106,27 +117,39 @@ class SqlWriter(DatasetWriter):
                 # Collect unique queries and documents from batch
                 unique_queries, unique_documents = self._collect_unique_entities(samples)
 
+                # 2. Queries (depend on Dataset)
                 created, skipped = self._save_queries(session, unique_queries)
                 summary.add_queries(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_QUERIES, created=created, skipped=skipped)
 
+                # 3. Documents (depend on Dataset)
                 created, skipped = self._save_documents(session, unique_documents)
                 summary.add_documents(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_DOCUMENTS, created=created, skipped=skipped)
 
+                # 4. JudgingSamples (depend on Query + Document)
                 created, skipped = self._save_samples(session, samples)
                 summary.add_samples(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_JUDGING_SAMPLES, created=created, skipped=skipped)
 
-                # Save NormalizedDataset entity
-                created, skipped = self._save_normalized_dataset(session, normalized_dataset)
+                # 5. NormalizedDataset entity (no FK dependencies)
+                created, skipped = self._save_normalized_dataset_entity(session, normalized_dataset)
                 if created > 0 or skipped > 0:
                     self.logger.info("write_normalized_dataset", created=created, skipped=skipped)
 
-                # Save IngestRun (references NormalizedDataset)
+                # Flush to ensure NormalizedDataset is persisted before creating junction records
+                # (required because step 6 has FK to NormalizedDataset)
+                session.flush()
+
+                # 6. NormalizedDataset junction records (depend on NormalizedDataset + JudgingSample)
+                created = self._save_normalized_dataset_junction(session, normalized_dataset)
+                if created > 0:
+                    self.logger.info("write_normalized_dataset_junction", created=created)
+
+                # 7. IngestRun (depends on NormalizedDataset)
                 created, skipped = self._save_ingest_run(session, run_info, normalized_dataset.id)
                 summary.add_runs(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
@@ -288,13 +311,15 @@ class SqlWriter(DatasetWriter):
 
         return (created, skipped)
 
-    def _save_normalized_dataset(
+    def _save_normalized_dataset_entity(
         self, session: Session, normalized_dataset: NormalizedDataset
     ) -> Tuple[int, int]:
-        """Save NormalizedDataset entity and junction table records.
+        """Save NormalizedDataset entity (step 5 in dependency order).
 
         Idempotent operation - reuses existing NormalizedDataset with same fingerprint.
-        Creates junction records linking samples with sequence numbers.
+
+        Note: This MUST be called before _save_normalized_dataset_junction because
+        junction records have FK to NormalizedDataset.
 
         Args:
             session: SQLAlchemy session
@@ -312,6 +337,36 @@ class SqlWriter(DatasetWriter):
         normalized_dataset_orm = normalized_dataset_to_orm(normalized_dataset)
         session.add(normalized_dataset_orm)
 
+        return (1, 0)
+
+    def _save_normalized_dataset_junction(
+        self, session: Session, normalized_dataset: NormalizedDataset
+    ) -> int:
+        """Save NormalizedDataset junction table records (step 6 in dependency order).
+
+        Creates junction records linking NormalizedDataset to JudgingSamples with
+        sequence numbers for deterministic ordering.
+
+        Note: This MUST be called after _save_normalized_dataset_entity because
+        junction records have FK to NormalizedDataset.
+
+        Args:
+            session: SQLAlchemy session
+            normalized_dataset: NormalizedDataset domain object
+
+        Returns:
+            Number of junction records created
+        """
+        # Check if junction records already exist (idempotency)
+        existing_count = (
+            session.query(NormalizedDatasetJudgingSampleORM)
+            .filter_by(normalized_dataset_id=normalized_dataset.id)
+            .count()
+        )
+
+        if existing_count > 0:
+            return 0
+
         # Create junction records with sequence numbers
         for seq_num, sample in enumerate(normalized_dataset.samples):
             junction = NormalizedDatasetJudgingSampleORM(
@@ -321,4 +376,4 @@ class SqlWriter(DatasetWriter):
             )
             session.add(junction)
 
-        return (1, 0)
+        return len(normalized_dataset.samples)

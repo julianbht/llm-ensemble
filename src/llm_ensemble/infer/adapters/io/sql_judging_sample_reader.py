@@ -4,7 +4,16 @@ Reads JudgingSample records from PostgreSQL database by ingest run name.
 This adapter queries the normalized relational schema and reconstructs
 domain objects from ORM entities using the mappers module for symmetry.
 
-The adapter follows the same database connection pattern as SqlJudgementWriter,
+Read Strategy:
+    Queries samples via NormalizedDataset for deterministic ordering:
+    1. Find IngestRun by run_name
+    2. Get IngestRun.normalized_dataset_id
+    3. Join through NormalizedDatasetJudgingSample junction table
+    4. Order by sequence_number (ensures reproducible ordering)
+    5. Eager load Query -> Dataset and Document -> Dataset
+    6. Reconstruct domain objects with embedded datasets
+
+The adapter follows the same database connection pattern as SqlWriter,
 using SQLAlchemy sessions from the libs/db layer.
 """
 

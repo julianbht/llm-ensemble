@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.libs.db import compute_normalized_dataset_uuid
+from llm_ensemble.libs.db import compute_normalized_dataset_fingerprint
 
 
 class NormalizedDataset(BaseModel):
@@ -69,7 +70,6 @@ class NormalizedDataset(BaseModel):
         Returns:
             NormalizedDataset with computed fingerprint and deterministic ID
         """
-        from llm_ensemble.libs.db import compute_normalized_dataset_fingerprint
 
         # Sort samples by ID for deterministic ordering
         sorted_samples = sorted(samples, key=lambda s: s.id)

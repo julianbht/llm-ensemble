@@ -5,7 +5,6 @@ It depends only on port abstractions and handles its own logging.
 """
 
 from __future__ import annotations
-from typing import Optional
 from collections import defaultdict
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
@@ -90,7 +89,43 @@ class AggregationService:
         query_id = judgement.judging_sample.query.external_id
         doc_id = judgement.judging_sample.document.external_id
         return (dataset_name, query_id, doc_id)
-    
+
+    def _validate_judged_datasets(
+        self, judged_datasets: list[JudgedDataset], run_names: list[str]
+    ) -> None:
+        """Validate that all JudgedDatasets are complete and compatible for aggregation.
+
+        Checks:
+        1. All JudgedDatasets have non-NULL fingerprints (run completed successfully)
+        2. All fingerprints match (same samples were processed)
+
+        Args:
+            judged_datasets: List of JudgedDataset objects loaded by reader
+            run_names: Corresponding run names (for error messages)
+
+        Raises:
+            ValueError: If validation fails
+        """
+        if not judged_datasets:
+            raise ValueError("No JudgedDatasets found. Cannot aggregate empty list.")
+
+        # Check for NULL fingerprints (incomplete runs)
+        for dataset, run_name in zip(judged_datasets, run_names):
+            if dataset.fingerprint is None:
+                raise ValueError(
+                    f"JudgedDataset for run '{run_name}' has NULL fingerprint. "
+                    f"This indicates the run did not complete successfully."
+                )
+
+        # Check that all fingerprints match
+        fingerprints = {dataset.fingerprint for dataset in judged_datasets}
+        if len(fingerprints) > 1:
+            raise ValueError(
+                f"Cannot aggregate runs with different JudgedDataset fingerprints. "
+                f"Found {len(fingerprints)} distinct fingerprints: {fingerprints}. "
+                f"This means the runs processed different sets of samples."
+            )
+
     def run_aggregation(
         self,
         run_names: list[str],
@@ -120,10 +155,12 @@ class AggregationService:
         summary_builder.set_start_time()
 
         # Read JudgedDatasets (one per run) via reader port
-        # Reader validates all fingerprints match (defense in depth)
         judged_datasets = self.judgement_reader.read(run_names)
 
-        # Log validation (reader already checked fingerprints match)
+        # Validate completion and fingerprint consistency
+        self._validate_judged_datasets(judged_datasets, run_names)
+
+        # Log validation
         fingerprints = {dataset.fingerprint for dataset in judged_datasets}
         self.logger.info(
             "validated_judged_datasets",

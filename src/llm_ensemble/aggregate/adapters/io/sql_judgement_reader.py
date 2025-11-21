@@ -1,8 +1,10 @@
 """SQL database adapter for reading LLM judgements from infer runs.
 
-Reads LLMJudgement records from PostgreSQL database by infer run name(s).
-This adapter queries the normalized relational schema and reconstructs
-complete domain objects from ORM entities.
+Reads JudgedDataset records from PostgreSQL database by infer run name(s).
+This adapter queries the normalized relational schema via InferRun → JudgedDataset
+relationship and reconstructs complete domain objects from ORM entities.
+
+Includes validation that all runs processed the same samples (same fingerprint).
 
 The adapter follows the same database connection pattern as SqlJudgementWriter,
 using SQLAlchemy sessions from the libs/db layer.
@@ -13,12 +15,14 @@ from __future__ import annotations
 from sqlalchemy.orm import joinedload
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
-from llm_ensemble.infer.schemas.inferred_dataset import InferredDataset
+from llm_ensemble.infer.schemas.judged_dataset import JudgedDataset
 from llm_ensemble.infer.schemas.orms_normalized import (
     LLMCallORM,
     LLMRequestORM,
     LLMScoreORM,
     InferRunORM,
+    JudgedDatasetORM,
+    JudgedDatasetLLMCallORM,
 )
 from llm_ensemble.ingest.schemas.orms import (
     JudgingSampleORM,
@@ -31,15 +35,15 @@ from llm_ensemble.libs.db import get_engine, get_session
 
 
 class SqlJudgementReader(JudgementReader):
-    """Read LLMJudgement records from SQL database by infer run name(s).
+    """Read JudgedDataset records from SQL database by infer run name(s).
 
     This adapter implements the JudgementReader port while handling the
     impedance mismatch between relational entities and domain objects.
 
     Architecture:
-    - Implements same interface as JsonJudgementReader (unified port)
-    - Data mapper logic lives in sql_mappers module
-    - Queries by infer run names (list of string parameters)
+    - Queries via InferRun → JudgedDataset relationship (simplified design)
+    - Data mapper logic lives in mappers_orm_to_domain module
+    - Validates all JudgedDatasets have same fingerprint (aggregation requirement)
 
     Database connection:
     - Reads DATABASE_URL from environment (.env file)
@@ -48,40 +52,44 @@ class SqlJudgementReader(JudgementReader):
 
     Query strategy:
     - For each run_name, find InferRunORM
-    - Query LLMCallORM records for those runs
-    - Eager load related entities (request, response, judging sample, etc.)
-    - Reconstruct Pydantic LLMJudgement models from ORM entities
+    - Load linked JudgedDatasetORM via FK
+    - Query LLMCallORM records via junction table (preserves sequence)
+    - Eager load related entities (request, score, judging sample, etc.)
+    - Reconstruct Pydantic LLMJudgement and JudgedDataset models
     """
 
-    def read(self, run_names: list[str]) -> list[InferredDataset]:
-        """Read InferredDataset from database by infer run name(s).
+    def read(self, run_names: list[str]) -> list[JudgedDataset]:
+        """Read JudgedDataset from database by infer run name(s).
 
-        Loads one InferredDataset per run, each containing the fingerprint
-        and all judgements from that run.
+        Loads one JudgedDataset per run, each containing the fingerprint
+        and all judgements from that run. Validates that all JudgedDatasets
+        have the same fingerprint (ensuring same samples were processed).
 
         Args:
             run_names: List of infer run identifiers (e.g., ["run1", "run2"])
                       Queries database for judgements from these runs
 
         Returns:
-            List of InferredDataset objects, one per run
+            List of JudgedDataset objects, one per run
 
         Raises:
             LookupError: If any infer run doesn't exist in database
+            ValueError: If JudgedDataset fingerprints don't match across runs
         """
         # Get database engine and create session
         engine = get_engine()  # Reads DATABASE_URL from .env
         session = get_session(engine)
 
         try:
-            inferred_datasets = []
+            judged_datasets = []
+            fingerprints_seen = set()
 
             for run_name in run_names:
-                # Find infer run by name with eager loading of inferred_dataset
+                # Find infer run by name with eager loading of judged_dataset
                 infer_run = (
                     session.query(InferRunORM)
                     .filter_by(run_name=run_name)
-                    .options(joinedload(InferRunORM.inferred_dataset))
+                    .options(joinedload(InferRunORM.judged_dataset))
                     .one_or_none()
                 )
 
@@ -91,7 +99,24 @@ class SqlJudgementReader(JudgementReader):
                         f"Available runs can be queried with: SELECT run_name FROM infer.infer_runs"
                     )
 
-                # Query LLM calls for this run with comprehensive eager loading
+                # Check that run completed successfully
+                if not infer_run.judged_dataset_id:
+                    raise ValueError(
+                        f"Infer run '{run_name}' did not complete successfully "
+                        f"(judged_dataset_id is NULL). Cannot aggregate incomplete runs."
+                    )
+
+                # Get JudgedDataset fingerprint for validation
+                judged_dataset_orm = infer_run.judged_dataset
+                if not judged_dataset_orm.fingerprint:
+                    raise ValueError(
+                        f"JudgedDataset for run '{run_name}' has NULL fingerprint. "
+                        f"This indicates the run did not complete properly."
+                    )
+
+                fingerprints_seen.add(judged_dataset_orm.fingerprint)
+
+                # Query LLM calls via junction table (preserves deterministic ordering)
                 # We need to reconstruct full LLMJudgement objects which require:
                 # - LLMCall (latency, retries, cost, tokens)
                 # - LLMRequest (prompt, judging_sample)
@@ -99,7 +124,13 @@ class SqlJudgementReader(JudgementReader):
                 # - JudgingSample (query, document, gold score)
                 calls_orm = (
                     session.query(LLMCallORM)
-                    .filter_by(infer_run_id=infer_run.id)
+                    .join(
+                        JudgedDatasetLLMCallORM,
+                        LLMCallORM.id == JudgedDatasetLLMCallORM.llm_call_id
+                    )
+                    .filter(
+                        JudgedDatasetLLMCallORM.judged_dataset_id == judged_dataset_orm.id
+                    )
                     .options(
                         # Load request and its judging sample with query/document
                         joinedload(LLMCallORM.llm_request)
@@ -115,6 +146,7 @@ class SqlJudgementReader(JudgementReader):
                             LLMScoreORM.parser_spec
                         ),
                     )
+                    .order_by(JudgedDatasetLLMCallORM.sequence_number)
                     .all()
                 )
 
@@ -124,12 +156,24 @@ class SqlJudgementReader(JudgementReader):
                     judgement = llm_judgement_from_orm(call_orm)
                     judgements.append(judgement)
 
-                # Create InferredDataset from judgements
-                inferred_dataset = InferredDataset.create(judgements)
+                # Create JudgedDataset domain object
+                judged_dataset = JudgedDataset(
+                    id=judged_dataset_orm.id,
+                    fingerprint=judged_dataset_orm.fingerprint,
+                    judgements=judgements,
+                )
 
-                inferred_datasets.append(inferred_dataset)
+                judged_datasets.append(judged_dataset)
 
-            return inferred_datasets
+            # Validate all fingerprints match (aggregation requirement)
+            if len(fingerprints_seen) > 1:
+                raise ValueError(
+                    f"Cannot aggregate runs with different JudgedDataset fingerprints. "
+                    f"Found {len(fingerprints_seen)} distinct fingerprints: {fingerprints_seen}. "
+                    f"This means the runs processed different sets of samples."
+                )
+
+            return judged_datasets
 
         finally:
             # Always close session (resource cleanup)

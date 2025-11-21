@@ -74,11 +74,19 @@ Override = Annotated[
     ),
 ]
 
-Limit = Annotated[
+StartIdx = Annotated[
     Optional[int],
     typer.Option(
-        "--limit",
-        help="Process at most N examples (None = no limit)",
+        "--start-idx",
+        help="Start index into NormalizedDataset (0-indexed, inclusive, None = start from beginning)",
+    ),
+]
+
+EndIdx = Annotated[
+    Optional[int],
+    typer.Option(
+        "--end-idx",
+        help="End index into NormalizedDataset (exclusive, None = process until end)",
     ),
 ]
 

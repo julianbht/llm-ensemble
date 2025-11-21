@@ -163,33 +163,34 @@ def infer_run_info_to_orm(
     model_spec_id: UUID,
     prompt_template_id: UUID,
     parser_spec_id: UUID,
-    start_sample_id: Optional[UUID] = None,
-    end_sample_id: Optional[UUID] = None,
+    ingest_run_id: UUID,
+    start_idx: int,
+    end_idx: int,
 ) -> InferRunORM:
     """Convert InferRunInfo to InferRunORM.
 
-    Creates InferRun with intent fields (what user requested) but without
-    inferred_dataset_id (actual result), which is set later in close().
+    Creates InferRun with explicit start_idx/end_idx (what was actually processed)
+    but without judged_dataset_id (actual result), which is set later in close().
 
     Note: Foreign key IDs must be provided explicitly as they're derived from
     the related entities (ModelSpec, PromptTemplate, ParserSpec).
 
-    The ingest_run_id is computed deterministically from the input_run_name.
+    The ingest_run_id is provided by the caller (computed from normalized_dataset.id).
+    The start_idx/end_idx are the computed actual values (computed by service from
+    run_info's nullable indices).
 
     Args:
         run_info: InferRunInfo context object
         model_spec_id: ModelSpec UUID (for foreign key)
         prompt_template_id: PromptTemplate UUID (for foreign key)
         parser_spec_id: ParserSpec UUID (for foreign key)
-        start_sample_id: Optional first sample ID user intended to process
-        end_sample_id: Optional last sample ID user intended to process
+        ingest_run_id: Ingest run UUID (for provenance linking)
+        start_idx: Computed start index into NormalizedDataset.samples
+        end_idx: Computed end index into NormalizedDataset.samples
 
     Returns:
-        InferRunORM model ready for persistence (without inferred_dataset_id)
+        InferRunORM model ready for persistence (without judged_dataset_id)
     """
-    # Compute ingest run ID from input run name (deterministic UUID)
-    ingest_run_id = compute_ingest_run_uuid(run_info.input_run_name)
-
     return InferRunORM(
         id=run_info.id,
         run_name=run_info.run_name,
@@ -198,10 +199,9 @@ def infer_run_info_to_orm(
         prompt_template_id=prompt_template_id,
         parser_spec_id=parser_spec_id,
         ingest_run_id=ingest_run_id,
-        start_sample_id=start_sample_id,
-        end_sample_id=end_sample_id,
-        limit=run_info.limit,
-        inferred_dataset_id=None,  # Set in close() after computing actual dataset
+        start_idx=start_idx,
+        end_idx=end_idx,
+        judged_dataset_id=None,  # Set in close() after computing actual dataset
         git_sha=run_info.git_sha,
         git_branch=run_info.git_branch,
         git_is_dirty=not run_info.git_clean,

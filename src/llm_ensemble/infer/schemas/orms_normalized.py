@@ -170,21 +170,26 @@ class JudgedDatasetLLMCallORM(Base):
 class InferRunORM(Base):
     """InferRun ORM - metadata for infer runs.
 
-    Separates user intent (what was requested) from actual result (what was judged):
+    Tracks what range of the NormalizedDataset was intended to be processed
+    and what judgements were actually produced:
 
     Intent (set in open()):
-    - start_sample_id, end_sample_id: Requested sample range to process
-    - limit: Optional limit on number of samples
+    - start_idx, end_idx: Index range into NormalizedDataset.samples to process
     - ingest_run_id: Source dataset
 
     Actual result (set in close()):
     - judged_dataset_id: What judgements were actually produced (LLMCalls)
-    - NULL if run incomplete/failed, populated when run completes successfully
+    - NULL if run incomplete/failed, populated when run completes
+
+    Completion validation:
+    - Compare judged_dataset.sample_count vs (end_idx - start_idx)
+    - Enables fault tolerance and resumability
 
     This design enables:
-    - Fault tolerance: partial runs persist with incomplete state
-    - Resumability: compare intent vs actual to find missing judgements
-    - Validation: aggregate CLI checks all runs share same judged_dataset_id
+    - Explicit intent: no defensive 'or' operators needed
+    - Simple completion check: actual count == expected count
+    - Future CLI features: --start-idx 100 --end-idx 500
+    - Validation: aggregate CLI checks runs processed same samples
     """
     __tablename__ = "infer_runs"
     __natural_key__ = "run_name"
@@ -218,20 +223,18 @@ class InferRunORM(Base):
         nullable=False,
     )
 
-    # INTENT: What user requested to process (set in open())
-    start_sample_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("ingest.judging_samples.id"),
-        nullable=True,
-        comment="First sample user intended to process (NULL = start from beginning)"
+    # INTENT: What range of NormalizedDataset to process (set in open())
+    start_idx = Column(
+        Integer,
+        nullable=False,
+        default=0,
+        comment="Start index into NormalizedDataset.samples (0-indexed, inclusive)"
     )
-    end_sample_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("ingest.judging_samples.id"),
-        nullable=True,
-        comment="Last sample user intended to process (NULL = process until end)"
+    end_idx = Column(
+        Integer,
+        nullable=False,
+        comment="End index into NormalizedDataset.samples (exclusive)"
     )
-    limit = Column(Integer, nullable=True, comment="Maximum number of samples to process")
 
     # ACTUAL RESULT: What was actually judged (set in close())
     judged_dataset_id = Column(

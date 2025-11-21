@@ -4,8 +4,6 @@ Reads JudgedDataset records from PostgreSQL database by infer run name(s).
 This adapter queries the normalized relational schema via InferRun → JudgedDataset
 relationship and reconstructs complete domain objects from ORM entities.
 
-Includes validation that all runs processed the same samples (same fingerprint).
-
 The adapter follows the same database connection pattern as SqlJudgementWriter,
 using SQLAlchemy sessions from the libs/db layer.
 """
@@ -43,7 +41,7 @@ class SqlJudgementReader(JudgementReader):
     Architecture:
     - Queries via InferRun → JudgedDataset relationship (simplified design)
     - Data mapper logic lives in mappers_orm_to_domain module
-    - Validates all JudgedDatasets have same fingerprint (aggregation requirement)
+    - No validation logic (validation belongs in service layer)
 
     Database connection:
     - Reads DATABASE_URL from environment (.env file)
@@ -62,8 +60,7 @@ class SqlJudgementReader(JudgementReader):
         """Read JudgedDataset from database by infer run name(s).
 
         Loads one JudgedDataset per run, each containing the fingerprint
-        and all judgements from that run. Validates that all JudgedDatasets
-        have the same fingerprint (ensuring same samples were processed).
+        and all judgements from that run.
 
         Args:
             run_names: List of infer run identifiers (e.g., ["run1", "run2"])
@@ -74,7 +71,6 @@ class SqlJudgementReader(JudgementReader):
 
         Raises:
             LookupError: If any infer run doesn't exist in database
-            ValueError: If JudgedDataset fingerprints don't match across runs
         """
         # Get database engine and create session
         engine = get_engine()  # Reads DATABASE_URL from .env
@@ -82,7 +78,6 @@ class SqlJudgementReader(JudgementReader):
 
         try:
             judged_datasets = []
-            fingerprints_seen = set()
 
             for run_name in run_names:
                 # Find infer run by name with eager loading of judged_dataset
@@ -99,22 +94,8 @@ class SqlJudgementReader(JudgementReader):
                         f"Available runs can be queried with: SELECT run_name FROM infer.infer_runs"
                     )
 
-                # Check that run completed successfully
-                if not infer_run.judged_dataset_id:
-                    raise ValueError(
-                        f"Infer run '{run_name}' did not complete successfully "
-                        f"(judged_dataset_id is NULL). Cannot aggregate incomplete runs."
-                    )
-
-                # Get JudgedDataset fingerprint for validation
+                # Get JudgedDataset (service will validate completion)
                 judged_dataset_orm = infer_run.judged_dataset
-                if not judged_dataset_orm.fingerprint:
-                    raise ValueError(
-                        f"JudgedDataset for run '{run_name}' has NULL fingerprint. "
-                        f"This indicates the run did not complete properly."
-                    )
-
-                fingerprints_seen.add(judged_dataset_orm.fingerprint)
 
                 # Query LLM calls via junction table (preserves deterministic ordering)
                 # We need to reconstruct full LLMJudgement objects which require:
@@ -164,14 +145,6 @@ class SqlJudgementReader(JudgementReader):
                 )
 
                 judged_datasets.append(judged_dataset)
-
-            # Validate all fingerprints match (aggregation requirement)
-            if len(fingerprints_seen) > 1:
-                raise ValueError(
-                    f"Cannot aggregate runs with different JudgedDataset fingerprints. "
-                    f"Found {len(fingerprints_seen)} distinct fingerprints: {fingerprints_seen}. "
-                    f"This means the runs processed different sets of samples."
-                )
 
             return judged_datasets
 

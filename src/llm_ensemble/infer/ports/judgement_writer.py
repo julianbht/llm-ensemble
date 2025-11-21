@@ -13,6 +13,7 @@ from typing import Optional
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
+from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 
 
 class JudgementWriter(ABC):
@@ -41,19 +42,30 @@ class JudgementWriter(ABC):
         self,
         run_dir: Path,
         run_info: InferRunInfo,
+        normalized_dataset: NormalizedDataset,
+        start_idx: int,
+        end_idx: int,
     ) -> JudgementWriter:
-        """Initialize writer with run directory and run context.
+        """Initialize writer with run directory, run context, input dataset, and computed indices.
 
         The run_info contains metadata about the inference run (model config,
-        prompt config, git SHA, etc.) that the writer needs for persistence
-        but is not part of individual judgements.
+        prompt config, git SHA, etc.) and nullable start_idx/end_idx capturing user intent.
 
-        For SQL writers, this creates the JudgedDataset entity with NULL fingerprint.
+        The computed start_idx and end_idx represent the actual indices that will be
+        processed (computed by the service from run_info + normalized_dataset).
+
+        The normalized_dataset is used to link InferRun to the source ingest run for provenance.
+
+        For SQL writers, this creates the JudgedDataset entity with NULL fingerprint
+        and InferRun with explicit start_idx/end_idx (computed actuals, not nullable intent).
         The fingerprint is computed and set during close() after all judgements written.
 
         Args:
             run_dir: Run directory where output should be written (writer determines file structure)
-            run_info: Inference run context (metadata about model, prompt, git state, etc.)
+            run_info: Inference run context (metadata about model, prompt, git state, nullable indices)
+            normalized_dataset: Input dataset being processed (used for provenance linking)
+            start_idx: Computed start index (0-indexed, inclusive, defaults to 0 if not specified by user)
+            end_idx: Computed end index (exclusive, defaults to sample_count if not specified by user)
 
         Returns:
             Self, to enable context manager usage

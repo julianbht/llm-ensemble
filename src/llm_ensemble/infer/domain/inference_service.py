@@ -6,7 +6,6 @@ It depends only on port abstractions and handles its own logging.
 
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement, LLMResponse, LLMScore
 from llm_ensemble.infer.schemas import ModelConfig
@@ -61,27 +60,27 @@ class InferenceService:
         model_config: ModelConfig,
         run_info: InferRunInfo,
         run_dir: Path,
-        limit: Optional[int] = None,
     ) -> InferRunSummary:
         """Execute the inference pipeline with streaming and immediate persistence.
 
         Coordinates:
         1. Reading JudgingSample objects via ExampleReader port
-        2. For each sample (streaming loop):
+        2. Computing actual start_idx and end_idx from run_info (defaulting to 0 and sample_count)
+        3. Slicing samples based on computed indices
+        4. For each sample in slice (streaming loop):
            a. Building prompt via PromptBuilder port → str (rendered prompt)
            b. Running inference via LLMProvider port → LLMResponse (raw response + provider warnings)
            c. Parsing response via ResponseParser port → LLMScore (parsed score + parser warnings)
            d. Creating LLMJudgement object (sample + prompt + response + score + run_info)
            e. Logging progress
            f. Writing judgement immediately to disk (fault tolerance)
-        3. Calculating statistics including warnings summary from all stages
+        5. Calculating statistics including warnings summary from all stages
 
         Args:
             run_name: Ingest run identifier (reader resolves to file path)
             model_config: Model configuration
-            run_info: Immutable runtime context (created by orchestrator, attached to each judgement)
+            run_info: Immutable runtime context with nullable start_idx/end_idx capturing user intent
             run_dir: Run directory where output should be written (writer determines file structure)
-            limit: Optional maximum number of examples to process
 
         Returns:
             Finalized InferRunSummary with statistics, timing, and warnings summary
@@ -92,16 +91,24 @@ class InferenceService:
         summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
 
-        # Read NormalizedDataset (reader resolves run_name to path)
-        normalized_dataset = self.example_reader.read(run_name, limit=limit)
+        # Read full NormalizedDataset (reader resolves run_name to path)
+        normalized_dataset = self.example_reader.read(run_name)
+
+        # Compute actual start_idx and end_idx from run_info (handle nullable intent)
+        start_idx = run_info.start_idx if run_info.start_idx is not None else 0
+        end_idx = run_info.end_idx if run_info.end_idx is not None else len(normalized_dataset.samples)
+
+        # Slice samples based on computed indices
+        samples_to_process = normalized_dataset.samples[start_idx:end_idx]
 
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
         # Open writer for streaming (context manager ensures proper cleanup)
-        with self.judgement_writer.open(run_dir, run_info) as writer:
-            # Process each sample individually (streaming loop)
-            for sample in normalized_dataset.samples:
+        # Pass computed indices to writer so it can create InferRun entity with actual range
+        with self.judgement_writer.open(run_dir, run_info, normalized_dataset, start_idx, end_idx) as writer:
+            # Process each sample in slice (streaming loop)
+            for sample in samples_to_process:
                 # Build prompt for this sample
                 prompt = self.prompt_builder.build(sample)
 

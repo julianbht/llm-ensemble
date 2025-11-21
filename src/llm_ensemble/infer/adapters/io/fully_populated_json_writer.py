@@ -14,6 +14,7 @@ from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
+from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.utils.entity_filenames import get_entity_filename
 from llm_ensemble.libs.logging.log_events import InferWriteEvent
@@ -49,12 +50,22 @@ class FullyPopulatedJsonWriter(JudgementWriter):
         self.judgements: list[LLMJudgement] = []
         self.logger = get_logger(component="json_writer")
 
-    def open(self, run_dir: Path, run_info: InferRunInfo) -> "FullyPopulatedJsonWriter":
+    def open(
+        self,
+        run_dir: Path,
+        run_info: InferRunInfo,
+        normalized_dataset: NormalizedDataset,
+        start_idx: int,
+        end_idx: int,
+    ) -> "FullyPopulatedJsonWriter":
         """Initialize writer, write manifest, and prepare for streaming.
 
         Args:
             run_dir: Run directory where output should be written
             run_info: Inference run context (written to separate manifest file)
+            normalized_dataset: Input dataset (not used by JSON writer)
+            start_idx: Computed start index (not used by JSON writer)
+            end_idx: Computed end index (not used by JSON writer)
 
         Returns:
             Self, to enable context manager usage

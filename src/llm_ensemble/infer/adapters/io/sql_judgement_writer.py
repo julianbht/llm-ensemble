@@ -30,6 +30,7 @@ from sqlalchemy.exc import IntegrityError
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
+from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.db import (
     get_engine,
@@ -122,18 +123,24 @@ class SqlJudgementWriter(JudgementWriter):
         self,
         run_dir: Path,
         run_info: InferRunInfo,
+        normalized_dataset: NormalizedDataset,
+        start_idx: int,
+        end_idx: int,
     ) -> "SqlJudgementWriter":
         """Open database session and initialize run metadata.
 
         This method:
         1. Creates SQLAlchemy session from DATABASE_URL env var
-        2. Initializes run metadata (Provider, ModelSpec, PromptTemplate, etc.)
+        2. Initializes run metadata (Provider, ModelSpec, PromptTemplate, InferRun with indices)
         3. Creates JudgedDataset entity with NULL fingerprint (pending state)
         4. Ready for streaming write_one() calls
 
         Args:
             run_dir: Run directory (cached but not used for DB writer)
-            run_info: Inference run context (used to create run metadata entities)
+            run_info: Inference run context with nullable indices capturing user intent
+            normalized_dataset: Input dataset (used for provenance linking)
+            start_idx: Computed start index (defaults to 0 if user didn't specify)
+            end_idx: Computed end index (defaults to sample_count if user didn't specify)
 
         Returns:
             Self, to enable context manager usage
@@ -155,8 +162,8 @@ class SqlJudgementWriter(JudgementWriter):
         # Initialize WriteSummary builder
         self._write_summary = WriteSummary()
 
-        # Initialize run metadata immediately using run_info (logs and adds to summary)
-        self._initialize_run_metadata(run_info)
+        # Initialize run metadata with computed indices (logs and adds to summary)
+        self._initialize_run_metadata(run_info, normalized_dataset, start_idx, end_idx)
 
         # Create JudgedDataset entity with NULL fingerprint (finalized in close())
         self._create_judged_dataset_entity()
@@ -263,7 +270,13 @@ class SqlJudgementWriter(JudgementWriter):
     # Internal Data Mapper Methods
     # ========================================================================
 
-    def _initialize_run_metadata(self, run_info: InferRunInfo) -> None:
+    def _initialize_run_metadata(
+        self,
+        run_info: InferRunInfo,
+        normalized_dataset: NormalizedDataset,
+        start_idx: int,
+        end_idx: int
+    ) -> None:
         """Initialize run metadata from run context with logging and tracking.
 
         Creates/upserts shared entities that remain constant across all judgements:
@@ -271,10 +284,13 @@ class SqlJudgementWriter(JudgementWriter):
         - ModelSpec (model config with inference parameters)
         - PromptTemplate (prompt config with template text)
         - ParserSpec (parser adapter specification)
-        - InferRun (run metadata and parameters)
+        - InferRun (run metadata with explicit start_idx/end_idx)
 
         Args:
             run_info: Inference run context (passed to open())
+            normalized_dataset: Input dataset (for provenance linking)
+            start_idx: Start index into NormalizedDataset.samples
+            end_idx: End index into NormalizedDataset.samples
         """
 
         # 1. Upsert Provider
@@ -301,8 +317,10 @@ class SqlJudgementWriter(JudgementWriter):
         if created > 0 or skipped > 0:
             self.logger.info(InferWriteEvent.WRITE_PARSER_SPECS, created=created, skipped=skipped)
 
-        # 5. Create InferRun (depends on all above)
-        self._infer_run_id, created, skipped = self._create_infer_run(run_info)
+        # 5. Create InferRun with explicit indices (depends on all above)
+        self._infer_run_id, created, skipped = self._create_infer_run(
+            run_info, normalized_dataset, start_idx, end_idx
+        )
         self._write_summary.add_infer_runs(created=created, skipped=skipped)
         if created > 0 or skipped > 0:
             self.logger.info(InferWriteEvent.WRITE_INFER_RUNS, created=created, skipped=skipped)
@@ -410,11 +428,20 @@ class SqlJudgementWriter(JudgementWriter):
 
         return (parser_spec_id, 1, 0)
 
-    def _create_infer_run(self, run_info: InferRunInfo) -> Tuple[UUID, int, int]:
+    def _create_infer_run(
+        self,
+        run_info: InferRunInfo,
+        normalized_dataset: NormalizedDataset,
+        start_idx: int,
+        end_idx: int
+    ) -> Tuple[UUID, int, int]:
         """Create infer run entity using mapper.
 
         Args:
-            run_info: InferRunInfo object from judgement
+            run_info: InferRunInfo object
+            normalized_dataset: Input dataset (for ingest_run_id)
+            start_idx: Computed start index (actual value processed)
+            end_idx: Computed end index (actual value processed)
 
         Returns:
             Tuple of (infer_run_id, created_count, skipped_count)
@@ -432,6 +459,9 @@ class SqlJudgementWriter(JudgementWriter):
             self._model_spec_id,
             self._prompt_template_id,
             self._parser_spec_id,
+            normalized_dataset.id,  # ingest_run_id for provenance
+            start_idx,
+            end_idx,
         )
         self._session.add(infer_run_orm)
 

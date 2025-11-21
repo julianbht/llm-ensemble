@@ -40,7 +40,8 @@ def run_inference(
     retry_config_name: str,
     io_config_name: str,
     run_name: Optional[str] = None,
-    limit: Optional[int] = None,
+    start_idx: int = 0,
+    end_idx: Optional[int] = None,
     official: bool = False,
     notes: Optional[str] = None,
     tag: Optional[str] = None,
@@ -48,6 +49,7 @@ def run_inference(
     """Run LLM inference on judging examples with full provenance.
 
     Infrastructure orchestration that coordinates:
+    - Reading NormalizedDataset and computing explicit indices
     - Setting up run directories and logging
     - Building manifest with git info and execution parameters
     - Instantiating adapters dynamically from config specifications
@@ -67,7 +69,8 @@ def run_inference(
         retry_config_name: Name of the retry config file (e.g., "standard")
         io_config_name: Name of the I/O config file (e.g., "json")
         run_name: Custom run ID (auto-generates if not provided)
-        limit: Process at most N examples
+        start_idx: Start index into NormalizedDataset (default: 0)
+        end_idx: End index into NormalizedDataset (None = full dataset)
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
         tag: Tag name for easy reference by downstream CLIs (e.g., "my-experiment")
@@ -100,7 +103,8 @@ def run_inference(
         retry_config=retry_config,
         io_config=io_config,
         input_run_name=input_run_name,
-        limit=limit,
+        start_idx=start_idx,
+        end_idx=end_idx,
         run_type=RunType.OFFICIAL if official else RunType.TEST,
         notes=notes,
         git_sha=git_info["git_sha"],
@@ -138,7 +142,8 @@ def run_inference(
         io_format=io_config_name,
         prompt=prompt_config_name,
         input_run_name=input_run_name,
-        limit=limit,
+        start_idx=start_idx,
+        end_idx=end_idx,
     )
     logger.info(InferLogEvent.RUN_DIRECTORY_CREATED, path=str(run_dir))
 
@@ -165,7 +170,6 @@ def run_inference(
             model_config=model_config,
             run_info=run_info,
             run_dir=run_dir,
-            limit=limit,
         )
         judgement_count = summary.judgement_count
         logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=judgement_count)

@@ -15,9 +15,8 @@ class JudgementReader(ABC):
     Implementations can read from different formats (JSON, SQL, etc.)
     while providing a consistent interface.
 
-    Readers accept run_name strings and load the complete JudgedDataset
-    (fingerprint + judgements) for each run. All JudgedDatasets must have
-    the same fingerprint to be aggregated together.
+    Readers are "dumb" data loaders - they simply fetch data without
+    performing validation. Validation logic belongs in the service layer.
     """
 
     @abstractmethod
@@ -28,8 +27,10 @@ class JudgementReader(ABC):
         - Fingerprint (SHA256 hash of sorted LLMCall IDs)
         - Judgements (LLM outputs for those calls)
 
-        Validation: All JudgedDatasets must have the same fingerprint,
-        ensuring they processed the same samples.
+        Readers do not perform validation - the service layer handles:
+        - Checking for NULL fingerprints
+        - Validating fingerprints match across runs
+        - Ensuring runs completed successfully
 
         Args:
             run_names: List of infer run identifiers (e.g., ["run1", "run2"])
@@ -40,7 +41,6 @@ class JudgementReader(ABC):
 
         Raises:
             FileNotFoundError: If any run directory or expected files don't exist
-            ValueError: If run names are invalid, data is malformed, or
-                       fingerprints don't match across runs
+            ValueError: If run names are invalid or data is malformed
         """
         pass

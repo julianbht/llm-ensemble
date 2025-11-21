@@ -98,9 +98,15 @@ class InferRunInfo(RunInfo):
         description="Ingest run name to read samples from (e.g., 'my_ingest_run')"
     )
 
-    limit: Optional[int] = Field(
+    # Index range (optional, from CLI --start-idx and --end-idx flags)
+    start_idx: Optional[int] = Field(
         default=None,
-        description="Maximum number of examples to process (None = no limit)"
+        description="Start index into NormalizedDataset.samples (0-indexed, inclusive, None = start from beginning)"
+    )
+
+    end_idx: Optional[int] = Field(
+        default=None,
+        description="End index into NormalizedDataset.samples (exclusive, None = process until end)"
     )
 
     model_config = ConfigDict(frozen=True)
@@ -118,7 +124,8 @@ class InferRunInfo(RunInfo):
         retry_config: RetryConfig,
         io_config: IOConfig,
         input_run_name: str,
-        limit: Optional[int] = None,
+        start_idx: Optional[int] = None,
+        end_idx: Optional[int] = None,
         **kwargs
     ) -> "InferRunInfo":
         """Create an InferRunInfo with computed deterministic UUID.
@@ -134,7 +141,8 @@ class InferRunInfo(RunInfo):
             retry_config: Full retry configuration
             io_config: Full I/O configuration
             input_run_name: Ingest run name to read samples from
-            limit: Optional example limit
+            start_idx: Start index into NormalizedDataset (None = start from beginning)
+            end_idx: End index into NormalizedDataset (None = process until end)
             **kwargs: Additional fields from base RunInfo (git_sha, etc.)
 
         Returns:
@@ -153,6 +161,7 @@ class InferRunInfo(RunInfo):
             retry_config=retry_config,
             io_config=io_config,
             input_run_name=input_run_name,
-            limit=limit,
+            start_idx=start_idx,
+            end_idx=end_idx,
             **kwargs
         )

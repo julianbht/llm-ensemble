@@ -70,8 +70,8 @@ class InferWriteEvent(str, Enum):
     WRITE_LLM_CALLS = "write_llm_calls"
 
     # Dataset finalization (written during close)
-    WRITE_INFERRED_DATASETS = "write_inferred_datasets"
-    WRITE_INFERRED_DATASET_JUNCTIONS = "write_inferred_dataset_junctions"
+    WRITE_JUDGED_DATASETS = "write_judged_datasets"
+    WRITE_JUDGED_DATASET_JUNCTIONS = "write_judged_dataset_junctions"
 
     # Final summary
     WRITE_COMPLETE = "write_complete"

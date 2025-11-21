@@ -136,7 +136,7 @@ class LLMJudgement(BaseModel):
 
     judging_sample: JudgingSample = Field(
         ...,
-        description="The input sample that was judged (includes ingest manifest)"
+        description="The input sample that was judged"
     )
 
     prompt: str = Field(

@@ -37,12 +37,19 @@ class JudgementWriter(ABC):
         self._write_summary: Optional[WriteSummary] = None
 
     @abstractmethod
-    def open(self, run_dir: Path, run_info: InferRunInfo) -> JudgementWriter:
-        """Initialize writer with run directory and context, prepare for streaming.
+    def open(
+        self,
+        run_dir: Path,
+        run_info: InferRunInfo,
+    ) -> JudgementWriter:
+        """Initialize writer with run directory and run context.
 
         The run_info contains metadata about the inference run (model config,
         prompt config, git SHA, etc.) that the writer needs for persistence
         but is not part of individual judgements.
+
+        For SQL writers, this creates the JudgedDataset entity with NULL fingerprint.
+        The fingerprint is computed and set during close() after all judgements written.
 
         Args:
             run_dir: Run directory where output should be written (writer determines file structure)

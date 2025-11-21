@@ -23,6 +23,7 @@ NAMESPACE_QUERY = uuid.UUID('a1b2c3d4-e5f6-7890-abcd-ef1234567890')
 NAMESPACE_DOCUMENT = uuid.UUID('b2c3d4e5-f678-90ab-cdef-123456789012')
 NAMESPACE_JUDGING_SAMPLE = uuid.UUID('c3d4e5f6-7890-abcd-ef12-34567890abcd')
 NAMESPACE_NORMALIZED_DATASET = uuid.UUID('c4d5e6f7-8901-bcde-f234-567890abcdef')
+NAMESPACE_JUDGED_DATASET = uuid.UUID('c5d6e7f8-9012-cdef-3456-67890abcdef0')
 NAMESPACE_INGEST_RUN = uuid.UUID('d4e5f678-90ab-cdef-1234-567890abcdef')
 NAMESPACE_INFER_RUN = uuid.UUID('e5f67890-abcd-ef12-3456-7890abcdef12')
 NAMESPACE_AGGREGATE_RUN = uuid.UUID('f6789012-3456-7890-abcd-ef1234567890')
@@ -114,6 +115,35 @@ def compute_normalized_dataset_uuid(fingerprint: str) -> uuid.UUID:
         Deterministic UUID based on fingerprint
     """
     return uuid.uuid5(NAMESPACE_NORMALIZED_DATASET, fingerprint)
+
+
+def compute_judged_dataset_fingerprint(llm_calls: list) -> str:
+    """Compute deterministic SHA256 fingerprint from sorted LLMCall IDs.
+
+    The fingerprint uniquely identifies a specific set of LLM judgements,
+    enabling idempotent infer runs and efficient validation in aggregate CLI.
+
+    Args:
+        llm_calls: List of LLMCall objects (domain or ORM) with .id attribute
+
+    Returns:
+        SHA256 hash (64 character hex string) of sorted call IDs
+    """
+    sorted_ids = sorted([str(c.id) for c in llm_calls])
+    id_string = ",".join(sorted_ids)
+    return hashlib.sha256(id_string.encode()).hexdigest()
+
+
+def compute_judged_dataset_uuid(fingerprint: str) -> uuid.UUID:
+    """Compute deterministic UUID for JudgedDataset from fingerprint.
+
+    Args:
+        fingerprint: SHA256 hash of sorted LLMCall IDs
+
+    Returns:
+        Deterministic UUID based on fingerprint
+    """
+    return uuid.uuid5(NAMESPACE_JUDGED_DATASET, fingerprint)
 
 
 # ========================================================================

@@ -105,51 +105,62 @@ class ModelSpecORM(Base):
     infer_runs = relationship("InferRunORM", back_populates="model_spec")
 
 
-class InferredDatasetORM(Base):
-    """InferredDataset ORM - set of samples actually processed by infer run.
+class JudgedDatasetORM(Base):
+    """JudgedDataset ORM - set of LLM judgements produced by infer run.
 
-    Represents the working set for inference. Multiple infer runs can produce
-    the same InferredDataset (same fingerprint), enabling idempotency.
+    Represents the output of inference (LLMCalls with scores).
 
-    Provenance to NormalizedDataset is tracked via InferRun → IngestRun → NormalizedDataset.
+    Lifecycle:
+    - Created in open() with NULL fingerprint (pending state)
+    - Fingerprint computed and set in close() after all judgements written
+    - Enables fault-tolerant partial runs (NULL fingerprint = incomplete)
 
-    Uses deterministic UUID based on fingerprint (SHA256 of sorted sample IDs).
+    Multiple infer runs can produce the same JudgedDataset (same fingerprint), enabling idempotency.
+    Provenance to input NormalizedDataset tracked via InferRun → IngestRun → NormalizedDataset.
+
+    Uses deterministic UUID based on fingerprint (SHA256 of sorted LLMCall IDs).
     """
-    __tablename__ = "inferred_datasets"
+    __tablename__ = "judged_datasets"
     __table_args__ = {"schema": "infer"}
     __natural_key__ = ("fingerprint",)
-    __uuid_function__ = "compute_normalized_dataset_uuid"
+    __uuid_function__ = "compute_judged_dataset_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    fingerprint = Column(CHAR(64), nullable=False, unique=True)
+
+    fingerprint = Column(
+        CHAR(64),
+        nullable=True,
+        unique=True,
+        comment="SHA256 of sorted LLMCall IDs (NULL during active run, set on completion)"
+    )
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    judging_samples = relationship(
-        "JudgingSampleORM",
-        secondary="infer.inferred_dataset_judging_samples",
-        order_by="InferredDatasetJudgingSampleORM.sequence_number"
+    llm_calls = relationship(
+        "LLMCallORM",
+        secondary="infer.judged_dataset_llm_calls",
+        order_by="JudgedDatasetLLMCallORM.sequence_number"
     )
-    infer_runs = relationship("InferRunORM", back_populates="inferred_dataset")
+    infer_runs = relationship("InferRunORM", back_populates="judged_dataset")
 
 
-class InferredDatasetJudgingSampleORM(Base):
-    """Junction table linking InferredDataset to JudgingSample with sequence.
+class JudgedDatasetLLMCallORM(Base):
+    """Junction table linking JudgedDataset to LLMCall with sequence.
 
-    Preserves deterministic ordering of samples via sequence_number.
+    Preserves deterministic ordering of judgements via sequence_number.
     This enables reproducible aggregation across multiple infer runs.
     """
-    __tablename__ = "inferred_dataset_judging_samples"
+    __tablename__ = "judged_dataset_llm_calls"
     __table_args__ = {"schema": "infer"}
 
-    inferred_dataset_id = Column(
+    judged_dataset_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.inferred_datasets.id", ondelete="CASCADE"),
+        ForeignKey("infer.judged_datasets.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    judging_sample_id = Column(
+    llm_call_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("ingest.judging_samples.id", ondelete="CASCADE"),
+        ForeignKey("infer.llm_calls.id", ondelete="CASCADE"),
         primary_key=True,
     )
     sequence_number = Column(Integer, nullable=False)
@@ -159,21 +170,21 @@ class InferredDatasetJudgingSampleORM(Base):
 class InferRunORM(Base):
     """InferRun ORM - metadata for infer runs.
 
-    Separates user intent (what was requested) from actual result (what was inferred):
-    
+    Separates user intent (what was requested) from actual result (what was judged):
+
     Intent (set in open()):
     - start_sample_id, end_sample_id: Requested sample range to process
     - limit: Optional limit on number of samples
     - ingest_run_id: Source dataset
-    
+
     Actual result (set in close()):
-    - inferred_dataset_id: What samples actually got judgements
+    - judged_dataset_id: What judgements were actually produced (LLMCalls)
     - NULL if run incomplete/failed, populated when run completes successfully
-    
+
     This design enables:
     - Fault tolerance: partial runs persist with incomplete state
-    - Resumability: compare intent vs actual to find missing samples
-    - Validation: aggregate CLI checks all runs share same inferred_dataset_id
+    - Resumability: compare intent vs actual to find missing judgements
+    - Validation: aggregate CLI checks all runs share same judged_dataset_id
     """
     __tablename__ = "infer_runs"
     __natural_key__ = "run_name"
@@ -222,12 +233,12 @@ class InferRunORM(Base):
     )
     limit = Column(Integer, nullable=True, comment="Maximum number of samples to process")
 
-    # ACTUAL RESULT: What was actually inferred (set in close())
-    inferred_dataset_id = Column(
+    # ACTUAL RESULT: What was actually judged (set in close())
+    judged_dataset_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.inferred_datasets.id"),
+        ForeignKey("infer.judged_datasets.id"),
         nullable=True,
-        comment="What samples actually got judgements (NULL = run incomplete/failed)"
+        comment="What judgements were actually produced (NULL = run incomplete/failed)"
     )
 
     git_sha = Column(String(40), nullable=True)
@@ -239,7 +250,7 @@ class InferRunORM(Base):
     # Relationships (many runs, one spec/template/model)
     model_spec = relationship("ModelSpecORM", back_populates="infer_runs")
     prompt_template = relationship("PromptTemplateORM", back_populates="infer_runs")
-    inferred_dataset = relationship("InferredDatasetORM", back_populates="infer_runs")
+    judged_dataset = relationship("JudgedDatasetORM", back_populates="infer_runs")
     parser_spec = relationship("ParserSpecORM", back_populates="infer_runs")
     calls = relationship("LLMCallORM", back_populates="infer_run")
     # Note: No explicit relationship to IngestRunORM to avoid cross-schema circular imports

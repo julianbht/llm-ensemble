@@ -42,6 +42,7 @@ from llm_ensemble.libs.db import (
     compute_llm_request_uuid,
     compute_llm_score_uuid,
     compute_llm_call_uuid,
+    compute_judged_dataset_uuid,
     compute_normalized_dataset_uuid,
 )
 from llm_ensemble.infer.schemas.orms_normalized import (
@@ -50,8 +51,8 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     PromptTemplateORM,
     ParserSpecORM,
     InferRunORM,
-    InferredDatasetORM,
-    InferredDatasetJudgingSampleORM,
+    JudgedDatasetORM,
+    JudgedDatasetLLMCallORM,
     LLMRequestORM,
     LLMScoreORM,
     LLMCallORM,
@@ -106,9 +107,10 @@ class SqlJudgementWriter(JudgementWriter):
         self._prompt_template_id: Optional[UUID] = None
         self._parser_spec_id: Optional[UUID] = None
         self._infer_run_id: Optional[UUID] = None
+        self._judged_dataset_id: Optional[UUID] = None
 
-        # Accumulate sample IDs for InferredDataset fingerprint computation
-        self._sample_ids: list[UUID] = []
+        # Accumulate LLMCall IDs for JudgedDataset fingerprint computation
+        self._call_ids: list[UUID] = []
 
         # Incremental write summary builder
         self._write_summary: Optional[WriteSummary] = None
@@ -116,13 +118,18 @@ class SqlJudgementWriter(JudgementWriter):
         # Logger for this adapter (includes CLI context from orchestrator)
         self.logger = get_logger(component="sql_judgement_writer")
 
-    def open(self, run_dir: Path, run_info: InferRunInfo) -> "SqlJudgementWriter":
+    def open(
+        self,
+        run_dir: Path,
+        run_info: InferRunInfo,
+    ) -> "SqlJudgementWriter":
         """Open database session and initialize run metadata.
 
         This method:
         1. Creates SQLAlchemy session from DATABASE_URL env var
-        2. Immediately initializes run metadata (Provider, ModelSpec, PromptTemplate, etc.)
-        3. Ready for streaming write_one() calls
+        2. Initializes run metadata (Provider, ModelSpec, PromptTemplate, etc.)
+        3. Creates JudgedDataset entity with NULL fingerprint (pending state)
+        4. Ready for streaming write_one() calls
 
         Args:
             run_dir: Run directory (cached but not used for DB writer)
@@ -151,6 +158,9 @@ class SqlJudgementWriter(JudgementWriter):
         # Initialize run metadata immediately using run_info (logs and adds to summary)
         self._initialize_run_metadata(run_info)
 
+        # Create JudgedDataset entity with NULL fingerprint (finalized in close())
+        self._create_judged_dataset_entity()
+
         return self
 
     def write_one(self, judgement: LLMJudgement) -> None:
@@ -175,9 +185,6 @@ class SqlJudgementWriter(JudgementWriter):
         if self._session is None:
             raise RuntimeError("Writer is not open - must call within context manager")
 
-        # Accumulate sample ID for InferredDataset fingerprint computation
-        self._sample_ids.append(judgement.judging_sample.id)
-
         # Decompose judgement into ORM entities with tracking and logging
         request_id, req_created, req_skipped = self._upsert_request(judgement)
         self._write_summary.add_llm_requests(created=req_created, skipped=req_skipped)
@@ -193,6 +200,9 @@ class SqlJudgementWriter(JudgementWriter):
         self._write_summary.add_llm_calls(created=1)
         self.logger.info(InferWriteEvent.WRITE_LLM_CALLS, created=1, skipped=0)
 
+        # Accumulate LLMCall ID for JudgedDataset fingerprint computation
+        self._call_ids.append(call_id)
+
         # Commit transaction (fault tolerance - each judgement is persisted immediately)
         self._session.commit()
 
@@ -200,9 +210,9 @@ class SqlJudgementWriter(JudgementWriter):
         """Close database session and release resources.
 
         Finalizes the inference run by:
-        1. Computing InferredDataset fingerprint from accumulated sample IDs
-        2. Upserting InferredDataset entity and junction records
-        3. Updating InferRun with inferred_dataset_id (marks run as complete)
+        1. Computing JudgedDataset fingerprint from accumulated LLMCall IDs
+        2. Upserting JudgedDataset entity and junction records
+        3. Updating InferRun with judged_dataset_id (marks run as complete)
         4. Committing final transaction
 
         Returns:
@@ -211,14 +221,14 @@ class SqlJudgementWriter(JudgementWriter):
         Raises:
             IOError: If close operation fails
         """
-        # Finalize InferredDataset before cleanup
-        if self._session is not None and self._sample_ids:
-            inferred_dataset_id = self._finalize_inferred_dataset()
-            
-            # Update InferRun with actual inferred_dataset_id (marks completion)
+        # Finalize JudgedDataset before cleanup
+        if self._session is not None and self._call_ids:
+            judged_dataset_id = self._finalize_judged_dataset()
+
+            # Update InferRun with actual judged_dataset_id (marks completion)
             infer_run = self._session.get(InferRunORM, self._infer_run_id)
             if infer_run:
-                infer_run.inferred_dataset_id = inferred_dataset_id
+                infer_run.judged_dataset_id = judged_dataset_id
                 self._session.commit()
 
         # Get summary before cleanup
@@ -243,7 +253,8 @@ class SqlJudgementWriter(JudgementWriter):
             self._prompt_template_id = None
             self._parser_spec_id = None
             self._infer_run_id = None
-            self._sample_ids = []
+            self._judged_dataset_id = None
+            self._call_ids = []
             self._write_summary = None
 
         return summary
@@ -516,97 +527,102 @@ class SqlJudgementWriter(JudgementWriter):
 
         return call_id
 
-    def _finalize_inferred_dataset(self) -> UUID:
-        """Finalize InferredDataset after all judgements written.
+    def _finalize_judged_dataset(self) -> UUID:
+        """Finalize JudgedDataset after all judgements written.
 
-        Computes fingerprint from accumulated sample IDs, creates/upserts
-        InferredDataset entity and junction records.
+        Computes fingerprint from accumulated LLMCall IDs and updates the
+        existing JudgedDataset entity (created in open()). Also creates
+        junction records linking calls to dataset.
 
         Returns:
-            UUID of the InferredDataset
+            UUID of the JudgedDataset
 
         Raises:
-            ValueError: If no samples were processed
+            ValueError: If no calls were processed
         """
-        if not self._sample_ids:
-            raise ValueError("Cannot finalize InferredDataset - no samples processed")
+        if not self._call_ids:
+            raise ValueError("Cannot finalize JudgedDataset - no calls processed")
 
-        # Sort sample IDs for deterministic fingerprint
-        sorted_sample_ids = sorted(self._sample_ids)
+        # Sort LLMCall IDs for deterministic fingerprint
+        sorted_call_ids = sorted(self._call_ids)
 
-        # Compute fingerprint from sorted UUIDs (same logic as compute_normalized_dataset_fingerprint)
-        id_string = ",".join(str(sid) for sid in sorted_sample_ids)
+        # Compute fingerprint from sorted UUIDs
+        id_string = ",".join(str(cid) for cid in sorted_call_ids)
         fingerprint = hashlib.sha256(id_string.encode()).hexdigest()
 
-        # Compute deterministic UUID from fingerprint
-        dataset_id = compute_normalized_dataset_uuid(fingerprint)
+        # Update existing JudgedDataset with computed fingerprint
+        judged_dataset = self._session.get(JudgedDatasetORM, self._judged_dataset_id)
+        if not judged_dataset:
+            raise RuntimeError(f"JudgedDataset {self._judged_dataset_id} not found - should have been created in open()")
 
-        # Upsert InferredDataset entity
-        created, skipped = self._upsert_inferred_dataset_entity(dataset_id, fingerprint)
-        self._write_summary.add_inferred_datasets(created=created, skipped=skipped)
-        if created > 0 or skipped > 0:
-            self.logger.info(InferWriteEvent.WRITE_INFERRED_DATASETS, created=created, skipped=skipped)
+        judged_dataset.fingerprint = fingerprint
+        self._session.flush()
 
-        # Create junction records linking dataset to samples (with sequence numbers)
-        junction_created = self._create_inferred_dataset_junctions(dataset_id, sorted_sample_ids)
-        self._write_summary.add_inferred_dataset_junctions(created=junction_created)
+        self.logger.info(InferWriteEvent.WRITE_JUDGED_DATASETS, created=0, skipped=0, updated=1)
+
+        # Create junction records linking dataset to LLMCalls (with sequence numbers)
+        junction_created = self._create_judged_dataset_junctions(self._judged_dataset_id, sorted_call_ids)
+        self._write_summary.add_judged_dataset_junctions(created=junction_created)
         if junction_created > 0:
-            self.logger.info(InferWriteEvent.WRITE_INFERRED_DATASET_JUNCTIONS, created=junction_created)
+            self.logger.info(InferWriteEvent.WRITE_JUDGED_DATASET_JUNCTIONS, created=junction_created)
 
-        return dataset_id
+        return self._judged_dataset_id
 
-    def _upsert_inferred_dataset_entity(self, dataset_id: UUID, fingerprint: str) -> Tuple[int, int]:
-        """Upsert InferredDataset entity.
+    def _create_judged_dataset_entity(self) -> None:
+        """Create JudgedDataset entity with NULL fingerprint (pending state).
 
-        Args:
-            dataset_id: Deterministic UUID for this dataset
-            fingerprint: SHA256 hash of sorted sample IDs
+        Called in open() to create the dataset entity early. The fingerprint
+        is computed and set in close() after all judgements are written.
 
-        Returns:
-            Tuple of (created_count, skipped_count)
+        The UUID is generated from a temporary placeholder fingerprint and
+        will be recomputed when the actual fingerprint is known.
         """
-        # Check if exists
-        existing = self._session.get(InferredDatasetORM, dataset_id)
-        if existing:
-            return (0, 1)
+        import uuid
 
-        # Create new dataset
-        dataset_orm = InferredDatasetORM(
-            id=dataset_id,
-            fingerprint=fingerprint,
+        # Generate temporary UUID for this pending dataset
+        # This will remain the ID throughout the run
+        self._judged_dataset_id = uuid.uuid4()
+
+        # Create JudgedDataset with NULL fingerprint (pending completion)
+        dataset_orm = JudgedDatasetORM(
+            id=self._judged_dataset_id,
+            fingerprint=None,  # Will be set in close()
         )
         self._session.add(dataset_orm)
+        self._session.flush()
 
-        return (1, 0)
+        # Track creation in summary
+        self._write_summary.add_judged_datasets(created=1, skipped=0)
+        self.logger.info(InferWriteEvent.WRITE_JUDGED_DATASETS, created=1, skipped=0)
 
-    def _create_inferred_dataset_junctions(
-        self, dataset_id: UUID, sorted_sample_ids: list[UUID]
+    def _create_judged_dataset_junctions(
+        self, dataset_id: UUID, sorted_call_ids: list[UUID]
     ) -> int:
-        """Create junction records linking InferredDataset to JudgingSamples.
+        """Create junction records linking JudgedDataset to LLMCalls.
 
         Args:
-            dataset_id: InferredDataset UUID
-            sorted_sample_ids: Sorted list of sample UUIDs
+            dataset_id: JudgedDataset UUID
+            sorted_call_ids: Sorted list of LLMCall UUIDs
 
         Returns:
             Number of junction records created
         """
         created = 0
-        for seq_num, sample_id in enumerate(sorted_sample_ids):
+        for seq_num, call_id in enumerate(sorted_call_ids):
             # Check if junction already exists
             existing = (
-                self._session.query(InferredDatasetJudgingSampleORM)
+                self._session.query(JudgedDatasetLLMCallORM)
                 .filter_by(
-                    inferred_dataset_id=dataset_id,
-                    judging_sample_id=sample_id,
+                    judged_dataset_id=dataset_id,
+                    llm_call_id=call_id,
                 )
                 .first()
             )
 
             if not existing:
-                junction = InferredDatasetJudgingSampleORM(
-                    inferred_dataset_id=dataset_id,
-                    judging_sample_id=sample_id,
+                junction = JudgedDatasetLLMCallORM(
+                    judged_dataset_id=dataset_id,
+                    llm_call_id=call_id,
                     sequence_number=seq_num,
                 )
                 self._session.add(junction)

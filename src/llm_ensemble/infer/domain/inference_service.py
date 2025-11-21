@@ -92,8 +92,8 @@ class InferenceService:
         summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
 
-        # Read JudgingSample objects (reader resolves run_name to path)
-        samples = self.example_reader.read(run_name, limit=limit)
+        # Read NormalizedDataset (reader resolves run_name to path)
+        normalized_dataset = self.example_reader.read(run_name, limit=limit)
 
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
@@ -101,7 +101,7 @@ class InferenceService:
         # Open writer for streaming (context manager ensures proper cleanup)
         with self.judgement_writer.open(run_dir, run_info) as writer:
             # Process each sample individually (streaming loop)
-            for sample in samples:
+            for sample in normalized_dataset.samples:
                 # Build prompt for this sample
                 prompt = self.prompt_builder.build(sample)
 

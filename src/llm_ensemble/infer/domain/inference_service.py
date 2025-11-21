@@ -105,10 +105,8 @@ class InferenceService:
                 # Build prompt for this sample
                 prompt = self.prompt_builder.build(sample)
 
-                # Log before sending request
-                self.logger.info(InferLogEvent.SENDING_REQUEST)
-
                 # Run inference for this sample
+                self.logger.info(InferLogEvent.SENDING_REQUEST)
                 response : LLMResponse = self.llm_provider.infer(prompt, model_config)
 
                 # Parse response to extract structured score
@@ -126,8 +124,6 @@ class InferenceService:
                 extracted_score = judgement.llm_score.label.value if judgement.llm_score.label else "null"
                 gold_score = judgement.judging_sample.gold_score.value
                 latency_s = judgement.llm_response.latency_ms / 1000
-
-                # Info to console
                 self.logger.info(
                     InferLogEvent.RESPONSE_PARSED,
                     extracted_score=extracted_score,
@@ -145,21 +141,7 @@ class InferenceService:
                     latency_s=latency_s,
                 )
 
-                # Full details (DEBUG level)
-                self.logger.debug(
-                    "judgement_details",
-                    query=judgement.judging_sample.query.query_text,
-                    doc=judgement.judging_sample.document.doc_text,
-                    prompt=judgement.prompt,
-                    raw_response=judgement.llm_response.raw_response,
-                    extracted_score=extracted_score,
-                    gold_score=gold_score,
-                    latency_ms=judgement.llm_response.latency_ms,
-                    warnings=[str(w) for w in judgement.get_all_warnings()],
-                )
-
                 # Write judgement immediately to disk (fault tolerance!)
-                # Adapter handles its own logging
                 writer.write_one(judgement)
 
                 # Collect for summary statistics

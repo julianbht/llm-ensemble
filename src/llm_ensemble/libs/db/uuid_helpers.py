@@ -274,22 +274,22 @@ def compute_llm_score_uuid(parser_spec_id: uuid.UUID, llm_response_text_id: uuid
 
 def compute_llm_judgement_uuid(
     llm_prompt_id: uuid.UUID,
-    score_id: uuid.UUID,
+    llm_response_text_id: uuid.UUID,
     llm_invocation_metrics_id: uuid.UUID
 ) -> uuid.UUID:
     """Compute deterministic UUID for LLMJudgement.
 
-    Natural key: (llm_prompt_id, score_id, llm_invocation_metrics_id)
+    Natural key: (llm_prompt_id, llm_response_text_id, llm_invocation_metrics_id)
 
     Args:
         llm_prompt_id: UUID of the prompt
-        score_id: UUID of the parsed score
+        llm_response_text_id: UUID of the response text
         llm_invocation_metrics_id: UUID of the invocation metrics
 
     Returns:
-        Deterministic UUID based on prompt + score + metrics
+        Deterministic UUID based on prompt + response + metrics
     """
-    natural_key = f"{llm_prompt_id}:{score_id}:{llm_invocation_metrics_id}"
+    natural_key = f"{llm_prompt_id}:{llm_response_text_id}:{llm_invocation_metrics_id}"
     return uuid.uuid5(NAMESPACE_LLM_JUDGEMENT, natural_key)
 
 # ========================================================================

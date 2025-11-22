@@ -341,7 +341,6 @@ class LLMScoreORM(Base):
     )
 
     # Relationships
-    judgements = relationship("LLMJudgementORM", back_populates="score")
     parser_spec = relationship("ParserSpecORM", back_populates="scores")
     response_text = relationship("LLMResponseTextORM", back_populates="scores")
 

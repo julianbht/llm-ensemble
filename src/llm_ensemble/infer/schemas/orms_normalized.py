@@ -141,7 +141,6 @@ class JudgedDatasetORM(Base):
         secondary="infer.judged_dataset_llm_judgements",
         order_by="JudgedDatasetLLMJudgementORM.sequence_number"
     )
-    infer_runs = relationship("InferRunORM", back_populates="judged_dataset")
 
 
 class JudgedDatasetLLMJudgementORM(Base):
@@ -255,7 +254,6 @@ class InferRunORM(Base):
     prompt_template = relationship("PromptTemplateORM", back_populates="infer_runs")
     judged_dataset = relationship("JudgedDatasetORM", back_populates="infer_runs")
     parser_spec = relationship("ParserSpecORM", back_populates="infer_runs")
-    judgements = relationship("LLMJudgementORM", back_populates="infer_run")
     # Note: No explicit relationship to IngestRunORM to avoid cross-schema circular imports
 
 

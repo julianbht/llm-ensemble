@@ -28,11 +28,6 @@ from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 class ProviderORM(Base):
-    """Provider ORM- LLM provider entity.
-
-    Uses deterministic UUID based on provider name.
-    One row per provider (openrouter, ollama, hf).
-    """
     __tablename__ = "providers"
     __table_args__ = {"schema": "infer"}
     __natural_key__ = "name"
@@ -47,12 +42,6 @@ class ProviderORM(Base):
 
 
 class PromptTemplateORM(Base):
-    """PromptTemplate ORM - prompt template with name.
-
-    Uses deterministic UUID based on template name.
-    Each prompt config (e.g., thomas-simple, thomas-advanced) is a distinct entity,
-    even if template text is similar. This ensures we know exactly what was used.
-    """
     __tablename__ = "prompt_templates"
     __table_args__ = {"schema": "infer"}
     __natural_key__ = "name"
@@ -68,9 +57,6 @@ class PromptTemplateORM(Base):
 
 
 class ModelSpecORM(Base):
-    """ModelSpec ORM specification with inference parameters.
-    Captures experimental parameters (model ID, temperature, etc.) that affect LLM behavior.
-    """
     __tablename__ = "model_specs"
     __natural_key__ = "name"
     __uuid_function__ = "compute_model_spec_uuid"
@@ -106,20 +92,6 @@ class ModelSpecORM(Base):
 
 
 class JudgedDatasetORM(Base):
-    """JudgedDataset ORM - set of LLM judgements produced by infer run.
-
-    Represents the output of inference (LLMJudgements with scores).
-
-    Lifecycle:
-    - Created in open() with NULL fingerprint (pending state)
-    - Fingerprint computed and set in close() after all judgements written
-    - Enables fault-tolerant partial runs (NULL fingerprint = incomplete)
-
-    Multiple infer runs can produce the same JudgedDataset (same fingerprint), enabling idempotency.
-    Provenance to input NormalizedDataset tracked via InferRun → IngestRun → NormalizedDataset.
-
-    Uses deterministic UUID based on fingerprint (SHA256 of sorted LLMJudgement IDs).
-    """
     __tablename__ = "judged_datasets"
     __table_args__ = {"schema": "infer"}
     __natural_key__ = ("fingerprint",)
@@ -145,11 +117,6 @@ class JudgedDatasetORM(Base):
 
 
 class JudgedDatasetLLMJudgementORM(Base):
-    """Junction table linking JudgedDataset to LLMJudgement with sequence.
-
-    Preserves deterministic ordering of judgements via sequence_number.
-    This enables reproducible aggregation across multiple infer runs.
-    """
     __tablename__ = "judged_dataset_llm_judgements"
     __table_args__ = {"schema": "infer"}
 
@@ -168,29 +135,6 @@ class JudgedDatasetLLMJudgementORM(Base):
 
 
 class InferRunORM(Base):
-    """InferRun ORM - metadata for infer runs.
-
-    Tracks what range of the NormalizedDataset was intended to be processed
-    and what judgements were actually produced:
-
-    Intent (set in open()):
-    - start_idx, end_idx: Index range into NormalizedDataset.samples to process
-    - ingest_run_id: Source dataset
-
-    Actual result (set in close()):
-    - judged_dataset_id: What judgements were actually produced (LLMCalls)
-    - NULL if run incomplete/failed, populated when run completes
-
-    Completion validation:
-    - Compare judged_dataset.sample_count vs (end_idx - start_idx)
-    - Enables fault tolerance and resumability
-
-    This design enables:
-    - Explicit intent: no defensive 'or' operators needed
-    - Simple completion check: actual count == expected count
-    - Future CLI features: --start-idx 100 --end-idx 500
-    - Validation: aggregate CLI checks runs processed same samples
-    """
     __tablename__ = "infer_runs"
     __natural_key__ = "run_name"
     __uuid_function__ = "compute_infer_run_uuid"
@@ -288,11 +232,6 @@ class ParserSpecORM(Base):
 
 
 class LLMPromptORM(Base):
-    """LLM prompt text linked to judging sample.
-
-    Stores the rendered prompt sent to the LLM for a specific sample.
-    Deduplicated by (judging_sample_id, prompt) - same sample+prompt = same entity.
-    """
     __tablename__ = "llm_prompts"
     __natural_key__ = ("prompt", "judging_sample_id")
     __uuid_function__ = "compute_llm_prompt_uuid"
@@ -319,12 +258,6 @@ class LLMPromptORM(Base):
 
 
 class LLMResponseTextORM(Base):
-    """Raw LLM response text.
-
-    Stores unparsed text returned by LLM providers.
-    Deduplicated by raw_response - same text = same entity.
-    This enables deduplication when models return identical responses.
-    """
     __tablename__ = "llm_response_texts"
     __natural_key__ = ("raw_response",)
     __uuid_function__ = "compute_llm_response_text_uuid"
@@ -339,12 +272,6 @@ class LLMResponseTextORM(Base):
 
 
 class LLMInvocationMetricsORM(Base):
-    """LLM invocation observability metrics.
-
-    Captures performance and cost data from LLM API calls.
-    Deduplicated by all metric fields - identical metrics = same entity.
-    Enables metric reuse when calls happen to have identical performance characteristics.
-    """
     __tablename__ = "llm_invocation_metrics"
     __natural_key__ = (
         "latency_ms", "retries", "cost_estimate_usd", "generation_id",
@@ -377,11 +304,6 @@ class LLMInvocationMetricsORM(Base):
 
 
 class LLMScoreORM(Base):
-    """Parsed LLM score from response text.
-
-    Represents the result of parsing raw_response with a specific parser.
-    Deduplicated by (parser_spec_id, llm_response_text_id) - same parser+text = same score.
-    """
     __tablename__ = "llm_scores"
     __natural_key__ = ("parser_spec_id", "llm_response_text_id")
     __uuid_function__ = "compute_llm_score_uuid"
@@ -425,19 +347,21 @@ class LLMScoreORM(Base):
 
 
 class LLMJudgementORM(Base):
-    """Complete LLM judgement linking prompt, score, and invocation metrics.
+    """Complete LLM judgement representing an API interaction.
 
-    Represents a unique inference output by content (prompt → response → parsed score)
-    plus the observed metrics from that specific API call.
+    Captures: what was asked (prompt) → what came back (response) → how it performed (metrics).
 
-    Deduplicated by content + metrics: same prompt + score + metrics = same judgement.
-    This mirrors ingest pattern where JudgingSample = (query, document, gold_score).
+    The judgement is the raw API interaction. Parsing (score) is separate and optional.
+    A response may have 0..N scores depending on parsing success and parser used.
+
+    Deduplicated by: (llm_prompt_id, llm_response_text_id, llm_invocation_metrics_id)
+    This mirrors ingest pattern where JudgingSample = (query_id, document_id, gold_score).
 
     No direct FK to InferRun - relationship tracked via JudgedDataset.
-    Multiple runs can produce the same judgement (same content/metrics).
+    Multiple runs can produce the same judgement (same prompt/response/metrics).
     """
     __tablename__ = "llm_judgements"
-    __natural_key__ = ("llm_prompt_id", "score_id", "llm_invocation_metrics_id")
+    __natural_key__ = ("llm_prompt_id", "llm_response_text_id", "llm_invocation_metrics_id")
     __uuid_function__ = "compute_llm_judgement_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -447,9 +371,9 @@ class LLMJudgementORM(Base):
         ForeignKey("infer.llm_prompts.id"),
         nullable=False,
     )
-    score_id = Column(
+    llm_response_text_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_scores.id"),
+        ForeignKey("infer.llm_response_texts.id"),
         nullable=False,
     )
     llm_invocation_metrics_id = Column(
@@ -463,15 +387,15 @@ class LLMJudgementORM(Base):
     __table_args__ = (
         UniqueConstraint(
             "llm_prompt_id",
-            "score_id",
+            "llm_response_text_id",
             "llm_invocation_metrics_id",
-            name="uq_judgement_content_metrics",
+            name="uq_judgement_prompt_response_metrics",
         ),
         {"schema": "infer"},
     )
 
     # Relationships
     llm_prompt = relationship("LLMPromptORM", back_populates="judgements")
-    score = relationship("LLMScoreORM", back_populates="judgements")
+    response_text = relationship("LLMResponseTextORM", back_populates="judgements")
     invocation_metrics = relationship("LLMInvocationMetricsORM", back_populates="judgements")
 

@@ -27,7 +27,8 @@ NAMESPACE_JUDGED_DATASET = uuid.UUID('c5d6e7f8-9012-cdef-3456-67890abcdef0')
 NAMESPACE_INGEST_RUN = uuid.UUID('d4e5f678-90ab-cdef-1234-567890abcdef')
 NAMESPACE_INFER_RUN = uuid.UUID('e5f67890-abcd-ef12-3456-7890abcdef12')
 NAMESPACE_AGGREGATE_RUN = uuid.UUID('f6789012-3456-7890-abcd-ef1234567890')
-NAMESPACE_LLM_REQUEST = uuid.UUID('a0b1c2d3-e4f5-6789-0abc-def123456789')
+NAMESPACE_LLM_PROMPT = uuid.UUID('a0b1c2d3-e4f5-6789-0abc-def123456789')
+NAMESPACE_LLM_RESPONSE_TEXT = uuid.UUID('b1c2d3e4-f567-8901-2345-6789abcdef01')
 NAMESPACE_LLM_SCORE = uuid.UUID('c2d3e4f5-6789-0abc-def1-234567890abc')
 NAMESPACE_LLM_JUDGEMENT = uuid.UUID('d3e4f567-890a-bcde-f123-4567890abcde')
 NAMESPACE_INFER_WARNING = uuid.UUID('1a2b3c4d-5e6f-7890-abcd-ef1234567890')
@@ -36,7 +37,6 @@ NAMESPACE_PROMPT_CONFIG = uuid.UUID('3c4d5e6f-7890-1234-5678-90abcdef1234')
 NAMESPACE_MODEL_SPEC = uuid.UUID('4d5e6f78-9012-3456-7890-1abcdef12345')
 NAMESPACE_PROVIDER = uuid.UUID('5e6f7890-1234-5678-9012-3abcdef12346')
 NAMESPACE_PARSER_SPEC = uuid.UUID('6f789012-3456-7890-abcd-1234def56789')
-NAMESPACE_LLM_CALL = uuid.UUID('789012ab-cdef-1234-5678-90abcdef1234')
 
 # Aggregate namespace UUIDs
 NAMESPACE_AGGREGATION_SPEC = uuid.UUID('890123bc-def1-2345-6789-0abcdef12345')
@@ -117,19 +117,19 @@ def compute_normalized_dataset_uuid(fingerprint: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE_NORMALIZED_DATASET, fingerprint)
 
 
-def compute_judged_dataset_fingerprint(llm_calls: list) -> str:
-    """Compute deterministic SHA256 fingerprint from sorted LLMCall IDs.
+def compute_judged_dataset_fingerprint(judgements: list) -> str:
+    """Compute deterministic SHA256 fingerprint from sorted LLMJudgement IDs.
 
     The fingerprint uniquely identifies a specific set of LLM judgements,
     enabling idempotent infer runs and efficient validation in aggregate CLI.
 
     Args:
-        llm_calls: List of LLMCall objects (domain or ORM) with .id attribute
+        judgements: List of LLMJudgement objects (domain or ORM) with .id attribute
 
     Returns:
-        SHA256 hash (64 character hex string) of sorted call IDs
+        SHA256 hash (64 character hex string) of sorted judgement IDs
     """
-    sorted_ids = sorted([str(c.id) for c in llm_calls])
+    sorted_ids = sorted([str(j.id) for j in judgements])
     id_string = ",".join(sorted_ids)
     return hashlib.sha256(id_string.encode()).hexdigest()
 
@@ -138,7 +138,7 @@ def compute_judged_dataset_uuid(fingerprint: str) -> uuid.UUID:
     """Compute deterministic UUID for JudgedDataset from fingerprint.
 
     Args:
-        fingerprint: SHA256 hash of sorted LLMCall IDs
+        fingerprint: SHA256 hash of sorted LLMJudgement IDs
 
     Returns:
         Deterministic UUID based on fingerprint
@@ -149,14 +149,6 @@ def compute_judged_dataset_uuid(fingerprint: str) -> uuid.UUID:
 # ========================================================================
 # Infer Entity UUIDs
 # ========================================================================
-
-def compute_llm_judgement_uuid(
-    judging_sample_id: uuid.UUID,
-    infer_run_id: uuid.UUID
-) -> uuid.UUID:
-    natural_key = f"{judging_sample_id}:{infer_run_id}"
-    return uuid.uuid5(NAMESPACE_LLM_JUDGEMENT, natural_key)
-
 
 def compute_infer_warning_uuid(
     judgement_id: uuid.UUID,
@@ -190,23 +182,69 @@ def compute_parser_spec_uuid(parser_module: str, parser_class: str, code_hash: s
     return uuid.uuid5(NAMESPACE_PARSER_SPEC, natural_key)
 
 
-def compute_llm_request_uuid(prompt: str, judging_sample_id: uuid.UUID) -> uuid.UUID:
+def compute_llm_prompt_uuid(prompt: str, judging_sample_id: uuid.UUID) -> uuid.UUID:
+    """Compute deterministic UUID for LLMPrompt.
+
+    Natural key: (prompt, judging_sample_id)
+
+    Args:
+        prompt: Rendered prompt text
+        judging_sample_id: UUID of the judging sample
+
+    Returns:
+        Deterministic UUID based on prompt hash and sample ID
+    """
     # Hash prompt to keep natural key reasonable length
     prompt_hash = hashlib.sha256(prompt.encode()).hexdigest()
     natural_key = f"{judging_sample_id}:{prompt_hash}"
-    return uuid.uuid5(NAMESPACE_LLM_REQUEST, natural_key)
+    return uuid.uuid5(NAMESPACE_LLM_PROMPT, natural_key)
 
 
-def compute_llm_score_uuid(parser_spec_id: uuid.UUID, raw_response: str) -> uuid.UUID:
-    # Hash raw response to keep natural key reasonable length
+def compute_llm_response_text_uuid(raw_response: str) -> uuid.UUID:
+    """Compute deterministic UUID for LLMResponseText.
+
+    Natural key: (raw_response)
+
+    Args:
+        raw_response: Raw response text from LLM
+
+    Returns:
+        Deterministic UUID based on response hash
+    """
     response_hash = hashlib.sha256(raw_response.encode()).hexdigest()
-    natural_key = f"{parser_spec_id}:{response_hash}"
+    return uuid.uuid5(NAMESPACE_LLM_RESPONSE_TEXT, response_hash)
+
+
+def compute_llm_score_uuid(parser_spec_id: uuid.UUID, llm_response_text_id: uuid.UUID) -> uuid.UUID:
+    """Compute deterministic UUID for LLMScore.
+
+    Natural key: (parser_spec_id, llm_response_text_id)
+
+    Args:
+        parser_spec_id: UUID of the parser spec
+        llm_response_text_id: UUID of the response text
+
+    Returns:
+        Deterministic UUID based on parser + response text
+    """
+    natural_key = f"{parser_spec_id}:{llm_response_text_id}"
     return uuid.uuid5(NAMESPACE_LLM_SCORE, natural_key)
 
 
-def compute_llm_call_uuid(llm_request_id: uuid.UUID, infer_run_id: uuid.UUID) -> uuid.UUID:
-    natural_key = f"{llm_request_id}:{infer_run_id}"
-    return uuid.uuid5(NAMESPACE_LLM_CALL, natural_key)
+def compute_llm_judgement_uuid(llm_prompt_id: uuid.UUID, infer_run_id: uuid.UUID) -> uuid.UUID:
+    """Compute deterministic UUID for LLMJudgement.
+
+    Natural key: (llm_prompt_id, infer_run_id)
+
+    Args:
+        llm_prompt_id: UUID of the prompt
+        infer_run_id: UUID of the infer run
+
+    Returns:
+        Deterministic UUID based on prompt + run
+    """
+    natural_key = f"{llm_prompt_id}:{infer_run_id}"
+    return uuid.uuid5(NAMESPACE_LLM_JUDGEMENT, natural_key)
 
 # ========================================================================
 # Aggregate Entity UUIDs

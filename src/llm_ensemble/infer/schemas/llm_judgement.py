@@ -1,9 +1,9 @@
 """Inference workflow DTOs for the infer CLI.
 
 This module contains all data structures used in the inference pipeline:
-- LLMResponse: Raw LLM output (unparsed text + observability metadata)
+- LLMInvocationMetrics: Observability data from LLM API calls (latency, retries, cost, tokens)
 - LLMScore: Parsed relevance assessment (label + confidence + rationale)
-- LLMJudgement: Complete judgement combining prompt, response, score, and sample
+- LLMJudgement: Complete judgement combining prompt, response text, metrics, score, and sample
 
 These are tightly coupled DTOs that represent the inference workflow pipeline.
 They are components of the LLMJudgement aggregate root.
@@ -18,26 +18,14 @@ from llm_ensemble.infer.schemas.warnings import BaseWarning
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
-class LLMResponse(BaseModel):
-    """Raw LLM response output from provider adapters.
+class LLMInvocationMetrics(BaseModel):
+    """Observability metrics from LLM API invocation.
 
-    This represents the raw output from calling an LLM API:
-    - raw_response: The unparsed text returned by the model
-    - Observability metadata: latency, retries, cost
-
-    This schema contains NO parsed/structured data. The ResponseParser
-    is responsible for extracting structured LLMScore from raw_response.
-
-    The domain service coordinates: Provider returns LLMResponse →
-    Parser extracts LLMScore → Service combines into LLMJudgement.
+    Captures performance and cost data from calling an LLM provider.
+    These metrics are observed from the API call event and stored inline
+    with the judgement record.
     """
 
-    raw_response: str = Field(
-        ...,
-        description="Unparsed LLM response text (will be parsed by ResponseParser)"
-    )
-
-    # Observability metadata
     latency_ms: float = Field(
         ...,
         ge=0.0,
@@ -56,7 +44,6 @@ class LLMResponse(BaseModel):
         description="Estimated cost in USD for this inference call"
     )
 
-    # Token usage information
     generation_id: Optional[str] = Field(
         None,
         description="Provider-specific generation ID (e.g., OpenRouter gen-xxx) for async cost queries"
@@ -124,11 +111,19 @@ class LLMJudgement(BaseModel):
     This is the canonical judgement schema that combines:
     - judging_sample: The input (query + document + gold score)
     - prompt: The rendered prompt text sent to the LLM
-    - llm_response: The raw LLM output (unparsed text + observability metadata)
+    - raw_response: The unparsed text returned by the LLM
+    - invocation_metrics: Observability data (latency, retries, cost, tokens)
     - llm_score: The parsed relevance assessment (label + confidence + rationale)
 
     This captures the complete data lineage for a single inference:
-    what was judged, what prompt was sent, what response came back, and what score was extracted.
+    what was judged, what prompt was sent, what response came back,
+    how the call performed, and what score was extracted.
+
+    The structure mirrors the inference workflow:
+    1. Build prompt from sample
+    2. Invoke LLM (get raw_response + invocation_metrics)
+    3. Parse response (get llm_score)
+    4. Create judgement
 
     Note: Run context (model config, git SHA, etc.) is NOT part of the judgement itself.
     That metadata is provided separately to persistence adapters when needed.
@@ -144,9 +139,14 @@ class LLMJudgement(BaseModel):
         description="The rendered prompt text sent to the LLM for this inference"
     )
 
-    llm_response: LLMResponse = Field(
+    raw_response: str = Field(
         ...,
-        description="The raw LLM output (unparsed text + observability metadata)"
+        description="The unparsed text returned by the LLM"
+    )
+
+    invocation_metrics: LLMInvocationMetrics = Field(
+        ...,
+        description="Observability data from the LLM API call (latency, retries, cost, tokens)"
     )
 
     llm_score: Optional[LLMScore] = Field(
@@ -165,7 +165,6 @@ class LLMJudgement(BaseModel):
         Returns:
             List of parser warnings from this judgement
         """
-        # Parser warnings from llm_score (if score exists)
         if self.llm_score is not None:
             return list(self.llm_score.warnings)
 

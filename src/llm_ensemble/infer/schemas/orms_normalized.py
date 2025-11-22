@@ -108,7 +108,7 @@ class ModelSpecORM(Base):
 class JudgedDatasetORM(Base):
     """JudgedDataset ORM - set of LLM judgements produced by infer run.
 
-    Represents the output of inference (LLMCalls with scores).
+    Represents the output of inference (LLMJudgements with scores).
 
     Lifecycle:
     - Created in open() with NULL fingerprint (pending state)
@@ -118,7 +118,7 @@ class JudgedDatasetORM(Base):
     Multiple infer runs can produce the same JudgedDataset (same fingerprint), enabling idempotency.
     Provenance to input NormalizedDataset tracked via InferRun → IngestRun → NormalizedDataset.
 
-    Uses deterministic UUID based on fingerprint (SHA256 of sorted LLMCall IDs).
+    Uses deterministic UUID based on fingerprint (SHA256 of sorted LLMJudgement IDs).
     """
     __tablename__ = "judged_datasets"
     __table_args__ = {"schema": "infer"}
@@ -131,26 +131,26 @@ class JudgedDatasetORM(Base):
         CHAR(64),
         nullable=True,
         unique=True,
-        comment="SHA256 of sorted LLMCall IDs (NULL during active run, set on completion)"
+        comment="SHA256 of sorted LLMJudgement IDs (NULL during active run, set on completion)"
     )
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    llm_calls = relationship(
-        "LLMCallORM",
-        secondary="infer.judged_dataset_llm_calls",
-        order_by="JudgedDatasetLLMCallORM.sequence_number"
+    judgements = relationship(
+        "LLMJudgementORM",
+        secondary="infer.judged_dataset_llm_judgements",
+        order_by="JudgedDatasetLLMJudgementORM.sequence_number"
     )
     infer_runs = relationship("InferRunORM", back_populates="judged_dataset")
 
 
-class JudgedDatasetLLMCallORM(Base):
-    """Junction table linking JudgedDataset to LLMCall with sequence.
+class JudgedDatasetLLMJudgementORM(Base):
+    """Junction table linking JudgedDataset to LLMJudgement with sequence.
 
     Preserves deterministic ordering of judgements via sequence_number.
     This enables reproducible aggregation across multiple infer runs.
     """
-    __tablename__ = "judged_dataset_llm_calls"
+    __tablename__ = "judged_dataset_llm_judgements"
     __table_args__ = {"schema": "infer"}
 
     judged_dataset_id = Column(
@@ -158,9 +158,9 @@ class JudgedDatasetLLMCallORM(Base):
         ForeignKey("infer.judged_datasets.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    llm_call_id = Column(
+    llm_judgement_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_calls.id", ondelete="CASCADE"),
+        ForeignKey("infer.llm_judgements.id", ondelete="CASCADE"),
         primary_key=True,
     )
     sequence_number = Column(Integer, nullable=False)
@@ -255,7 +255,7 @@ class InferRunORM(Base):
     prompt_template = relationship("PromptTemplateORM", back_populates="infer_runs")
     judged_dataset = relationship("JudgedDatasetORM", back_populates="infer_runs")
     parser_spec = relationship("ParserSpecORM", back_populates="infer_runs")
-    calls = relationship("LLMCallORM", back_populates="infer_run")
+    judgements = relationship("LLMJudgementORM", back_populates="infer_run")
     # Note: No explicit relationship to IngestRunORM to avoid cross-schema circular imports
 
 
@@ -287,10 +287,15 @@ class ParserSpecORM(Base):
     scores = relationship("LLMScoreORM", back_populates="parser_spec")
 
 
-class LLMRequestORM(Base):
-    __tablename__ = "llm_requests"
+class LLMPromptORM(Base):
+    """LLM prompt text linked to judging sample.
+
+    Stores the rendered prompt sent to the LLM for a specific sample.
+    Deduplicated by (judging_sample_id, prompt) - same sample+prompt = same entity.
+    """
+    __tablename__ = "llm_prompts"
     __natural_key__ = ("prompt", "judging_sample_id")
-    __uuid_function__ = "compute_llm_request_uuid"
+    __uuid_function__ = "compute_llm_prompt_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     judging_sample_id = Column(
@@ -310,62 +315,38 @@ class LLMRequestORM(Base):
         {"schema": "infer"},
     )
 
-    calls = relationship("LLMCallORM", back_populates="llm_request")
+    judgements = relationship("LLMJudgementORM", back_populates="llm_prompt")
 
 
-class LLMCallORM(Base):
-    __tablename__ = "llm_calls"
-    __natural_key__ = ("llm_request_id", "infer_run_id")
-    __uuid_function__ = "compute_llm_call_uuid"
+class LLMResponseTextORM(Base):
+    """Raw LLM response text.
+
+    Stores unparsed text returned by LLM providers.
+    Deduplicated by raw_response - same text = same entity.
+    This enables deduplication when models return identical responses.
+    """
+    __tablename__ = "llm_response_texts"
+    __natural_key__ = ("raw_response",)
+    __uuid_function__ = "compute_llm_response_text_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-
-    llm_request_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_requests.id"),
-        nullable=False,
-    )
-    infer_run_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.infer_runs.id"),
-        nullable=False,
-    )
-
-    # Each call has at most one (possibly shared) score
-    score_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_scores.id"),
-        nullable=True,
-    )
-
-    latency_ms = Column(Float, nullable=False)
-    retries = Column(Integer, nullable=False, default=0)
-    cost_estimate_usd = Column(Float, nullable=True)
-
-    generation_id = Column(String(255), nullable=True)
-    prompt_tokens = Column(Integer, nullable=True)
-    completion_tokens = Column(Integer, nullable=True)
-    total_tokens = Column(Integer, nullable=True)
-
+    raw_response = Column(Text, nullable=False, unique=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
-    __table_args__ = (
-        UniqueConstraint(
-            "llm_request_id",
-            "infer_run_id",
-            name="uq_call_per_run_and_request",
-        ),
-        {"schema": "infer"},
-    )
+    __table_args__ = {"schema": "infer"}
 
-    llm_request = relationship("LLMRequestORM", back_populates="calls")
-    infer_run = relationship("InferRunORM", back_populates="calls")
-    score = relationship("LLMScoreORM", back_populates="calls")
+    scores = relationship("LLMScoreORM", back_populates="response_text")
+    judgements = relationship("LLMJudgementORM", back_populates="response_text")
 
 
 class LLMScoreORM(Base):
+    """Parsed LLM score from response text.
+
+    Represents the result of parsing raw_response with a specific parser.
+    Deduplicated by (parser_spec_id, llm_response_text_id) - same parser+text = same score.
+    """
     __tablename__ = "llm_scores"
-    __natural_key__ = ("parser_spec_id", "raw_response")
+    __natural_key__ = ("parser_spec_id", "llm_response_text_id")
     __uuid_function__ = "compute_llm_score_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -375,9 +356,13 @@ class LLMScoreORM(Base):
         ForeignKey("infer.parser_specs.id"),
         nullable=False,
     )
-    raw_response = Column(Text, nullable=False)
+    llm_response_text_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.llm_response_texts.id"),
+        nullable=False,
+    )
 
-    # Derived / parsed info; functionally dependent on (parser_spec_id, raw_response)
+    # Derived / parsed info; functionally dependent on (parser_spec_id, llm_response_text_id)
     label = Column(SQLEnum(RelevanceScore, schema="public"), nullable=False)
     confidence = Column(Float, nullable=True)
     rationale = Column(Text, nullable=True)
@@ -390,13 +375,77 @@ class LLMScoreORM(Base):
     __table_args__ = (
         UniqueConstraint(
             "parser_spec_id",
-            "raw_response",
-            name="uq_score_parser_raw",
+            "llm_response_text_id",
+            name="uq_score_parser_response",
         ),
         {"schema": "infer"},
     )
 
-    # One score can be reused by many calls
-    calls = relationship("LLMCallORM", back_populates="score")
+    # Relationships
+    judgements = relationship("LLMJudgementORM", back_populates="score")
     parser_spec = relationship("ParserSpecORM", back_populates="scores")
+    response_text = relationship("LLMResponseTextORM", back_populates="scores")
+
+
+class LLMJudgementORM(Base):
+    """Complete LLM judgement linking prompt, response, metrics, and score.
+
+    Represents a single inference event in a specific run.
+    Deduplicated by (llm_prompt_id, infer_run_id) - one judgement per prompt per run.
+
+    Contains inlined invocation metrics (latency, retries, cost, tokens) as these
+    are unique observations per judgement and don't need separate deduplication.
+    """
+    __tablename__ = "llm_judgements"
+    __natural_key__ = ("llm_prompt_id", "infer_run_id")
+    __uuid_function__ = "compute_llm_judgement_uuid"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+
+    llm_prompt_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.llm_prompts.id"),
+        nullable=False,
+    )
+    llm_response_text_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.llm_response_texts.id"),
+        nullable=False,
+    )
+    infer_run_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.infer_runs.id"),
+        nullable=False,
+    )
+    score_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.llm_scores.id"),
+        nullable=True,
+    )
+
+    # Inlined invocation metrics (unique per judgement, no deduplication benefit)
+    latency_ms = Column(Float, nullable=False)
+    retries = Column(Integer, nullable=False, default=0)
+    cost_estimate_usd = Column(Float, nullable=True)
+    generation_id = Column(String(255), nullable=True)
+    prompt_tokens = Column(Integer, nullable=True)
+    completion_tokens = Column(Integer, nullable=True)
+    total_tokens = Column(Integer, nullable=True)
+
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "llm_prompt_id",
+            "infer_run_id",
+            name="uq_judgement_per_run_and_prompt",
+        ),
+        {"schema": "infer"},
+    )
+
+    # Relationships
+    llm_prompt = relationship("LLMPromptORM", back_populates="judgements")
+    response_text = relationship("LLMResponseTextORM", back_populates="judgements")
+    infer_run = relationship("InferRunORM", back_populates="judgements")
+    score = relationship("LLMScoreORM", back_populates="judgements")
 

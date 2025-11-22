@@ -27,9 +27,10 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     PromptTemplateORM,
     ParserSpecORM,
     InferRunORM,
-    LLMRequestORM,
+    LLMPromptORM,
+    LLMResponseTextORM,
     LLMScoreORM,
-    LLMCallORM,
+    LLMJudgementORM,
 )
 from llm_ensemble.libs.db import (
     compute_provider_uuid,

@@ -43,8 +43,6 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     ModelSpecORM,
     InferRunORM,
     ParserSpecORM,
-    LLMRequestORM,
-    LLMCallORM,
     LLMScoreORM,
 )
 

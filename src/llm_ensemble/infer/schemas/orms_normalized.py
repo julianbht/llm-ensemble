@@ -141,6 +141,7 @@ class JudgedDatasetORM(Base):
         secondary="infer.judged_dataset_llm_judgements",
         order_by="JudgedDatasetLLMJudgementORM.sequence_number"
     )
+    infer_runs = relationship("InferRunORM", back_populates="judged_dataset")
 
 
 class JudgedDatasetLLMJudgementORM(Base):
@@ -255,6 +256,7 @@ class InferRunORM(Base):
     judged_dataset = relationship("JudgedDatasetORM", back_populates="infer_runs")
     parser_spec = relationship("ParserSpecORM", back_populates="infer_runs")
     # Note: No explicit relationship to IngestRunORM to avoid cross-schema circular imports
+    # Note: No direct relationship to LLMJudgementORM - access via judged_dataset.judgements
 
 
 class ParserSpecORM(Base):
@@ -334,7 +336,44 @@ class LLMResponseTextORM(Base):
     __table_args__ = {"schema": "infer"}
 
     scores = relationship("LLMScoreORM", back_populates="response_text")
-    judgements = relationship("LLMJudgementORM", back_populates="response_text")
+
+
+class LLMInvocationMetricsORM(Base):
+    """LLM invocation observability metrics.
+
+    Captures performance and cost data from LLM API calls.
+    Deduplicated by all metric fields - identical metrics = same entity.
+    Enables metric reuse when calls happen to have identical performance characteristics.
+    """
+    __tablename__ = "llm_invocation_metrics"
+    __natural_key__ = (
+        "latency_ms", "retries", "cost_estimate_usd", "generation_id",
+        "prompt_tokens", "completion_tokens", "total_tokens"
+    )
+    __uuid_function__ = "compute_llm_invocation_metrics_uuid"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+
+    latency_ms = Column(Float, nullable=False)
+    retries = Column(Integer, nullable=False, default=0)
+    cost_estimate_usd = Column(Float, nullable=True)
+    generation_id = Column(String(255), nullable=True)
+    prompt_tokens = Column(Integer, nullable=True)
+    completion_tokens = Column(Integer, nullable=True)
+    total_tokens = Column(Integer, nullable=True)
+
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "latency_ms", "retries", "cost_estimate_usd", "generation_id",
+            "prompt_tokens", "completion_tokens", "total_tokens",
+            name="uq_invocation_metrics",
+        ),
+        {"schema": "infer"},
+    )
+
+    judgements = relationship("LLMJudgementORM", back_populates="invocation_metrics")
 
 
 class LLMScoreORM(Base):
@@ -386,16 +425,19 @@ class LLMScoreORM(Base):
 
 
 class LLMJudgementORM(Base):
-    """Complete LLM judgement linking prompt, response, metrics, and score.
+    """Complete LLM judgement linking prompt, score, and invocation metrics.
 
-    Represents a single inference event in a specific run.
-    Deduplicated by (llm_prompt_id, infer_run_id) - one judgement per prompt per run.
+    Represents a unique inference output by content (prompt → response → parsed score)
+    plus the observed metrics from that specific API call.
 
-    Contains inlined invocation metrics (latency, retries, cost, tokens) as these
-    are unique observations per judgement and don't need separate deduplication.
+    Deduplicated by content + metrics: same prompt + score + metrics = same judgement.
+    This mirrors ingest pattern where JudgingSample = (query, document, gold_score).
+
+    No direct FK to InferRun - relationship tracked via JudgedDataset.
+    Multiple runs can produce the same judgement (same content/metrics).
     """
     __tablename__ = "llm_judgements"
-    __natural_key__ = ("llm_prompt_id", "infer_run_id")
+    __natural_key__ = ("llm_prompt_id", "score_id", "llm_invocation_metrics_id")
     __uuid_function__ = "compute_llm_judgement_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -405,45 +447,31 @@ class LLMJudgementORM(Base):
         ForeignKey("infer.llm_prompts.id"),
         nullable=False,
     )
-    llm_response_text_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_response_texts.id"),
-        nullable=False,
-    )
-    infer_run_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.infer_runs.id"),
-        nullable=False,
-    )
     score_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("infer.llm_scores.id"),
-        nullable=True,
+        nullable=False,
     )
-
-    # Inlined invocation metrics (unique per judgement, no deduplication benefit)
-    latency_ms = Column(Float, nullable=False)
-    retries = Column(Integer, nullable=False, default=0)
-    cost_estimate_usd = Column(Float, nullable=True)
-    generation_id = Column(String(255), nullable=True)
-    prompt_tokens = Column(Integer, nullable=True)
-    completion_tokens = Column(Integer, nullable=True)
-    total_tokens = Column(Integer, nullable=True)
+    llm_invocation_metrics_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.llm_invocation_metrics.id"),
+        nullable=False,
+    )
 
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     __table_args__ = (
         UniqueConstraint(
             "llm_prompt_id",
-            "infer_run_id",
-            name="uq_judgement_per_run_and_prompt",
+            "score_id",
+            "llm_invocation_metrics_id",
+            name="uq_judgement_content_metrics",
         ),
         {"schema": "infer"},
     )
 
     # Relationships
     llm_prompt = relationship("LLMPromptORM", back_populates="judgements")
-    response_text = relationship("LLMResponseTextORM", back_populates="judgements")
-    infer_run = relationship("InferRunORM", back_populates="judgements")
     score = relationship("LLMScoreORM", back_populates="judgements")
+    invocation_metrics = relationship("LLMInvocationMetricsORM", back_populates="judgements")
 

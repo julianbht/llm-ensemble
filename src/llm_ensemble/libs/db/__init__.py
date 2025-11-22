@@ -34,6 +34,7 @@ from llm_ensemble.libs.db.uuid_helpers import (
     compute_parser_spec_uuid,
     compute_llm_prompt_uuid,
     compute_llm_response_text_uuid,
+    compute_llm_invocation_metrics_uuid,
     compute_llm_score_uuid,
     compute_llm_judgement_uuid,
     compute_aggregation_spec_uuid,
@@ -69,6 +70,7 @@ __all__ = [
     "compute_parser_spec_uuid",
     "compute_llm_prompt_uuid",
     "compute_llm_response_text_uuid",
+    "compute_llm_invocation_metrics_uuid",
     "compute_llm_score_uuid",
     "compute_llm_judgement_uuid",
     # UUID helpers - aggregate

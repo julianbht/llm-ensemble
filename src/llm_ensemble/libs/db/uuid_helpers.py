@@ -29,6 +29,7 @@ NAMESPACE_INFER_RUN = uuid.UUID('e5f67890-abcd-ef12-3456-7890abcdef12')
 NAMESPACE_AGGREGATE_RUN = uuid.UUID('f6789012-3456-7890-abcd-ef1234567890')
 NAMESPACE_LLM_PROMPT = uuid.UUID('a0b1c2d3-e4f5-6789-0abc-def123456789')
 NAMESPACE_LLM_RESPONSE_TEXT = uuid.UUID('b1c2d3e4-f567-8901-2345-6789abcdef01')
+NAMESPACE_LLM_INVOCATION_METRICS = uuid.UUID('b2c3d4e5-f678-90ab-cdef-123456789abc')
 NAMESPACE_LLM_SCORE = uuid.UUID('c2d3e4f5-6789-0abc-def1-234567890abc')
 NAMESPACE_LLM_JUDGEMENT = uuid.UUID('d3e4f567-890a-bcde-f123-4567890abcde')
 NAMESPACE_INFER_WARNING = uuid.UUID('1a2b3c4d-5e6f-7890-abcd-ef1234567890')
@@ -215,6 +216,46 @@ def compute_llm_response_text_uuid(raw_response: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE_LLM_RESPONSE_TEXT, response_hash)
 
 
+def compute_llm_invocation_metrics_uuid(
+    latency_ms: float,
+    retries: int,
+    cost_estimate_usd: float | None,
+    generation_id: str | None,
+    prompt_tokens: int | None,
+    completion_tokens: int | None,
+    total_tokens: int | None
+) -> uuid.UUID:
+    """Compute deterministic UUID for LLMInvocationMetrics.
+
+    Natural key: all metric fields (latency_ms, retries, cost_estimate_usd,
+                 generation_id, prompt_tokens, completion_tokens, total_tokens)
+
+    Args:
+        latency_ms: Inference time in milliseconds
+        retries: Number of retries
+        cost_estimate_usd: Estimated cost in USD (optional)
+        generation_id: Provider generation ID (optional)
+        prompt_tokens: Number of prompt tokens (optional)
+        completion_tokens: Number of completion tokens (optional)
+        total_tokens: Total tokens (optional)
+
+    Returns:
+        Deterministic UUID based on all metric fields
+    """
+    # Build natural key from all fields (handling None values)
+    fields = [
+        str(latency_ms),
+        str(retries),
+        str(cost_estimate_usd) if cost_estimate_usd is not None else "NULL",
+        generation_id if generation_id else "NULL",
+        str(prompt_tokens) if prompt_tokens is not None else "NULL",
+        str(completion_tokens) if completion_tokens is not None else "NULL",
+        str(total_tokens) if total_tokens is not None else "NULL"
+    ]
+    natural_key = ":".join(fields)
+    return uuid.uuid5(NAMESPACE_LLM_INVOCATION_METRICS, natural_key)
+
+
 def compute_llm_score_uuid(parser_spec_id: uuid.UUID, llm_response_text_id: uuid.UUID) -> uuid.UUID:
     """Compute deterministic UUID for LLMScore.
 
@@ -231,19 +272,24 @@ def compute_llm_score_uuid(parser_spec_id: uuid.UUID, llm_response_text_id: uuid
     return uuid.uuid5(NAMESPACE_LLM_SCORE, natural_key)
 
 
-def compute_llm_judgement_uuid(llm_prompt_id: uuid.UUID, infer_run_id: uuid.UUID) -> uuid.UUID:
+def compute_llm_judgement_uuid(
+    llm_prompt_id: uuid.UUID,
+    score_id: uuid.UUID,
+    llm_invocation_metrics_id: uuid.UUID
+) -> uuid.UUID:
     """Compute deterministic UUID for LLMJudgement.
 
-    Natural key: (llm_prompt_id, infer_run_id)
+    Natural key: (llm_prompt_id, score_id, llm_invocation_metrics_id)
 
     Args:
         llm_prompt_id: UUID of the prompt
-        infer_run_id: UUID of the infer run
+        score_id: UUID of the parsed score
+        llm_invocation_metrics_id: UUID of the invocation metrics
 
     Returns:
-        Deterministic UUID based on prompt + run
+        Deterministic UUID based on prompt + score + metrics
     """
-    natural_key = f"{llm_prompt_id}:{infer_run_id}"
+    natural_key = f"{llm_prompt_id}:{score_id}:{llm_invocation_metrics_id}"
     return uuid.uuid5(NAMESPACE_LLM_JUDGEMENT, natural_key)
 
 # ========================================================================

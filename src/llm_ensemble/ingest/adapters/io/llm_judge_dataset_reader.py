@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
 
-from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore, Dataset, JudgingSample, NormalizedDataset
+from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore, JudgingSample, NormalizedDataset
 from llm_ensemble.ingest.ports import DatasetReader
 
 
@@ -69,12 +69,9 @@ class LLMJudgeDatasetReader(DatasetReader):
         """
         paths = LlmJudgePaths(Path(input_path))
 
-        # Create Dataset entity (dataset metadata extracted from data context)
-        dataset = Dataset.create("llmjudge", description="LLM Judge Challenge 2024")
-
-        # Load queries and documents into memory (with IDs computed from dataset)
-        queries = self._read_queries(paths.queries, dataset)
-        docs = self._read_documents(paths.documents, dataset)
+        # Load queries and documents into memory (content-based IDs)
+        queries = self._read_queries(paths.queries)
+        docs = self._read_documents(paths.documents)
 
         # Process qrels and join with queries/documents
         samples = []
@@ -104,17 +101,19 @@ class LLMJudgeDatasetReader(DatasetReader):
             if limit is not None and len(samples) >= limit:
                 break
 
-        return NormalizedDataset.create(samples=samples)
+        return NormalizedDataset.create(
+            samples=samples,
+            external_dataset_name="llmjudge"
+        )
 
-    def _read_queries(self, path: Path, dataset: Dataset) -> Dict[str, Query]:
+    def _read_queries(self, path: Path) -> Dict[str, Query]:
         """Read TSV of (query_id, query_text) into a dict.
 
         Args:
             path: Path to queries TSV file
-            dataset: Dataset entity
 
         Returns:
-            Dictionary mapping query_id to Query objects (with IDs computed)
+            Dictionary mapping external query_id to Query objects (with content-based IDs)
 
         Raises:
             FileNotFoundError: If queries file doesn't exist
@@ -131,18 +130,17 @@ class LLMJudgeDatasetReader(DatasetReader):
                 if len(parts) != 2:
                     raise ValueError(f"Invalid query line {i}: {line!r}")
                 qid, qtext = parts[0].strip(), parts[1].strip()
-                out[qid] = Query.create(dataset, qid, qtext)
+                out[qid] = Query.create(qtext)
         return out
 
-    def _read_documents(self, path: Path, dataset: Dataset) -> Dict[str, Document]:
+    def _read_documents(self, path: Path) -> Dict[str, Document]:
         """Read JSONL of documents into a dict.
 
         Args:
             path: Path to documents JSONL file
-            dataset: Dataset entity
 
         Returns:
-            Dictionary mapping docid to Document objects (with IDs computed)
+            Dictionary mapping external docid to Document objects (with content-based IDs)
 
         Raises:
             FileNotFoundError: If documents file doesn't exist
@@ -162,7 +160,7 @@ class LLMJudgeDatasetReader(DatasetReader):
                 doc = obj.get("doc")
                 if not (isinstance(docid, str) and isinstance(doc, str)):
                     raise ValueError(f"Missing docid/doc at line {i}")
-                out[docid] = Document.create(dataset, docid, doc)
+                out[docid] = Document.create(doc)
         return out
 
     def _read_qrels(self, path: Path) -> list[tuple[str, str, int]]:

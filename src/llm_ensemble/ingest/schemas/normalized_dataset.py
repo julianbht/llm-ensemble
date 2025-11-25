@@ -6,10 +6,15 @@ same NormalizedDataset (same fingerprint) enabling idempotent re-runs.
 
 Samples are always stored in deterministic order (sorted by sample.id) to support
 reproducible slicing via future start_sample/end_sample parameters.
+
+Design:
+- All samples within one NormalizedDataset are from one external dataset
+- external_dataset_name tracks the source dataset for context
 """
 
 from __future__ import annotations
 from uuid import UUID
+from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
 from llm_ensemble.ingest.schemas import JudgingSample
@@ -29,8 +34,8 @@ class NormalizedDataset(BaseModel):
     The fingerprint is computed from the sorted list of sample IDs (UUIDs).
     Samples are always stored sorted by sample.id to ensure reproducibility.
 
-    Note: Does not store Dataset entity - each sample already has dataset embedded
-    in query.dataset and document.dataset.
+    All samples within one NormalizedDataset are from one external dataset,
+    tracked via external_dataset_name for context.
     """
 
     id: UUID = Field(
@@ -40,6 +45,10 @@ class NormalizedDataset(BaseModel):
     fingerprint: str = Field(
         ...,
         description="SHA256 hash of sorted sample IDs (deterministic identifier)"
+    )
+    external_dataset_name: Optional[str] = Field(
+        None,
+        description="Name of the external source dataset (e.g., 'msmarco', 'llmjudge')"
     )
     samples: list[JudgingSample] = Field(
         ...,
@@ -61,11 +70,16 @@ class NormalizedDataset(BaseModel):
         return v
 
     @classmethod
-    def create(cls, samples: list[JudgingSample]) -> "NormalizedDataset":
+    def create(
+        cls,
+        samples: list[JudgingSample],
+        external_dataset_name: Optional[str] = None
+    ) -> "NormalizedDataset":
         """Create NormalizedDataset with computed fingerprint and ID.
 
         Args:
             samples: List of judging samples (will be sorted by ID)
+            external_dataset_name: Optional name of the external source dataset
 
         Returns:
             NormalizedDataset with computed fingerprint and deterministic ID
@@ -83,6 +97,7 @@ class NormalizedDataset(BaseModel):
         return cls(
             id=dataset_id,
             fingerprint=fingerprint,
+            external_dataset_name=external_dataset_name,
             samples=sorted_samples,
         )
 

@@ -62,18 +62,36 @@ def compute_aggregate_run_uuid(run_name: str) -> uuid.UUID:
 # Ingest Entitie UUIDs
 # ========================================================================
 
-def compute_dataset_uuid(name: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE_DATASET, name)
+def compute_query_uuid(query_text: str) -> uuid.UUID:
+    """Compute deterministic UUID for Query based on content.
+
+    Queries are global entities identified by their text content.
+    Two queries with identical text are considered the same query.
+
+    Args:
+        query_text: The query text content
+
+    Returns:
+        Deterministic UUID based on query text hash
+    """
+    text_hash = hashlib.sha256(query_text.encode()).hexdigest()
+    return uuid.uuid5(NAMESPACE_QUERY, text_hash)
 
 
-def compute_query_uuid(dataset_id: uuid.UUID, external_id: str) -> uuid.UUID:
-    natural_key = f"{dataset_id}:{external_id}"
-    return uuid.uuid5(NAMESPACE_QUERY, natural_key)
+def compute_document_uuid(doc_text: str) -> uuid.UUID:
+    """Compute deterministic UUID for Document based on content.
 
+    Documents are global entities identified by their text content.
+    Two documents with identical text are considered the same document.
 
-def compute_document_uuid(dataset_id: uuid.UUID, external_id: str) -> uuid.UUID:
-    natural_key = f"{dataset_id}:{external_id}"
-    return uuid.uuid5(NAMESPACE_DOCUMENT, natural_key)
+    Args:
+        doc_text: The document text content
+
+    Returns:
+        Deterministic UUID based on document text hash
+    """
+    text_hash = hashlib.sha256(doc_text.encode()).hexdigest()
+    return uuid.uuid5(NAMESPACE_DOCUMENT, text_hash)
 
 
 def compute_judging_sample_uuid(

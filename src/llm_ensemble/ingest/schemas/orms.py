@@ -7,6 +7,11 @@ All models use deterministic UUID primary keys computed via uuid_helpers.
 
 Naming convention: ORM models use "Model" suffix to distinguish from Pydantic schemas.
 Example: JudgingSampleModel (ORM) vs JudgingSample (Pydantic)
+
+Design:
+- Queries and Documents are global entities identified by content hash
+- NormalizedDataset tracks external_dataset_name to distinguish source datasets
+- All judging_samples within one normalized_dataset are from one external_dataset
 """
 
 from __future__ import annotations
@@ -31,62 +36,36 @@ from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
-class DatasetORM(Base):
-    __tablename__ = "datasets"
-    __table_args__ = {"schema": "ingest"}
-    __natural_key__ = ("name",)
-    __uuid_function__ = "compute_dataset_uuid"
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    name = Column(String(255), nullable=False, unique=True)
-    description = Column(Text, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=utcnow)
-    
-    # Relationships
-    queries = relationship("QueryORM", back_populates="dataset")
-    documents = relationship("DocumentORM", back_populates="dataset")
-
-
 class QueryORM(Base):
     __tablename__ = "queries"
-    __natural_key__ = ("dataset_id", "external_id")
+    __natural_key__ = ("content_hash",)
     __uuid_function__ = "compute_query_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    dataset_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.datasets.id"), nullable=False)
-    external_id = Column(String(255), nullable=False)
+    content_hash = Column(CHAR(64), nullable=False, unique=True)
     query_text = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
-    
+
     # Relationships
-    dataset = relationship("DatasetORM", back_populates="queries")
     judging_samples = relationship("JudgingSampleORM", back_populates="query")
-    
-    __table_args__ = (
-        UniqueConstraint("dataset_id", "external_id", name="uq_query_dataset_external_id"),
-        {"schema": "ingest"},
-    )
+
+    __table_args__ = {"schema": "ingest"}
 
 
 class DocumentORM(Base):
     __tablename__ = "documents"
-    __natural_key__ = ("dataset_id", "external_id")
+    __natural_key__ = ("content_hash",)
     __uuid_function__ = "compute_document_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    dataset_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.datasets.id"), nullable=False)
-    external_id = Column(String(255), nullable=False)
+    content_hash = Column(CHAR(64), nullable=False, unique=True)
     doc_text = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
-    
+
     # Relationships
-    dataset = relationship("DatasetORM", back_populates="documents")
     judging_samples = relationship("JudgingSampleORM", back_populates="document")
 
-    __table_args__ = (
-        UniqueConstraint("dataset_id", "external_id", name="uq_document_dataset_external_id"),
-        {"schema": "ingest"},
-    )
+    __table_args__ = {"schema": "ingest"}
 
 
 class NormalizedDatasetORM(Base):
@@ -97,6 +76,7 @@ class NormalizedDatasetORM(Base):
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     fingerprint = Column(CHAR(64), nullable=False, unique=True)
+    external_dataset_name = Column(String(255), nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships

@@ -9,19 +9,23 @@ Design principles:
 - Stateless: Pure functions with no side effects
 - Explicit: Clear parameter names for foreign keys that aren't in domain objects
 
-The domain layer works with pure Pydantic objects (Dataset, Query, Document, JudgingSample).
-The persistence layer works with SQLAlchemy ORMs (DatasetORM, QueryORM, etc.).
+The domain layer works with pure Pydantic objects (Query, Document, JudgingSample).
+The persistence layer works with SQLAlchemy ORMs (QueryORM, DocumentORM, etc.).
 These mappers handle the impedance mismatch.
+
+Design:
+- Queries and Documents are global entities with content-based hashing
+- No Dataset entity - context is tracked at NormalizedDataset level
+- Content hashes are computed by domain models, not mappers
 """
 
 from __future__ import annotations
 from uuid import UUID
 
-from llm_ensemble.ingest.schemas import Dataset, Query, Document, JudgingSample
+from llm_ensemble.ingest.schemas import Query, Document, JudgingSample
 from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.orms import (
-    DatasetORM,
     QueryORM,
     DocumentORM,
     JudgingSampleORM,
@@ -31,60 +35,23 @@ from llm_ensemble.ingest.schemas.orms import (
 
 
 # ============================================================================
-# Dataset Mappers
-# ============================================================================
-
-def dataset_to_orm(dataset: Dataset) -> DatasetORM:
-    """Convert Dataset domain object to DatasetORM.
-
-    Args:
-        dataset: Dataset domain object
-
-    Returns:
-        DatasetORM model ready for persistence
-    """
-    return DatasetORM(
-        id=dataset.id,
-        name=dataset.name,
-        description=dataset.description,
-    )
-
-
-def dataset_from_orm(dataset_orm: DatasetORM) -> Dataset:
-    """Convert DatasetORM to Dataset domain object.
-
-    Args:
-        dataset_orm: DatasetORM model from database
-
-    Returns:
-        Dataset domain object
-    """
-    return Dataset(
-        id=dataset_orm.id,
-        name=dataset_orm.name,
-        description=dataset_orm.description,
-    )
-
-
-# ============================================================================
 # Query Mappers
 # ============================================================================
 
 def query_to_orm(query: Query) -> QueryORM:
     """Convert Query domain object to QueryORM.
 
-    Now extracts dataset_id from the embedded dataset object.
+    Simply maps fields - content_hash is already computed by domain model.
 
     Args:
-        query: Query domain object with embedded dataset
+        query: Query domain object
 
     Returns:
         QueryORM model ready for persistence
     """
     return QueryORM(
         id=query.id,
-        dataset_id=query.dataset.id,
-        external_id=query.external_id,
+        content_hash=query.content_hash,
         query_text=query.query_text,
     )
 
@@ -92,21 +59,16 @@ def query_to_orm(query: Query) -> QueryORM:
 def query_from_orm(query_orm: QueryORM) -> Query:
     """Convert QueryORM to Query domain object.
 
-    Reconstructs the embedded dataset from the ORM relationship.
-    Requires the dataset relationship to be eager loaded.
-
     Args:
-        query_orm: QueryORM model from database (with dataset relationship loaded)
+        query_orm: QueryORM model from database
 
     Returns:
-        Query domain object with embedded dataset
+        Query domain object
     """
-    dataset = dataset_from_orm(query_orm.dataset)
     return Query(
         id=query_orm.id,
-        external_id=query_orm.external_id,
+        content_hash=query_orm.content_hash,
         query_text=query_orm.query_text,
-        dataset=dataset,
     )
 
 
@@ -117,18 +79,17 @@ def query_from_orm(query_orm: QueryORM) -> Query:
 def document_to_orm(document: Document) -> DocumentORM:
     """Convert Document domain object to DocumentORM.
 
-    Now extracts dataset_id from the embedded dataset object.
+    Simply maps fields - content_hash is already computed by domain model.
 
     Args:
-        document: Document domain object with embedded dataset
+        document: Document domain object
 
     Returns:
         DocumentORM model ready for persistence
     """
     return DocumentORM(
         id=document.id,
-        dataset_id=document.dataset.id,
-        external_id=document.external_id,
+        content_hash=document.content_hash,
         doc_text=document.doc_text,
     )
 
@@ -136,21 +97,16 @@ def document_to_orm(document: Document) -> DocumentORM:
 def document_from_orm(document_orm: DocumentORM) -> Document:
     """Convert DocumentORM to Document domain object.
 
-    Reconstructs the embedded dataset from the ORM relationship.
-    Requires the dataset relationship to be eager loaded.
-
     Args:
-        document_orm: DocumentORM model from database (with dataset relationship loaded)
+        document_orm: DocumentORM model from database
 
     Returns:
-        Document domain object with embedded dataset
+        Document domain object
     """
-    dataset = dataset_from_orm(document_orm.dataset)
     return Document(
         id=document_orm.id,
-        external_id=document_orm.external_id,
+        content_hash=document_orm.content_hash,
         doc_text=document_orm.doc_text,
-        dataset=dataset,
     )
 
 
@@ -226,6 +182,7 @@ def normalized_dataset_to_orm(normalized_dataset: NormalizedDataset) -> Normaliz
     return NormalizedDatasetORM(
         id=normalized_dataset.id,
         fingerprint=normalized_dataset.fingerprint,
+        external_dataset_name=normalized_dataset.external_dataset_name,
     )
 
 
@@ -245,6 +202,7 @@ def normalized_dataset_from_orm(
     return NormalizedDataset(
         id=normalized_dataset_orm.id,
         fingerprint=normalized_dataset_orm.fingerprint,
+        external_dataset_name=normalized_dataset_orm.external_dataset_name,
         samples=samples,
     )
 

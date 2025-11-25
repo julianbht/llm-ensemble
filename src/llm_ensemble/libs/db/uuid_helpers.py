@@ -38,8 +38,6 @@ NAMESPACE_PROMPT_CONFIG = uuid.UUID('3c4d5e6f-7890-1234-5678-90abcdef1234')
 NAMESPACE_MODEL_SPEC = uuid.UUID('4d5e6f78-9012-3456-7890-1abcdef12345')
 NAMESPACE_PROVIDER = uuid.UUID('5e6f7890-1234-5678-9012-3abcdef12346')
 NAMESPACE_PARSER_SPEC = uuid.UUID('6f789012-3456-7890-abcd-1234def56789')
-
-# Aggregate namespace UUIDs
 NAMESPACE_AGGREGATION_SPEC = uuid.UUID('890123bc-def1-2345-6789-0abcdef12345')
 NAMESPACE_AGGREGATED_SCORE = uuid.UUID('a12345de-f123-4567-890a-bcdef1234567')
 NAMESPACE_AGGREGATED_SCORE_LLM_CALL = uuid.UUID('b23456ef-1234-5678-9012-3456789abcde')
@@ -63,33 +61,11 @@ def compute_aggregate_run_uuid(run_name: str) -> uuid.UUID:
 # ========================================================================
 
 def compute_query_uuid(query_text: str) -> uuid.UUID:
-    """Compute deterministic UUID for Query based on content.
-
-    Queries are global entities identified by their text content.
-    Two queries with identical text are considered the same query.
-
-    Args:
-        query_text: The query text content
-
-    Returns:
-        Deterministic UUID based on query text hash
-    """
     text_hash = hashlib.sha256(query_text.encode()).hexdigest()
     return uuid.uuid5(NAMESPACE_QUERY, text_hash)
 
 
 def compute_document_uuid(doc_text: str) -> uuid.UUID:
-    """Compute deterministic UUID for Document based on content.
-
-    Documents are global entities identified by their text content.
-    Two documents with identical text are considered the same document.
-
-    Args:
-        doc_text: The document text content
-
-    Returns:
-        Deterministic UUID based on document text hash
-    """
     text_hash = hashlib.sha256(doc_text.encode()).hexdigest()
     return uuid.uuid5(NAMESPACE_DOCUMENT, text_hash)
 
@@ -103,17 +79,6 @@ def compute_judging_sample_uuid(
 
 
 def compute_normalized_dataset_fingerprint(samples: list) -> str:
-    """Compute deterministic SHA256 fingerprint from sorted sample IDs.
-
-    The fingerprint uniquely identifies a specific set of judging samples,
-    enabling idempotent ingest runs and efficient validation in aggregate CLI.
-
-    Args:
-        samples: List of JudgingSample objects (must be sorted by ID)
-
-    Returns:
-        SHA256 hash (64 character hex string) of sorted sample IDs
-    """
     # Extract and sort sample IDs (already sorted, but ensure determinism)
     sorted_ids = sorted([str(s.id) for s in samples])
 
@@ -125,14 +90,6 @@ def compute_normalized_dataset_fingerprint(samples: list) -> str:
 
 
 def compute_normalized_dataset_uuid(fingerprint: str) -> uuid.UUID:
-    """Compute deterministic UUID for NormalizedDataset from fingerprint.
-
-    Args:
-        fingerprint: SHA256 hash of sorted sample IDs
-
-    Returns:
-        Deterministic UUID based on fingerprint
-    """
     return uuid.uuid5(NAMESPACE_NORMALIZED_DATASET, fingerprint)
 
 
@@ -140,47 +97,17 @@ def compute_dataset_sample_uuid(
     normalized_dataset_id: uuid.UUID,
     judging_sample_id: uuid.UUID
 ) -> uuid.UUID:
-    """Compute deterministic UUID for DatasetSample.
-
-    Natural key: (normalized_dataset_id, judging_sample_id)
-
-    Args:
-        normalized_dataset_id: UUID of the normalized dataset
-        judging_sample_id: UUID of the judging sample
-
-    Returns:
-        Deterministic UUID based on composite key
-    """
     natural_key = f"{normalized_dataset_id}:{judging_sample_id}"
     return uuid.uuid5(NAMESPACE_DATASET_SAMPLE, natural_key)
 
 
 def compute_judged_dataset_fingerprint(judgements: list) -> str:
-    """Compute deterministic SHA256 fingerprint from sorted LLMJudgement IDs.
-
-    The fingerprint uniquely identifies a specific set of LLM judgements,
-    enabling idempotent infer runs and efficient validation in aggregate CLI.
-
-    Args:
-        judgements: List of LLMJudgement objects (domain or ORM) with .id attribute
-
-    Returns:
-        SHA256 hash (64 character hex string) of sorted judgement IDs
-    """
     sorted_ids = sorted([str(j.id) for j in judgements])
     id_string = ",".join(sorted_ids)
     return hashlib.sha256(id_string.encode()).hexdigest()
 
 
 def compute_judged_dataset_uuid(fingerprint: str) -> uuid.UUID:
-    """Compute deterministic UUID for JudgedDataset from fingerprint.
-
-    Args:
-        fingerprint: SHA256 hash of sorted LLMJudgement IDs
-
-    Returns:
-        Deterministic UUID based on fingerprint
-    """
     return uuid.uuid5(NAMESPACE_JUDGED_DATASET, fingerprint)
 
 
@@ -221,17 +148,6 @@ def compute_parser_spec_uuid(parser_module: str, parser_class: str, code_hash: s
 
 
 def compute_llm_prompt_uuid(prompt: str, judging_sample_id: uuid.UUID) -> uuid.UUID:
-    """Compute deterministic UUID for LLMPrompt.
-
-    Natural key: (prompt, judging_sample_id)
-
-    Args:
-        prompt: Rendered prompt text
-        judging_sample_id: UUID of the judging sample
-
-    Returns:
-        Deterministic UUID based on prompt hash and sample ID
-    """
     # Hash prompt to keep natural key reasonable length
     prompt_hash = hashlib.sha256(prompt.encode()).hexdigest()
     natural_key = f"{judging_sample_id}:{prompt_hash}"
@@ -239,16 +155,6 @@ def compute_llm_prompt_uuid(prompt: str, judging_sample_id: uuid.UUID) -> uuid.U
 
 
 def compute_llm_response_text_uuid(raw_response: str) -> uuid.UUID:
-    """Compute deterministic UUID for LLMResponseText.
-
-    Natural key: (raw_response)
-
-    Args:
-        raw_response: Raw response text from LLM
-
-    Returns:
-        Deterministic UUID based on response hash
-    """
     response_hash = hashlib.sha256(raw_response.encode()).hexdigest()
     return uuid.uuid5(NAMESPACE_LLM_RESPONSE_TEXT, response_hash)
 
@@ -262,23 +168,6 @@ def compute_llm_invocation_metrics_uuid(
     completion_tokens: int | None,
     total_tokens: int | None
 ) -> uuid.UUID:
-    """Compute deterministic UUID for LLMInvocationMetrics.
-
-    Natural key: all metric fields (latency_ms, retries, cost_estimate_usd,
-                 generation_id, prompt_tokens, completion_tokens, total_tokens)
-
-    Args:
-        latency_ms: Inference time in milliseconds
-        retries: Number of retries
-        cost_estimate_usd: Estimated cost in USD (optional)
-        generation_id: Provider generation ID (optional)
-        prompt_tokens: Number of prompt tokens (optional)
-        completion_tokens: Number of completion tokens (optional)
-        total_tokens: Total tokens (optional)
-
-    Returns:
-        Deterministic UUID based on all metric fields
-    """
     # Build natural key from all fields (handling None values)
     fields = [
         str(latency_ms),
@@ -294,17 +183,6 @@ def compute_llm_invocation_metrics_uuid(
 
 
 def compute_llm_score_uuid(parser_spec_id: uuid.UUID, llm_response_text_id: uuid.UUID) -> uuid.UUID:
-    """Compute deterministic UUID for LLMScore.
-
-    Natural key: (parser_spec_id, llm_response_text_id)
-
-    Args:
-        parser_spec_id: UUID of the parser spec
-        llm_response_text_id: UUID of the response text
-
-    Returns:
-        Deterministic UUID based on parser + response text
-    """
     natural_key = f"{parser_spec_id}:{llm_response_text_id}"
     return uuid.uuid5(NAMESPACE_LLM_SCORE, natural_key)
 
@@ -314,18 +192,6 @@ def compute_llm_judgement_uuid(
     llm_response_text_id: uuid.UUID,
     llm_invocation_metrics_id: uuid.UUID
 ) -> uuid.UUID:
-    """Compute deterministic UUID for LLMJudgement.
-
-    Natural key: (llm_prompt_id, llm_response_text_id, llm_invocation_metrics_id)
-
-    Args:
-        llm_prompt_id: UUID of the prompt
-        llm_response_text_id: UUID of the response text
-        llm_invocation_metrics_id: UUID of the invocation metrics
-
-    Returns:
-        Deterministic UUID based on prompt + response + metrics
-    """
     natural_key = f"{llm_prompt_id}:{llm_response_text_id}:{llm_invocation_metrics_id}"
     return uuid.uuid5(NAMESPACE_LLM_JUDGEMENT, natural_key)
 
@@ -334,14 +200,6 @@ def compute_llm_judgement_uuid(
 # ========================================================================
 
 def compute_aggregation_spec_uuid(name: str) -> uuid.UUID:
-    """Compute deterministic UUID for aggregation spec.
-
-    Args:
-        name: Spec name (e.g., 'majority_vote', 'weighted_majority')
-
-    Returns:
-        Deterministic UUID based on spec name
-    """
     return uuid.uuid5(NAMESPACE_AGGREGATION_SPEC, name)
 
 
@@ -349,18 +207,6 @@ def compute_aggregated_score_uuid(
     aggregate_run_id: uuid.UUID,
     llm_call_ids: tuple[uuid.UUID, ...]
 ) -> uuid.UUID:
-    """Compute deterministic UUID for aggregated score.
-
-    The score is uniquely identified by the aggregate run and the set of LLM calls
-    being aggregated (order-independent set, sorted for determinism).
-
-    Args:
-        aggregate_run_id: UUID of the aggregate run
-        llm_call_ids: Tuple of LLM call UUIDs being aggregated (will be sorted)
-
-    Returns:
-        Deterministic UUID based on composite key
-    """
     # Sort for deterministic ordering (set of calls, not ordered list)
     sorted_call_ids = ":".join(str(cid) for cid in sorted(llm_call_ids))
     natural_key = f"{aggregate_run_id}:{sorted_call_ids}"
@@ -371,16 +217,5 @@ def compute_aggregated_score_llm_call_uuid(
     aggregated_score_id: uuid.UUID,
     llm_call_id: uuid.UUID
 ) -> uuid.UUID:
-    """Compute deterministic UUID for aggregated score LLM call join table.
-
-    Join table linking aggregated scores to their constituent LLM calls.
-
-    Args:
-        aggregated_score_id: UUID of the aggregated score
-        llm_call_id: UUID of the LLM call (individual model judgement)
-
-    Returns:
-        Deterministic UUID based on composite key
-    """
     natural_key = f"{aggregated_score_id}:{llm_call_id}"
     return uuid.uuid5(NAMESPACE_AGGREGATED_SCORE_LLM_CALL, natural_key)

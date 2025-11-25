@@ -32,11 +32,6 @@ from llm_ensemble.libs.schemas import RelevanceScore
 
 
 class DatasetORM(Base):
-    """Dataset ORM model - normalized dataset metadata.
-
-    Each dataset represents a distinct IR dataset (e.g., 'msmarco', 'trec-covid').
-    Uses deterministic UUID based on dataset name.
-    """
     __tablename__ = "datasets"
     __table_args__ = {"schema": "ingest"}
     __natural_key__ = ("name",)
@@ -53,10 +48,6 @@ class DatasetORM(Base):
 
 
 class QueryORM(Base):
-    """Query ORM model - search queries from IR datasets.
-
-    Uses deterministic UUID based on dataset + external_id.
-    """
     __tablename__ = "queries"
     __natural_key__ = ("dataset_id", "external_id")
     __uuid_function__ = "compute_query_uuid"
@@ -78,10 +69,6 @@ class QueryORM(Base):
 
 
 class DocumentORM(Base):
-    """Document ORM model - documents from IR datasets.
-
-    Uses deterministic UUID based on dataset + external_id.
-    """
     __tablename__ = "documents"
     __natural_key__ = ("dataset_id", "external_id")
     __uuid_function__ = "compute_document_uuid"
@@ -103,13 +90,6 @@ class DocumentORM(Base):
 
 
 class NormalizedDatasetORM(Base):
-    """NormalizedDataset ORM - internal dataset with deterministic fingerprint.
-
-    Represents a specific collection of judging samples. Multiple ingest runs
-    can produce the same NormalizedDataset (same fingerprint), enabling idempotency.
-
-    Uses deterministic UUID based on fingerprint (SHA256 of sorted sample IDs).
-    """
     __tablename__ = "normalized_datasets"
     __table_args__ = {"schema": "ingest"}
     __natural_key__ = ("fingerprint",)
@@ -130,11 +110,6 @@ class NormalizedDatasetORM(Base):
 
 
 class NormalizedDatasetJudgingSampleORM(Base):
-    """Junction table linking NormalizedDataset to JudgingSample with sequence.
-
-    Preserves deterministic ordering of samples via sequence_number.
-    This enables reproducible slicing (start_sample/end_sample) in future.
-    """
     __tablename__ = "normalized_dataset_judging_samples"
     __table_args__ = {"schema": "ingest"}
 
@@ -153,14 +128,6 @@ class NormalizedDatasetJudgingSampleORM(Base):
 
 
 class IngestRunORM(Base):
-    """IngestRun ORM model - metadata for ingest runs.
-
-    Uses deterministic UUID based on run_name.
-    Tracks run_type using RunType enum for proper typing and validation.
-
-    Each ingest run produces exactly one NormalizedDataset.
-    Multiple runs can produce the same NormalizedDataset (idempotency).
-    """
     __tablename__ = "ingest_runs"
     __table_args__ = {"schema": "ingest"}
     __natural_key__ = ("run_name",)
@@ -187,15 +154,6 @@ class IngestRunORM(Base):
 
 
 class JudgingSampleORM(Base):
-    """JudgingSample ORM - query-document pairs with gold relevance scores.
-
-    Uses deterministic UUID based on query_id + document_id.
-    Links to Query and Document via foreign keys.
-    Uses RelevanceScore enum for proper typing and validation.
-
-    Relationship to NormalizedDatasets is Many-to-Many via junction table,
-    enabling the same sample to be part of multiple normalized datasets.
-    """
     __tablename__ = "judging_samples"
     __natural_key__ = ("query_id", "document_id")
     __uuid_function__ = "compute_judging_sample_uuid"

@@ -346,19 +346,6 @@ class LLMScoreORM(Base):
 
 
 class LLMJudgementORM(Base):
-    """Complete LLM judgement representing an API interaction.
-
-    Captures: what was asked (prompt) → what came back (response) → how it performed (metrics).
-
-    The judgement is the raw API interaction. Parsing (score) is separate and optional.
-    A response may have 0..N scores depending on parsing success and parser used.
-
-    Deduplicated by: (llm_prompt_id, llm_response_text_id, llm_invocation_metrics_id)
-    This mirrors ingest pattern where JudgingSample = (query_id, document_id, gold_score).
-
-    No direct FK to InferRun - relationship tracked via JudgedDataset.
-    Multiple runs can produce the same judgement (same prompt/response/metrics).
-    """
     __tablename__ = "llm_judgements"
     __natural_key__ = ("llm_prompt_id", "llm_response_text_id", "llm_invocation_metrics_id")
     __uuid_function__ = "compute_llm_judgement_uuid"

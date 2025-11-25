@@ -18,11 +18,11 @@ import hashlib
 # Each entity type has its own namespace UUID to ensure no collisions
 # between different entity types even if they have the same natural key.
 
-NAMESPACE_DATASET = uuid.UUID('f0e1d2c3-b4a5-9687-7654-321fedcba098')
 NAMESPACE_QUERY = uuid.UUID('a1b2c3d4-e5f6-7890-abcd-ef1234567890')
 NAMESPACE_DOCUMENT = uuid.UUID('b2c3d4e5-f678-90ab-cdef-123456789012')
 NAMESPACE_JUDGING_SAMPLE = uuid.UUID('c3d4e5f6-7890-abcd-ef12-34567890abcd')
 NAMESPACE_NORMALIZED_DATASET = uuid.UUID('c4d5e6f7-8901-bcde-f234-567890abcdef')
+NAMESPACE_DATASET_SAMPLE = uuid.UUID('c5d6e7f8-9012-cdef-1234-567890abcdef')
 NAMESPACE_JUDGED_DATASET = uuid.UUID('c5d6e7f8-9012-cdef-3456-67890abcdef0')
 NAMESPACE_INGEST_RUN = uuid.UUID('d4e5f678-90ab-cdef-1234-567890abcdef')
 NAMESPACE_INFER_RUN = uuid.UUID('e5f67890-abcd-ef12-3456-7890abcdef12')
@@ -134,6 +134,25 @@ def compute_normalized_dataset_uuid(fingerprint: str) -> uuid.UUID:
         Deterministic UUID based on fingerprint
     """
     return uuid.uuid5(NAMESPACE_NORMALIZED_DATASET, fingerprint)
+
+
+def compute_dataset_sample_uuid(
+    normalized_dataset_id: uuid.UUID,
+    judging_sample_id: uuid.UUID
+) -> uuid.UUID:
+    """Compute deterministic UUID for DatasetSample.
+
+    Natural key: (normalized_dataset_id, judging_sample_id)
+
+    Args:
+        normalized_dataset_id: UUID of the normalized dataset
+        judging_sample_id: UUID of the judging sample
+
+    Returns:
+        Deterministic UUID based on composite key
+    """
+    natural_key = f"{normalized_dataset_id}:{judging_sample_id}"
+    return uuid.uuid5(NAMESPACE_DATASET_SAMPLE, natural_key)
 
 
 def compute_judged_dataset_fingerprint(judgements: list) -> str:

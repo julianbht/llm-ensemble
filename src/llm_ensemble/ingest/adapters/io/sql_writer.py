@@ -20,7 +20,7 @@ from llm_ensemble.ingest.schemas.orms import (
     IngestRunORM,
     JudgingSampleORM,
     NormalizedDatasetORM,
-    NormalizedDatasetJudgingSampleORM,
+    DatasetSampleORM,
 )
 from llm_ensemble.ingest.ports import DatasetWriter
 from llm_ensemble.ingest.adapters.io.mappers import (
@@ -312,24 +312,24 @@ class SqlWriter(DatasetWriter):
     def _save_normalized_dataset_junction(
         self, session: Session, normalized_dataset: NormalizedDataset
     ) -> int:
-        """Save NormalizedDataset junction table records (step 6 in dependency order).
+        """Save DatasetSample entity records (step 5 in dependency order).
 
-        Creates junction records linking NormalizedDataset to JudgingSamples with
+        Creates DatasetSample entities linking NormalizedDataset to JudgingSamples with
         sequence numbers for deterministic ordering.
 
         Note: This MUST be called after _save_normalized_dataset_entity because
-        junction records have FK to NormalizedDataset.
+        DatasetSample entities have FK to NormalizedDataset.
 
         Args:
             session: SQLAlchemy session
             normalized_dataset: NormalizedDataset domain object
 
         Returns:
-            Number of junction records created
+            Number of DatasetSample records created
         """
-        # Check if junction records already exist (idempotency)
+        # Check if DatasetSample records already exist (idempotency)
         existing_count = (
-            session.query(NormalizedDatasetJudgingSampleORM)
+            session.query(DatasetSampleORM)
             .filter_by(normalized_dataset_id=normalized_dataset.id)
             .count()
         )
@@ -337,13 +337,20 @@ class SqlWriter(DatasetWriter):
         if existing_count > 0:
             return 0
 
-        # Create junction records with sequence numbers
+        # Create DatasetSample entities with sequence numbers and computed IDs
+        from llm_ensemble.libs.db import compute_dataset_sample_uuid
+
         for seq_num, sample in enumerate(normalized_dataset.samples):
-            junction = NormalizedDatasetJudgingSampleORM(
+            dataset_sample_id = compute_dataset_sample_uuid(
+                normalized_dataset.id,
+                sample.id
+            )
+            dataset_sample = DatasetSampleORM(
+                id=dataset_sample_id,
                 normalized_dataset_id=normalized_dataset.id,
                 judging_sample_id=sample.id,
                 sequence_number=seq_num,
             )
-            session.add(junction)
+            session.add(dataset_sample)
 
         return len(normalized_dataset.samples)

@@ -1,17 +1,10 @@
 """SQLAlchemy ORM models for INGEST CLI.
 
-Pure SQLAlchemy models (NOT SQLModel) for database persistence.
-Separate from Pydantic schemas to maintain clean architecture.
-
-All models use deterministic UUID primary keys computed via uuid_helpers.
-
 Naming convention: ORM models use "Model" suffix to distinguish from Pydantic schemas.
 Example: JudgingSampleModel (ORM) vs JudgingSample (Pydantic)
 
 Design:
 - Queries and Documents are global entities identified by content hash
-- NormalizedDataset tracks external_dataset_name to distinguish source datasets
-- All judging_samples within one normalized_dataset are from one external_dataset
 """
 
 from __future__ import annotations
@@ -82,29 +75,36 @@ class NormalizedDatasetORM(Base):
     # Relationships
     judging_samples = relationship(
         "JudgingSampleORM",
-        secondary="ingest.normalized_dataset_judging_samples",
+        secondary="ingest.dataset_sample",
         back_populates="normalized_datasets",
-        order_by="NormalizedDatasetJudgingSampleORM.sequence_number"
+        order_by="DatasetSampleORM.sequence_number"
     )
     ingest_runs = relationship("IngestRunORM", back_populates="normalized_dataset")
 
 
-class NormalizedDatasetJudgingSampleORM(Base):
-    __tablename__ = "normalized_dataset_judging_samples"
-    __table_args__ = {"schema": "ingest"}
+class DatasetSampleORM(Base):
+    __tablename__ = "dataset_sample"
+    __natural_key__ = ("normalized_dataset_id", "judging_sample_id")
+    __uuid_function__ = "compute_dataset_sample_uuid"
 
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
     normalized_dataset_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("ingest.normalized_datasets.id", ondelete="CASCADE"),
-        primary_key=True,
+        nullable=False,
     )
     judging_sample_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("ingest.judging_samples.id", ondelete="CASCADE"),
-        primary_key=True,
+        nullable=False,
     )
     sequence_number = Column(Integer, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("normalized_dataset_id", "judging_sample_id", name="uq_dataset_sample"),
+        {"schema": "ingest"},
+    )
 
 
 class IngestRunORM(Base):
@@ -149,7 +149,7 @@ class JudgingSampleORM(Base):
     document = relationship("DocumentORM", back_populates="judging_samples")
     normalized_datasets = relationship(
         "NormalizedDatasetORM",
-        secondary="ingest.normalized_dataset_judging_samples",
+        secondary="ingest.dataset_sample",
         back_populates="judging_samples"
     )
 

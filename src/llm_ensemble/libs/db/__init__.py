@@ -17,12 +17,12 @@ from llm_ensemble.libs.db.session import (
 )
 
 from llm_ensemble.libs.db.uuid_helpers import (
-    compute_dataset_uuid,
     compute_query_uuid,
     compute_document_uuid,
     compute_judging_sample_uuid,
     compute_normalized_dataset_fingerprint,
     compute_normalized_dataset_uuid,
+    compute_dataset_sample_uuid,
     compute_judged_dataset_fingerprint,
     compute_judged_dataset_uuid,
     compute_ingest_run_uuid,
@@ -53,12 +53,12 @@ __all__ = [
     "get_session",
     "session_context",
     # UUID helpers - ingest
-    "compute_dataset_uuid",
     "compute_query_uuid",
     "compute_document_uuid",
     "compute_judging_sample_uuid",
     "compute_normalized_dataset_fingerprint",
     "compute_normalized_dataset_uuid",
+    "compute_dataset_sample_uuid",
     "compute_ingest_run_uuid",
     # UUID helpers - infer
     "compute_judged_dataset_fingerprint",

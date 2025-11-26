@@ -103,8 +103,16 @@ def compute_dataset_sample_uuid(
     return uuid.uuid5(NAMESPACE_DATASET_SAMPLE, natural_key)
 
 
-def compute_judged_dataset_fingerprint(judgements: list) -> str:
-    sorted_ids = sorted([str(j.id) for j in judgements])
+def compute_judged_dataset_fingerprint(dataset_sample_ids: list[uuid.UUID]) -> str:
+    """Compute fingerprint from sorted dataset_sample IDs.
+
+    Args:
+        dataset_sample_ids: List of dataset_sample UUIDs
+
+    Returns:
+        SHA256 hash of sorted, comma-separated UUID strings
+    """
+    sorted_ids = sorted([str(id) for id in dataset_sample_ids])
     id_string = ",".join(sorted_ids)
     return hashlib.sha256(id_string.encode()).hexdigest()
 

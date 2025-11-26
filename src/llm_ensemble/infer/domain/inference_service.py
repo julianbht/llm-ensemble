@@ -7,7 +7,7 @@ It depends only on port abstractions and handles its own logging.
 from __future__ import annotations
 from pathlib import Path
 
-from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement, LLMResponse, LLMScore
+from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement, LLMScore
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
@@ -64,14 +64,14 @@ class InferenceService:
         """Execute the inference pipeline with streaming and immediate persistence.
 
         Coordinates:
-        1. Reading JudgingSample objects via ExampleReader port
+        1. Reading DatasetSample objects via ExampleReader port
         2. Computing actual start_idx and end_idx from run_info (defaulting to 0 and sample_count)
         3. Slicing samples based on computed indices
-        4. For each sample in slice (streaming loop):
-           a. Building prompt via PromptBuilder port → str (rendered prompt)
-           b. Running inference via LLMProvider port → LLMResponse (raw response + provider warnings)
-           c. Parsing response via ResponseParser port → LLMScore (parsed score + parser warnings)
-           d. Creating LLMJudgement object (sample + prompt + response + score + run_info)
+        4. For each dataset_sample in slice (streaming loop):
+           a. Building prompt via PromptBuilder port → LLMPrompt (dataset_sample + prompt_text)
+           b. Running inference via LLMProvider port → (raw_response_text, LLMInvocationMetrics)
+           c. Parsing response via ResponseParser port → LLMScore (llm_response_text + parsed fields)
+           d. Creating LLMJudgement object (llm_prompt + invocation_metrics + llm_score)
            e. Logging progress
            f. Writing judgement immediately to disk (fault tolerance)
         5. Calculating statistics including warnings summary from all stages
@@ -109,31 +109,30 @@ class InferenceService:
         with self.judgement_writer.open(run_dir, run_info, normalized_dataset, start_idx, end_idx) as writer:
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
-                # Extract the judging sample for processing
-                judging_sample = dataset_sample.judging_sample
+                # Build prompt from dataset_sample
+                llm_prompt = self.prompt_builder.build(dataset_sample)
 
-                # Build prompt for this judging sample
-                prompt = self.prompt_builder.build(judging_sample)
-
-                # Run inference for this sample
+                # Run inference - returns raw text and metrics
                 self.logger.info(InferLogEvent.SENDING_REQUEST)
-                response : LLMResponse = self.llm_provider.infer(prompt, model_config)
+                raw_response_text, invocation_metrics = self.llm_provider.infer(
+                    llm_prompt.prompt_text,
+                    model_config
+                )
 
-                # Parse response to extract structured score
-                score : LLMScore = self.response_parser.parse(response.raw_response)
+                # Parse response to extract structured score (includes llm_response_text)
+                llm_score = self.response_parser.parse(raw_response_text)
 
-                # Create judgement (stores judging_sample, not dataset_sample)
-                judgement = LLMJudgement(
-                    judging_sample=judging_sample,
-                    prompt=prompt,
-                    llm_response=response,
-                    llm_score=score,
+                # Create judgement from nested components
+                judgement = LLMJudgement.create(
+                    llm_prompt=llm_prompt,
+                    invocation_metrics=invocation_metrics,
+                    llm_score=llm_score,
                 )
 
                 # Log each completed judgement
-                extracted_score = judgement.llm_score.label.value if judgement.llm_score.label else "null"
-                gold_score = judgement.judging_sample.gold_score.value
-                latency_s = judgement.llm_response.latency_ms / 1000
+                extracted_score = judgement.llm_score.label.value if judgement.llm_score and judgement.llm_score.label else "null"
+                gold_score = judgement.llm_prompt.dataset_sample.judging_sample.gold_score.value
+                latency_s = judgement.invocation_metrics.latency_ms / 1000
                 self.logger.info(
                     InferLogEvent.RESPONSE_PARSED,
                     extracted_score=extracted_score,
@@ -142,7 +141,7 @@ class InferenceService:
                 )
 
                 # Log metrics for observability dashboard (cost, agreement, latency)
-                cost_usd = judgement.llm_response.cost_estimate_usd or 0.0
+                cost_usd = judgement.invocation_metrics.cost_estimate_usd or 0.0
                 agreement = 1 if extracted_score == gold_score else 0
                 self.logger.info(
                     InferLogEvent.JUDGEMENT_METRICS,
@@ -162,8 +161,8 @@ class InferenceService:
 
         # Calculate aggregate statistics from judgements (for summary)
         count = len(llm_judgements)
-        error_count = sum(1 for j in llm_judgements if j.llm_score.label is None)
-        total_latency_ms = sum(j.llm_response.latency_ms for j in llm_judgements)
+        error_count = sum(1 for j in llm_judgements if j.llm_score is None or j.llm_score.label is None)
+        total_latency_ms = sum(j.invocation_metrics.latency_ms for j in llm_judgements)
         avg_latency = total_latency_ms / count if count > 0 else 0.0
 
         # Build warnings summary from all judgements

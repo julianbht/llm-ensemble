@@ -18,7 +18,7 @@ from typing import Optional
 from openai import APIError
 import structlog
 
-from llm_ensemble.infer.schemas.llm_judgement import LLMResponse
+from llm_ensemble.infer.schemas.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.logging.log_events import InferLogEvent
@@ -58,7 +58,7 @@ class LLMProvider(ABC):
         self,
         prompt: str,
         model_config: ModelConfig,
-    ) -> LLMResponse:
+    ) -> tuple[str, LLMInvocationMetrics]:
         """Run inference with automatic retry logic (template method).
 
         This concrete method implements exponential backoff with jitter.
@@ -69,7 +69,7 @@ class LLMProvider(ABC):
             model_config: Model configuration with provider and settings
 
         Returns:
-            LLMResponse with raw response text, metadata, and retry count
+            Tuple of (raw_response_text, invocation_metrics) with retry count set
 
         Raises:
             ValueError: If configuration is invalid
@@ -80,13 +80,22 @@ class LLMProvider(ABC):
         for attempt in range(self.retry_config.max_retries + 1):
             try:
                 # Call the provider-specific implementation
-                response = self._do_infer(prompt, model_config)
+                raw_response_text, metrics = self._do_infer(prompt, model_config)
 
-                # Success! Set retry count
+                # Success! Set retry count on metrics
                 # attempt = 0 means first try (no retries), attempt = 1 means one retry, etc.
-                response.retries = attempt
+                # Create new metrics object with updated retry count
+                updated_metrics = LLMInvocationMetrics.create(
+                    latency_ms=metrics.latency_ms,
+                    retries=attempt,
+                    cost_estimate_usd=metrics.cost_estimate_usd,
+                    generation_id=metrics.generation_id,
+                    prompt_tokens=metrics.prompt_tokens,
+                    completion_tokens=metrics.completion_tokens,
+                    total_tokens=metrics.total_tokens,
+                )
 
-                return response
+                return raw_response_text, updated_metrics
 
             except APIError as e:
 
@@ -138,11 +147,11 @@ class LLMProvider(ABC):
         self,
         prompt: str,
         model_config: ModelConfig,
-    ) -> LLMResponse:
+    ) -> tuple[str, LLMInvocationMetrics]:
         """Perform the actual inference API call (implemented by subclasses).
 
         This is the method that provider adapters must implement.
-        It should make the API call and return an LLMResponse.
+        It should make the API call and return raw response text and metrics.
 
         The base class infer() method handles retries and wraps this call.
 
@@ -151,7 +160,7 @@ class LLMProvider(ABC):
             model_config: Model configuration with provider and settings
 
         Returns:
-            LLMResponse with raw response text and metadata
+            Tuple of (raw_response_text, invocation_metrics without retry count)
 
         Raises:
             APIError: If API call fails (will trigger retry in base class)

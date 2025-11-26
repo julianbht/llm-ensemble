@@ -16,17 +16,23 @@ from __future__ import annotations
 from typing import Optional
 from pydantic import BaseModel, Field
 
-from llm_ensemble.ingest.schemas.judging_sample import JudgingSample
+from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.schemas.warnings import BaseWarning
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
 class LLMPrompt(BaseModel):
-    """Rendered prompt text sent to LLM.
+    """Rendered prompt text sent to LLM, built from a dataset sample.
 
+    Captures the semantic relationship: prompt is built FROM dataset_sample.
     Pure domain entity without persistence concerns.
     UUID computation handled by mappers during ORM conversion.
     """
+
+    dataset_sample: DatasetSample = Field(
+        ...,
+        description="The dataset sample this prompt was built from"
+    )
 
     prompt_text: str = Field(
         ...,
@@ -34,41 +40,17 @@ class LLMPrompt(BaseModel):
     )
 
     @classmethod
-    def create(cls, prompt_text: str) -> "LLMPrompt":
+    def create(cls, dataset_sample: DatasetSample, prompt_text: str) -> "LLMPrompt":
         """Create an LLMPrompt.
 
         Args:
+            dataset_sample: Dataset sample this prompt was built from
             prompt_text: Rendered prompt text
 
         Returns:
             LLMPrompt instance
         """
-        return cls(prompt_text=prompt_text)
-
-
-class LLMResponse(BaseModel):
-    """Raw response text from LLM.
-
-    Pure domain entity without persistence concerns.
-    UUID computation handled by mappers during ORM conversion.
-    """
-
-    raw_response: str = Field(
-        ...,
-        description="The unparsed text returned by the LLM"
-    )
-
-    @classmethod
-    def create(cls, raw_response: str) -> "LLMResponse":
-        """Create an LLMResponse.
-
-        Args:
-            raw_response: Raw LLM response text
-
-        Returns:
-            LLMResponse instance
-        """
-        return cls(raw_response=raw_response)
+        return cls(dataset_sample=dataset_sample, prompt_text=prompt_text)
 
 
 class LLMInvocationMetrics(BaseModel):
@@ -159,12 +141,18 @@ class LLMInvocationMetrics(BaseModel):
 class LLMScore(BaseModel):
     """Parsed relevance assessment extracted from LLM response.
 
+    Captures the semantic relationship: score is parsed FROM llm_response_text.
     This represents the structured score that a ResponseParser extracts
     from raw LLM output text. All fields are optional to handle parse failures.
 
     Pure domain entity without persistence concerns.
     UUID computation handled by mappers during ORM conversion.
     """
+
+    llm_response_text: str = Field(
+        ...,
+        description="The raw LLM response text that was parsed to extract this score"
+    )
 
     label: Optional[RelevanceScore] = Field(
         None,
@@ -195,6 +183,7 @@ class LLMScore(BaseModel):
     @classmethod
     def create(
         cls,
+        llm_response_text: str,
         label: Optional[RelevanceScore] = None,
         confidence: Optional[float] = None,
         rationale: Optional[str] = None,
@@ -203,6 +192,7 @@ class LLMScore(BaseModel):
         """Create an LLMScore.
 
         Args:
+            llm_response_text: Raw LLM response text that was parsed
             label: Parsed relevance label
             confidence: Confidence score [0-1]
             rationale: Explanation for the judgement
@@ -212,6 +202,7 @@ class LLMScore(BaseModel):
             LLMScore instance
         """
         return cls(
+            llm_response_text=llm_response_text,
             label=label,
             confidence=confidence,
             rationale=rationale,
@@ -222,40 +213,29 @@ class LLMScore(BaseModel):
 class LLMJudgement(BaseModel):
     """A complete LLM relevance judgement - pure domain model.
 
-    This is the canonical judgement schema that combines:
-    - judging_sample: The input (query + document + gold score)
-    - llm_prompt: The rendered prompt text sent to the LLM
-    - llm_response: The unparsed text returned by the LLM
-    - invocation_metrics: Observability data (latency, retries, cost, tokens)
-    - llm_score: The parsed relevance assessment (label + confidence + rationale)
+    Nested structure matching ORM semantics:
+    - llm_prompt: Contains the dataset_sample (prompt built FROM sample)
+    - invocation_metrics: Performance data from the LLM API call
+    - llm_score: Contains the llm_response_text (score parsed FROM response)
 
     This captures the complete data lineage for a single inference:
-    what was judged, what prompt was sent, what response came back,
-    how the call performed, and what score was extracted.
+    what was judged (in llm_prompt.dataset_sample), what prompt was sent,
+    what response came back (in llm_score.llm_response_text), how the call
+    performed, and what score was extracted.
 
     The structure mirrors the inference workflow:
-    1. Build prompt from sample (LLMPrompt)
-    2. Invoke LLM (LLMResponse + LLMInvocationMetrics)
-    3. Parse response (LLMScore)
+    1. Build prompt from dataset sample → LLMPrompt (dataset_sample + prompt_text)
+    2. Invoke LLM → response_text + LLMInvocationMetrics
+    3. Parse response → LLMScore (llm_response_text + label/confidence/rationale)
     4. Create judgement
 
     Pure domain entity without persistence concerns.
     UUID computation handled by mappers during ORM conversion.
     """
 
-    judging_sample: JudgingSample = Field(
-        ...,
-        description="The input sample that was judged"
-    )
-
     llm_prompt: LLMPrompt = Field(
         ...,
-        description="The rendered prompt text sent to the LLM"
-    )
-
-    llm_response: LLMResponse = Field(
-        ...,
-        description="The unparsed text returned by the LLM"
+        description="The prompt sent to the LLM (contains dataset_sample + prompt_text)"
     )
 
     invocation_metrics: LLMInvocationMetrics = Field(
@@ -266,7 +246,7 @@ class LLMJudgement(BaseModel):
     llm_score: Optional[LLMScore] = Field(
         None,
         description=(
-            "The parsed relevance assessment (label + confidence + rationale). "
+            "The parsed score (contains llm_response_text + label/confidence/rationale). "
             "None if response parsing completely failed."
         )
     )
@@ -274,28 +254,22 @@ class LLMJudgement(BaseModel):
     @classmethod
     def create(
         cls,
-        judging_sample: JudgingSample,
         llm_prompt: LLMPrompt,
-        llm_response: LLMResponse,
         invocation_metrics: LLMInvocationMetrics,
         llm_score: Optional[LLMScore] = None,
     ) -> "LLMJudgement":
         """Create an LLMJudgement.
 
         Args:
-            judging_sample: Input sample that was judged
-            llm_prompt: Rendered prompt sent to LLM
-            llm_response: Raw response from LLM
+            llm_prompt: Prompt sent to LLM (contains dataset_sample + prompt_text)
             invocation_metrics: Observability metrics
-            llm_score: Parsed score (None if parsing failed)
+            llm_score: Parsed score (contains llm_response_text + parsed fields, None if parsing failed)
 
         Returns:
             LLMJudgement instance
         """
         return cls(
-            judging_sample=judging_sample,
             llm_prompt=llm_prompt,
-            llm_response=llm_response,
             invocation_metrics=invocation_metrics,
             llm_score=llm_score,
         )

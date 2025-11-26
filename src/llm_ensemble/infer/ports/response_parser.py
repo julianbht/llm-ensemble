@@ -29,12 +29,15 @@ class ResponseParser(ABC):
             raw_text: Raw text response from the LLM
 
         Returns:
-            LLMScore with extracted label/confidence/rationale and warnings.
-            Fields may be None if parsing failed. Warnings are included in the
-            LLMScore.warnings field for any parsing issues encountered.
+            LLMScore with llm_response_text set to raw_text and extracted
+            label/confidence/rationale and warnings. Parsed fields may be None
+            if parsing failed. Warnings are included in LLMScore.warnings for
+            any parsing issues encountered.
 
         Note:
-            If parsing completely fails, return LLMScore() with all None fields
-            and appropriate warnings. Never raise exceptions - always return a result.
+            The returned LLMScore must always include llm_response_text (set to raw_text).
+            If parsing completely fails, return LLMScore with llm_response_text set
+            and all parsed fields as None with appropriate warnings.
+            Never raise exceptions - always return a result.
         """
         pass

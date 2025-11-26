@@ -23,8 +23,9 @@ from llm_ensemble.libs.db import compute_judged_dataset_fingerprint
 class JudgedDataset(BaseModel):
     """Set of LLM judgements produced during inference.
 
-    The fingerprint is computed from the sorted list of LLMCall IDs (UUIDs).
-    Judgements are stored sorted by their judging_sample.id for reproducibility.
+    The fingerprint is computed from the sorted list of dataset_sample IDs.
+    This identifies which samples were judged, independent of model/prompt used.
+    Judgements are stored sorted by their dataset_sample.id for reproducibility.
 
     Provenance to input NormalizedDataset is tracked via:
       JudgedDataset → InferRun → IngestRun → NormalizedDataset
@@ -39,28 +40,25 @@ class JudgedDataset(BaseModel):
     )
     fingerprint: str = Field(
         ...,
-        description="SHA256 hash of sorted LLMCall IDs (deterministic identifier)"
+        description="SHA256 hash of sorted dataset_sample IDs (deterministic identifier)"
     )
     judgements: list[LLMJudgement] = Field(
         ...,
-        description="LLM judgements, always sorted by judging_sample.id for reproducibility"
+        description="LLM judgements, always sorted by dataset_sample.id for reproducibility"
     )
 
     @field_validator('judgements')
     @classmethod
     def validate_judgements_sorted(cls, v: list[LLMJudgement]) -> list[LLMJudgement]:
-        """Ensure judgements are sorted by LLMCall ID for deterministic ordering."""
+        """Ensure judgements are sorted by dataset_sample ID for deterministic ordering."""
         if not v:
             return v
 
-        # Check if already sorted by llm_call_id
-        # Note: LLMJudgement domain objects don't have llm_call_id directly,
-        # but they will be created with deterministic IDs based on (request_id, infer_run_id)
-        # For now, we'll sort by judging_sample.id to maintain deterministic ordering
-        # This will be refined when we add llm_call_id to LLMJudgement domain object
-        sample_ids = [j.judging_sample.id for j in v]
+        # Check if already sorted by dataset_sample.id
+        # dataset_sample is nested in llm_prompt
+        sample_ids = [j.llm_prompt.dataset_sample.id for j in v]
         if sample_ids != sorted(sample_ids):
-            raise ValueError("Judgements must be sorted by judging_sample.id for deterministic ordering")
+            raise ValueError("Judgements must be sorted by dataset_sample.id for deterministic ordering")
 
         return v
 
@@ -72,34 +70,29 @@ class JudgedDataset(BaseModel):
         """Create JudgedDataset with computed fingerprint and ID.
 
         Args:
-            judgements: List of LLM judgements (will be sorted by sample ID)
+            judgements: List of LLM judgements (will be sorted by dataset_sample.id)
 
         Returns:
             JudgedDataset with computed fingerprint and deterministic ID
 
-        Note: Currently uses judging_sample.id for sorting since LLMJudgement
-        domain objects don't expose llm_call_id. This maintains compatibility
-        while we transition the structure. The fingerprint will be based on
-        LLMCall IDs in the database layer.
+        Note: Fingerprint is computed from sorted dataset_sample IDs, which
+        identifies which samples were judged (independent of model/prompt).
         """
 
-        # Sort judgements by sample ID for deterministic ordering
-        # (LLMCall ID would be ideal, but not available in domain model yet)
-        sorted_judgements = sorted(judgements, key=lambda j: j.judging_sample.id)
+        # Sort judgements by dataset_sample.id for deterministic ordering
+        sorted_judgements = sorted(
+            judgements,
+            key=lambda j: j.llm_prompt.dataset_sample.id
+        )
 
-        # Create pseudo-objects with id attribute for fingerprint computation
-        # In practice, this will be called with actual LLMCall ORMs or updated
-        # domain objects that have llm_call_id
-        class PseudoCall:
-            def __init__(self, judgement_id):
-                # For now, use judging_sample.id as proxy
-                # This will be replaced with actual llm_call_id
-                self.id = judgement_id
+        # Extract dataset_sample IDs for fingerprint computation
+        dataset_sample_ids = [
+            j.llm_prompt.dataset_sample.id
+            for j in sorted_judgements
+        ]
 
-        pseudo_calls = [PseudoCall(j.judging_sample.id) for j in sorted_judgements]
-
-        # Compute fingerprint from sorted call IDs
-        fingerprint = compute_judged_dataset_fingerprint(pseudo_calls)
+        # Compute fingerprint from sorted dataset_sample IDs
+        fingerprint = compute_judged_dataset_fingerprint(dataset_sample_ids)
 
         # Compute deterministic UUID from fingerprint
         dataset_id = compute_judged_dataset_uuid(fingerprint)

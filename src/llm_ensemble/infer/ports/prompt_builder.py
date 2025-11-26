@@ -8,7 +8,8 @@ without coupling to specific implementations.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
-from llm_ensemble.ingest.schemas import JudgingSample
+from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
+from llm_ensemble.infer.schemas.llm_judgement import LLMPrompt
 
 
 class PromptBuilder(ABC):
@@ -17,18 +18,18 @@ class PromptBuilder(ABC):
     Implementations can build prompts using different templates and formats
     while providing a consistent interface to the LLM provider adapters.
 
-    Returns the rendered prompt string directly (no wrapper needed).
+    Returns an LLMPrompt containing the dataset_sample and rendered prompt_text.
     """
 
     @abstractmethod
-    def build(self, example: JudgingSample) -> str:
-        """Build a prompt from a judging example.
+    def build(self, dataset_sample: DatasetSample) -> LLMPrompt:
+        """Build an LLMPrompt from a dataset sample.
 
         Args:
-            example: JudgingSample object containing query and document
+            dataset_sample: DatasetSample containing judging_sample and context
 
         Returns:
-            Rendered prompt string
+            LLMPrompt containing the dataset_sample and rendered prompt text
 
         Raises:
             Exception: For unrecoverable errors (e.g., template file missing).

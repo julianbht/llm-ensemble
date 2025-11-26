@@ -49,7 +49,7 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     DatasetJudgementORM,
     InferRunORM,
     LLMPromptTextORM,
-    LLMResponseORM,
+    LLMResponseTextORM,
     LLMInvocationMetricsORM,
     LLMScoreORM,
     LLMJudgementORM,

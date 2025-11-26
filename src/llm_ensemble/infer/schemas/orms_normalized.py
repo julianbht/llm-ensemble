@@ -339,13 +339,13 @@ class LLMScoreORM(Base):
         ForeignKey("infer.parser_specs.id"),
         nullable=False,
     )
-    llm_response_id = Column(
+    llm_response_text_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_responses.id"),
+        ForeignKey("infer.llm_response_texts.id"),
         nullable=False,
     )
 
-    # Derived / parsed info; functionally dependent on (parser_spec_id, llm_response_id)
+    # Derived / parsed info
     label = Column(SQLEnum(RelevanceScore, schema="public"), nullable=False)
     confidence = Column(Float, nullable=True)
     rationale = Column(Text, nullable=True)
@@ -358,7 +358,7 @@ class LLMScoreORM(Base):
     __table_args__ = (
         UniqueConstraint(
             "parser_spec_id",
-            "llm_response_id",
+            "llm_response_text_id",
             name="uq_score_parser_response",
         ),
         {"schema": "infer"},

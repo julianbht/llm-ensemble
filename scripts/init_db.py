@@ -58,25 +58,26 @@ from llm_ensemble.infer.schemas.orms_normalized import (
 
 def main():
     """Create all database schemas and tables."""
-    print("Initializing database schema...")
-    print("Reading DATABASE_URL from environment...")
+    print("=" * 70)
+    print("DATABASE INITIALIZATION")
+    print("=" * 70)
+    print()
 
     # Get database engine (reads DATABASE_URL from .env)
+    print("Connecting to database...")
     engine = get_engine()
-
-    print(f"Connected to: {engine.url}")
-    print("Creating PostgreSQL schemas...")
+    print(f"  Connected to: {engine.url.database}@{engine.url.host}:{engine.url.port}")
+    print()
 
     # Create schemas first (ingest, infer, aggregate, evaluate)
+    print("Creating PostgreSQL schemas...")
     create_schemas(engine)
-
-    print("Creating tables...")
+    print("  Schemas: public, ingest, infer, aggregate, evaluate")
+    print()
 
     # Create all tables (idempotent - safe to run multiple times)
+    print("Creating tables from ORM models...")
     create_all_tables(engine)
-
-    print("Database schema initialized successfully!")
-    print("")
 
     # Dynamically list all created tables grouped by schema
     tables_by_schema = defaultdict(list)
@@ -84,10 +85,24 @@ def main():
         schema = table.schema or 'public'
         tables_by_schema[schema].append(table.name)
 
-    print("Schemas and tables created:")
+    total_tables = sum(len(tables) for tables in tables_by_schema.values())
+    print(f"  Created {total_tables} tables across {len(tables_by_schema)} schemas")
+    print()
+
+    print("=" * 70)
+    print("SCHEMA SUMMARY")
+    print("=" * 70)
+    print()
     for schema in sorted(tables_by_schema.keys()):
-        tables = ', '.join(sorted(tables_by_schema[schema]))
-        print(f"  {schema}: {tables}")
+        tables = sorted(tables_by_schema[schema])
+        print(f"  {schema.upper()} ({len(tables)} tables):")
+        for table in tables:
+            print(f"    - {table}")
+        print()
+
+    print("=" * 70)
+    print("DATABASE INITIALIZATION COMPLETE")
+    print("=" * 70)
 
 
 if __name__ == "__main__":

@@ -279,20 +279,19 @@ class LLMPromptTextORM(Base):
     llm_judgements = relationship("LLMJudgementORM", back_populates="llm_prompt_text")
 
 
-class LLMResponseORM(Base):
-    __tablename__ = "llm_responses"
-    __natural_key__ = ("raw_response",)
-    __uuid_function__ = "compute_llm_response_uuid"
+class LLMResponseTextORM(Base):
+    __tablename__ = "llm_response_texts"
+    __natural_key__ = ("llm_response_text",)
+    __uuid_function__ = "compute_llm_response_text_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    raw_response = Column(Text, nullable=False, unique=True)
+    llm_response_text = Column(Text, nullable=False, unique=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     __table_args__ = {"schema": "infer"}
 
     # Relationships
-    llm_judgements = relationship("LLMJudgementORM", back_populates="llm_response")
-    scores = relationship("LLMScoreORM", back_populates="llm_response")
+    scores = relationship("LLMScoreORM", back_populates="llm_response_text")
 
 
 class LLMInvocationMetricsORM(Base):
@@ -367,7 +366,7 @@ class LLMScoreORM(Base):
 
     # Relationships
     parser_spec = relationship("ParserSpecORM", back_populates="scores")
-    llm_response = relationship("LLMResponseORM", back_populates="scores")
+    llm_response_text = relationship("LLMResponseTextORM", back_populates="scores")
     llm_judgements = relationship("LLMJudgementORM", back_populates="llm_score")
 
 
@@ -375,7 +374,7 @@ class LLMJudgementORM(Base):
     __tablename__ = "llm_judgements"
     __natural_key__ = (
         "dataset_judgement_id", "model_config_id", "llm_prompt_text_id",
-        "llm_response_id", "llm_invocation_metrics_id", "llm_score_id"
+        "llm_invocation_metrics_id", "llm_score_id"
     )
     __uuid_function__ = "compute_llm_judgement_uuid"
 
@@ -396,11 +395,6 @@ class LLMJudgementORM(Base):
         ForeignKey("infer.llm_prompt_texts.id"),
         nullable=False,
     )
-    llm_response_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_responses.id"),
-        nullable=False,
-    )
     llm_invocation_metrics_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("infer.llm_invocation_metrics.id"),
@@ -417,7 +411,7 @@ class LLMJudgementORM(Base):
     __table_args__ = (
         UniqueConstraint(
             "dataset_judgement_id", "model_config_id", "llm_prompt_text_id",
-            "llm_response_id", "llm_invocation_metrics_id", "llm_score_id",
+            "llm_invocation_metrics_id", "llm_score_id",
             name="uq_judgement_identity",
         ),
         {"schema": "infer"},
@@ -427,6 +421,5 @@ class LLMJudgementORM(Base):
     dataset_judgement = relationship("DatasetJudgementORM", back_populates="llm_judgements")
     model_config = relationship("ModelConfigORM", back_populates="judgements")
     llm_prompt_text = relationship("LLMPromptTextORM", back_populates="llm_judgements")
-    llm_response = relationship("LLMResponseORM", back_populates="llm_judgements")
     llm_invocation_metrics = relationship("LLMInvocationMetricsORM", back_populates="llm_judgements")
     llm_score = relationship("LLMScoreORM", back_populates="llm_judgements")

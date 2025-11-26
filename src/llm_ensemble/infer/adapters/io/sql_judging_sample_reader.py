@@ -20,8 +20,6 @@ using SQLAlchemy sessions from the libs/db layer.
 from __future__ import annotations
 from typing import Optional
 
-from sqlalchemy.orm import joinedload
-
 from llm_ensemble.ingest.schemas import JudgingSample, DatasetSample
 from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.schemas.orms import (
@@ -102,17 +100,11 @@ class SqlJudgingSampleReader(ExampleReader):
                     f"Ingest run '{run_name}' not found in database."
                 )
 
-            # 2. Query DatasetSample entities via NormalizedDataset with eager loading
-            # Join through DatasetSample to get samples in deterministic order
+            # 2. Query DatasetSample entities via NormalizedDataset
+            # Order by sequence_number for deterministic ordering
             query = (
                 session.query(DatasetSampleORM)
                 .filter(DatasetSampleORM.normalized_dataset_id == ingest_run.normalized_dataset_id)
-                .join(JudgingSampleORM, DatasetSampleORM.judging_sample_id == JudgingSampleORM.id)
-                .options(
-                    # Eager load judging sample and its relationships
-                    joinedload(DatasetSampleORM.judging_sample).joinedload(JudgingSampleORM.query),
-                    joinedload(DatasetSampleORM.judging_sample).joinedload(JudgingSampleORM.document),
-                )
                 .order_by(DatasetSampleORM.sequence_number)
             )
 
@@ -132,14 +124,26 @@ class SqlJudgingSampleReader(ExampleReader):
             # 4. Convert ORM entities to Pydantic domain models using mappers
             dataset_samples = []
             for ds_orm in dataset_sample_orms:
+                # Manually fetch related JudgingSample
+                judging_sample_orm = session.get(JudgingSampleORM, ds_orm.judging_sample_id)
+                if not judging_sample_orm:
+                    raise ValueError(f"JudgingSample {ds_orm.judging_sample_id} not found")
+
+                # Manually fetch related Query and Document
+                query_orm = session.get(QueryORM, judging_sample_orm.query_id)
+                document_orm = session.get(DocumentORM, judging_sample_orm.document_id)
+
+                if not query_orm or not document_orm:
+                    raise ValueError("Query or Document not found for JudgingSample")
+
                 # Reconstruct Query from ORM
-                query_obj = query_from_orm(ds_orm.judging_sample.query)
+                query_obj = query_from_orm(query_orm)
 
                 # Reconstruct Document from ORM
-                document = document_from_orm(ds_orm.judging_sample.document)
+                document = document_from_orm(document_orm)
 
                 # Reconstruct JudgingSample from ORM (with embedded query and document)
-                judging_sample = judging_sample_from_orm(ds_orm.judging_sample, query_obj, document)
+                judging_sample = judging_sample_from_orm(judging_sample_orm, query_obj, document)
 
                 # Reconstruct DatasetSample from ORM (with embedded judging_sample)
                 dataset_sample = dataset_sample_from_orm(ds_orm, judging_sample)

@@ -12,7 +12,14 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from llm_ensemble.ingest.schemas import JudgingSample, Query, Document, WriteSummary, NormalizedDataset
+from llm_ensemble.ingest.schemas import (
+    JudgingSample,
+    Query,
+    Document,
+    WriteSummary,
+    NormalizedDataset,
+)
+from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.orms import (
     QueryORM,
@@ -80,9 +87,10 @@ class SqlWriter(DatasetWriter):
         Raises:
             IOError: If database write fails
         """
-        samples = normalized_dataset.samples
+        dataset_samples = normalized_dataset.samples
+        judging_samples = [ds.judging_sample for ds in dataset_samples]
 
-        if not samples:
+        if not dataset_samples:
             return WriteSummary()
 
         # Note: Tables must be created via `make db-init` before first write
@@ -103,7 +111,7 @@ class SqlWriter(DatasetWriter):
                 #   5. IngestRun (depends on NormalizedDataset)
 
                 # Collect unique queries and documents from batch
-                unique_queries, unique_documents = self._collect_unique_entities(samples)
+                unique_queries, unique_documents = self._collect_unique_entities(dataset_samples)
 
                 # 1. Queries (no dependencies - global entities)
                 created, skipped = self._save_queries(session, unique_queries)
@@ -118,7 +126,7 @@ class SqlWriter(DatasetWriter):
                     self.logger.info(IngestWriteEvent.WRITE_DOCUMENTS, created=created, skipped=skipped)
 
                 # 3. JudgingSamples (depend on Query + Document)
-                created, skipped = self._save_samples(session, samples)
+                created, skipped = self._save_samples(session, judging_samples)
                 summary.add_samples(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_JUDGING_SAMPLES, created=created, skipped=skipped)
@@ -178,24 +186,18 @@ class SqlWriter(DatasetWriter):
         return (1, 0)
 
     def _collect_unique_entities(
-        self, samples: List[JudgingSample]
+        self, samples: List[DatasetSample]
     ) -> Tuple[Dict[UUID, Query], Dict[UUID, Document]]:
-        """Collect unique queries and documents from samples batch.
-
-        Args:
-            samples: List of judging samples
-
-        Returns:
-            Tuple of (unique_queries_dict, unique_documents_dict) keyed by UUID
-        """
+        """Collect unique queries and documents from dataset samples batch."""
         unique_queries: Dict[UUID, Query] = {}
         unique_documents: Dict[UUID, Document] = {}
 
         for sample in samples:
-            if sample.query.id not in unique_queries:
-                unique_queries[sample.query.id] = sample.query
-            if sample.document.id not in unique_documents:
-                unique_documents[sample.document.id] = sample.document
+            judging_sample = sample.judging_sample
+            if judging_sample.query.id not in unique_queries:
+                unique_queries[judging_sample.query.id] = judging_sample.query
+            if judging_sample.document.id not in unique_documents:
+                unique_documents[judging_sample.document.id] = judging_sample.document
 
         return unique_queries, unique_documents
 
@@ -269,8 +271,15 @@ class SqlWriter(DatasetWriter):
         """
         created = 0
         skipped = 0
+        seen_ids = set()
 
         for sample in samples:
+            # Duplicates within the same batch won't be visible to session.get()
+            if sample.id in seen_ids:
+                skipped += 1
+                continue
+            seen_ids.add(sample.id)
+
             existing = session.get(JudgingSampleORM, sample.id)
             if not existing:
                 sample_orm = judging_sample_to_orm(sample)
@@ -338,18 +347,12 @@ class SqlWriter(DatasetWriter):
             return 0
 
         # Create DatasetSample entities with sequence numbers and computed IDs
-        from llm_ensemble.libs.db import compute_dataset_sample_uuid
-
-        for seq_num, sample in enumerate(normalized_dataset.samples):
-            dataset_sample_id = compute_dataset_sample_uuid(
-                normalized_dataset.id,
-                sample.id
-            )
+        for sample in normalized_dataset.samples:
             dataset_sample = DatasetSampleORM(
-                id=dataset_sample_id,
-                normalized_dataset_id=normalized_dataset.id,
-                judging_sample_id=sample.id,
-                sequence_number=seq_num,
+                id=sample.id,
+                normalized_dataset_id=sample.normalized_dataset_id,
+                judging_sample_id=sample.judging_sample.id,
+                sequence_number=sample.sequence_number,
             )
             session.add(dataset_sample)
 

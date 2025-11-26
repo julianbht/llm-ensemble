@@ -35,7 +35,7 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     ParserSpecORM,
     InferRunORM,
     LLMPromptTextORM,
-    LLMResponseORM,
+    LLMResponseTextORM,
     LLMInvocationMetricsORM,
     LLMScoreORM,
     LLMJudgementORM,
@@ -265,24 +265,24 @@ def llm_prompt_to_orm(
 
 
 # ============================================================================
-# LLMResponse Mappers
+# LLMResponseText Mappers
 # ============================================================================
 
-def llm_response_to_orm(llm_response: LLMResponse) -> LLMResponseORM:
-    """Convert LLMResponse domain object to LLMResponseORM.
+def llm_response_text_to_orm(llm_response_text: str) -> LLMResponseTextORM:
+    """Convert raw LLM response text to LLMResponseTextORM.
 
-    UUID is computed from raw_response content hash.
+    UUID is computed from llm_response_text content hash.
 
     Args:
-        llm_response: LLMResponse domain object
+        llm_response_text: Raw LLM response text string
 
     Returns:
-        LLMResponseORM model ready for persistence
+        LLMResponseTextORM model ready for persistence
     """
-    response_id = compute_llm_response_text_uuid(llm_response.raw_response)
-    return LLMResponseORM(
+    response_id = compute_llm_response_text_uuid(llm_response_text)
+    return LLMResponseTextORM(
         id=response_id,
-        raw_response=llm_response.raw_response,
+        llm_response_text=llm_response_text,
     )
 
 
@@ -329,21 +329,21 @@ def llm_invocation_metrics_to_orm(metrics: LLMInvocationMetrics) -> LLMInvocatio
 def llm_score_to_orm(
     llm_score: LLMScore,
     parser_spec_id: UUID,
-    llm_response_id: UUID,
+    llm_response_text_id: UUID,
 ) -> LLMScoreORM:
     """Convert LLMScore domain object to LLMScoreORM.
 
-    UUID is computed from (parser_spec_id, llm_response_id).
+    UUID is computed from (parser_spec_id, llm_response_text_id).
 
     Args:
         llm_score: LLMScore domain object
         parser_spec_id: Parser spec UUID (for foreign key)
-        llm_response_id: LLM response UUID (for foreign key)
+        llm_response_text_id: LLM response text UUID (for foreign key)
 
     Returns:
         LLMScoreORM model ready for persistence
     """
-    score_id = compute_llm_score_uuid(parser_spec_id, llm_response_id)
+    score_id = compute_llm_score_uuid(parser_spec_id, llm_response_text_id)
 
     # Handle case where label is None (parsing failed) - need default for non-nullable column
     label = llm_score.label if llm_score.label is not None else RelevanceScore.NOT_RELEVANT
@@ -354,7 +354,7 @@ def llm_score_to_orm(
     return LLMScoreORM(
         id=score_id,
         parser_spec_id=parser_spec_id,
-        llm_response_id=llm_response_id,
+        llm_response_id=llm_response_text_id,
         label=label,
         confidence=llm_score.confidence,
         rationale=llm_score.rationale,
@@ -371,7 +371,6 @@ def llm_judgement_to_orm(
     dataset_judgement_id: UUID,
     model_config_id: UUID,
     llm_prompt_text_id: UUID,
-    llm_response_id: UUID,
     llm_invocation_metrics_id: UUID,
     llm_score_id: UUID,
 ) -> LLMJudgementORM:
@@ -384,18 +383,17 @@ def llm_judgement_to_orm(
         dataset_judgement_id: DatasetJudgement UUID (for foreign key)
         model_config_id: ModelConfig UUID (for foreign key)
         llm_prompt_text_id: LLMPromptText UUID (for foreign key)
-        llm_response_id: LLMResponse UUID (for foreign key)
         llm_invocation_metrics_id: LLMInvocationMetrics UUID (for foreign key)
         llm_score_id: LLMScore UUID (for foreign key)
 
     Returns:
         LLMJudgementORM model ready for persistence
     """
-    # Natural key: all 6 component IDs
+    # Natural key: all 5 component IDs
     from uuid import uuid5, NAMESPACE_DNS
     judgement_id = uuid5(
         NAMESPACE_DNS,
-        f"{dataset_judgement_id}:{model_config_id}:{llm_prompt_text_id}:{llm_response_id}:{llm_invocation_metrics_id}:{llm_score_id}"
+        f"{dataset_judgement_id}:{model_config_id}:{llm_prompt_text_id}:{llm_invocation_metrics_id}:{llm_score_id}"
     )
 
     return LLMJudgementORM(
@@ -403,7 +401,6 @@ def llm_judgement_to_orm(
         dataset_judgement_id=dataset_judgement_id,
         model_config_id=model_config_id,
         llm_prompt_text_id=llm_prompt_text_id,
-        llm_response_id=llm_response_id,
         llm_invocation_metrics_id=llm_invocation_metrics_id,
         llm_score_id=llm_score_id,
     )

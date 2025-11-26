@@ -16,7 +16,7 @@ from .shared_params import (
     Tag,
 )
 from .aggregate import AggregateIoCfg, InferRunInput
-from .ingest import IngestIoCfg
+from .ingest import IngestIoCfg, Limit
 from .infer import InferIoCfg, IngestRunInput as InferIngestRunInput
 
 __all__ = [
@@ -35,6 +35,7 @@ __all__ = [
     "Tag",
     "AggregateIoCfg",
     "IngestIoCfg",
+    "Limit",
     "InferIoCfg",
     "InferIngestRunInput",
     "InferRunInput",

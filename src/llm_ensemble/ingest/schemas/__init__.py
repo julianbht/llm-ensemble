@@ -1,5 +1,6 @@
 """Ingest schemas - normalized IR dataset structures."""
 from llm_ensemble.ingest.schemas.judging_sample import Query, Document, JudgingSample
+from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.libs.schemas import RelevanceScore  # Shared schema
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
@@ -21,6 +22,7 @@ __all__ = [
     "Document",
     "RelevanceScore",
     "JudgingSample",
+    "DatasetSample",
     "NormalizedDataset",
     "IngestRunInfo",
     "IngestRunSummary",

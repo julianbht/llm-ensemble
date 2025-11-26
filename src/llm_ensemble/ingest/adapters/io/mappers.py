@@ -22,7 +22,7 @@ Design:
 from __future__ import annotations
 from uuid import UUID
 
-from llm_ensemble.ingest.schemas import Query, Document, JudgingSample
+from llm_ensemble.ingest.schemas import Query, Document, JudgingSample, DatasetSample
 from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.schemas.orms import (
@@ -30,6 +30,7 @@ from llm_ensemble.ingest.schemas.orms import (
     DocumentORM,
     JudgingSampleORM,
     NormalizedDatasetORM,
+    DatasetSampleORM,
     IngestRunORM,
 )
 
@@ -164,6 +165,48 @@ def judging_sample_from_orm(
 
 
 # ============================================================================
+# DatasetSample Mappers
+# ============================================================================
+
+def dataset_sample_to_orm(dataset_sample: DatasetSample) -> DatasetSampleORM:
+    """Convert DatasetSample domain object to DatasetSampleORM.
+
+    Args:
+        dataset_sample: DatasetSample domain object
+
+    Returns:
+        DatasetSampleORM model ready for persistence
+    """
+    return DatasetSampleORM(
+        id=dataset_sample.id,
+        normalized_dataset_id=dataset_sample.normalized_dataset_id,
+        judging_sample_id=dataset_sample.judging_sample.id,
+        sequence_number=dataset_sample.sequence_number,
+    )
+
+
+def dataset_sample_from_orm(
+    dataset_sample_orm: DatasetSampleORM,
+    judging_sample: JudgingSample,
+) -> DatasetSample:
+    """Convert DatasetSampleORM to DatasetSample domain object.
+
+    Args:
+        dataset_sample_orm: DatasetSampleORM model from database
+        judging_sample: JudgingSample domain object (already converted from ORM)
+
+    Returns:
+        DatasetSample domain object with embedded judging_sample
+    """
+    return DatasetSample(
+        id=dataset_sample_orm.id,
+        normalized_dataset_id=dataset_sample_orm.normalized_dataset_id,
+        judging_sample=judging_sample,
+        sequence_number=dataset_sample_orm.sequence_number,
+    )
+
+
+# ============================================================================
 # NormalizedDataset Mappers
 # ============================================================================
 
@@ -188,22 +231,22 @@ def normalized_dataset_to_orm(normalized_dataset: NormalizedDataset) -> Normaliz
 
 def normalized_dataset_from_orm(
     normalized_dataset_orm: NormalizedDatasetORM,
-    samples: list[JudgingSample],
+    dataset_samples: list[DatasetSample],
 ) -> NormalizedDataset:
     """Convert NormalizedDatasetORM to NormalizedDataset domain object.
 
     Args:
         normalized_dataset_orm: NormalizedDatasetORM model from database
-        samples: List of JudgingSample domain objects (already converted from ORM)
+        dataset_samples: List of DatasetSample domain objects (already converted from ORM)
 
     Returns:
-        NormalizedDataset domain object with embedded samples
+        NormalizedDataset domain object with embedded dataset samples
     """
     return NormalizedDataset(
         id=normalized_dataset_orm.id,
         fingerprint=normalized_dataset_orm.fingerprint,
         external_dataset_name=normalized_dataset_orm.external_dataset_name,
-        samples=samples,
+        samples=dataset_samples,
     )
 
 

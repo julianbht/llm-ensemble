@@ -22,19 +22,22 @@ from typing import Optional
 
 from sqlalchemy.orm import joinedload
 
-from llm_ensemble.ingest.schemas import JudgingSample
+from llm_ensemble.ingest.schemas import JudgingSample, DatasetSample
+from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.schemas.orms import (
     JudgingSampleORM,
     QueryORM,
     DocumentORM,
     IngestRunORM,
     NormalizedDatasetORM,
-    NormalizedDatasetJudgingSampleORM,
+    DatasetSampleORM,
 )
 from llm_ensemble.ingest.adapters.io.mappers import (
     query_from_orm,
     document_from_orm,
     judging_sample_from_orm,
+    dataset_sample_from_orm,
+    normalized_dataset_from_orm,
 )
 from llm_ensemble.infer.ports import ExampleReader
 from llm_ensemble.libs.db import get_engine, get_session
@@ -67,8 +70,8 @@ class SqlJudgingSampleReader(ExampleReader):
         self,
         run_name: str,
         limit: Optional[int] = None,
-    ) -> list[JudgingSample]:
-        """Read judging samples from database by ingest run name.
+    ) -> NormalizedDataset:
+        """Read normalized dataset from database by ingest run name.
 
         Args:
             run_name: Ingest run identifier (e.g., "my_ingest_run")
@@ -76,7 +79,7 @@ class SqlJudgingSampleReader(ExampleReader):
             limit: Optional maximum number of samples to read
 
         Returns:
-            List of JudgingSample domain objects
+            NormalizedDataset domain object with DatasetSample entities
 
         Raises:
             FileNotFoundError: If ingest run doesn't exist in database
@@ -99,44 +102,56 @@ class SqlJudgingSampleReader(ExampleReader):
                     f"Ingest run '{run_name}' not found in database."
                 )
 
-            # 2. Query judging samples via NormalizedDataset with eager loading
-            # Join through NormalizedDataset to get samples in deterministic order
+            # 2. Query DatasetSample entities via NormalizedDataset with eager loading
+            # Join through DatasetSample to get samples in deterministic order
             query = (
-                session.query(JudgingSampleORM)
-                .join(
-                    NormalizedDatasetJudgingSampleORM,
-                    NormalizedDatasetJudgingSampleORM.judging_sample_id == JudgingSampleORM.id
-                )
-                .filter(NormalizedDatasetJudgingSampleORM.normalized_dataset_id == ingest_run.normalized_dataset_id)
+                session.query(DatasetSampleORM)
+                .filter(DatasetSampleORM.normalized_dataset_id == ingest_run.normalized_dataset_id)
+                .join(JudgingSampleORM, DatasetSampleORM.judging_sample_id == JudgingSampleORM.id)
                 .options(
-                    # Eager load query and its dataset
-                    joinedload(JudgingSampleORM.query).joinedload(QueryORM.dataset),
-                    # Eager load document and its dataset
-                    joinedload(JudgingSampleORM.document).joinedload(DocumentORM.dataset),
+                    # Eager load judging sample and its relationships
+                    joinedload(DatasetSampleORM.judging_sample).joinedload(JudgingSampleORM.query),
+                    joinedload(DatasetSampleORM.judging_sample).joinedload(JudgingSampleORM.document),
                 )
-                .order_by(NormalizedDatasetJudgingSampleORM.sequence_number)
+                .order_by(DatasetSampleORM.sequence_number)
             )
 
             # Apply limit if specified
             if limit is not None:
                 query = query.limit(limit)
 
-            samples_orm = query.all()
+            dataset_sample_orms = query.all()
 
-            # 3. Convert ORM entities to Pydantic domain models using mappers
-            samples = []
-            for sample_orm in samples_orm:
+            # 3. Get the NormalizedDatasetORM for metadata
+            normalized_dataset_orm = (
+                session.query(NormalizedDatasetORM)
+                .filter_by(id=ingest_run.normalized_dataset_id)
+                .one()
+            )
+
+            # 4. Convert ORM entities to Pydantic domain models using mappers
+            dataset_samples = []
+            for ds_orm in dataset_sample_orms:
                 # Reconstruct Query from ORM
-                query = query_from_orm(sample_orm.query)
+                query_obj = query_from_orm(ds_orm.judging_sample.query)
 
                 # Reconstruct Document from ORM
-                document = document_from_orm(sample_orm.document)
+                document = document_from_orm(ds_orm.judging_sample.document)
 
                 # Reconstruct JudgingSample from ORM (with embedded query and document)
-                sample = judging_sample_from_orm(sample_orm, query, document)
-                samples.append(sample)
+                judging_sample = judging_sample_from_orm(ds_orm.judging_sample, query_obj, document)
 
-            return samples
+                # Reconstruct DatasetSample from ORM (with embedded judging_sample)
+                dataset_sample = dataset_sample_from_orm(ds_orm, judging_sample)
+                dataset_samples.append(dataset_sample)
+
+            # 5. Reconstruct NormalizedDataset from ORM with DatasetSamples
+            normalized_dataset = normalized_dataset_from_orm(
+                normalized_dataset_orm,
+                dataset_samples
+            )
+
+            return normalized_dataset
 
         finally:
             # Always close session (resource cleanup)

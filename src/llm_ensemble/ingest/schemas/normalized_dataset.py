@@ -18,6 +18,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
 from llm_ensemble.ingest.schemas import JudgingSample
+from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.libs.db import compute_normalized_dataset_uuid
 from llm_ensemble.libs.db import compute_normalized_dataset_fingerprint
 
@@ -25,14 +26,15 @@ from llm_ensemble.libs.db import compute_normalized_dataset_fingerprint
 class NormalizedDataset(BaseModel):
     """Internal dataset with deterministic fingerprint.
 
-    Represents a specific collection of judging samples with a deterministic
-    fingerprint computed from sorted sample IDs. This enables:
+    Represents a specific collection of dataset samples with a deterministic
+    fingerprint computed from sorted judging sample IDs. This enables:
     - Idempotent ingest runs (same samples = same fingerprint = same entity)
     - Reproducible sample ordering for start/end slicing
     - Efficient validation in aggregate CLI (compare fingerprints)
 
-    The fingerprint is computed from the sorted list of sample IDs (UUIDs).
-    Samples are always stored sorted by sample.id to ensure reproducibility.
+    The fingerprint is computed from the sorted list of judging sample IDs (UUIDs).
+    Samples are wrapped in DatasetSample objects that track position and dataset context,
+    and are always stored sorted by judging_sample.id to ensure reproducibility.
 
     All samples within one NormalizedDataset are from one external dataset,
     tracked via external_dataset_name for context.
@@ -50,22 +52,22 @@ class NormalizedDataset(BaseModel):
         None,
         description="Name of the external source dataset (e.g., 'msmarco', 'llmjudge')"
     )
-    samples: list[JudgingSample] = Field(
+    samples: list[DatasetSample] = Field(
         ...,
-        description="Judging samples, always sorted by sample.id for reproducibility"
+        description="Dataset samples with position info, sorted by judging_sample.id for reproducibility"
     )
 
     @field_validator('samples')
     @classmethod
-    def validate_samples_sorted(cls, v: list[JudgingSample]) -> list[JudgingSample]:
-        """Ensure samples are sorted by ID for deterministic ordering."""
+    def validate_samples_sorted(cls, v: list[DatasetSample]) -> list[DatasetSample]:
+        """Ensure samples are sorted by judging_sample.id for deterministic ordering."""
         if not v:
             return v
 
-        # Check if already sorted
-        sample_ids = [s.id for s in v]
+        # Check if already sorted by judging_sample.id
+        sample_ids = [s.judging_sample.id for s in v]
         if sample_ids != sorted(sample_ids):
-            raise ValueError("Samples must be sorted by sample.id for deterministic ordering")
+            raise ValueError("Samples must be sorted by judging_sample.id for deterministic ordering")
 
         return v
 
@@ -78,7 +80,7 @@ class NormalizedDataset(BaseModel):
         """Create NormalizedDataset with computed fingerprint and ID.
 
         Args:
-            samples: List of judging samples (will be sorted by ID)
+            samples: List of judging samples (will be sorted by ID and wrapped in DatasetSample)
             external_dataset_name: Optional name of the external source dataset
 
         Returns:
@@ -88,17 +90,27 @@ class NormalizedDataset(BaseModel):
         # Sort samples by ID for deterministic ordering
         sorted_samples = sorted(samples, key=lambda s: s.id)
 
-        # Compute fingerprint from sorted sample IDs
+        # Compute fingerprint from sorted sample IDs (before wrapping)
         fingerprint = compute_normalized_dataset_fingerprint(sorted_samples)
 
         # Compute deterministic UUID from fingerprint
         dataset_id = compute_normalized_dataset_uuid(fingerprint)
 
+        # Wrap each JudgingSample in a DatasetSample with sequence number
+        dataset_samples = [
+            DatasetSample.create(
+                normalized_dataset_id=dataset_id,
+                judging_sample=sample,
+                sequence_number=idx,
+            )
+            for idx, sample in enumerate(sorted_samples)
+        ]
+
         return cls(
             id=dataset_id,
             fingerprint=fingerprint,
             external_dataset_name=external_dataset_name,
-            samples=sorted_samples,
+            samples=dataset_samples,
         )
 
     @property

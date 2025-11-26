@@ -35,9 +35,11 @@ NAMESPACE_LLM_JUDGEMENT = uuid.UUID('d3e4f567-890a-bcde-f123-4567890abcde')
 NAMESPACE_INFER_WARNING = uuid.UUID('1a2b3c4d-5e6f-7890-abcd-ef1234567890')
 NAMESPACE_PROMPT_TEMPLATE = uuid.UUID('2b3c4d5e-6f78-9012-3456-789abcdef012')
 NAMESPACE_PROMPT_CONFIG = uuid.UUID('3c4d5e6f-7890-1234-5678-90abcdef1234')
-NAMESPACE_MODEL_SPEC = uuid.UUID('4d5e6f78-9012-3456-7890-1abcdef12345')
+NAMESPACE_MODEL = uuid.UUID('3d4e5f67-8901-2345-6789-0abcdef12344')
+NAMESPACE_MODEL_CONFIG = uuid.UUID('4d5e6f78-9012-3456-7890-1abcdef12345')
 NAMESPACE_PROVIDER = uuid.UUID('5e6f7890-1234-5678-9012-3abcdef12346')
 NAMESPACE_PARSER_SPEC = uuid.UUID('6f789012-3456-7890-abcd-1234def56789')
+NAMESPACE_DATASET_JUDGEMENT = uuid.UUID('7890abcd-ef12-3456-7890-abcdef123456')
 NAMESPACE_AGGREGATION_SPEC = uuid.UUID('890123bc-def1-2345-6789-0abcdef12345')
 NAMESPACE_AGGREGATED_SCORE = uuid.UUID('a12345de-f123-4567-890a-bcdef1234567')
 NAMESPACE_AGGREGATED_SCORE_LLM_CALL = uuid.UUID('b23456ef-1234-5678-9012-3456789abcde')
@@ -134,8 +136,17 @@ def compute_prompt_config_uuid(config_name: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE_PROMPT_CONFIG, config_name)
 
 
+def compute_model_uuid(name: str) -> uuid.UUID:
+    return uuid.uuid5(NAMESPACE_MODEL, name)
+
+
+def compute_model_config_uuid(name: str) -> uuid.UUID:
+    return uuid.uuid5(NAMESPACE_MODEL_CONFIG, name)
+
+
 def compute_model_spec_uuid(name: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE_MODEL_SPEC, name)
+    """Deprecated: Use compute_model_config_uuid instead."""
+    return uuid.uuid5(NAMESPACE_MODEL_CONFIG, name)
 
 
 def compute_provider_uuid(name: str) -> uuid.UUID:

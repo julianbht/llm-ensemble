@@ -91,10 +91,10 @@ class InferenceService:
         summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
 
-        # Read full NormalizedDataset (reader resolves run_name to path)
+        # Read full NormalizedDataset
         normalized_dataset = self.example_reader.read(run_name)
 
-        # Compute actual start_idx and end_idx from run_info (handle nullable intent)
+        # Compute actual start_idx and end_idx from run_info
         start_idx = run_info.start_idx if run_info.start_idx is not None else 0
         end_idx = run_info.end_idx if run_info.end_idx is not None else len(normalized_dataset.samples)
 

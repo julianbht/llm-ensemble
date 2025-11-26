@@ -18,8 +18,9 @@ need to run this once unless you:
 - Add new ORM models to the codebase
 """
 
+from collections import defaultdict
 from llm_ensemble.libs.runtime.env import load_runtime_config
-from llm_ensemble.libs.db import get_engine, create_schemas, create_all_tables
+from llm_ensemble.libs.db import get_engine, create_schemas, create_all_tables, Base
 
 # Load runtime configuration (reads .env and runtime configs)
 load_runtime_config()
@@ -27,23 +28,31 @@ load_runtime_config()
 # Import all ORM models so they are registered with SQLAlchemy's Base.metadata
 # This is required for create_all_tables() to know which tables to create
 
-# Ingest CLI ORMs (datasets, queries, documents, samples)
+# Ingest CLI ORMs
 from llm_ensemble.ingest.schemas.orms import (
-    DatasetORM,
     QueryORM,
     DocumentORM,
+    NormalizedDatasetORM,
+    DatasetSampleORM,
     IngestRunORM,
     JudgingSampleORM,
 )
 
-# Infer CLI ORMs (providers, models, prompts, requests, scores, calls)
+# Infer CLI ORMs
 from llm_ensemble.infer.schemas.orms_normalized import (
     ProviderORM,
+    ModelORM,
+    ModelConfigORM,
     PromptTemplateORM,
-    ModelSpecORM,
-    InferRunORM,
     ParserSpecORM,
+    JudgedDatasetORM,
+    DatasetJudgementORM,
+    InferRunORM,
+    LLMPromptTextORM,
+    LLMResponseORM,
+    LLMInvocationMetricsORM,
     LLMScoreORM,
+    LLMJudgementORM,
 )
 
 
@@ -68,11 +77,17 @@ def main():
 
     print("Database schema initialized successfully!")
     print("")
+
+    # Dynamically list all created tables grouped by schema
+    tables_by_schema = defaultdict(list)
+    for table in Base.metadata.sorted_tables:
+        schema = table.schema or 'public'
+        tables_by_schema[schema].append(table.name)
+
     print("Schemas and tables created:")
-    print("  public: runtype (enum), relevancescore (enum) - shared across schemas")
-    print("  ingest: datasets, queries, documents, ingest_runs, judging_samples")
-    print("  infer: providers, prompt_templates, model_specs, parser_specs,")
-    print("         infer_runs, llm_requests, llm_calls, llm_responses")
+    for schema in sorted(tables_by_schema.keys()):
+        tables = ', '.join(sorted(tables_by_schema[schema]))
+        print(f"  {schema}: {tables}")
 
 
 if __name__ == "__main__":

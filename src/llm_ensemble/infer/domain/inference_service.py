@@ -107,10 +107,13 @@ class InferenceService:
         # Open writer for streaming (context manager ensures proper cleanup)
         # Pass computed indices to writer so it can create InferRun entity with actual range
         with self.judgement_writer.open(run_dir, run_info, normalized_dataset, start_idx, end_idx) as writer:
-            # Process each sample in slice (streaming loop)
-            for sample in samples_to_process:
-                # Build prompt for this sample
-                prompt = self.prompt_builder.build(sample)
+            # Process each dataset sample in slice (streaming loop)
+            for dataset_sample in samples_to_process:
+                # Extract the judging sample for processing
+                judging_sample = dataset_sample.judging_sample
+
+                # Build prompt for this judging sample
+                prompt = self.prompt_builder.build(judging_sample)
 
                 # Run inference for this sample
                 self.logger.info(InferLogEvent.SENDING_REQUEST)
@@ -119,9 +122,9 @@ class InferenceService:
                 # Parse response to extract structured score
                 score : LLMScore = self.response_parser.parse(response.raw_response)
 
-                # Create judgement
+                # Create judgement (stores judging_sample, not dataset_sample)
                 judgement = LLMJudgement(
-                    judging_sample=sample,
+                    judging_sample=judging_sample,
                     prompt=prompt,
                     llm_response=response,
                     llm_score=score,

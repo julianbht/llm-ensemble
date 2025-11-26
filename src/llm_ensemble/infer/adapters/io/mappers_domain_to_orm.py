@@ -233,37 +233,34 @@ def infer_run_info_to_orm(
 def llm_prompt_to_orm(
     llm_prompt: LLMPrompt,
     prompt_template_id: UUID,
-    judging_sample_id: UUID,
+    dataset_sample_id: UUID,
 ) -> LLMPromptTextORM:
     """Convert LLMPrompt domain object to LLMPromptTextORM.
 
-    UUID is computed from (prompt_template_id, judging_sample_id, prompt_text).
+    UUID is computed from (prompt_template_id, dataset_sample_id, prompt_text).
 
     Args:
         llm_prompt: LLMPrompt domain object
         prompt_template_id: PromptTemplate UUID (for foreign key)
-        judging_sample_id: JudgingSample UUID (for foreign key)
+        dataset_sample_id: DatasetSample UUID (cross-schema reference to ingest.dataset_sample)
 
     Returns:
         LLMPromptTextORM model ready for persistence
     """
-    # For now, use hash of prompt_text as dataset_sample_id placeholder
-    # TODO: Fix when we determine proper cross-schema reference
     import hashlib
     prompt_hash = hashlib.sha256(llm_prompt.prompt_text.encode()).hexdigest()
 
     # Natural key: (prompt_template_id, dataset_sample_id, prompt_text)
-    # We'll use a placeholder UUID namespace for now
     from uuid import uuid5, NAMESPACE_DNS
     prompt_id = uuid5(
         NAMESPACE_DNS,
-        f"{prompt_template_id}:{judging_sample_id}:{prompt_hash}"
+        f"{prompt_template_id}:{dataset_sample_id}:{prompt_hash}"
     )
 
     return LLMPromptTextORM(
         id=prompt_id,
         prompt_template_id=prompt_template_id,
-        dataset_sample_id=judging_sample_id,  # FIXME: Should reference dataset_sample, not judging_sample
+        dataset_sample_id=dataset_sample_id,
         prompt_text=llm_prompt.prompt_text,
     )
 

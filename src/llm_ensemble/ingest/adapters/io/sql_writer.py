@@ -182,7 +182,7 @@ class SqlWriter(DatasetWriter):
             return (0, 1)
 
         ingest_run_orm = ingest_run_info_to_orm(run_info, normalized_dataset_id)
-        session.add(ingest_run_orm)
+        session.merge(ingest_run_orm)
         return (1, 0)
 
     def _collect_unique_entities(
@@ -281,12 +281,13 @@ class SqlWriter(DatasetWriter):
             seen_ids.add(sample.id)
 
             existing = session.get(JudgingSampleORM, sample.id)
-            if not existing:
-                sample_orm = judging_sample_to_orm(sample)
-                session.add(sample_orm)
-                created += 1
-            else:
+            if existing:
                 skipped += 1
+                continue
+
+            sample_orm = judging_sample_to_orm(sample)
+            session.merge(sample_orm)
+            created += 1
 
         return (created, skipped)
 
@@ -314,7 +315,7 @@ class SqlWriter(DatasetWriter):
 
         # Create NormalizedDataset entity
         normalized_dataset_orm = normalized_dataset_to_orm(normalized_dataset)
-        session.add(normalized_dataset_orm)
+        session.merge(normalized_dataset_orm)
 
         return (1, 0)
 
@@ -336,24 +337,23 @@ class SqlWriter(DatasetWriter):
         Returns:
             Number of DatasetSample records created
         """
-        # Check if DatasetSample records already exist (idempotency)
-        existing_count = (
-            session.query(DatasetSampleORM)
-            .filter_by(normalized_dataset_id=normalized_dataset.id)
-            .count()
-        )
-
-        if existing_count > 0:
-            return 0
+        created = 0
+        seen_ids = set()
 
         # Create DatasetSample entities with sequence numbers and computed IDs
         for sample in normalized_dataset.samples:
+            # Skip duplicates within this batch
+            if sample.id in seen_ids:
+                continue
+            seen_ids.add(sample.id)
+
             dataset_sample = DatasetSampleORM(
                 id=sample.id,
                 normalized_dataset_id=sample.normalized_dataset_id,
                 judging_sample_id=sample.judging_sample.id,
                 sequence_number=sample.sequence_number,
             )
-            session.add(dataset_sample)
+            session.merge(dataset_sample)
+            created += 1
 
-        return len(normalized_dataset.samples)
+        return created

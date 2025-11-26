@@ -27,11 +27,12 @@ class IngestWriteEvent(str, Enum):
     These events work for both database and file-based storage.
     """
 
-    WRITE_DATASETS = "write_datasets"
-    WRITE_RUNS = "write_runs"
     WRITE_QUERIES = "write_queries"
     WRITE_DOCUMENTS = "write_documents"
     WRITE_JUDGING_SAMPLES = "write_judging_samples"
+    WRITE_NORMALIZED_DATASET = "write_normalized_dataset"
+    WRITE_DATASET_SAMPLES = "write_dataset_samples"
+    WRITE_RUNS = "write_runs"
     WRITE_COMPLETE = "write_complete"
 
 

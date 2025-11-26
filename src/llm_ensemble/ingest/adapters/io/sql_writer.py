@@ -134,16 +134,16 @@ class SqlWriter(DatasetWriter):
                 # 4. NormalizedDataset entity (no FK dependencies)
                 created, skipped = self._save_normalized_dataset_entity(session, normalized_dataset)
                 if created > 0 or skipped > 0:
-                    self.logger.info("write_normalized_dataset", created=created, skipped=skipped)
+                    self.logger.info(IngestWriteEvent.WRITE_NORMALIZED_DATASET, created=created, skipped=skipped)
 
-                # Flush to ensure NormalizedDataset is persisted before creating junction records
-                # (required because step 5 has FK to NormalizedDataset)
+                # Flush to ensure NormalizedDataset is persisted before creating DatasetSample records
+                # (required because DatasetSample has FK to NormalizedDataset)
                 session.flush()
 
-                # 5. NormalizedDataset junction records (depend on NormalizedDataset + JudgingSample)
-                created = self._save_normalized_dataset_junction(session, normalized_dataset)
+                # 5. DatasetSample records (depend on NormalizedDataset + JudgingSample)
+                created = self._save_dataset_samples(session, normalized_dataset)
                 if created > 0:
-                    self.logger.info("write_normalized_dataset_junction", created=created)
+                    self.logger.info(IngestWriteEvent.WRITE_DATASET_SAMPLES, created=created)
 
                 # 6. IngestRun (depends on NormalizedDataset)
                 created, skipped = self._save_ingest_run(session, run_info, normalized_dataset.id)
@@ -319,16 +319,16 @@ class SqlWriter(DatasetWriter):
 
         return (1, 0)
 
-    def _save_normalized_dataset_junction(
+    def _save_dataset_samples(
         self, session: Session, normalized_dataset: NormalizedDataset
     ) -> int:
-        """Save DatasetSample entity records (step 5 in dependency order).
+        """Save DatasetSample records (step 5 in dependency order).
 
-        Creates DatasetSample entities linking NormalizedDataset to JudgingSamples with
+        Creates DatasetSample records linking NormalizedDataset to JudgingSamples with
         sequence numbers for deterministic ordering.
 
         Note: This MUST be called after _save_normalized_dataset_entity because
-        DatasetSample entities have FK to NormalizedDataset.
+        DatasetSample has FK to NormalizedDataset.
 
         Args:
             session: SQLAlchemy session
@@ -340,7 +340,7 @@ class SqlWriter(DatasetWriter):
         created = 0
         seen_ids = set()
 
-        # Create DatasetSample entities with sequence numbers and computed IDs
+        # Create DatasetSample records with sequence numbers and computed IDs
         for sample in normalized_dataset.samples:
             # Skip duplicates within this batch
             if sample.id in seen_ids:

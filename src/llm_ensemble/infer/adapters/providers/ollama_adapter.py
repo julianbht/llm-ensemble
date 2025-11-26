@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Optional
 import structlog
 
-from llm_ensemble.infer.schemas.llm_judgement import LLMResponse
+from llm_ensemble.infer.schemas.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.ports import LLMProvider
@@ -49,7 +49,7 @@ class OllamaAdapter(LLMProvider):
         self,
         prompt: str,
         model_config: ModelConfig,
-    ) -> LLMResponse:
+    ) -> tuple[str, LLMInvocationMetrics]:
         """Perform the actual Ollama API call (called by base class retry logic).
 
         Args:
@@ -57,7 +57,7 @@ class OllamaAdapter(LLMProvider):
             model_config: Model configuration with provider and settings
 
         Returns:
-            LLMResponse with raw response text and metadata
+            Tuple of (raw_response_text, invocation_metrics without retry count)
 
         Raises:
             NotImplementedError: Ollama adapter not yet implemented

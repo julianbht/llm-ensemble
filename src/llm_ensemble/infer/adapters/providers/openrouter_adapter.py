@@ -15,7 +15,7 @@ from typing import Optional
 from openai import OpenAI
 import structlog
 
-from llm_ensemble.infer.schemas.llm_judgement import LLMResponse
+from llm_ensemble.infer.schemas.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.ports import LLMProvider
@@ -58,7 +58,7 @@ class OpenRouterAdapter(LLMProvider):
         self,
         prompt: str,
         model_config: ModelConfig,
-    ) -> LLMResponse:
+    ) -> tuple[str, LLMInvocationMetrics]:
         """Perform the actual OpenRouter API call (called by base class retry logic).
 
         Args:
@@ -66,7 +66,7 @@ class OpenRouterAdapter(LLMProvider):
             model_config: Model configuration with provider and settings
 
         Returns:
-            LLMResponse with raw response text and metadata
+            Tuple of (raw_response_text, invocation_metrics without retry count)
 
         Raises:
             ValueError: If openrouter_model_id is not configured
@@ -145,10 +145,10 @@ class OpenRouterAdapter(LLMProvider):
             completion_cost = (completion_tokens / 1_000_000) * model_config.pricing.completion_cost_per_1m_tokens
             cost_estimate_usd = prompt_cost + completion_cost
 
-        # Note: retry count will be added by base class
-        llm_response = LLMResponse(
-            raw_response=raw_response,
+        # Create invocation metrics (retry count will be added by base class)
+        invocation_metrics = LLMInvocationMetrics.create(
             latency_ms=latency_ms,
+            retries=0,  # Will be set by base class retry logic
             cost_estimate_usd=cost_estimate_usd,
             generation_id=generation_id,
             prompt_tokens=prompt_tokens,
@@ -156,4 +156,4 @@ class OpenRouterAdapter(LLMProvider):
             total_tokens=total_tokens,
         )
 
-        return llm_response
+        return raw_response, invocation_metrics

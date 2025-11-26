@@ -24,7 +24,6 @@ from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.llm_judgement import (
     LLMJudgement,
     LLMPrompt,
-    LLMResponse,
     LLMInvocationMetrics,
     LLMScore,
 )

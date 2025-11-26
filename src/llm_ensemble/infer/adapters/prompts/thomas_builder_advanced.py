@@ -7,10 +7,9 @@ Enables role description and aspects-based evaluation in the prompt.
 from __future__ import annotations
 from jinja2 import Template
 
-from llm_ensemble.ingest.schemas import JudgingSample
+from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.ports import PromptBuilder
-
-
+from llm_ensemble.infer.schemas.llm_judgement import LLMPrompt
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
@@ -42,30 +41,38 @@ class ThomasBuilderAdvanced(PromptBuilder):
             self.template_text = f.read()
             self.template = Template(self.template_text)
 
-    def build(self, example: JudgingSample) -> str:
-        """Build a prompt from a judging sample with advanced features.
+    def build(self, dataset_sample: DatasetSample) -> LLMPrompt:
+        """Build an LLMPrompt from a dataset sample with advanced features.
 
-        Passes query and document text to the template.
+        Extracts the judging_sample and passes query/document text to the template.
         Uses thomas-advanced.jinja which includes role description and M, T, O scoring.
 
         Args:
-            example: JudgingSample object containing query and document
+            dataset_sample: DatasetSample containing judging_sample and context
 
         Returns:
-            Rendered prompt string
+            LLMPrompt containing the dataset_sample and rendered prompt text
 
         Raises:
             Exception: If template rendering fails (unrecoverable error)
         """
+        # Extract judging_sample from dataset_sample
+        judging_sample = dataset_sample.judging_sample
+
         # Pass query/document text to template
         template_vars = {
-            "query": example.query.query_text,
-            "document": example.document.doc_text,
+            "query": judging_sample.query.query_text,
+            "document": judging_sample.document.doc_text,
         }
 
         # Render template
-        prompt = self.template.render(**template_vars)
-        return prompt
+        prompt_text = self.template.render(**template_vars)
+
+        # Create LLMPrompt with dataset_sample and rendered text
+        return LLMPrompt.create(
+            dataset_sample=dataset_sample,
+            prompt_text=prompt_text
+        )
 
     def get_template_text(self) -> str:
         """Get the raw Jinja template text.

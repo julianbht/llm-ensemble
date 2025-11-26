@@ -45,7 +45,7 @@ class JsonResponseParser(ResponseParser):
             raw_text: Raw text response from the LLM
 
         Returns:
-            LLMScore with extracted label and any parsing warnings
+            LLMScore with llm_response_text, extracted label, and any parsing warnings
         """
         warnings: list[ParserWarning] = []
 
@@ -62,7 +62,7 @@ class JsonResponseParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(warnings=warnings)
+            return LLMScore(llm_response_text=raw_text, warnings=warnings)
 
         json_str = json_match.group(0)
 
@@ -76,7 +76,7 @@ class JsonResponseParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(warnings=warnings)
+            return LLMScore(llm_response_text=raw_text, warnings=warnings)
 
         # Extract the score
         score = data.get(self.score_field)
@@ -89,7 +89,7 @@ class JsonResponseParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(warnings=warnings)
+            return LLMScore(llm_response_text=raw_text, warnings=warnings)
 
         # Validate the score is 0, 1, 2, or 3
         if not isinstance(score, int) or score not in [0, 1, 2, 3]:
@@ -100,7 +100,7 @@ class JsonResponseParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(warnings=warnings)
+            return LLMScore(llm_response_text=raw_text, warnings=warnings)
 
         # Convert to RelevanceScore enum
         try:
@@ -113,6 +113,6 @@ class JsonResponseParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(warnings=warnings)
+            return LLMScore(llm_response_text=raw_text, warnings=warnings)
 
-        return LLMScore(label=relevance_label, warnings=warnings)
+        return LLMScore(llm_response_text=raw_text, label=relevance_label, warnings=warnings)

@@ -7,8 +7,9 @@ The template is colocated with this adapter in the templates/ subdirectory.
 from __future__ import annotations
 from jinja2 import Template
 
-from llm_ensemble.ingest.schemas import JudgingSample
+from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.ports import PromptBuilder
+from llm_ensemble.infer.schemas.llm_judgement import LLMPrompt
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
@@ -44,31 +45,39 @@ class JinjaPromptBuilder(PromptBuilder):
             self.template_text = f.read()
             self.template = Template(self.template_text)
 
-    def build(self, example: JudgingSample) -> str:
-        """Build a prompt from a judging sample.
+    def build(self, dataset_sample: DatasetSample) -> LLMPrompt:
+        """Build an LLMPrompt from a dataset sample.
 
-        Passes JudgingSample model attributes to the template:
-        - query: Query Pydantic object (with .query_text, .external_id)
-        - document: Document Pydantic object (with .doc_text, .external_id)
+        Extracts the judging_sample and passes its attributes to the template:
+        - query: Query text from judging_sample
+        - document: Document text from judging_sample
 
         Args:
-            example: JudgingSample object containing query and document
+            dataset_sample: DatasetSample containing judging_sample and context
 
         Returns:
-            Rendered prompt string
+            LLMPrompt containing the dataset_sample and rendered prompt text
 
         Raises:
             Exception: If template rendering fails (unrecoverable error)
         """
-        # Pass JudgingSample Pydantic model attributes directly to template
+        # Extract judging_sample from dataset_sample
+        judging_sample = dataset_sample.judging_sample
+
+        # Pass JudgingSample model attributes directly to template
         template_vars = {
-            "query": example.query.query_text,
-            "document": example.document.doc_text,
+            "query": judging_sample.query.query_text,
+            "document": judging_sample.document.doc_text,
         }
 
         # Render template
-        prompt = self.template.render(**template_vars)
-        return prompt
+        prompt_text = self.template.render(**template_vars)
+
+        # Create LLMPrompt with dataset_sample and rendered text
+        return LLMPrompt.create(
+            dataset_sample=dataset_sample,
+            prompt_text=prompt_text
+        )
 
     def get_template_text(self) -> str:
         """Get the raw Jinja template text.

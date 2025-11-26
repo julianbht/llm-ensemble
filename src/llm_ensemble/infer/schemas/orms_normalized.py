@@ -35,10 +35,66 @@ class ProviderORM(Base):
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
-    created_at = Column(DateTime(timezone=True),nullable=False,default=utcnow)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     # Relationships
-    model_specs = relationship("ModelSpecORM", back_populates="provider")
+    model_configs = relationship("ModelConfigORM", back_populates="provider")
+
+
+class ModelORM(Base):
+    __tablename__ = "models"
+    __table_args__ = {"schema": "infer"}
+    __natural_key__ = "name"
+    __uuid_function__ = "compute_model_uuid"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    name = Column(String(255), nullable=False, unique=True)
+    context_window = Column(Integer, nullable=False)
+    capabilities = Column(JSONB, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    # Relationships
+    model_configs = relationship("ModelConfigORM", back_populates="model")
+
+
+class ModelConfigORM(Base):
+    __tablename__ = "model_configs"
+    __natural_key__ = "name"
+    __uuid_function__ = "compute_model_config_uuid"
+    __table_args__ = {"schema": "infer"}
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    name = Column(String(255), nullable=False, unique=True)
+
+    model_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.models.id"),
+        nullable=False
+    )
+    provider_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.providers.id"),
+        nullable=False
+    )
+
+    # Explicit inference parameters for SQL querying
+    temperature = Column(Float, nullable=True)
+    max_tokens = Column(Integer, nullable=True)
+    top_p = Column(Float, nullable=True)
+    frequency_penalty = Column(Float, nullable=True)
+    presence_penalty = Column(Float, nullable=True)
+    seed = Column(Integer, nullable=True)
+
+    # Additional parameters as JSONB (stop sequences, response_format, etc.)
+    additional_params = Column(JSONB, nullable=True)
+
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    # Relationships
+    model = relationship("ModelORM", back_populates="model_configs")
+    provider = relationship("ProviderORM", back_populates="model_configs")
+    parsers = relationship("ParserSpecORM", back_populates="model_config")
+    judgements = relationship("LLMJudgementORM", back_populates="model_config")
 
 
 class PromptTemplateORM(Base):
@@ -53,42 +109,40 @@ class PromptTemplateORM(Base):
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    infer_runs = relationship("InferRunORM", back_populates="prompt_template")
+    prompt_texts = relationship("LLMPromptTextORM", back_populates="prompt_template")
 
 
-class ModelSpecORM(Base):
-    __tablename__ = "model_specs"
-    __natural_key__ = "name"
-    __uuid_function__ = "compute_model_spec_uuid"
-    __table_args__ = {"schema": "infer"}
+class ParserSpecORM(Base):
+    __tablename__ = "parser_specs"
+    __natural_key__ = ("parser_module", "parser_class", "code_hash")
+    __uuid_function__ = "compute_parser_spec_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    name = Column(String(255), nullable=False, unique=True)
-    model_id = Column(String(255), nullable=False)
-    provider_id = Column(
+
+    model_config_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.providers.id"),
-        nullable=False
+        ForeignKey("infer.model_configs.id"),
+        nullable=False,
     )
-    context_window = Column(Integer, nullable=False)
 
-    # Explicit inference parameters for SQL querying
-    temperature = Column(Float, nullable=True)
-    max_tokens = Column(Integer, nullable=True)
-    top_p = Column(Float, nullable=True)
-    frequency_penalty = Column(Float, nullable=True)
-    presence_penalty = Column(Float, nullable=True)
-    seed = Column(Integer, nullable=True)
-
-    # Additional parameters as JSONB (stop sequences, response_format, etc.)
-    additional_params = Column(JSONB, nullable=True)
-    capabilities = Column(JSONB, nullable=True)
-
+    code_hash = Column(CHAR(64), nullable=False)
+    parser_module = Column(String(512), nullable=False)
+    parser_class = Column(String(255), nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
+    __table_args__ = (
+        UniqueConstraint(
+            "parser_module",
+            "parser_class",
+            "code_hash",
+            name="uq_parser_spec_identity",
+        ),
+        {"schema": "infer"},
+    )
+
     # Relationships
-    provider = relationship("ProviderORM", back_populates="model_specs")
-    infer_runs = relationship("InferRunORM", back_populates="model_spec")
+    model_config = relationship("ModelConfigORM", back_populates="parsers")
+    scores = relationship("LLMScoreORM", back_populates="parser_spec")
 
 
 class JudgedDatasetORM(Base):
@@ -103,35 +157,43 @@ class JudgedDatasetORM(Base):
         CHAR(64),
         nullable=True,
         unique=True,
-        comment="SHA256 of sorted LLMJudgement IDs (NULL during active run, set on completion)"
+        comment="SHA256 of sorted DatasetJudgement IDs (NULL during active run, set on completion)"
     )
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    judgements = relationship(
-        "LLMJudgementORM",
-        secondary="infer.judged_dataset_llm_judgements",
-        order_by="JudgedDatasetLLMJudgementORM.sequence_number"
-    )
+    dataset_judgements = relationship("DatasetJudgementORM", back_populates="judged_dataset")
     infer_runs = relationship("InferRunORM", back_populates="judged_dataset")
 
 
-class JudgedDatasetLLMJudgementORM(Base):
-    __tablename__ = "judged_dataset_llm_judgements"
+class DatasetJudgementORM(Base):
+    __tablename__ = "dataset_judgements"
     __table_args__ = {"schema": "infer"}
+    __natural_key__ = ("judged_dataset_id", "sequence_number")
+    __uuid_function__ = "compute_dataset_judgement_uuid"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
     judged_dataset_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("infer.judged_datasets.id", ondelete="CASCADE"),
-        primary_key=True,
-    )
-    llm_judgement_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_judgements.id", ondelete="CASCADE"),
-        primary_key=True,
+        nullable=False,
     )
     sequence_number = Column(Integer, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "judged_dataset_id",
+            "sequence_number",
+            name="uq_dataset_judgement_position",
+        ),
+        {"schema": "infer"},
+    )
+
+    # Relationships
+    judged_dataset = relationship("JudgedDatasetORM", back_populates="dataset_judgements")
+    llm_judgements = relationship("LLMJudgementORM", back_populates="dataset_judgement")
 
 
 class InferRunORM(Base):
@@ -144,27 +206,11 @@ class InferRunORM(Base):
     run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType, schema="public"), nullable=False, default=RunType.TEST)
 
-    model_spec_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.model_specs.id"),
+    # Config names snapshot for easy viewing
+    config_names = Column(
+        JSONB,
         nullable=False,
-    )
-    prompt_template_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.prompt_templates.id"),
-        nullable=False,
-    )
-    parser_spec_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.parser_specs.id"),
-        nullable=False,
-    )
-
-    # Reference to source ingest run (provenance)
-    ingest_run_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("ingest.ingest_runs.id"),
-        nullable=False,
+        comment="Config names used: {model_config, prompt_template, parser_spec}"
     )
 
     # INTENT: What range of NormalizedDataset to process (set in open())
@@ -194,73 +240,49 @@ class InferRunORM(Base):
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
-    # Relationships (many runs, one spec/template/model)
-    model_spec = relationship("ModelSpecORM", back_populates="infer_runs")
-    prompt_template = relationship("PromptTemplateORM", back_populates="infer_runs")
+    # Relationships
     judged_dataset = relationship("JudgedDatasetORM", back_populates="infer_runs")
-    parser_spec = relationship("ParserSpecORM", back_populates="infer_runs")
-    # Note: No explicit relationship to IngestRunORM to avoid cross-schema circular imports
-    # Note: No direct relationship to LLMJudgementORM - access via judged_dataset.judgements
 
 
-class ParserSpecORM(Base):
-    __tablename__ = "parser_specs"
-    __natural_key__ = ("parser_module", "parser_class", "code_hash")
-    __uuid_function__ = "compute_parser_spec_uuid"
+class LLMPromptTextORM(Base):
+    __tablename__ = "llm_prompt_texts"
+    __natural_key__ = ("prompt_template_id", "dataset_sample_id", "prompt_text")
+    __uuid_function__ = "compute_llm_prompt_text_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
-    code_hash = Column(CHAR(64), nullable=False)
-    parser_module = Column(String(512), nullable=False)
-    parser_class = Column(String(255), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=utcnow)
-
-    __table_args__ = (
-        UniqueConstraint(
-            "parser_module",
-            "parser_class",
-            "code_hash",
-            name="uq_parser_spec_identity",
-        ),
-        {"schema": "infer"},
-    )
-
-    infer_runs = relationship("InferRunORM", back_populates="parser_spec")
-
-    # One parser spec can be used by many parsed scores
-    scores = relationship("LLMScoreORM", back_populates="parser_spec")
-
-
-class LLMPromptORM(Base):
-    __tablename__ = "llm_prompts"
-    __natural_key__ = ("prompt", "judging_sample_id")
-    __uuid_function__ = "compute_llm_prompt_uuid"
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    judging_sample_id = Column(
+    prompt_template_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("ingest.judging_samples.id"),
+        ForeignKey("infer.prompt_templates.id"),
         nullable=False,
     )
-    prompt = Column(Text, nullable=False)
+    dataset_sample_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ingest.dataset_sample.id"),
+        nullable=False,
+    )
+    prompt_text = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     __table_args__ = (
         UniqueConstraint(
-            "prompt",
-            "judging_sample_id",
-            name="uq_prompt_judging_sample",
+            "prompt_template_id",
+            "dataset_sample_id",
+            "prompt_text",
+            name="uq_prompt_template_sample_text",
         ),
         {"schema": "infer"},
     )
 
-    judgements = relationship("LLMJudgementORM", back_populates="llm_prompt")
+    # Relationships
+    prompt_template = relationship("PromptTemplateORM", back_populates="prompt_texts")
+    llm_judgements = relationship("LLMJudgementORM", back_populates="llm_prompt_text")
 
 
-class LLMResponseTextORM(Base):
-    __tablename__ = "llm_response_texts"
+class LLMResponseORM(Base):
+    __tablename__ = "llm_responses"
     __natural_key__ = ("raw_response",)
-    __uuid_function__ = "compute_llm_response_text_uuid"
+    __uuid_function__ = "compute_llm_response_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     raw_response = Column(Text, nullable=False, unique=True)
@@ -268,7 +290,9 @@ class LLMResponseTextORM(Base):
 
     __table_args__ = {"schema": "infer"}
 
-    scores = relationship("LLMScoreORM", back_populates="response_text")
+    # Relationships
+    llm_judgements = relationship("LLMJudgementORM", back_populates="llm_response")
+    scores = relationship("LLMScoreORM", back_populates="llm_response")
 
 
 class LLMInvocationMetricsORM(Base):
@@ -300,12 +324,13 @@ class LLMInvocationMetricsORM(Base):
         {"schema": "infer"},
     )
 
-    judgements = relationship("LLMJudgementORM", back_populates="invocation_metrics")
+    # Relationships
+    llm_judgements = relationship("LLMJudgementORM", back_populates="llm_invocation_metrics")
 
 
 class LLMScoreORM(Base):
     __tablename__ = "llm_scores"
-    __natural_key__ = ("parser_spec_id", "llm_response_text_id")
+    __natural_key__ = ("parser_spec_id", "llm_response_id")
     __uuid_function__ = "compute_llm_score_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -315,13 +340,13 @@ class LLMScoreORM(Base):
         ForeignKey("infer.parser_specs.id"),
         nullable=False,
     )
-    llm_response_text_id = Column(
+    llm_response_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_response_texts.id"),
+        ForeignKey("infer.llm_responses.id"),
         nullable=False,
     )
 
-    # Derived / parsed info; functionally dependent on (parser_spec_id, llm_response_text_id)
+    # Derived / parsed info; functionally dependent on (parser_spec_id, llm_response_id)
     label = Column(SQLEnum(RelevanceScore, schema="public"), nullable=False)
     confidence = Column(Float, nullable=True)
     rationale = Column(Text, nullable=True)
@@ -334,7 +359,7 @@ class LLMScoreORM(Base):
     __table_args__ = (
         UniqueConstraint(
             "parser_spec_id",
-            "llm_response_text_id",
+            "llm_response_id",
             name="uq_score_parser_response",
         ),
         {"schema": "infer"},
@@ -342,24 +367,38 @@ class LLMScoreORM(Base):
 
     # Relationships
     parser_spec = relationship("ParserSpecORM", back_populates="scores")
-    response_text = relationship("LLMResponseTextORM", back_populates="scores")
+    llm_response = relationship("LLMResponseORM", back_populates="scores")
+    llm_judgements = relationship("LLMJudgementORM", back_populates="llm_score")
 
 
 class LLMJudgementORM(Base):
     __tablename__ = "llm_judgements"
-    __natural_key__ = ("llm_prompt_id", "llm_response_text_id", "llm_invocation_metrics_id")
+    __natural_key__ = (
+        "dataset_judgement_id", "model_config_id", "llm_prompt_text_id",
+        "llm_response_id", "llm_invocation_metrics_id", "llm_score_id"
+    )
     __uuid_function__ = "compute_llm_judgement_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
-    llm_prompt_id = Column(
+    dataset_judgement_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_prompts.id"),
+        ForeignKey("infer.dataset_judgements.id", ondelete="CASCADE"),
         nullable=False,
     )
-    llm_response_text_id = Column(
+    model_config_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_response_texts.id"),
+        ForeignKey("infer.model_configs.id"),
+        nullable=False,
+    )
+    llm_prompt_text_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.llm_prompt_texts.id"),
+        nullable=False,
+    )
+    llm_response_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.llm_responses.id"),
         nullable=False,
     )
     llm_invocation_metrics_id = Column(
@@ -367,21 +406,27 @@ class LLMJudgementORM(Base):
         ForeignKey("infer.llm_invocation_metrics.id"),
         nullable=False,
     )
+    llm_score_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.llm_scores.id"),
+        nullable=False,
+    )
 
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     __table_args__ = (
         UniqueConstraint(
-            "llm_prompt_id",
-            "llm_response_text_id",
-            "llm_invocation_metrics_id",
-            name="uq_judgement_prompt_response_metrics",
+            "dataset_judgement_id", "model_config_id", "llm_prompt_text_id",
+            "llm_response_id", "llm_invocation_metrics_id", "llm_score_id",
+            name="uq_judgement_identity",
         ),
         {"schema": "infer"},
     )
 
     # Relationships
-    llm_prompt = relationship("LLMPromptORM", back_populates="judgements")
-    response_text = relationship("LLMResponseTextORM", back_populates="judgements")
-    invocation_metrics = relationship("LLMInvocationMetricsORM", back_populates="judgements")
-
+    dataset_judgement = relationship("DatasetJudgementORM", back_populates="llm_judgements")
+    model_config = relationship("ModelConfigORM", back_populates="judgements")
+    llm_prompt_text = relationship("LLMPromptTextORM", back_populates="llm_judgements")
+    llm_response = relationship("LLMResponseORM", back_populates="llm_judgements")
+    llm_invocation_metrics = relationship("LLMInvocationMetricsORM", back_populates="llm_judgements")
+    llm_score = relationship("LLMScoreORM", back_populates="llm_judgements")

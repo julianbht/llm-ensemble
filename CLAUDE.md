@@ -47,30 +47,10 @@ The codebase follows hexagonal architecture with clear separation of concerns. U
    - Organized by concern: `io/`, `providers/`, `prompts/`, `parsers/`
    - Instantiated dynamically via config-driven methods (e.g., `model_config.get_provider()`)
 
-### Example: Infer CLI Flow
-
-```
-CLI (infer_cli.py)
-  ↓
-Orchestrator (orchestrator.py) - loads configs, creates run dir, sets up logging
-  ↓
-Domain Service (InferenceService) - coordinates: reader.read() → provider.infer() → writer.write()
-  ↓
-Adapters - concrete implementations:
-  • OpenRouterAdapter (providers/)
-```
-
-**Benefits:** Test domain logic without APIs/GPUs, swap providers via config, refactor layers independently.
-
 ### Dynamic Adapter Instantiation
 
 Adapters are instantiated dynamically from configuration, not via separate factory modules. Config files specify module paths and class names, and config objects provide methods to instantiate adapters.
 
-### Summary Return Pattern
-
-Adapters return Pydantic summary objects instead of handling their own logging (separation of concerns). Summaries encapsulate their logging structure via methods like `get_log_entries()`, so orchestrators iterate and log without knowing internal fields. This follows the same pattern as `RunSummaryBuilder` - infrastructure returns data, orchestrators handle presentation.
-
-**Example:** `WriteSummary` returned by `DatasetWriter.write()` tracks created/skipped entities and provides structured log entries.
 
 ## Design Principles
 
@@ -83,12 +63,6 @@ Adapters return Pydantic summary objects instead of handling their own logging (
 - **Configuration files bundle related concerns** (e.g., prompts bundle builder + parser, I/O configs bundle reader + writer)
 - **Errors over silent fallbacks** - if config is missing or invalid, raise clear errors explaining what's needed
 - **Verbosity confronts users with choices** - this helps them understand how the system works and what they can adjust
-
-**Examples:**
-- ✅ `--model gpt-oss-20b` (loads `configs/models/gpt-oss-20b.yaml` which explicitly specifies `provider: openrouter`)
-- ✅ `--io json` (loads `configs/io/json.yaml` which explicitly specifies reader and writer adapters)
-- ✅ Missing `provider` field in model config → **ValidationError** (not silent default)
-- ❌ Don't silently default to a specific provider or I/O format without user knowledge
 
 **Rationale:** Explicit configuration makes the system's behavior transparent and predictable. Users understand what's happening and can adjust behavior by modifying configs, not by discovering hidden defaults through trial and error.
 
@@ -119,15 +93,12 @@ ingest --io llm_judge_ingest --limit 100
 ingest --io llm_judge_ingest --override data_dir=/custom/path --limit 100
 
 # Infer - Run LLM judge inference
-# Uses configs: configs/models/gpt-oss-20b.yaml, configs/prompts/thomas-et-al-prompt.yaml, configs/io/json.yaml
 infer --model gpt-oss-20b --prompt thomas-et-al-prompt --io json --input artifacts/runs/ingest/<run_name>/samples.json
 
 # Aggregate - Combine model judgements using ensemble strategies
-# Uses configs: configs/ensembles/weighted_majority.yaml, configs/io/json.yaml
 aggregate --ensemble weighted_majority --io json --input artifacts/runs/infer/<run_name>/judgements.json
 
 # Evaluate - Compute metrics and generate reports
-# Uses config: configs/io/json.yaml
 evaluate --io json --input artifacts/runs/aggregate/<run_name>/ensemble.json
 
 # Alternative: run via python module
@@ -175,25 +146,6 @@ pytest -m requires_api # Run tests requiring API credentials
 - `@pytest.mark.requires_api` — Tests requiring API credentials
 
 **Configuration:** Tests are discovered from `tests/` directory. pytest is configured in `pyproject.toml` with `-q` (quiet mode) by default.
-
-### Schema Generation
-
-The project uses Pydantic models extensively. To generate JSON schemas for documentation and validation:
-
-```bash
-# Generate JSON schemas from Pydantic models
-make schemas
-
-# Or directly:
-python3 scripts/generate_schemas.py
-```
-
-**Output:** JSON schemas are generated in `src/llm_ensemble/libs/generated_schemas/` organized by category:
-- `data_contracts/` — Pipeline data flow (JudgingExample, ModelJudgement, etc.)
-- `configurations/` — Config file schemas (ModelConfig, PromptConfig, IOConfig)
-- `internal/` — Domain models for documentation
-
-**When to run:** After modifying any Pydantic schema definitions or when setting up the project.
 
 ### Environment Variables
 
@@ -245,27 +197,6 @@ Aggregated decisions from multiple models with voting metadata.
 
 All system behavior is controlled via YAML configuration files in `configs/`. CLI flags reference config names (not paths), promoting a "config-first" design.
 
-**Configuration Types:**
-
-- **Models** (`configs/models/*.yaml`) — Provider, context window, default parameters
-  - Example: `--model gpt-oss-20b` loads `configs/models/gpt-oss-20b.yaml`
-  - Schema: `infer/schemas/model_config_schema.py`
-
-- **Prompts** (`configs/prompts/*.yaml`) — Template file, variables, bundled builder + parser
-  - Example: `--prompt thomas-et-al-prompt` loads `configs/prompts/thomas-et-al-prompt.yaml`
-  - Schema: `infer/schemas/prompt_config_schema.py`
-
-- **I/O Formats** (`configs/io/*.yaml`) — Bundled reader + writer adapters, dataset paths
-  - Example: `--io json` loads `configs/io/json.yaml`
-  - For ingest: `--io llm_judge_ingest` loads `configs/io/llm_judge_ingest.yaml` (includes dataset adapter and paths)
-  - Schema: `infer/schemas/io_config_schema.py`
-  - All CLIs now use the `--io` flag for consistent I/O configuration
-
-- **Ensembles** (`configs/ensembles/*.yaml`) — Strategy, model weights
-  - Example: `--ensemble weighted_majority` loads `configs/ensembles/weighted_majority.yaml` (planned)
-
-**Config Overrides:** All configs support runtime overrides via `--override key=value` for experimentation without modifying files.
-
 ## Project Structure
 
 ```
@@ -306,3 +237,4 @@ src/llm_ensemble/
 - Keep in mind that the system will later need to be fully dockerized.
 - Keep in mind 12-factor app design.
 - Follow common software design principles, such as seperation of concerns, to produce clean reusable code.
+- Keep comments and docstrings short and precise. Use expressive names for variables, methods, interfaces etc., even if they may be long.

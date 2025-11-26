@@ -93,7 +93,6 @@ class ModelConfigORM(Base):
     # Relationships
     model = relationship("ModelORM", back_populates="model_configs")
     provider = relationship("ProviderORM", back_populates="model_configs")
-    parsers = relationship("ParserSpecORM", back_populates="model_config")
     judgements = relationship("LLMJudgementORM", back_populates="model_config")
 
 
@@ -119,12 +118,6 @@ class ParserSpecORM(Base):
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
-    model_config_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.model_configs.id"),
-        nullable=False,
-    )
-
     code_hash = Column(CHAR(64), nullable=False)
     parser_module = Column(String(512), nullable=False)
     parser_class = Column(String(255), nullable=False)
@@ -141,7 +134,6 @@ class ParserSpecORM(Base):
     )
 
     # Relationships
-    model_config = relationship("ModelConfigORM", back_populates="parsers")
     scores = relationship("LLMScoreORM", back_populates="parser_spec")
 
 

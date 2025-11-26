@@ -163,14 +163,12 @@ def prompt_config_to_template_orm(prompt_cfg: PromptConfig, template_text: str) 
 
 def prompt_config_to_parser_orm(
     prompt_cfg: PromptConfig,
-    model_config_id: UUID,
     code_hash: str,
 ) -> ParserSpecORM:
     """Convert PromptConfig to ParserSpecORM.
 
     Args:
         prompt_cfg: PromptConfig object
-        model_config_id: ModelConfig UUID (for foreign key)
         code_hash: Parser code hash (for versioning)
 
     Returns:
@@ -182,7 +180,6 @@ def prompt_config_to_parser_orm(
             prompt_cfg.parser_class,
             code_hash
         ),
-        model_config_id=model_config_id,
         code_hash=code_hash,
         parser_module=prompt_cfg.parser_module,
         parser_class=prompt_cfg.parser_class,

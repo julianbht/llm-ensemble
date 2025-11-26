@@ -141,9 +141,9 @@ class SqlWriter(DatasetWriter):
                 session.flush()
 
                 # 5. DatasetSample records (depend on NormalizedDataset + JudgingSample)
-                created = self._save_dataset_samples(session, normalized_dataset)
-                if created > 0:
-                    self.logger.info(IngestWriteEvent.WRITE_DATASET_SAMPLES, created=created)
+                created, skipped = self._save_dataset_samples(session, normalized_dataset)
+                if created > 0 or skipped > 0:
+                    self.logger.info(IngestWriteEvent.WRITE_DATASET_SAMPLES, created=created, skipped=skipped)
 
                 # 6. IngestRun (depends on NormalizedDataset)
                 created, skipped = self._save_ingest_run(session, run_info, normalized_dataset.id)
@@ -314,11 +314,10 @@ class SqlWriter(DatasetWriter):
 
     def _save_dataset_samples(
         self, session: Session, normalized_dataset: NormalizedDataset
-    ) -> int:
+    ) -> Tuple[int, int]:
         """Save DatasetSample records (step 5 in dependency order).
 
-        Creates DatasetSample records linking NormalizedDataset to JudgingSamples with
-        sequence numbers for deterministic ordering.
+        Idempotent operation - reuses existing DatasetSamples with same ID.
 
         Note: This MUST be called after _save_normalized_dataset_entity because
         DatasetSample has FK to NormalizedDataset.
@@ -328,12 +327,18 @@ class SqlWriter(DatasetWriter):
             normalized_dataset: NormalizedDataset domain object
 
         Returns:
-            Number of DatasetSample records created
+            Tuple of (created_count, skipped_count)
         """
         created = 0
+        skipped = 0
 
         # Create DatasetSample records with sequence numbers and computed IDs
         for sample in normalized_dataset.samples:
+            existing = session.get(DatasetSampleORM, sample.id)
+            if existing:
+                skipped += 1
+                continue
+
             dataset_sample = DatasetSampleORM(
                 id=sample.id,
                 normalized_dataset_id=sample.normalized_dataset_id,
@@ -343,4 +348,4 @@ class SqlWriter(DatasetWriter):
             session.merge(dataset_sample)
             created += 1
 
-        return created
+        return (created, skipped)

@@ -148,8 +148,7 @@ class JudgedDatasetORM(Base):
     fingerprint = Column(
         CHAR(64),
         nullable=True,
-        unique=True,
-        comment="SHA256 of sorted DatasetJudgement IDs (NULL during active run, set on completion)"
+        comment="SHA256 of sorted dataset_sample IDs (identifies which samples were judged, for aggregation)"
     )
     created_at = Column(DateTime, nullable=False, default=utcnow)
 

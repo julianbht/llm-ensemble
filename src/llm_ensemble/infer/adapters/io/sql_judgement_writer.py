@@ -305,8 +305,10 @@ class SqlJudgementWriter(JudgementWriter):
         if not existing:
             self._session.add(llm_prompt_text_orm)
             self._write_summary.add_llm_prompts(created=1, skipped=0)
+            self.logger.info(InferWriteEvent.WRITE_LLM_PROMPTS, created=1, skipped=0)
         else:
             self._write_summary.add_llm_prompts(created=0, skipped=1)
+            self.logger.info(InferWriteEvent.WRITE_LLM_PROMPTS, created=0, skipped=1)
         return llm_prompt_text_orm.id
 
     def _upsert_llm_response_text(self, judgement: LLMJudgement) -> uuid.UUID:
@@ -318,8 +320,10 @@ class SqlJudgementWriter(JudgementWriter):
             response_orm = llm_response_text_to_orm(response_text)
             self._session.add(response_orm)
             self._write_summary.add_llm_responses(created=1, skipped=0)
+            self.logger.info(InferWriteEvent.WRITE_LLM_RESPONSES, created=1, skipped=0)
         else:
             self._write_summary.add_llm_responses(created=0, skipped=1)
+            self.logger.info(InferWriteEvent.WRITE_LLM_RESPONSES, created=0, skipped=1)
         return response_id
 
     def _upsert_llm_invocation_metrics(self, judgement: LLMJudgement) -> uuid.UUID:
@@ -338,8 +342,10 @@ class SqlJudgementWriter(JudgementWriter):
             metrics_orm = llm_invocation_metrics_to_orm(judgement.invocation_metrics)
             self._session.add(metrics_orm)
             self._write_summary.add_llm_invocation_metrics(created=1, skipped=0)
+            self.logger.info(InferWriteEvent.WRITE_LLM_INVOCATION_METRICS, created=1, skipped=0)
         else:
             self._write_summary.add_llm_invocation_metrics(created=0, skipped=1)
+            self.logger.info(InferWriteEvent.WRITE_LLM_INVOCATION_METRICS, created=0, skipped=1)
         return metrics_id
 
     def _upsert_llm_score(self, judgement: LLMJudgement, llm_response_text_id: uuid.UUID) -> uuid.UUID:
@@ -354,6 +360,8 @@ class SqlJudgementWriter(JudgementWriter):
             )
             self._session.add(score_orm)
             self._write_summary.add_llm_scores(created=1, skipped=0)
+            self.logger.info(InferWriteEvent.WRITE_LLM_SCORES, created=1, skipped=0)
         else:
             self._write_summary.add_llm_scores(created=0, skipped=1)
+            self.logger.info(InferWriteEvent.WRITE_LLM_SCORES, created=0, skipped=1)
         return score_id

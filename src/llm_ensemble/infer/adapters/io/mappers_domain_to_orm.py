@@ -351,7 +351,7 @@ def llm_score_to_orm(
     return LLMScoreORM(
         id=score_id,
         parser_spec_id=parser_spec_id,
-        llm_response_id=llm_response_text_id,
+        llm_response_text_id=llm_response_text_id,
         label=label,
         confidence=llm_score.confidence,
         rationale=llm_score.rationale,

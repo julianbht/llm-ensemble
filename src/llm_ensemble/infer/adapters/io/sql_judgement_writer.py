@@ -38,6 +38,7 @@ from llm_ensemble.libs.db import (
     compute_llm_response_text_uuid,
     compute_llm_invocation_metrics_uuid,
     compute_llm_score_uuid,
+    compute_judged_dataset_fingerprint,
 )
 from llm_ensemble.infer.schemas.orms_normalized import (
     ProviderORM,
@@ -93,6 +94,7 @@ class SqlJudgementWriter(JudgementWriter):
         self._infer_run_id: Optional[uuid.UUID] = None
         self._judged_dataset_id: Optional[uuid.UUID] = None
         self._sequence_num: int = 0
+        self._dataset_sample_ids: list[uuid.UUID] = []
         self._write_summary = WriteSummary()
         self.logger = get_logger(component="sql_judgement_writer")
 
@@ -133,6 +135,9 @@ class SqlJudgementWriter(JudgementWriter):
         if self._session is None:
             raise RuntimeError("Writer is not open")
 
+        # Track dataset_sample ID for fingerprint computation in close()
+        self._dataset_sample_ids.append(judgement.llm_prompt.dataset_sample.id)
+
         # Upsert LLMPromptText
         llm_prompt_text_id = self._upsert_llm_prompt_text(judgement)
 
@@ -172,11 +177,9 @@ class SqlJudgementWriter(JudgementWriter):
         """Close session and finalize JudgedDataset."""
         if self._session is not None:
             # Finalize JudgedDataset fingerprint
-            if self._judged_dataset_id:
-                # For now, use a simple fingerprint (sequence count)
-                # TODO: Compute from sorted LLMJudgement IDs
-                import hashlib
-                fingerprint = hashlib.sha256(str(self._sequence_num).encode()).hexdigest()
+            if self._judged_dataset_id and self._dataset_sample_ids:
+                # Compute fingerprint from dataset_sample IDs (same as JudgedDataset.create())
+                fingerprint = compute_judged_dataset_fingerprint(self._dataset_sample_ids)
 
                 judged_dataset = self._session.get(JudgedDatasetORM, self._judged_dataset_id)
                 if judged_dataset:

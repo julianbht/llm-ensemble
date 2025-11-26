@@ -271,15 +271,8 @@ class SqlWriter(DatasetWriter):
         """
         created = 0
         skipped = 0
-        seen_ids = set()
 
         for sample in samples:
-            # Duplicates within the same batch won't be visible to session.get()
-            if sample.id in seen_ids:
-                skipped += 1
-                continue
-            seen_ids.add(sample.id)
-
             existing = session.get(JudgingSampleORM, sample.id)
             if existing:
                 skipped += 1
@@ -338,15 +331,9 @@ class SqlWriter(DatasetWriter):
             Number of DatasetSample records created
         """
         created = 0
-        seen_ids = set()
 
         # Create DatasetSample records with sequence numbers and computed IDs
         for sample in normalized_dataset.samples:
-            # Skip duplicates within this batch
-            if sample.id in seen_ids:
-                continue
-            seen_ids.add(sample.id)
-
             dataset_sample = DatasetSampleORM(
                 id=sample.id,
                 normalized_dataset_id=sample.normalized_dataset_id,

@@ -57,7 +57,7 @@ class Query(BaseModel):
             Query instance with computed id and content_hash
         """
         content_hash = hashlib.sha256(query_text.encode()).hexdigest()
-        query_id = compute_query_uuid(query_text)
+        query_id = compute_query_uuid(content_hash)
         return cls(
             id=query_id,
             content_hash=content_hash,
@@ -96,7 +96,7 @@ class Document(BaseModel):
             Document instance with computed id and content_hash
         """
         content_hash = hashlib.sha256(doc_text.encode()).hexdigest()
-        doc_id = compute_document_uuid(doc_text)
+        doc_id = compute_document_uuid(content_hash)
         return cls(
             id=doc_id,
             content_hash=content_hash,

@@ -62,14 +62,22 @@ def compute_aggregate_run_uuid(run_name: str) -> uuid.UUID:
 # Ingest Entitie UUIDs
 # ========================================================================
 
-def compute_query_uuid(query_text: str) -> uuid.UUID:
-    text_hash = hashlib.sha256(query_text.encode()).hexdigest()
-    return uuid.uuid5(NAMESPACE_QUERY, text_hash)
+def compute_query_uuid(content_hash: str) -> uuid.UUID:
+    """Compute query UUID from content hash.
+
+    Args:
+        content_hash: SHA256 hex digest of query text
+    """
+    return uuid.uuid5(NAMESPACE_QUERY, content_hash)
 
 
-def compute_document_uuid(doc_text: str) -> uuid.UUID:
-    text_hash = hashlib.sha256(doc_text.encode()).hexdigest()
-    return uuid.uuid5(NAMESPACE_DOCUMENT, text_hash)
+def compute_document_uuid(content_hash: str) -> uuid.UUID:
+    """Compute document UUID from content hash.
+
+    Args:
+        content_hash: SHA256 hex digest of document text
+    """
+    return uuid.uuid5(NAMESPACE_DOCUMENT, content_hash)
 
 
 def compute_judging_sample_uuid(

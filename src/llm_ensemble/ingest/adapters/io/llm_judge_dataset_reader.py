@@ -74,7 +74,8 @@ class LLMJudgeDatasetReader(DatasetReader):
         docs = self._read_documents(paths.documents)
 
         # Process qrels and join with queries/documents
-        samples = []
+        # Use dict to deduplicate by content-based sample.id
+        samples_by_id = {}
         for qid, docid, relevance in self._read_qrels(paths.qrels):
             q = queries.get(qid)
             d = docs.get(docid)
@@ -89,18 +90,22 @@ class LLMJudgeDatasetReader(DatasetReader):
                     f"Document '{docid}' referenced in qrels but not found in documents file"
                 )
 
-            # Create complete JudgingSample (reader does full normalization)
+            # Create complete JudgingSample (content-based ID)
             sample = JudgingSample.create(
                 query=q,
                 document=d,
                 gold_score=RelevanceScore(relevance),
             )
-            samples.append(sample)
+
+            # Deduplicate by content-based ID (keep first occurrence)
+            if sample.id not in samples_by_id:
+                samples_by_id[sample.id] = sample
 
             # Stop if limit reached
-            if limit is not None and len(samples) >= limit:
+            if limit is not None and len(samples_by_id) >= limit:
                 break
 
+        samples = list(samples_by_id.values())
         return NormalizedDataset.create(
             samples=samples,
             external_dataset_name="llmjudge"

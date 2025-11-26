@@ -47,15 +47,18 @@ from llm_ensemble.libs.db import (
 )
 from llm_ensemble.infer.schemas.orms_normalized import (
     ProviderORM,
-    ModelSpecORM,
+    ModelORM,
+    ModelConfigORM,
     PromptTemplateORM,
     ParserSpecORM,
     InferRunORM,
     JudgedDatasetORM,
-    JudgedDatasetLLMCallORM,
-    LLMRequestORM,
+    DatasetJudgementORM,
+    LLMPromptTextORM,
+    LLMResponseTextORM,
+    LLMInvocationMetricsORM,
     LLMScoreORM,
-    LLMCallORM,
+    LLMJudgementORM,
 )
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig

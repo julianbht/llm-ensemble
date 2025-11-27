@@ -46,13 +46,11 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     ModelConfigORM,
     PromptTemplateORM,
     ParserSpecORM,
-    InferRunORM,
     JudgedDatasetORM,
     LLMPromptTextORM,
     LLMResponseTextORM,
     LLMInvocationMetricsORM,
     LLMScoreORM,
-    LLMJudgementORM,
 )
 from llm_ensemble.infer.adapters.io.mappers_domain_to_orm import (
     provider_name_to_orm,

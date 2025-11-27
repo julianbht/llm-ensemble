@@ -94,57 +94,33 @@ class AggregatedDatasetORM(Base):
         CHAR(64),
         nullable=False,
         unique=True,
-        comment="SHA256 of sorted dataset_vote IDs (identifies which samples were aggregated)"
+        comment="SHA256 of sorted dataset_sample IDs (identifies which samples were aggregated)"
     )
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    dataset_votes = relationship("DatasetVoteORM", back_populates="aggregated_dataset")
     aggregate_runs = relationship("AggregateRunORM", back_populates="aggregated_dataset")
-
-
-class DatasetVoteORM(Base):
-    __tablename__ = "dataset_votes"
-    __table_args__ = {"schema": "aggregate"}
-    __natural_key__ = ("aggregated_dataset_id", "sequence_number")
-    __uuid_function__ = "compute_dataset_vote_uuid"
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
-
-    aggregated_dataset_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("aggregate.aggregated_datasets.id", ondelete="CASCADE"),
-        nullable=False,
+    # Many-to-many with AggregatedVoteORM via join table
+    aggregated_votes = relationship(
+        "AggregatedVoteORM",
+        secondary="aggregate.aggregated_dataset_votes",
+        back_populates="aggregated_datasets"
     )
-    sequence_number = Column(Integer, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=utcnow)
-
-    __table_args__ = (
-        UniqueConstraint(
-            "aggregated_dataset_id",
-            "sequence_number",
-            name="uq_dataset_vote_position",
-        ),
-        {"schema": "aggregate"},
-    )
-
-    # Relationships
-    aggregated_dataset = relationship("AggregatedDatasetORM", back_populates="dataset_votes")
-    aggregated_votes = relationship("AggregatedVoteORM", back_populates="dataset_vote")
 
 
 class AggregatedVoteORM(Base):
     __tablename__ = "aggregated_votes"
     __table_args__ = {"schema": "aggregate"}
-    __natural_key__ = ("dataset_vote_id", "aggregation_spec_id")
+    __natural_key__ = ("dataset_sample_id", "aggregation_spec_id")
     __uuid_function__ = "compute_aggregated_vote_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
-    dataset_vote_id = Column(
+    dataset_sample_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("aggregate.dataset_votes.id", ondelete="CASCADE"),
+        ForeignKey("ingest.dataset_sample.id"),
         nullable=False,
+        comment="Which dataset sample this vote aggregated judgements for"
     )
     aggregation_spec_id = Column(
         PG_UUID(as_uuid=True),
@@ -173,7 +149,7 @@ class AggregatedVoteORM(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "dataset_vote_id",
+            "dataset_sample_id",
             "aggregation_spec_id",
             name="uq_aggregated_vote_identity",
         ),
@@ -181,9 +157,32 @@ class AggregatedVoteORM(Base):
     )
 
     # Relationships
-    dataset_vote = relationship("DatasetVoteORM", back_populates="aggregated_votes")
     aggregation_spec = relationship("AggregationSpecORM", back_populates="aggregated_votes")
     aggregation_votes = relationship("AggregationVoteORM", back_populates="aggregated_vote")
+    # Many-to-many with AggregatedDatasetORM via join table
+    aggregated_datasets = relationship(
+        "AggregatedDatasetORM",
+        secondary="aggregate.aggregated_dataset_votes",
+        back_populates="aggregated_votes"
+    )
+
+
+# Join table for many-to-many relationship between AggregatedDataset and AggregatedVote
+class AggregatedDatasetVoteORM(Base):
+    __tablename__ = "aggregated_dataset_votes"
+    __table_args__ = {"schema": "aggregate"}
+
+    aggregated_dataset_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("aggregate.aggregated_datasets.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    aggregated_vote_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("aggregate.aggregated_votes.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
 
 class AggregationVoteORM(Base):

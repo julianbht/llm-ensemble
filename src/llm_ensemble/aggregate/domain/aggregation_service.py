@@ -10,7 +10,7 @@ from collections import defaultdict
 
 from llm_ensemble.infer.schemas.judged_dataset import JudgedDataset
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
-from llm_ensemble.aggregate.schemas import AggregatedDataset, DatasetVote, AggregatedVote
+from llm_ensemble.aggregate.schemas import AggregatedDataset, AggregatedVote
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.aggregate_run_summary import AggregateRunSummary
 from llm_ensemble.aggregate.ports import (

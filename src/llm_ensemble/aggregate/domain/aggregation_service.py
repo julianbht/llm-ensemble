@@ -5,90 +5,67 @@ It depends only on port abstractions and handles its own logging.
 """
 
 from __future__ import annotations
+from uuid import UUID
 from collections import defaultdict
 
-from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.judged_dataset import JudgedDataset
-from llm_ensemble.aggregate.schemas import AggregatedJudgement
+from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.aggregate.schemas import AggregatedDataset, DatasetVote, AggregatedVote
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.aggregate_run_summary import AggregateRunSummary
 from llm_ensemble.aggregate.ports import (
     AggregationStrategy,
     JudgementReader,
-    AggregatedJudgementWriter,
 )
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
+from llm_ensemble.libs.db import (
+    compute_dataset_vote_uuid,
+    compute_aggregated_vote_uuid,
+    compute_aggregation_vote_uuid,
+)
 
 
 class AggregationService:
     """Domain service for coordinating ensemble aggregation pipeline.
-    
+
     Pure business logic that orchestrates:
-    - Reading judgements via JudgementReader port
-    - Grouping judgements by natural composite key (dataset, query external_id, doc external_id)
+    - Reading JudgedDatasets via JudgementReader port
+    - Validating fingerprints match (same samples processed)
+    - Grouping dataset_judgements by sequence_number position
     - Applying aggregation strategy to each group
-    - Writing aggregated judgements via AggregatedJudgementWriter port
+    - Creating AggregatedDataset with DatasetVotes and AggregatedVotes
     - Tracking statistics (ties, no-votes)
-    
-    Depends only on port abstractions and handles its own logging, enabling complete
-    independence from infrastructure concerns.
-    
-    Identity Strategy:
-        Uses namespaced natural keys for grouping judgements of the same sample.
-        A sample's identity is defined by:
-        - dataset (from judging_sample.run_info.io_config_name)
-        - query external_id (from judging_sample.query.external_id)
-        - document external_id (from judging_sample.document.external_id)
-        
-        This avoids artificial ID generation while handling multi-dataset scenarios
-        correctly. Defers database surrogate keys until persistence layer is needed.
+
+    New Architecture:
+        The service works with the normalized aggregate schema:
+        - AggregatedDataset: Idempotent set identified by fingerprint
+        - DatasetVote: Single position in the dataset (like DatasetSample in ingest)
+        - AggregatedVote: Result of applying aggregation strategy
+        - AggregationVote: Tracks which dataset_judgements were aggregated
+
+    Idempotency:
+        Multiple aggregate runs aggregating the same votes will produce
+        the same AggregatedDataset (same fingerprint → same UUID).
     """
-    
+
     def __init__(
         self,
         judgement_reader: JudgementReader,
-        aggregated_judgement_writer: AggregatedJudgementWriter,
         strategy: AggregationStrategy,
+        aggregation_spec_id: UUID,
     ):
         """Initialize aggregation service with port dependencies.
-        
+
         Args:
-            judgement_reader: Port for reading LLMJudgement records
-            aggregated_judgement_writer: Port for writing AggregatedJudgement records
+            judgement_reader: Port for reading JudgedDataset records
             strategy: Port for aggregation strategy (e.g., MajorityVoteAdapter)
+            aggregation_spec_id: UUID of the aggregation spec being used
         """
         self.judgement_reader = judgement_reader
-        self.aggregated_judgement_writer = aggregated_judgement_writer
         self.strategy = strategy
+        self.aggregation_spec_id = aggregation_spec_id
         self.logger = get_logger(component="aggregation_service")
-    
-    @staticmethod
-    def _get_sample_identity(judgement: LLMJudgement) -> tuple[str, str, str]:
-        """Extract natural composite key for grouping judgements of the same sample.
-        
-        Uses namespaced natural keys to identify unique query-document pairs:
-        - dataset: Identifies which dataset the sample came from (io_config_name)
-        - query_id: External query identifier from the original dataset
-        - doc_id: External document identifier from the original dataset
-        
-        This approach:
-        - Handles multiple datasets with overlapping IDs correctly
-        - Avoids artificial ID generation
-        - Is deterministic and reproducible
-        - Defers database surrogate keys to persistence layer
-        
-        Args:
-            judgement: LLM judgement to extract identity from
-
-        Returns:
-            Tuple of (dataset, query_id, doc_id) serving as natural composite key
-        """
-        # Extract dataset from embedded query (dataset now flows through pipeline)
-        dataset_name = judgement.judging_sample.query.dataset.name
-        query_id = judgement.judging_sample.query.external_id
-        doc_id = judgement.judging_sample.document.external_id
-        return (dataset_name, query_id, doc_id)
 
     def _validate_judged_datasets(
         self, judged_datasets: list[JudgedDataset], run_names: list[str]
@@ -122,7 +99,7 @@ class AggregationService:
         if len(fingerprints) > 1:
             raise ValueError(
                 f"Cannot aggregate runs with different JudgedDataset fingerprints. "
-                f"Found {len(fingerprints)} distinct fingerprints: {fingerprints}. "
+                f"Found {len(fingerprints)} distinct fingerprints. "
                 f"This means the runs processed different sets of samples."
             )
 
@@ -133,20 +110,24 @@ class AggregationService:
         run_dir,
     ) -> AggregateRunSummary:
         """Execute the aggregation pipeline.
-        
+
         Pure business logic that:
-        1. Reads all judgements via reader port
-        2. Groups judgements by natural composite key (dataset, query_id, doc_id)
-        3. For each group, applies strategy to get aggregated score
-        4. Creates AggregatedJudgement with full judgements + aggregated score
-        5. Writes via writer port (streaming)
-        6. Tracks statistics (ties, no-votes, etc.)
-        
+        1. Reads JudgedDatasets via reader port
+        2. Validates fingerprints match
+        3. For each sequence_number position:
+           - Collects all dataset_judgements at that position from all runs
+           - Extracts all llm_judgements from those dataset_judgements
+           - Applies aggregation strategy to get consensus
+           - Creates AggregatedVote with result
+           - Creates DatasetVote with the AggregatedVote
+        4. Creates AggregatedDataset from all DatasetVotes
+        5. Tracks statistics (ties, no-votes, etc.)
+
         Args:
             run_names: List of infer run identifiers to read judgements from
             run_info: Immutable runtime context (attached to summary)
             run_dir: Run directory for output
-            
+
         Returns:
             AggregateRunSummary with statistics
         """
@@ -168,67 +149,100 @@ class AggregationService:
             shared_fingerprint=list(fingerprints)[0][:16] + "..." if fingerprints else "N/A"
         )
 
-        # Extract all judgements from all datasets
-        judgements = [
-            judgement
-            for dataset in judged_datasets
-            for judgement in dataset.judgements
-        ]
+        # Group dataset_judgements by sequence_number position
+        # Key: sequence_number, Value: list of dataset_judgement_ids and their llm_judgements
+        grouped_by_position: dict[int, list[tuple[UUID, list[LLMJudgement]]]] = defaultdict(list)
 
-        # Group judgements by natural composite key (dataset, query_id, doc_id)
-        grouped: dict[tuple[str, str, str], list[LLMJudgement]] = defaultdict(list)
-        for judgement in judgements:
-            key = self._get_sample_identity(judgement)
-            grouped[key].append(judgement)
-        
+        total_judgements = 0
+        for dataset in judged_datasets:
+            for judgement in dataset.judgements:
+                # TODO: Extract sequence_number and dataset_judgement_id from judgement
+                # For now, using placeholder logic
+                sequence_number = 0  # TODO: Get from judgement
+                dataset_judgement_id = UUID(int=0)  # TODO: Get from judgement
+                grouped_by_position[sequence_number].append((dataset_judgement_id, [judgement]))
+                total_judgements += 1
+
         # Track statistics
         tie_count = 0
         no_valid_votes_count = 0
-        output_count = 0
-        
-        # Open writer for streaming writes
-        with self.aggregated_judgement_writer.open(run_dir) as writer:
-            # Process each group
-            for (dataset, query_id, doc_id), group_judgements in grouped.items():
-                # Apply strategy to get aggregated score
-                aggregated_score = self.strategy.aggregate(group_judgements)
-                
-                # Track statistics
-                if aggregated_score.final_relevance_score is None:
-                    no_valid_votes_count += 1
-                elif "tie" in aggregated_score.final_reasoning.lower():
-                    tie_count += 1
-                
-                # Create aggregated judgement
-                aggregated_judgement = AggregatedJudgement(
-                    judgements=group_judgements,
-                    aggregated_scores=[aggregated_score],  # List to support multiple strategies in future
-                )
-                
-                # Write via writer port
-                writer.write_one(aggregated_judgement)
-                
-                # Log progress
-                primary_score = aggregated_judgement.get_primary_aggregated_score()
-                final_label = primary_score.final_relevance_score
-                confidence = primary_score.final_confidence
-                
-                self.logger.info(
-                    "aggregated_pair",
-                    final_label=final_label.label if final_label else "None",
-                    confidence=f"{confidence:.2f}" if confidence else "0.00",
-                    num_models=len(aggregated_judgement.judgements),
-                )
-                
-                output_count += 1
-        
+        dataset_votes = []
+
+        # Process each position
+        for sequence_number in sorted(grouped_by_position.keys()):
+            position_data = grouped_by_position[sequence_number]
+
+            # Extract all dataset_judgement_ids and llm_judgements
+            dataset_judgement_ids = []
+            all_llm_judgements = []
+            for dataset_judgement_id, llm_judgements in position_data:
+                dataset_judgement_ids.append(dataset_judgement_id)
+                all_llm_judgements.extend(llm_judgements)
+
+            # Apply aggregation strategy
+            final_label, final_confidence, final_reasoning = self.strategy.aggregate(all_llm_judgements)
+
+            # Track statistics
+            if final_label is None:
+                no_valid_votes_count += 1
+            elif final_reasoning and "tie" in final_reasoning.lower():
+                tie_count += 1
+
+            # Create AggregatedVote (will compute UUID later when we have aggregated_dataset_id)
+            # For now, create placeholder DatasetVote
+            # TODO: Properly compute UUIDs using compute_dataset_vote_uuid, etc.
+
+            # Create AggregationVote IDs linking to source dataset_judgements
+            aggregation_vote_ids = []
+            # TODO: Compute these properly
+
+            aggregated_vote = AggregatedVote(
+                id=UUID(int=0),  # TODO: Compute properly
+                dataset_vote_id=UUID(int=0),  # TODO: Set after creating dataset_vote
+                aggregation_spec_id=self.aggregation_spec_id,
+                final_label=final_label,
+                final_confidence=final_confidence,
+                final_reasoning=final_reasoning,
+                aggregation_vote_ids=aggregation_vote_ids,
+            )
+
+            dataset_vote = DatasetVote(
+                id=UUID(int=0),  # TODO: Compute properly
+                aggregated_dataset_id=UUID(int=0),  # TODO: Set after creating aggregated_dataset
+                sequence_number=sequence_number,
+                aggregated_votes=[aggregated_vote],
+            )
+
+            dataset_votes.append(dataset_vote)
+
+            # Log progress
+            self.logger.info(
+                "aggregated_position",
+                sequence_number=sequence_number,
+                final_label=final_label.label if final_label else "None",
+                confidence=f"{final_confidence:.2f}" if final_confidence else "0.00",
+                num_judgements=len(all_llm_judgements),
+            )
+
+        # Create AggregatedDataset (computes fingerprint and UUID)
+        aggregated_dataset = AggregatedDataset.create(dataset_votes)
+
+        self.logger.info(
+            "created_aggregated_dataset",
+            dataset_id=str(aggregated_dataset.id),
+            fingerprint=aggregated_dataset.fingerprint[:16] + "...",
+            vote_count=aggregated_dataset.vote_count,
+        )
+
+        # TODO: Write aggregated_dataset via writer port
+
         # Build and finalize summary
-        summary_builder.add("input_judgement_count", len(judgements))
-        summary_builder.add("unique_pair_count", len(grouped))
-        summary_builder.add("output_aggregated_count", output_count)
+        summary_builder.add("input_judgement_count", total_judgements)
+        summary_builder.add("unique_pair_count", len(grouped_by_position))
+        summary_builder.add("output_aggregated_count", len(dataset_votes))
         summary_builder.add("tie_count", tie_count)
         summary_builder.add("no_valid_votes_count", no_valid_votes_count)
-        
+
         # Optional: add warnings summary
         warnings_summary = {}
         if tie_count > 0:
@@ -237,5 +251,5 @@ class AggregationService:
             warnings_summary["no_valid_votes"] = no_valid_votes_count
         if warnings_summary:
             summary_builder.add("warnings_summary", warnings_summary)
-        
+
         return summary_builder.finalize(AggregateRunSummary)

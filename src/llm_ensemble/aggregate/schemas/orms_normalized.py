@@ -188,32 +188,19 @@ class AggregatedDatasetVoteORM(Base):
 class AggregationVoteORM(Base):
     __tablename__ = "aggregation_votes"
     __table_args__ = {"schema": "aggregate"}
-    __natural_key__ = ("aggregated_vote_id", "llm_judgement_id")
-    __uuid_function__ = "compute_aggregation_vote_uuid"
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
     aggregated_vote_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("aggregate.aggregated_votes.id", ondelete="CASCADE"),
-        nullable=False,
+        primary_key=True,
     )
     llm_judgement_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("infer.llm_judgements.id"),
-        nullable=False,
+        primary_key=True,
     )
 
     created_at = Column(DateTime, nullable=False, default=utcnow)
-
-    __table_args__ = (
-        UniqueConstraint(
-            "aggregated_vote_id",
-            "llm_judgement_id",
-            name="uq_aggregation_vote_identity",
-        ),
-        {"schema": "aggregate"},
-    )
 
     # Relationships
     aggregated_vote = relationship("AggregatedVoteORM", back_populates="aggregation_votes")

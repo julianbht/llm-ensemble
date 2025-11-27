@@ -1,66 +1,44 @@
-"""Port interface for aggregated judgement writers.
+"""Port interface for aggregated dataset writers.
 
-Defines the abstract contract for writing AggregatedJudgement records to storage.
+Defines the abstract contract for writing AggregatedDataset records to storage.
 """
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from llm_ensemble.aggregate.schemas import AggregatedJudgement
+from llm_ensemble.aggregate.schemas.aggregated_dataset import AggregatedDataset
+from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
+from llm_ensemble.aggregate.schemas.write_summary import WriteSummary
 
 
 class AggregatedJudgementWriter(ABC):
-    """Abstract base class for writing AggregatedJudgement records.
-    
-    Implementations can write to different formats (JSON, Parquet, etc.)
+    """Abstract base class for writing AggregatedDataset records.
+
+    Implementations can write to different formats (Database, JSON, etc.)
     while providing a consistent interface.
-    
-    Uses context manager pattern for proper resource management.
+
+    Supports batch writing of entire aggregated dataset.
     """
-    
+
     @abstractmethod
-    def open(self, run_dir: Path) -> "AggregatedJudgementWriter":
-        """Open writer for streaming writes.
-        
+    def write(
+        self,
+        run_dir: Path,
+        run_info: AggregateRunInfo,
+        aggregated_dataset: AggregatedDataset,
+    ) -> WriteSummary:
+        """Write entire aggregated dataset in one batch.
+
         Args:
             run_dir: Run directory where output should be written
-            
+            run_info: Aggregate run context (config, metadata)
+            aggregated_dataset: The aggregated dataset to write (with all votes)
+
         Returns:
-            Self, to enable context manager usage
-            
-        Raises:
-            IOError: If file cannot be opened
-            RuntimeError: If writer is already open
-        """
-        pass
-    
-    @abstractmethod
-    def write_one(self, aggregated_judgement: AggregatedJudgement) -> None:
-        """Write a single aggregated judgement.
-        
-        Args:
-            aggregated_judgement: AggregatedJudgement to write
-            
+            WriteSummary tracking what entities were created/skipped
+
         Raises:
             IOError: If write operation fails
-            RuntimeError: If called outside of context manager
         """
         pass
-    
-    @abstractmethod
-    def close(self) -> None:
-        """Close writer and release resources.
-        
-        Called automatically by context manager __exit__.
-        """
-        pass
-    
-    def __enter__(self) -> "AggregatedJudgementWriter":
-        """Context manager entry."""
-        return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit."""
-        self.close()
-        return False

@@ -19,11 +19,6 @@ from llm_ensemble.aggregate.ports import (
 )
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
-from llm_ensemble.libs.db import (
-    compute_dataset_vote_uuid,
-    compute_aggregated_vote_uuid,
-    compute_aggregation_vote_uuid,
-)
 
 
 class AggregationService:
@@ -136,7 +131,7 @@ class AggregationService:
         summary_builder.set_start_time()
 
         # Read JudgedDatasets (one per run) via reader port
-        judged_datasets = self.judgement_reader.read(run_names)
+        judged_datasets : list[JudgedDataset] = self.judgement_reader.read(run_names)
 
         # Validate completion and fingerprint consistency
         self._validate_judged_datasets(judged_datasets, run_names)

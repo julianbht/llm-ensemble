@@ -9,7 +9,6 @@ This module handles infrastructure concerns for the aggregation pipeline:
 """
 
 from __future__ import annotations
-from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo

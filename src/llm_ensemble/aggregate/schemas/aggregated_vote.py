@@ -12,6 +12,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.schemas import RelevanceScore
+from llm_ensemble.infer.schemas.dataset_judgement import DatasetJudgement
 
 
 class AggregatedVote(BaseModel):
@@ -21,13 +22,14 @@ class AggregatedVote(BaseModel):
     - id: Deterministic UUID from (dataset_vote_id, aggregation_spec_id)
     - dataset_vote_id: Which dataset_vote this aggregation belongs to
     - aggregation_spec_id: Which aggregation strategy was used
+    - dataset_judgements: All dataset judgements that were aggregated (full objects)
     - final_label: Consensus label chosen by the strategy
     - final_confidence: Strategy's confidence in the decision
     - final_reasoning: Human-readable explanation of how consensus was reached
-    - aggregation_vote_ids: References to dataset_judgement IDs that were aggregated
 
-    Note: Individual model votes are NOT stored here. They can be accessed via
-    the aggregation_vote_ids which reference dataset_judgements.
+    Design: Stores full DatasetJudgement objects for self-contained domain model.
+    Each DatasetJudgement contains LLMJudgements from different models.
+    At persistence layer, AggregationVote ORM entities track FK relationships.
     """
 
     id: UUID = Field(
@@ -43,6 +45,11 @@ class AggregatedVote(BaseModel):
     aggregation_spec_id: UUID = Field(
         ...,
         description="Which aggregation strategy was used"
+    )
+
+    dataset_judgements: list[DatasetJudgement] = Field(
+        default_factory=list,
+        description="All dataset judgements that were aggregated (one from each run, each containing LLMJudgements)"
     )
 
     final_label: Optional[RelevanceScore] = Field(
@@ -67,9 +74,4 @@ class AggregatedVote(BaseModel):
             "Human-readable explanation of how consensus was reached. "
             "E.g., '3/5 models voted RELEVANT', 'tie broken by lowest label'"
         )
-    )
-
-    aggregation_vote_ids: list[UUID] = Field(
-        default_factory=list,
-        description="IDs of aggregation_votes (linking to dataset_judgements) that were aggregated"
     )

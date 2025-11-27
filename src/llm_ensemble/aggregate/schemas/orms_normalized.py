@@ -1,43 +1,3 @@
-"""
-SQLAlchemy ORM models for AGGREGATE CLI.
-
-Pure SQLAlchemy models for database persistence of ensemble aggregation results.
-All models use deterministic UUID primary keys computed via uuid_helpers.
-
-FUNCTIONAL DEPENDENCIES & NORMALIZATION:
-
-The schema is in 3NF (Third Normal Form) with the following functional dependencies:
-
-1. AggregationSpecORM:
-   - name → id (deterministic UUID)
-   - name → description, strategy_module, strategy_class (spec defines implementation)
-
-2. AggregateRunORM:
-   - run_name → {id, run_type, aggregation_spec_id, git_sha, git_branch, git_is_dirty, notes, created_at}
-   - id → run_name (bidirectional via deterministic UUID)
-   - Each run uses exactly ONE aggregation spec (enforced by design)
-
-3. AggregatedScoreORM:
-   - id → {aggregate_run_id, final_label, final_confidence, final_reasoning}
-   - Aggregation spec is determined by aggregate_run.aggregation_spec_id
-   - Result functionally dependent on: (set of llm_calls via join table, aggregation_spec)
-   - Individual model votes NOT stored (derivable from llm_call.response.label via join table)
-
-4. AggregatedScoreLLMCallORM:
-   - Composite primary key: (aggregated_score_id, llm_call_id)
-   - Pure join table (many-to-many between AggregatedScore and LLMCall)
-   - No non-key attributes - satisfies BCNF
-   - Votes derivable via llm_call.response.label (no denormalization)
-
-DESIGN RATIONALE:
-
-- Enforces one aggregation spec per run (compare specs by running multiple aggregate runs)
-- AggregatedScore is the primary output entity (no thin wrapper entity needed)
-- Semantic constraints (one score per sample per run) enforced by pipeline, not DB
-- AggregatedScoreLLMCall uses composite PK (no surrogate ID or timestamp needed)
-- Individual votes not denormalized (derivable from LLMScoreORM.label)
-"""
-
 from __future__ import annotations
 
 from sqlalchemy import (
@@ -58,14 +18,6 @@ from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 class AggregationSpecORM(Base):
-    """Aggregation spec entity - catalog of available ensemble methods.
-
-    Uses deterministic UUID based on spec name.
-    One row per spec (majority_vote, weighted_majority, etc.).
-
-    Functional dependencies:
-    - name → {description, strategy_module, strategy_class}
-    """
     __tablename__ = "aggregation_specs"
     __table_args__ = {"schema": "aggregate"}
     __natural_key__ = "name"
@@ -86,15 +38,6 @@ class AggregationSpecORM(Base):
 
 
 class AggregateRunORM(Base):
-    """Aggregate run metadata - execution context for ensemble aggregation.
-
-    Uses deterministic UUID based on run_name.
-    Captures which aggregation spec was used and git provenance for reproducibility.
-
-    Functional dependencies:
-    - run_name → {id, run_type, aggregation_spec_id, git_sha, git_branch, git_is_dirty, notes}
-    - id → run_name (bidirectional via deterministic UUID)
-    """
     __tablename__ = "aggregate_runs"
     __table_args__ = {"schema": "aggregate"}
     __natural_key__ = "run_name"
@@ -124,19 +67,6 @@ class AggregateRunORM(Base):
 
 
 class AggregatedScoreORM(Base):
-    """Consensus result from aggregating multiple LLM calls.
-
-    Stores the consensus decision produced by the aggregation strategy.
-    The result is functionally dependent on:
-    - The set of LLM calls aggregated (via AggregatedScoreLLMCallORM join table)
-    - The aggregation spec used (via aggregate_run.aggregation_spec_id)
-
-    Individual model votes are NOT stored here - they're derivable from
-    llm_call.score.label via the join table (order-independent).
-
-    Semantic constraint (one score per sample per run) is enforced by the pipeline,
-    not by database constraints.
-    """
     __tablename__ = "aggregated_scores"
     __table_args__ = {"schema": "aggregate"}
 
@@ -165,17 +95,6 @@ class AggregatedScoreORM(Base):
 
 
 class AggregatedScoreLLMCallORM(Base):
-    """Join table linking LLM calls to aggregated scores.
-
-    Many-to-many relationship: each aggregated score aggregates multiple LLM calls,
-    and each LLM call can potentially be used in multiple aggregation runs.
-
-    Uses composite primary key (aggregated_score_id, llm_call_id).
-    Pure join table (BCNF) - no non-key attributes.
-
-    Note: Individual model votes are NOT stored here - they are derivable from
-    llm_call.score.label. This avoids denormalization and maintains single source of truth.
-    """
     __tablename__ = "aggregated_score_llm_calls"
     __table_args__ = {"schema": "aggregate"}
 

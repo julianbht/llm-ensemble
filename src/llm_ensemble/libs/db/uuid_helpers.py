@@ -229,16 +229,16 @@ def compute_aggregation_spec_uuid(name: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE_AGGREGATION_SPEC, name)
 
 
-def compute_aggregated_dataset_fingerprint(dataset_vote_ids: list[uuid.UUID]) -> str:
-    """Compute fingerprint from sorted dataset_vote IDs.
+def compute_aggregated_dataset_fingerprint(dataset_sample_ids: list[uuid.UUID]) -> str:
+    """Compute fingerprint from sorted dataset_sample IDs.
 
     Args:
-        dataset_vote_ids: List of dataset_vote UUIDs
+        dataset_sample_ids: List of dataset_sample UUIDs
 
     Returns:
         SHA256 hash of sorted, comma-separated UUID strings
     """
-    sorted_ids = sorted([str(id) for id in dataset_vote_ids])
+    sorted_ids = sorted([str(id) for id in dataset_sample_ids])
     id_string = ",".join(sorted_ids)
     return hashlib.sha256(id_string.encode()).hexdigest()
 
@@ -256,10 +256,10 @@ def compute_dataset_vote_uuid(
 
 
 def compute_aggregated_vote_uuid(
-    dataset_vote_id: uuid.UUID,
+    dataset_sample_id: uuid.UUID,
     aggregation_spec_id: uuid.UUID
 ) -> uuid.UUID:
-    natural_key = f"{dataset_vote_id}:{aggregation_spec_id}"
+    natural_key = f"{dataset_sample_id}:{aggregation_spec_id}"
     return uuid.uuid5(NAMESPACE_AGGREGATED_VOTE, natural_key)
 
 

@@ -13,33 +13,33 @@ from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.schemas import RelevanceScore
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.libs.db import compute_aggregated_vote_uuid
 
 
 class AggregatedVote(BaseModel):
     """Result from applying an ensemble strategy to multiple model predictions.
 
     Contains:
-    - id: Deterministic UUID from (dataset_vote_id, aggregation_spec_id)
-    - dataset_vote_id: Which dataset_vote this aggregation belongs to
+    - id: Deterministic UUID from (dataset_sample_id, aggregation_spec_id)
     - aggregation_spec_id: Which aggregation strategy was used
-    - llm_judgements: All LLM judgements that were aggregated (full objects)
+    - llm_judgements: All LLM judgements that were aggregated (full objects, all for same dataset_sample)
     - final_label: Consensus label chosen by the strategy
     - final_confidence: Strategy's confidence in the decision
     - final_reasoning: Human-readable explanation of how consensus was reached
 
     Design: Stores full LLMJudgement objects for self-contained domain model.
     Each LLMJudgement comes from a different judged_dataset (different model config).
-    At persistence layer, AggregationVote ORM entities track FK relationships.
+    
+    Globally unique: An AggregatedVote represents applying a specific strategy to
+    judgements for a specific sample. It can belong to multiple AggregatedDatasets.
+    
+    Natural key: (dataset_sample_id, aggregation_spec_id)
+    where dataset_sample_id is extracted from llm_judgements[0].llm_prompt.dataset_sample.id
     """
 
     id: UUID = Field(
         ...,
-        description="Deterministic UUID computed from dataset_vote_id and aggregation_spec_id"
-    )
-
-    dataset_vote_id: UUID = Field(
-        ...,
-        description="Which dataset_vote this aggregation belongs to"
+        description="Deterministic UUID computed from dataset_sample_id and aggregation_spec_id"
     )
 
     aggregation_spec_id: UUID = Field(
@@ -49,7 +49,7 @@ class AggregatedVote(BaseModel):
 
     llm_judgements: list[LLMJudgement] = Field(
         default_factory=list,
-        description="All LLM judgements that were aggregated (one from each judged_dataset/model config)"
+        description="All LLM judgements that were aggregated (one from each judged_dataset/model config, all for same dataset_sample)"
     )
 
     final_label: Optional[RelevanceScore] = Field(
@@ -75,3 +75,56 @@ class AggregatedVote(BaseModel):
             "E.g., '3/5 models voted RELEVANT', 'tie broken by lowest label'"
         )
     )
+
+    @classmethod
+    def create(
+        cls,
+        aggregation_spec_id: UUID,
+        llm_judgements: list[LLMJudgement],
+        final_label: Optional[RelevanceScore] = None,
+        final_confidence: Optional[float] = None,
+        final_reasoning: Optional[str] = None,
+    ) -> "AggregatedVote":
+        """Create AggregatedVote with computed ID.
+
+        Args:
+            aggregation_spec_id: Which aggregation strategy was used
+            llm_judgements: All LLM judgements that were aggregated (must all be for same dataset_sample)
+            final_label: Consensus label chosen by the strategy
+            final_confidence: Confidence in the aggregated decision
+            final_reasoning: Explanation of how consensus was reached
+
+        Returns:
+            AggregatedVote with deterministic UUID
+
+        Raises:
+            ValueError: If llm_judgements is empty or judgements have different dataset_sample_ids
+        """
+        if not llm_judgements:
+            raise ValueError("llm_judgements cannot be empty")
+
+        # Extract dataset_sample_id from first judgement
+        dataset_sample_id = llm_judgements[0].llm_prompt.dataset_sample.id
+
+        # Validate all judgements are for the same sample
+        for judgement in llm_judgements[1:]:
+            if judgement.llm_prompt.dataset_sample.id != dataset_sample_id:
+                raise ValueError(
+                    f"All llm_judgements must be for the same dataset_sample. "
+                    f"Expected {dataset_sample_id}, got {judgement.llm_prompt.dataset_sample.id}"
+                )
+
+        # Compute deterministic UUID
+        aggregated_vote_id = compute_aggregated_vote_uuid(
+            dataset_sample_id,
+            aggregation_spec_id
+        )
+
+        return cls(
+            id=aggregated_vote_id,
+            aggregation_spec_id=aggregation_spec_id,
+            llm_judgements=llm_judgements,
+            final_label=final_label,
+            final_confidence=final_confidence,
+            final_reasoning=final_reasoning,
+        )

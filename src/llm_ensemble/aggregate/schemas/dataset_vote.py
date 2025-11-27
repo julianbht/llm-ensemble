@@ -9,6 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.aggregate.schemas.aggregated_vote import AggregatedVote
+from llm_ensemble.libs.db import compute_dataset_vote_uuid
 
 
 class DatasetVote(BaseModel):
@@ -44,3 +45,32 @@ class DatasetVote(BaseModel):
         default_factory=list,
         description="Results from applying aggregation strategies to this query-document pair"
     )
+
+    @classmethod
+    def create(
+        cls,
+        aggregated_dataset_id: UUID,
+        sequence_number: int,
+        aggregated_votes: list[AggregatedVote],
+    ) -> "DatasetVote":
+        """Create DatasetVote with computed ID.
+
+        Args:
+            aggregated_dataset_id: Which aggregated dataset this vote belongs to
+            sequence_number: Position in the aggregated dataset
+            aggregated_votes: Results from applying aggregation strategies
+
+        Returns:
+            DatasetVote with deterministic UUID
+        """
+        dataset_vote_id = compute_dataset_vote_uuid(
+            aggregated_dataset_id,
+            sequence_number
+        )
+
+        return cls(
+            id=dataset_vote_id,
+            aggregated_dataset_id=aggregated_dataset_id,
+            sequence_number=sequence_number,
+            aggregated_votes=aggregated_votes,
+        )

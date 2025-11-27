@@ -156,10 +156,10 @@ class AggregationService:
         # Track statistics
         tie_count = 0
         no_valid_votes_count = 0
-        dataset_votes = []
+        aggregated_votes = []
 
-        # Process each dataset_sample_id (assign sequence_number based on sorted order)
-        for sequence_number, dataset_sample_id in enumerate(sorted(grouped_by_sample.keys())):
+        # Process each dataset_sample_id
+        for dataset_sample_id in sorted(grouped_by_sample.keys()):
             # All llm_judgements for this sample (one from each run/model config)
             llm_judgements_for_sample = grouped_by_sample[dataset_sample_id]
 
@@ -172,21 +172,8 @@ class AggregationService:
             elif final_reasoning and "tie" in final_reasoning.lower():
                 tie_count += 1
 
-            # Compute UUIDs (placeholder aggregated_dataset_id for now)
-            placeholder_aggregated_dataset_id = UUID(int=0)
-            dataset_vote_id = compute_dataset_vote_uuid(
-                placeholder_aggregated_dataset_id,
-                sequence_number
-            )
-            aggregated_vote_id = compute_aggregated_vote_uuid(
-                dataset_vote_id,
-                self.aggregation_spec_id
-            )
-
-            # Create AggregatedVote with full llm_judgements
-            aggregated_vote = AggregatedVote(
-                id=aggregated_vote_id,
-                dataset_vote_id=dataset_vote_id,
+            # Create AggregatedVote (globally unique by dataset_sample_id + aggregation_spec_id)
+            aggregated_vote = AggregatedVote.create(
                 aggregation_spec_id=self.aggregation_spec_id,
                 llm_judgements=llm_judgements_for_sample,
                 final_label=final_label,
@@ -194,28 +181,19 @@ class AggregationService:
                 final_reasoning=final_reasoning,
             )
 
-            # Create DatasetVote
-            dataset_vote = DatasetVote(
-                id=dataset_vote_id,
-                aggregated_dataset_id=placeholder_aggregated_dataset_id,
-                sequence_number=sequence_number,
-                aggregated_votes=[aggregated_vote],
-            )
-
-            dataset_votes.append(dataset_vote)
+            aggregated_votes.append(aggregated_vote)
 
             # Log progress
             self.logger.info(
                 "aggregated_sample",
-                sequence_number=sequence_number,
                 dataset_sample_id=str(dataset_sample_id)[:8] + "...",
                 final_label=final_label.label if final_label else "None",
                 confidence=f"{final_confidence:.2f}" if final_confidence else "0.00",
                 num_llm_judgements=len(llm_judgements_for_sample),
             )
 
-        # Create AggregatedDataset (computes fingerprint and UUID)
-        aggregated_dataset = AggregatedDataset.create(dataset_votes)
+        # Create AggregatedDataset (computes fingerprint and UUID from votes)
+        aggregated_dataset = AggregatedDataset.create(aggregated_votes)
 
         self.logger.info(
             "created_aggregated_dataset",
@@ -233,7 +211,7 @@ class AggregationService:
         )
         summary_builder.add("input_judgement_count", total_llm_judgements)
         summary_builder.add("unique_pair_count", len(grouped_by_sample))
-        summary_builder.add("output_aggregated_count", len(dataset_votes))
+        summary_builder.add("output_aggregated_count", len(aggregated_votes))
         summary_builder.add("tie_count", tie_count)
         summary_builder.add("no_valid_votes_count", no_valid_votes_count)
 

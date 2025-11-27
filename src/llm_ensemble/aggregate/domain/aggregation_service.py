@@ -9,7 +9,7 @@ from uuid import UUID
 from collections import defaultdict
 
 from llm_ensemble.infer.schemas.judged_dataset import JudgedDataset
-from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.dataset_judgement import DatasetJudgement
 from llm_ensemble.aggregate.schemas import AggregatedDataset, DatasetVote, AggregatedVote
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.aggregate_run_summary import AggregateRunSummary
@@ -144,37 +144,30 @@ class AggregationService:
             shared_fingerprint=list(fingerprints)[0][:16] + "..." if fingerprints else "N/A"
         )
 
-        # Group dataset_judgements by sequence_number position
-        # Key: sequence_number, Value: list of dataset_judgement_ids and their llm_judgements
-        grouped_by_position: dict[int, list[tuple[UUID, list[LLMJudgement]]]] = defaultdict(list)
+        # Group dataset_judgements by sequence_number across all runs
+        # Key: sequence_number, Value: list of dataset_judgements from different runs at that position
+        grouped_by_position: dict[int, list[DatasetJudgement]] = defaultdict(list)
 
-        total_judgements = 0
-        for dataset in judged_datasets:
-            for judgement in dataset.judgements:
-                # TODO: Extract sequence_number and dataset_judgement_id from judgement
-                # For now, using placeholder logic
-                sequence_number = 0  # TODO: Get from judgement
-                dataset_judgement_id = UUID(int=0)  # TODO: Get from judgement
-                grouped_by_position[sequence_number].append((dataset_judgement_id, [judgement]))
-                total_judgements += 1
+        for judged_dataset in judged_datasets:
+            for dataset_judgement in judged_dataset.dataset_judgements:
+                grouped_by_position[dataset_judgement.sequence_number].append(dataset_judgement)
 
         # Track statistics
         tie_count = 0
         no_valid_votes_count = 0
         dataset_votes = []
 
-        # Process each position
+        # Process each sequence_number position
         for sequence_number in sorted(grouped_by_position.keys()):
-            position_data = grouped_by_position[sequence_number]
+            # All dataset_judgements at this position (one from each run)
+            dataset_judgements_at_position = grouped_by_position[sequence_number]
 
-            # Extract all dataset_judgement_ids and llm_judgements
-            dataset_judgement_ids = []
+            # Extract all LLM judgements from all dataset_judgements at this position
             all_llm_judgements = []
-            for dataset_judgement_id, llm_judgements in position_data:
-                dataset_judgement_ids.append(dataset_judgement_id)
-                all_llm_judgements.extend(llm_judgements)
+            for dataset_judgement in dataset_judgements_at_position:
+                all_llm_judgements.extend(dataset_judgement.llm_judgements)
 
-            # Apply aggregation strategy
+            # Apply aggregation strategy to get consensus
             final_label, final_confidence, final_reasoning = self.strategy.aggregate(all_llm_judgements)
 
             # Track statistics
@@ -183,27 +176,32 @@ class AggregationService:
             elif final_reasoning and "tie" in final_reasoning.lower():
                 tie_count += 1
 
-            # Create AggregatedVote (will compute UUID later when we have aggregated_dataset_id)
-            # For now, create placeholder DatasetVote
-            # TODO: Properly compute UUIDs using compute_dataset_vote_uuid, etc.
+            # Compute UUIDs (placeholder aggregated_dataset_id for now)
+            placeholder_aggregated_dataset_id = UUID(int=0)
+            dataset_vote_id = compute_dataset_vote_uuid(
+                placeholder_aggregated_dataset_id,
+                sequence_number
+            )
+            aggregated_vote_id = compute_aggregated_vote_uuid(
+                dataset_vote_id,
+                self.aggregation_spec_id
+            )
 
-            # Create AggregationVote IDs linking to source dataset_judgements
-            aggregation_vote_ids = []
-            # TODO: Compute these properly
-
+            # Create AggregatedVote with full dataset_judgements
             aggregated_vote = AggregatedVote(
-                id=UUID(int=0),  # TODO: Compute properly
-                dataset_vote_id=UUID(int=0),  # TODO: Set after creating dataset_vote
+                id=aggregated_vote_id,
+                dataset_vote_id=dataset_vote_id,
                 aggregation_spec_id=self.aggregation_spec_id,
+                dataset_judgements=dataset_judgements_at_position,
                 final_label=final_label,
                 final_confidence=final_confidence,
                 final_reasoning=final_reasoning,
-                aggregation_vote_ids=aggregation_vote_ids,
             )
 
+            # Create DatasetVote
             dataset_vote = DatasetVote(
-                id=UUID(int=0),  # TODO: Compute properly
-                aggregated_dataset_id=UUID(int=0),  # TODO: Set after creating aggregated_dataset
+                id=dataset_vote_id,
+                aggregated_dataset_id=placeholder_aggregated_dataset_id,
                 sequence_number=sequence_number,
                 aggregated_votes=[aggregated_vote],
             )
@@ -216,7 +214,8 @@ class AggregationService:
                 sequence_number=sequence_number,
                 final_label=final_label.label if final_label else "None",
                 confidence=f"{final_confidence:.2f}" if final_confidence else "0.00",
-                num_judgements=len(all_llm_judgements),
+                num_llm_judgements=len(all_llm_judgements),
+                num_dataset_judgements=len(dataset_judgements_at_position),
             )
 
         # Create AggregatedDataset (computes fingerprint and UUID)
@@ -232,7 +231,12 @@ class AggregationService:
         # TODO: Write aggregated_dataset via writer port
 
         # Build and finalize summary
-        summary_builder.add("input_judgement_count", total_judgements)
+        total_llm_judgements = sum(
+            len(dj.llm_judgements)
+            for judged_dataset in judged_datasets
+            for dj in judged_dataset.dataset_judgements
+        )
+        summary_builder.add("input_judgement_count", total_llm_judgements)
         summary_builder.add("unique_pair_count", len(grouped_by_position))
         summary_builder.add("output_aggregated_count", len(dataset_votes))
         summary_builder.add("tie_count", tie_count)

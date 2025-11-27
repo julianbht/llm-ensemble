@@ -33,6 +33,12 @@ class EnsembleConfig(BaseConfig):
         description="Strategy adapter class name in UpperCamelCase"
     )
 
+    @computed_field
+    @property
+    def id(self) -> UUID:
+        """Deterministic UUID computed from config name (natural key)."""
+        return compute_aggregation_spec_uuid(self.name)
+
     def get_strategy(self) -> Any:
         """Instantiate and return the aggregation strategy adapter.
         

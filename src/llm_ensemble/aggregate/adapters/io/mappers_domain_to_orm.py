@@ -38,19 +38,19 @@ from llm_ensemble.aggregate.schemas.orms_normalized import (
 
 def ensemble_config_to_aggregation_spec_orm(
     ensemble_config: EnsembleConfig,
-    aggregation_spec_id: UUID,
 ) -> AggregationSpecORM:
     """Convert EnsembleConfig to AggregationSpecORM.
 
+    UUID is already computed in the ensemble_config.id property.
+
     Args:
         ensemble_config: EnsembleConfig domain object
-        aggregation_spec_id: Pre-computed UUID for this spec
 
     Returns:
         AggregationSpecORM model ready for persistence
     """
     return AggregationSpecORM(
-        id=aggregation_spec_id,
+        id=ensemble_config.id,
         name=ensemble_config.name,
         description=f"Aggregation strategy: {ensemble_config.strategy_class}",
         strategy_module=ensemble_config.strategy_module,

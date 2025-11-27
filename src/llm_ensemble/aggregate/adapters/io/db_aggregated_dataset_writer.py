@@ -28,7 +28,6 @@ from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.db import (
     get_engine,
     get_session,
-    compute_aggregation_spec_uuid,
     compute_aggregate_run_uuid,
 )
 from llm_ensemble.aggregate.schemas.orms_normalized import (
@@ -139,15 +138,12 @@ class DbAggregatedDatasetWriter(AggregatedJudgementWriter):
         Returns:
             Tuple of (aggregation_spec_id, aggregate_run_id)
         """
-        # Upsert AggregationSpec
+        # Upsert AggregationSpec (ID is computed in ensemble_config.id)
         aggregation_spec_id = self._upsert_entity(
             session,
             AggregationSpecORM,
-            compute_aggregation_spec_uuid(run_info.ensemble_config.name),
-            lambda: ensemble_config_to_aggregation_spec_orm(
-                run_info.ensemble_config,
-                compute_aggregation_spec_uuid(run_info.ensemble_config.name)
-            ),
+            run_info.ensemble_config.id,
+            lambda: ensemble_config_to_aggregation_spec_orm(run_info.ensemble_config),
             "aggregation_specs",
             write_summary
         )

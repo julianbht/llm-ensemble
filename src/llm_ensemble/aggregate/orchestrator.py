@@ -22,7 +22,6 @@ from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
-from llm_ensemble.libs.db import compute_aggregation_spec_uuid
 
 
 def run_aggregation(
@@ -127,12 +126,13 @@ def run_aggregation(
     strategy = ensemble_config.get_strategy()
     reader = io_config.get_reader()
     writer = io_config.get_writer()
-    
-    # Create domain service
+
+    # Create domain service (ensemble_config.id is computed from name)
     service = AggregationService(
         judgement_reader=reader,
         aggregated_judgement_writer=writer,
         strategy=strategy,
+        aggregation_spec_id=ensemble_config.id,
     )
     
     # Run aggregation pipeline

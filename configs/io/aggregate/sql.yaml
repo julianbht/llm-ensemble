@@ -1,0 +1,11 @@
+name_hint: sql
+description: |
+  SQL database format for aggregate CLI.
+  Reads JudgedDataset records from infer schema (via DbJudgedDatasetReader).
+  Writes AggregatedDataset records to aggregate schema (via DbAggregatedDatasetWriter).
+
+# Adapter specifications (loaded dynamically)
+reader_module: llm_ensemble.aggregate.adapters.io.db_judged_dataset_reader
+reader_class: DbJudgedDatasetReader
+writer_module: llm_ensemble.aggregate.adapters.io.db_aggregated_dataset_writer
+writer_class: DbAggregatedDatasetWriter

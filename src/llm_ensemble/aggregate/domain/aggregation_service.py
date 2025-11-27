@@ -16,6 +16,7 @@ from llm_ensemble.aggregate.schemas.aggregate_run_summary import AggregateRunSum
 from llm_ensemble.aggregate.ports import (
     AggregationStrategy,
     JudgementReader,
+    AggregatedJudgementWriter,
 )
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
@@ -30,6 +31,7 @@ class AggregationService:
     - Grouping LLM judgements by dataset_sample_id across runs
     - Applying aggregation strategy to each group
     - Creating AggregatedDataset with DatasetVotes and AggregatedVotes
+    - Writing AggregatedDataset via writer port
     - Tracking statistics (ties, no-votes)
 
     New Architecture:
@@ -47,6 +49,7 @@ class AggregationService:
     def __init__(
         self,
         judgement_reader: JudgementReader,
+        aggregated_judgement_writer: AggregatedJudgementWriter,
         strategy: AggregationStrategy,
         aggregation_spec_id: UUID,
     ):
@@ -54,10 +57,12 @@ class AggregationService:
 
         Args:
             judgement_reader: Port for reading JudgedDataset records
+            aggregated_judgement_writer: Port for writing AggregatedDataset records
             strategy: Port for aggregation strategy (e.g., MajorityVoteAdapter)
             aggregation_spec_id: UUID of the aggregation spec being used
         """
         self.judgement_reader = judgement_reader
+        self.aggregated_judgement_writer = aggregated_judgement_writer
         self.strategy = strategy
         self.aggregation_spec_id = aggregation_spec_id
         self.logger = get_logger(component="aggregation_service")
@@ -148,7 +153,7 @@ class AggregationService:
         grouped_by_sample: dict[UUID, list[LLMJudgement]] = defaultdict(list)
 
         for judged_dataset in judged_datasets:
-            for llm_judgement in judged_dataset.llm_judgements:
+            for llm_judgement in judged_dataset.llm_judgements:ho
                 # Get dataset_sample_id via llm_prompt → dataset_sample
                 dataset_sample_id = llm_judgement.llm_prompt.dataset_sample.id
                 grouped_by_sample[dataset_sample_id].append(llm_judgement)
@@ -202,7 +207,18 @@ class AggregationService:
             vote_count=aggregated_dataset.vote_count,
         )
 
-        # TODO: Write aggregated_dataset via writer port
+        # Write aggregated_dataset via writer port
+        write_summary = self.aggregated_judgement_writer.write(
+            run_dir=run_dir,
+            run_info=run_info,
+            aggregated_dataset=aggregated_dataset,
+        )
+
+        self.logger.info(
+            "write_complete",
+            entities_created=write_summary.total_created,
+            entities_skipped=write_summary.total_skipped,
+        )
 
         # Build and finalize summary
         total_llm_judgements = sum(

@@ -22,6 +22,7 @@ from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
+from llm_ensemble.libs.db import compute_aggregation_spec_uuid
 
 
 def run_aggregation(

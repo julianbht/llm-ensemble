@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 from typing import Optional, Any
-from pydantic import Field
+from uuid import UUID
+from pydantic import Field, computed_field
 
 from llm_ensemble.libs.schemas.base_config import BaseConfig
+from llm_ensemble.libs.db import compute_aggregation_spec_uuid
 
 
 class EnsembleConfig(BaseConfig):

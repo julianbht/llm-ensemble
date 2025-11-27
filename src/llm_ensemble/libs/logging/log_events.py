@@ -60,15 +60,18 @@ class InferWriteEvent(str, Enum):
 
     # Run metadata entities (written once during open)
     WRITE_PROVIDERS = "write_providers"
-    WRITE_MODEL_SPECS = "write_model_specs"
+    WRITE_MODELS = "write_models"
+    WRITE_MODEL_CONFIGS = "write_model_configs"
     WRITE_PROMPT_TEMPLATES = "write_prompt_templates"
     WRITE_PARSER_SPECS = "write_parser_specs"
     WRITE_INFER_RUNS = "write_infer_runs"
 
     # Per-judgement entities (written during write_one)
-    WRITE_LLM_REQUESTS = "write_llm_requests"
+    WRITE_LLM_PROMPTS = "write_llm_prompts"
+    WRITE_LLM_RESPONSES = "write_llm_responses"
+    WRITE_LLM_INVOCATION_METRICS = "write_llm_invocation_metrics"
     WRITE_LLM_SCORES = "write_llm_scores"
-    WRITE_LLM_CALLS = "write_llm_calls"
+    WRITE_LLM_JUDGEMENTS = "write_llm_judgements"
 
     # Dataset finalization (written during close)
     WRITE_JUDGED_DATASETS = "write_judged_datasets"

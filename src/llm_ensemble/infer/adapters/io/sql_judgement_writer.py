@@ -116,8 +116,9 @@ class SqlJudgementWriter(JudgementWriter):
         # Initialize run metadata (providers, models, prompts, etc.)
         self._initialize_run_metadata(run_info, normalized_dataset, start_idx, end_idx)
 
-        # Create JudgedDataset with NULL fingerprint (finalized in close())
-        self._judged_dataset_id = uuid.uuid4()
+        # Create JudgedDataset with same ID as InferRun (1:1 relationship)
+        # Fingerprint computed in close() after all judgements written
+        self._judged_dataset_id = self._infer_run_id
         judged_dataset_orm = JudgedDatasetORM(
             id=self._judged_dataset_id,
             fingerprint=None,

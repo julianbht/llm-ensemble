@@ -140,10 +140,10 @@ class ParserSpecORM(Base):
 class JudgedDatasetORM(Base):
     __tablename__ = "judged_datasets"
     __table_args__ = {"schema": "infer"}
-    __natural_key__ = ("fingerprint",)
-    __uuid_function__ = "compute_judged_dataset_uuid"
+    __natural_key__ = None  # 1:1 with InferRun, uses same ID
+    __uuid_function__ = None  # ID comes from InferRun
 
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, comment="Same as InferRun.id (1:1 relationship)")
 
     fingerprint = Column(
         CHAR(64),
@@ -154,7 +154,7 @@ class JudgedDatasetORM(Base):
 
     # Relationships
     dataset_judgements = relationship("DatasetJudgementORM", back_populates="judged_dataset")
-    infer_runs = relationship("InferRunORM", back_populates="judged_dataset")
+    infer_run = relationship("InferRunORM", back_populates="judged_dataset", uselist=False)
 
 
 class DatasetJudgementORM(Base):
@@ -232,7 +232,7 @@ class InferRunORM(Base):
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    judged_dataset = relationship("JudgedDatasetORM", back_populates="infer_runs")
+    judged_dataset = relationship("JudgedDatasetORM", back_populates="infer_run", uselist=False)
 
 
 class LLMPromptTextORM(Base):

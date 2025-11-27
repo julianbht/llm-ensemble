@@ -41,8 +41,10 @@ NAMESPACE_PROVIDER = uuid.UUID('5e6f7890-1234-5678-9012-3abcdef12346')
 NAMESPACE_PARSER_SPEC = uuid.UUID('6f789012-3456-7890-abcd-1234def56789')
 NAMESPACE_DATASET_JUDGEMENT = uuid.UUID('7890abcd-ef12-3456-7890-abcdef123456')
 NAMESPACE_AGGREGATION_SPEC = uuid.UUID('890123bc-def1-2345-6789-0abcdef12345')
-NAMESPACE_AGGREGATED_SCORE = uuid.UUID('a12345de-f123-4567-890a-bcdef1234567')
-NAMESPACE_AGGREGATED_SCORE_LLM_CALL = uuid.UUID('b23456ef-1234-5678-9012-3456789abcde')
+NAMESPACE_AGGREGATED_DATASET = uuid.UUID('901234cd-ef12-3456-789a-bcdef1234567')
+NAMESPACE_DATASET_VOTE = uuid.UUID('a12345de-f123-4567-890a-bcdef1234567')
+NAMESPACE_AGGREGATED_VOTE = uuid.UUID('b23456ef-1234-5678-901a-bcdef1234568')
+NAMESPACE_AGGREGATION_VOTE = uuid.UUID('c34567f0-1234-5678-9012-3456789abcde')
 
 # ========================================================================
 # Run Info UUIDs
@@ -230,19 +232,43 @@ def compute_aggregation_spec_uuid(name: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE_AGGREGATION_SPEC, name)
 
 
-def compute_aggregated_score_uuid(
-    aggregate_run_id: uuid.UUID,
-    llm_call_ids: tuple[uuid.UUID, ...]
-) -> uuid.UUID:
-    # Sort for deterministic ordering (set of calls, not ordered list)
-    sorted_call_ids = ":".join(str(cid) for cid in sorted(llm_call_ids))
-    natural_key = f"{aggregate_run_id}:{sorted_call_ids}"
-    return uuid.uuid5(NAMESPACE_AGGREGATED_SCORE, natural_key)
+def compute_aggregated_dataset_fingerprint(dataset_vote_ids: list[uuid.UUID]) -> str:
+    """Compute fingerprint from sorted dataset_vote IDs.
+
+    Args:
+        dataset_vote_ids: List of dataset_vote UUIDs
+
+    Returns:
+        SHA256 hash of sorted, comma-separated UUID strings
+    """
+    sorted_ids = sorted([str(id) for id in dataset_vote_ids])
+    id_string = ",".join(sorted_ids)
+    return hashlib.sha256(id_string.encode()).hexdigest()
 
 
-def compute_aggregated_score_llm_call_uuid(
-    aggregated_score_id: uuid.UUID,
-    llm_call_id: uuid.UUID
+def compute_aggregated_dataset_uuid(fingerprint: str) -> uuid.UUID:
+    return uuid.uuid5(NAMESPACE_AGGREGATED_DATASET, fingerprint)
+
+
+def compute_dataset_vote_uuid(
+    aggregated_dataset_id: uuid.UUID,
+    sequence_number: int
 ) -> uuid.UUID:
-    natural_key = f"{aggregated_score_id}:{llm_call_id}"
-    return uuid.uuid5(NAMESPACE_AGGREGATED_SCORE_LLM_CALL, natural_key)
+    natural_key = f"{aggregated_dataset_id}:{sequence_number}"
+    return uuid.uuid5(NAMESPACE_DATASET_VOTE, natural_key)
+
+
+def compute_aggregated_vote_uuid(
+    dataset_vote_id: uuid.UUID,
+    aggregation_spec_id: uuid.UUID
+) -> uuid.UUID:
+    natural_key = f"{dataset_vote_id}:{aggregation_spec_id}"
+    return uuid.uuid5(NAMESPACE_AGGREGATED_VOTE, natural_key)
+
+
+def compute_aggregation_vote_uuid(
+    aggregated_vote_id: uuid.UUID,
+    dataset_judgement_id: uuid.UUID
+) -> uuid.UUID:
+    natural_key = f"{aggregated_vote_id}:{dataset_judgement_id}"
+    return uuid.uuid5(NAMESPACE_AGGREGATION_VOTE, natural_key)

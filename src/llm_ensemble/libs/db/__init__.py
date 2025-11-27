@@ -40,7 +40,11 @@ from llm_ensemble.libs.db.uuid_helpers import (
     compute_llm_score_uuid,
     compute_llm_judgement_uuid,
     compute_aggregation_spec_uuid,
-    compute_aggregated_score_uuid,
+    compute_aggregated_dataset_fingerprint,
+    compute_aggregated_dataset_uuid,
+    compute_dataset_vote_uuid,
+    compute_aggregated_vote_uuid,
+    compute_aggregation_vote_uuid,
 )
 
 from llm_ensemble.libs.db.utcnow import utcnow
@@ -80,7 +84,11 @@ __all__ = [
     # UUID helpers - aggregate
     "compute_aggregate_run_uuid",
     "compute_aggregation_spec_uuid",
-    "compute_aggregated_score_uuid",
+    "compute_aggregated_dataset_fingerprint",
+    "compute_aggregated_dataset_uuid",
+    "compute_dataset_vote_uuid",
+    "compute_aggregated_vote_uuid",
+    "compute_aggregation_vote_uuid",
     # Other db helpers
     "utcnow",
 ]

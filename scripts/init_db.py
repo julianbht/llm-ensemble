@@ -46,13 +46,22 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     PromptTemplateORM,
     ParserSpecORM,
     JudgedDatasetORM,
-    DatasetJudgementORM,
     InferRunORM,
     LLMPromptTextORM,
     LLMResponseTextORM,
     LLMInvocationMetricsORM,
     LLMScoreORM,
     LLMJudgementORM,
+)
+
+# Aggregate CLI ORMs
+from llm_ensemble.aggregate.schemas.orms_normalized import (
+    AggregationSpecORM,
+    AggregateRunORM,
+    AggregatedDatasetORM,
+    AggregatedVoteORM,
+    AggregatedDatasetVoteORM,
+    AggregationVoteORM,
 )
 
 

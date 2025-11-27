@@ -93,10 +93,8 @@ def compute_judging_sample_uuid(
 def compute_normalized_dataset_fingerprint(samples: list) -> str:
     # Extract and sort sample IDs (already sorted, but ensure determinism)
     sorted_ids = sorted([str(s.id) for s in samples])
-
     # Create comma-separated string of UUIDs
     id_string = ",".join(sorted_ids)
-
     # Compute SHA256 hash
     return hashlib.sha256(id_string.encode()).hexdigest()
 
@@ -217,11 +215,10 @@ def compute_llm_score_uuid(parser_spec_id: uuid.UUID, llm_response_text_id: uuid
 
 
 def compute_llm_judgement_uuid(
-    llm_prompt_id: uuid.UUID,
-    llm_response_text_id: uuid.UUID,
-    llm_invocation_metrics_id: uuid.UUID
+    judged_dataset_id: uuid.UUID,
+    llm_prompt_text_id: uuid.UUID
 ) -> uuid.UUID:
-    natural_key = f"{llm_prompt_id}:{llm_response_text_id}:{llm_invocation_metrics_id}"
+    natural_key = f"{judged_dataset_id}:{llm_prompt_text_id}"
     return uuid.uuid5(NAMESPACE_LLM_JUDGEMENT, natural_key)
 
 # ========================================================================
@@ -268,7 +265,7 @@ def compute_aggregated_vote_uuid(
 
 def compute_aggregation_vote_uuid(
     aggregated_vote_id: uuid.UUID,
-    dataset_judgement_id: uuid.UUID
+    llm_judgement_id: uuid.UUID
 ) -> uuid.UUID:
-    natural_key = f"{aggregated_vote_id}:{dataset_judgement_id}"
+    natural_key = f"{aggregated_vote_id}:{llm_judgement_id}"
     return uuid.uuid5(NAMESPACE_AGGREGATION_VOTE, natural_key)

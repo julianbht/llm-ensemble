@@ -1,7 +1,7 @@
 """JudgedDataset - set of LLM judgements produced during inference.
 
 This is the output of the infer pipeline and represents the actual judgements
-organized by position (DatasetJudgement).
+from a single model configuration.
 
 Provenance to input NormalizedDataset is tracked via:
   JudgedDataset → InferRun → IngestRun → NormalizedDataset
@@ -15,17 +15,16 @@ from __future__ import annotations
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from llm_ensemble.infer.schemas.dataset_judgement import DatasetJudgement
-from llm_ensemble.libs.db import compute_judged_dataset_uuid
+from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.libs.db import compute_judged_dataset_fingerprint
 
 
 class JudgedDataset(BaseModel):
-    """Set of dataset judgements produced during inference.
+    """Set of LLM judgements produced during inference with a single model config.
 
-    The fingerprint is computed from the sorted list of dataset_judgement IDs.
+    The sample_fingerprint is computed from the sorted list of dataset_sample IDs
+    (via llm_judgement → llm_prompt_text → dataset_sample).
     This identifies which samples were judged, independent of model/prompt used.
-    Dataset judgements are stored sorted by sequence_number for reproducibility.
 
     Provenance to input NormalizedDataset is tracked via:
       JudgedDataset → InferRun → IngestRun → NormalizedDataset
@@ -36,54 +35,58 @@ class JudgedDataset(BaseModel):
 
     id: UUID = Field(
         ...,
-        description="Deterministic UUID computed from fingerprint"
+        description="Same as InferRun.id (1:1 relationship)"
     )
-    fingerprint: str = Field(
+    model_config_id: UUID = Field(
         ...,
-        description="SHA256 hash of sorted dataset_judgement IDs (deterministic identifier)"
+        description="Which model configuration was used for all judgements"
     )
-    dataset_judgements: list[DatasetJudgement] = Field(
+    sample_fingerprint: str = Field(
         ...,
-        description="Dataset judgements, sorted by sequence_number for reproducibility"
+        description="SHA256 hash of sorted dataset_sample IDs (deterministic identifier)"
+    )
+    llm_judgements: list[LLMJudgement] = Field(
+        ...,
+        description="LLM judgements, one per dataset_sample"
     )
 
     @classmethod
     def create(
         cls,
-        dataset_judgements: list[DatasetJudgement]
+        id: UUID,
+        model_config_id: UUID,
+        llm_judgements: list[LLMJudgement]
     ) -> "JudgedDataset":
-        """Create JudgedDataset with computed fingerprint and ID.
+        """Create JudgedDataset with computed sample_fingerprint.
 
         Args:
-            dataset_judgements: List of dataset judgements (will be sorted by sequence_number)
+            id: JudgedDataset ID (same as InferRun.id)
+            model_config_id: Which model config was used
+            llm_judgements: List of LLM judgements
 
         Returns:
-            JudgedDataset with computed fingerprint and deterministic ID
+            JudgedDataset with computed sample_fingerprint
 
-        Note: Fingerprint is computed from sorted dataset_judgement IDs.
+        Note: sample_fingerprint is computed from sorted dataset_sample IDs
+        (via llm_judgement → llm_prompt_text → dataset_sample).
         """
-        # Sort by sequence_number for deterministic ordering
-        sorted_judgements = sorted(
-            dataset_judgements,
-            key=lambda dj: dj.sequence_number
-        )
+        # Extract dataset_sample IDs for fingerprint computation
+        dataset_sample_ids = [
+            j.llm_prompt.dataset_sample.id
+            for j in llm_judgements
+        ]
 
-        # Extract dataset_judgement IDs for fingerprint computation
-        dataset_judgement_ids = [dj.id for dj in sorted_judgements]
-
-        # Compute fingerprint from sorted dataset_judgement IDs
-        fingerprint = compute_judged_dataset_fingerprint(dataset_judgement_ids)
-
-        # Compute deterministic UUID from fingerprint
-        dataset_id = compute_judged_dataset_uuid(fingerprint)
+        # Compute fingerprint from sorted dataset_sample IDs
+        sample_fingerprint = compute_judged_dataset_fingerprint(dataset_sample_ids)
 
         return cls(
-            id=dataset_id,
-            fingerprint=fingerprint,
-            dataset_judgements=sorted_judgements,
+            id=id,
+            model_config_id=model_config_id,
+            sample_fingerprint=sample_fingerprint,
+            llm_judgements=llm_judgements,
         )
 
     @property
     def judgement_count(self) -> int:
-        """Get number of dataset judgements in this dataset."""
-        return len(self.dataset_judgements)
+        """Get number of LLM judgements in this dataset."""
+        return len(self.llm_judgements)

@@ -1,7 +1,7 @@
 """AggregatedVote - result from applying an ensemble strategy to multiple model votes.
 
 Represents the output of a single aggregation strategy (e.g., majority vote, weighted vote)
-applied to a group of dataset_judgements for the same query-document pair.
+applied to a group of LLM judgements for the same query-document pair.
 
 This replaces the old AggregatedScore schema to match the new ORM structure.
 """
@@ -12,7 +12,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.schemas import RelevanceScore
-from llm_ensemble.infer.schemas.dataset_judgement import DatasetJudgement
+from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 
 
 class AggregatedVote(BaseModel):
@@ -22,13 +22,13 @@ class AggregatedVote(BaseModel):
     - id: Deterministic UUID from (dataset_vote_id, aggregation_spec_id)
     - dataset_vote_id: Which dataset_vote this aggregation belongs to
     - aggregation_spec_id: Which aggregation strategy was used
-    - dataset_judgements: All dataset judgements that were aggregated (full objects)
+    - llm_judgements: All LLM judgements that were aggregated (full objects)
     - final_label: Consensus label chosen by the strategy
     - final_confidence: Strategy's confidence in the decision
     - final_reasoning: Human-readable explanation of how consensus was reached
 
-    Design: Stores full DatasetJudgement objects for self-contained domain model.
-    Each DatasetJudgement contains LLMJudgements from different models.
+    Design: Stores full LLMJudgement objects for self-contained domain model.
+    Each LLMJudgement comes from a different judged_dataset (different model config).
     At persistence layer, AggregationVote ORM entities track FK relationships.
     """
 
@@ -47,9 +47,9 @@ class AggregatedVote(BaseModel):
         description="Which aggregation strategy was used"
     )
 
-    dataset_judgements: list[DatasetJudgement] = Field(
+    llm_judgements: list[LLMJudgement] = Field(
         default_factory=list,
-        description="All dataset judgements that were aggregated (one from each run, each containing LLMJudgements)"
+        description="All LLM judgements that were aggregated (one from each judged_dataset/model config)"
     )
 
     final_label: Optional[RelevanceScore] = Field(

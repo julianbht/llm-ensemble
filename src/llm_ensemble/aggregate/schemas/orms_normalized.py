@@ -189,7 +189,7 @@ class AggregatedVoteORM(Base):
 class AggregationVoteORM(Base):
     __tablename__ = "aggregation_votes"
     __table_args__ = {"schema": "aggregate"}
-    __natural_key__ = ("aggregated_vote_id", "dataset_judgement_id")
+    __natural_key__ = ("aggregated_vote_id", "llm_judgement_id")
     __uuid_function__ = "compute_aggregation_vote_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -199,9 +199,9 @@ class AggregationVoteORM(Base):
         ForeignKey("aggregate.aggregated_votes.id", ondelete="CASCADE"),
         nullable=False,
     )
-    dataset_judgement_id = Column(
+    llm_judgement_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.dataset_judgements.id"),
+        ForeignKey("infer.llm_judgements.id"),
         nullable=False,
     )
 
@@ -210,7 +210,7 @@ class AggregationVoteORM(Base):
     __table_args__ = (
         UniqueConstraint(
             "aggregated_vote_id",
-            "dataset_judgement_id",
+            "llm_judgement_id",
             name="uq_aggregation_vote_identity",
         ),
         {"schema": "aggregate"},
@@ -218,4 +218,4 @@ class AggregationVoteORM(Base):
 
     # Relationships
     aggregated_vote = relationship("AggregatedVoteORM", back_populates="aggregation_votes")
-    # Note: dataset_judgement relationship defined in infer schema (cross-schema)
+    # Note: llm_judgement relationship defined in infer schema (cross-schema)

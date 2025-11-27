@@ -93,7 +93,7 @@ class ModelConfigORM(Base):
     # Relationships
     model = relationship("ModelORM", back_populates="model_configs")
     provider = relationship("ProviderORM", back_populates="model_configs")
-    judgements = relationship("LLMJudgementORM", back_populates="model_config")
+    judged_datasets = relationship("JudgedDatasetORM", back_populates="model_config")
 
 
 class PromptTemplateORM(Base):
@@ -145,7 +145,14 @@ class JudgedDatasetORM(Base):
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, comment="Same as InferRun.id (1:1 relationship)")
 
-    fingerprint = Column(
+    model_config_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.model_configs.id"),
+        nullable=False,
+        comment="Which model configuration was used for all judgements in this dataset"
+    )
+
+    sample_fingerprint = Column(
         CHAR(64),
         nullable=True,
         comment="SHA256 of sorted dataset_sample IDs (identifies which samples were judged, for aggregation)"
@@ -153,38 +160,9 @@ class JudgedDatasetORM(Base):
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    dataset_judgements = relationship("DatasetJudgementORM", back_populates="judged_dataset")
+    model_config = relationship("ModelConfigORM", back_populates="judged_datasets")
+    llm_judgements = relationship("LLMJudgementORM", back_populates="judged_dataset")
     infer_run = relationship("InferRunORM", back_populates="judged_dataset", uselist=False)
-
-
-class DatasetJudgementORM(Base):
-    __tablename__ = "dataset_judgements"
-    __table_args__ = {"schema": "infer"}
-    __natural_key__ = ("judged_dataset_id", "sequence_number")
-    __uuid_function__ = "compute_dataset_judgement_uuid"
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
-
-    judged_dataset_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.judged_datasets.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    sequence_number = Column(Integer, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=utcnow)
-
-    __table_args__ = (
-        UniqueConstraint(
-            "judged_dataset_id",
-            "sequence_number",
-            name="uq_dataset_judgement_position",
-        ),
-        {"schema": "infer"},
-    )
-
-    # Relationships
-    judged_dataset = relationship("JudgedDatasetORM", back_populates="dataset_judgements")
-    llm_judgements = relationship("LLMJudgementORM", back_populates="dataset_judgement")
 
 
 class InferRunORM(Base):
@@ -363,22 +341,14 @@ class LLMScoreORM(Base):
 
 class LLMJudgementORM(Base):
     __tablename__ = "llm_judgements"
-    __natural_key__ = (
-        "dataset_judgement_id", "model_config_id", "llm_prompt_text_id",
-        "llm_invocation_metrics_id", "llm_score_id"
-    )
+    __natural_key__ = ("judged_dataset_id", "llm_prompt_text_id")
     __uuid_function__ = "compute_llm_judgement_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
-    dataset_judgement_id = Column(
+    judged_dataset_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.dataset_judgements.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    model_config_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.model_configs.id"),
+        ForeignKey("infer.judged_datasets.id", ondelete="CASCADE"),
         nullable=False,
     )
     llm_prompt_text_id = Column(
@@ -401,16 +371,15 @@ class LLMJudgementORM(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "dataset_judgement_id", "model_config_id", "llm_prompt_text_id",
-            "llm_invocation_metrics_id", "llm_score_id",
+            "judged_dataset_id",
+            "llm_prompt_text_id",
             name="uq_judgement_identity",
         ),
         {"schema": "infer"},
     )
 
     # Relationships
-    dataset_judgement = relationship("DatasetJudgementORM", back_populates="llm_judgements")
-    model_config = relationship("ModelConfigORM", back_populates="judgements")
+    judged_dataset = relationship("JudgedDatasetORM", back_populates="llm_judgements")
     llm_prompt_text = relationship("LLMPromptTextORM", back_populates="llm_judgements")
     llm_invocation_metrics = relationship("LLMInvocationMetricsORM", back_populates="llm_judgements")
     llm_score = relationship("LLMScoreORM", back_populates="llm_judgements")

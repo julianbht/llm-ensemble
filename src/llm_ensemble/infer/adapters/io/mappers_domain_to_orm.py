@@ -40,7 +40,6 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     LLMScoreORM,
     LLMJudgementORM,
     JudgedDatasetORM,
-    DatasetJudgementORM,
 )
 from llm_ensemble.libs.db import (
     compute_provider_uuid,
@@ -53,6 +52,7 @@ from llm_ensemble.libs.db import (
     compute_llm_score_uuid,
     compute_judged_dataset_uuid,
     compute_infer_run_uuid,
+    compute_llm_judgement_uuid,
 )
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
@@ -365,20 +365,18 @@ def llm_score_to_orm(
 
 def llm_judgement_to_orm(
     judgement: LLMJudgement,
-    dataset_judgement_id: UUID,
-    model_config_id: UUID,
+    judged_dataset_id: UUID,
     llm_prompt_text_id: UUID,
     llm_invocation_metrics_id: UUID,
     llm_score_id: UUID,
 ) -> LLMJudgementORM:
     """Convert LLMJudgement domain object to LLMJudgementORM.
 
-    UUID is computed from all component IDs.
+    UUID is computed from natural key (judged_dataset_id, llm_prompt_text_id).
 
     Args:
         judgement: LLMJudgement domain object
-        dataset_judgement_id: DatasetJudgement UUID (for foreign key)
-        model_config_id: ModelConfig UUID (for foreign key)
+        judged_dataset_id: JudgedDataset UUID (for foreign key)
         llm_prompt_text_id: LLMPromptText UUID (for foreign key)
         llm_invocation_metrics_id: LLMInvocationMetrics UUID (for foreign key)
         llm_score_id: LLMScore UUID (for foreign key)
@@ -386,52 +384,14 @@ def llm_judgement_to_orm(
     Returns:
         LLMJudgementORM model ready for persistence
     """
-    # Natural key: all 5 component IDs
-    from uuid import uuid5, NAMESPACE_DNS
-    judgement_id = uuid5(
-        NAMESPACE_DNS,
-        f"{dataset_judgement_id}:{model_config_id}:{llm_prompt_text_id}:{llm_invocation_metrics_id}:{llm_score_id}"
-    )
+    judgement_id = compute_llm_judgement_uuid(judged_dataset_id, llm_prompt_text_id)
 
     return LLMJudgementORM(
         id=judgement_id,
-        dataset_judgement_id=dataset_judgement_id,
-        model_config_id=model_config_id,
+        judged_dataset_id=judged_dataset_id,
         llm_prompt_text_id=llm_prompt_text_id,
         llm_invocation_metrics_id=llm_invocation_metrics_id,
         llm_score_id=llm_score_id,
-    )
-
-
-# ============================================================================
-# DatasetJudgement Mappers
-# ============================================================================
-
-def dataset_judgement_to_orm(
-    judged_dataset_id: UUID,
-    sequence_number: int,
-) -> DatasetJudgementORM:
-    """Create DatasetJudgementORM.
-
-    UUID is computed from (judged_dataset_id, sequence_number).
-
-    Args:
-        judged_dataset_id: JudgedDataset UUID (for foreign key)
-        sequence_number: Position in the dataset
-
-    Returns:
-        DatasetJudgementORM model ready for persistence
-    """
-    from uuid import uuid5, NAMESPACE_DNS
-    dataset_judgement_id = uuid5(
-        NAMESPACE_DNS,
-        f"{judged_dataset_id}:{sequence_number}"
-    )
-
-    return DatasetJudgementORM(
-        id=dataset_judgement_id,
-        judged_dataset_id=judged_dataset_id,
-        sequence_number=sequence_number,
     )
 
 

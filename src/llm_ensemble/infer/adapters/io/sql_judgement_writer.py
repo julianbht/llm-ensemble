@@ -48,7 +48,6 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     ParserSpecORM,
     InferRunORM,
     JudgedDatasetORM,
-    DatasetJudgementORM,
     LLMPromptTextORM,
     LLMResponseTextORM,
     LLMInvocationMetricsORM,
@@ -67,8 +66,6 @@ from llm_ensemble.infer.adapters.io.mappers_domain_to_orm import (
     llm_invocation_metrics_to_orm,
     llm_score_to_orm,
     llm_judgement_to_orm,
-    dataset_judgement_to_orm,
-    judged_dataset_to_orm,
 )
 from llm_ensemble.libs.logging.log_events import InferWriteEvent
 
@@ -93,7 +90,6 @@ class SqlJudgementWriter(JudgementWriter):
         self._parser_spec_id: Optional[uuid.UUID] = None
         self._infer_run_id: Optional[uuid.UUID] = None
         self._judged_dataset_id: Optional[uuid.UUID] = None
-        self._sequence_num: int = 0
         self._dataset_sample_ids: list[uuid.UUID] = []
         self._write_summary = WriteSummary()
         self.logger = get_logger(component="sql_judgement_writer")
@@ -117,11 +113,12 @@ class SqlJudgementWriter(JudgementWriter):
         self._initialize_run_metadata(run_info, normalized_dataset, start_idx, end_idx)
 
         # Create JudgedDataset with same ID as InferRun (1:1 relationship)
-        # Fingerprint computed in close() after all judgements written
+        # sample_fingerprint computed in close() after all judgements written
         self._judged_dataset_id = self._infer_run_id
         judged_dataset_orm = JudgedDatasetORM(
             id=self._judged_dataset_id,
-            fingerprint=None,
+            model_config_id=self._model_config_id,
+            sample_fingerprint=None,
         )
         self._session.add(judged_dataset_orm)
         self._session.commit()
@@ -151,19 +148,10 @@ class SqlJudgementWriter(JudgementWriter):
         # Upsert LLMScore (if present)
         llm_score_id = self._upsert_llm_score(judgement, llm_response_text_id) if judgement.llm_score else None
 
-        # Create DatasetJudgement
-        dataset_judgement_orm = dataset_judgement_to_orm(
-            self._judged_dataset_id,
-            self._sequence_num
-        )
-        self._session.add(dataset_judgement_orm)
-        self._write_summary.add_judged_dataset_junctions(created=1)
-
-        # Create LLMJudgement
+        # Create LLMJudgement (directly linked to JudgedDataset)
         llm_judgement_orm = llm_judgement_to_orm(
             judgement,
-            dataset_judgement_orm.id,
-            self._model_config_id,
+            self._judged_dataset_id,
             llm_prompt_text_id,
             llm_invocation_metrics_id,
             llm_score_id,
@@ -171,20 +159,19 @@ class SqlJudgementWriter(JudgementWriter):
         self._session.add(llm_judgement_orm)
         self._write_summary.add_llm_judgements(created=1, skipped=0)
 
-        self._sequence_num += 1
         self._session.commit()
 
     def close(self) -> WriteSummary:
         """Close session and finalize JudgedDataset."""
         if self._session is not None:
-            # Finalize JudgedDataset fingerprint
+            # Finalize JudgedDataset sample_fingerprint
             if self._judged_dataset_id and self._dataset_sample_ids:
                 # Compute fingerprint from dataset_sample IDs (same as JudgedDataset.create())
                 fingerprint = compute_judged_dataset_fingerprint(self._dataset_sample_ids)
 
                 judged_dataset = self._session.get(JudgedDatasetORM, self._judged_dataset_id)
                 if judged_dataset:
-                    judged_dataset.fingerprint = fingerprint
+                    judged_dataset.sample_fingerprint = fingerprint
                     self._session.commit()
 
             # Log totals

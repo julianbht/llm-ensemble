@@ -10,7 +10,7 @@ description: |
 
 # Adapter specifications (loaded dynamically)
 # Format: module paths are snake_case, class names are UpperCamelCase
-reader_module: llm_ensemble.infer.adapters.io.db_judged_dataset_reader
-reader_class: DbJudgedDatasetReader
+reader_module: llm_ensemble.infer.adapters.io.sql_judging_sample_reader
+reader_class: SqlJudgingSampleReader
 writer_module: llm_ensemble.infer.adapters.io.sql_judgement_writer
 writer_class: SqlJudgementWriter

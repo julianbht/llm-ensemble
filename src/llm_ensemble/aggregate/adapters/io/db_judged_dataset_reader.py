@@ -13,7 +13,6 @@ from llm_ensemble.infer.schemas.judged_dataset import JudgedDataset
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.orms_normalized import (
     InferRunORM,
-    JudgedDatasetORM,
     LLMJudgementORM,
 )
 from llm_ensemble.aggregate.ports import JudgementReader

@@ -20,7 +20,6 @@ using SQLAlchemy sessions from the libs/db layer.
 from __future__ import annotations
 from typing import Optional
 
-from llm_ensemble.ingest.schemas import JudgingSample, DatasetSample
 from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.schemas.orms import (
     JudgingSampleORM,

@@ -46,6 +46,7 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     ModelConfigORM,
     PromptTemplateORM,
     ParserSpecORM,
+    InferRunORM,
     JudgedDatasetORM,
     LLMPromptTextORM,
     LLMResponseTextORM,
@@ -162,15 +163,19 @@ class SqlJudgementWriter(JudgementWriter):
     def close(self) -> WriteSummary:
         """Close session and finalize JudgedDataset."""
         if self._session is not None:
-            # Finalize JudgedDataset sample_fingerprint
+            # Finalize JudgedDataset sample_fingerprint and link to InferRun
             if self._judged_dataset_id and self._dataset_sample_ids:
                 # Compute fingerprint from dataset_sample IDs (same as JudgedDataset.create())
                 fingerprint = compute_judged_dataset_fingerprint(self._dataset_sample_ids)
 
                 judged_dataset = self._session.get(JudgedDatasetORM, self._judged_dataset_id)
-                if judged_dataset:
-                    judged_dataset.sample_fingerprint = fingerprint
-                    self._session.commit()
+                judged_dataset.sample_fingerprint = fingerprint
+
+                # Link InferRun to JudgedDataset (enables aggregate CLI to find judgements)
+                infer_run = self._session.get(InferRunORM, self._infer_run_id)
+                infer_run.judged_dataset_id = self._judged_dataset_id
+
+                self._session.commit()
 
             # Log totals
             self.logger.info(

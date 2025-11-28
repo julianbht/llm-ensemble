@@ -7,8 +7,6 @@ objects for use in the aggregation pipeline.
 
 from __future__ import annotations
 
-from sqlalchemy.orm import joinedload
-
 from llm_ensemble.infer.schemas.judged_dataset import JudgedDataset
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.orms_normalized import (
@@ -86,27 +84,12 @@ class DbJudgedDatasetReader(JudgementReader):
                         f"This indicates the run did not complete successfully."
                     )
 
-                # Query LLM judgements directly (no DatasetJudgement intermediary)
-                llm_judgements_orm = (
-                    session.query(LLMJudgementORM)
-                    .filter_by(judged_dataset_id=judged_dataset_orm.id)
-                    .options(
-                        joinedload(LLMJudgementORM.llm_prompt_text)
-                        .joinedload("prompt_template"),
-                        joinedload(LLMJudgementORM.llm_prompt_text)
-                        .joinedload("dataset_sample"),
-                        joinedload(LLMJudgementORM.llm_score)
-                        .joinedload("parser_spec"),
-                        joinedload(LLMJudgementORM.llm_score)
-                        .joinedload("llm_response_text"),
-                        joinedload(LLMJudgementORM.llm_invocation_metrics),
-                    )
-                    .all()
-                )
-
-                # TODO: Convert ORM entities to Pydantic domain models
-                # For now, create empty judgements list
-                # This will be implemented when we have proper ORM-to-domain mappers
+                # TODO: Query and convert LLM judgements from ORM to domain models
+                # For now, create empty judgements list until we implement proper ORM-to-domain mappers
+                # Will need to query LLMJudgementORM and eagerly load related entities:
+                #   - llm_prompt_text + prompt_template + dataset_sample
+                #   - llm_score + parser_spec + llm_response_text
+                #   - llm_invocation_metrics
                 llm_judgements = []
 
                 # Create JudgedDataset domain object

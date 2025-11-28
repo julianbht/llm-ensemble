@@ -14,9 +14,9 @@ from llm_ensemble.aggregate.schemas import AggregatedDataset, AggregatedVote
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.aggregate_run_summary import AggregateRunSummary
 from llm_ensemble.aggregate.ports import (
+    AggregatedJudgementWriter,
     AggregationStrategy,
     JudgementReader,
-    AggregatedJudgementWriter,
 )
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
@@ -51,7 +51,6 @@ class AggregationService:
         judgement_reader: JudgementReader,
         aggregated_judgement_writer: AggregatedJudgementWriter,
         strategy: AggregationStrategy,
-        aggregation_spec_id: UUID,
     ):
         """Initialize aggregation service with port dependencies.
 
@@ -59,12 +58,10 @@ class AggregationService:
             judgement_reader: Port for reading JudgedDataset records
             aggregated_judgement_writer: Port for writing AggregatedDataset records
             strategy: Port for aggregation strategy (e.g., MajorityVoteAdapter)
-            aggregation_spec_id: UUID of the aggregation spec being used
         """
         self.judgement_reader = judgement_reader
         self.aggregated_judgement_writer = aggregated_judgement_writer
         self.strategy = strategy
-        self.aggregation_spec_id = aggregation_spec_id
         self.logger = get_logger(component="aggregation_service")
 
     def _validate_judged_datasets(
@@ -130,9 +127,10 @@ class AggregationService:
         Returns:
             AggregateRunSummary with statistics
         """
-        # Initialize summary builder with run_info
-        summary_builder = RunSummaryBuilder(run_info)
+        # Initialize summary builder
+        summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
+        summary_builder.add("run_info", run_info)
 
         # Read JudgedDatasets (one per run) via reader port
         judged_datasets : list[JudgedDataset] = self.judgement_reader.read(run_names)
@@ -153,7 +151,7 @@ class AggregationService:
         grouped_by_sample: dict[UUID, list[LLMJudgement]] = defaultdict(list)
 
         for judged_dataset in judged_datasets:
-            for llm_judgement in judged_dataset.llm_judgements:ho
+            for llm_judgement in judged_dataset.llm_judgements:
                 # Get dataset_sample_id via llm_prompt → dataset_sample
                 dataset_sample_id = llm_judgement.llm_prompt.dataset_sample.id
                 grouped_by_sample[dataset_sample_id].append(llm_judgement)
@@ -168,23 +166,14 @@ class AggregationService:
             # All llm_judgements for this sample (one from each run/model config)
             llm_judgements_for_sample = grouped_by_sample[dataset_sample_id]
 
-            # Apply aggregation strategy to get consensus
-            final_label, final_confidence, final_reasoning = self.strategy.aggregate(llm_judgements_for_sample)
+            # Apply aggregation strategy to get AggregatedVote
+            aggregated_vote : AggregatedVote = self.strategy.aggregate(llm_judgements_for_sample)
 
             # Track statistics
-            if final_label is None:
+            if aggregated_vote.final_label is None:
                 no_valid_votes_count += 1
-            elif final_reasoning and "tie" in final_reasoning.lower():
+            elif aggregated_vote.final_reasoning and "tie" in aggregated_vote.final_reasoning.lower():
                 tie_count += 1
-
-            # Create AggregatedVote (globally unique by dataset_sample_id + aggregation_spec_id)
-            aggregated_vote = AggregatedVote.create(
-                aggregation_spec_id=self.aggregation_spec_id,
-                llm_judgements=llm_judgements_for_sample,
-                final_label=final_label,
-                final_confidence=final_confidence,
-                final_reasoning=final_reasoning,
-            )
 
             aggregated_votes.append(aggregated_vote)
 
@@ -192,8 +181,8 @@ class AggregationService:
             self.logger.info(
                 "aggregated_sample",
                 dataset_sample_id=str(dataset_sample_id)[:8] + "...",
-                final_label=final_label.label if final_label else "None",
-                confidence=f"{final_confidence:.2f}" if final_confidence else "0.00",
+                final_label=aggregated_vote.final_label.label if aggregated_vote.final_label else "None",
+                confidence=f"{aggregated_vote.final_confidence:.2f}" if aggregated_vote.final_confidence else "0.00",
                 num_llm_judgements=len(llm_judgements_for_sample),
             )
 

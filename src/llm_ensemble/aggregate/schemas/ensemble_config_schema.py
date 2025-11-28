@@ -41,14 +41,19 @@ class EnsembleConfig(BaseConfig):
 
     def get_strategy(self) -> Any:
         """Instantiate and return the aggregation strategy adapter.
-        
-        Dynamically imports the strategy module and instantiates the strategy class.
-        
+
+        Dynamically imports the strategy module and instantiates the strategy class
+        with the aggregation_spec_id (computed from config name).
+
         Returns:
             Instance of the aggregation strategy adapter
-            
+
         Raises:
             ImportError: If the strategy module cannot be imported
             AttributeError: If the strategy class doesn't exist in the module
         """
-        return self._instantiate_adapter(self.strategy_module, self.strategy_class)
+        return self._instantiate_adapter(
+            self.strategy_module,
+            self.strategy_class,
+            aggregation_spec_id=self.id
+        )

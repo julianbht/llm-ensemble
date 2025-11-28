@@ -7,10 +7,9 @@ etc.) without coupling to specific implementations.
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
-from llm_ensemble.libs.schemas import RelevanceScore
+from llm_ensemble.aggregate.schemas.aggregated_vote import AggregatedVote
 
 
 class AggregationStrategy(ABC):
@@ -19,23 +18,23 @@ class AggregationStrategy(ABC):
     Implementations can use different aggregation methods (majority vote,
     weighted vote, soft voting, etc.) while providing a consistent interface
     to combine multiple model judgements into a consensus decision.
+
+    Strategy adapters receive aggregation_spec_id in their constructor,
+    similar to how infer adapters receive config context.
     """
 
     @abstractmethod
     def aggregate(
         self,
         judgements: list[LLMJudgement]
-    ) -> Tuple[Optional[RelevanceScore], Optional[float], Optional[str]]:
+    ) -> AggregatedVote:
         """Apply aggregation strategy to combine multiple model judgements.
 
         Args:
             judgements: All model judgements for a single query-document pair
 
         Returns:
-            Tuple of (final_label, final_confidence, final_reasoning):
-            - final_label: Consensus relevance label (None if no consensus)
-            - final_confidence: Confidence in decision [0-1] (None if no consensus)
-            - final_reasoning: Human-readable explanation of how consensus was reached
+            AggregatedVote with consensus decision and metadata
 
         Note:
             Strategy should handle edge cases gracefully:
@@ -43,4 +42,10 @@ class AggregationStrategy(ABC):
             - All models failed to parse (no valid labels)
             - Ties in voting
         """
+        pass
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Return human-readable name of this strategy for logging."""
         pass

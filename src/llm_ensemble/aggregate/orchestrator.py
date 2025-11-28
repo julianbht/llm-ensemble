@@ -113,26 +113,25 @@ def run_aggregation(
         console_level=logging_config.console_level,
         file_level=logging_config.file_level,
     )
-    
-    logger.info(
-        "starting_aggregation",
-        strategy=ensemble_config.strategy,
-        io_format=io_config_name,
-        input_run_names=input_run_names,
-    )
-    logger.info("run_directory", path=str(run_dir))
-    
+
     # Instantiate adapters via dynamic loading from configs
     strategy = ensemble_config.get_strategy()
     reader = io_config.get_reader()
     writer = io_config.get_writer()
 
-    # Create domain service (ensemble_config.id is computed from name)
+    logger.info(
+        "starting_aggregation",
+        strategy=strategy.name,
+        io_format=io_config_name,
+        input_run_names=input_run_names,
+    )
+    logger.info("run_directory", path=str(run_dir))
+
+    # Create domain service
     service = AggregationService(
         judgement_reader=reader,
         aggregated_judgement_writer=writer,
         strategy=strategy,
-        aggregation_spec_id=ensemble_config.id,
     )
     
     # Run aggregation pipeline

@@ -3,11 +3,11 @@
 from llm_ensemble.aggregate.adapters.io.db_judged_dataset_reader import (
     DbJudgedDatasetReader,
 )
-from llm_ensemble.aggregate.adapters.io.json_aggregated_judgement_writer import (
-    JsonAggregatedJudgementWriter,
+from llm_ensemble.aggregate.adapters.io.db_aggregated_dataset_writer import (
+    DbAggregatedDatasetWriter,
 )
 
 __all__ = [
     "DbJudgedDatasetReader",
-    "JsonAggregatedJudgementWriter",
+    "DbAggregatedDatasetWriter",
 ]

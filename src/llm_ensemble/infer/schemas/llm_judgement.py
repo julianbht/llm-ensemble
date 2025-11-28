@@ -14,20 +14,32 @@ UUID computation is handled by mappers during ORM conversion.
 
 from __future__ import annotations
 from typing import Optional
+from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.schemas.warnings import BaseWarning
 from llm_ensemble.libs.schemas import RelevanceScore
+from llm_ensemble.libs.db import (
+    compute_llm_prompt_text_uuid,
+    compute_llm_invocation_metrics_uuid,
+    compute_llm_response_text_uuid,
+    compute_llm_score_uuid,
+    compute_llm_judgement_uuid,
+)
 
 
 class LLMPrompt(BaseModel):
     """Rendered prompt text sent to LLM, built from a dataset sample.
 
     Captures the semantic relationship: prompt is built FROM dataset_sample.
-    Pure domain entity without persistence concerns.
-    UUID computation handled by mappers during ORM conversion.
+    UUID is computed from (prompt_template_id, dataset_sample_id, prompt_text).
     """
+
+    id: UUID = Field(
+        ...,
+        description="Deterministic UUID computed from natural key"
+    )
 
     dataset_sample: DatasetSample = Field(
         ...,
@@ -40,26 +52,45 @@ class LLMPrompt(BaseModel):
     )
 
     @classmethod
-    def create(cls, dataset_sample: DatasetSample, prompt_text: str) -> "LLMPrompt":
-        """Create an LLMPrompt.
+    def create(
+        cls,
+        dataset_sample: DatasetSample,
+        prompt_text: str,
+        prompt_template_id: UUID
+    ) -> "LLMPrompt":
+        """Create an LLMPrompt with computed UUID.
 
         Args:
             dataset_sample: Dataset sample this prompt was built from
             prompt_text: Rendered prompt text
+            prompt_template_id: Prompt template UUID (for UUID computation)
 
         Returns:
-            LLMPrompt instance
+            LLMPrompt instance with computed ID
         """
-        return cls(dataset_sample=dataset_sample, prompt_text=prompt_text)
+        prompt_id = compute_llm_prompt_text_uuid(
+            prompt_template_id=prompt_template_id,
+            dataset_sample_id=dataset_sample.id,
+            prompt_text=prompt_text
+        )
+        return cls(
+            id=prompt_id,
+            dataset_sample=dataset_sample,
+            prompt_text=prompt_text
+        )
 
 
 class LLMInvocationMetrics(BaseModel):
     """Observability metrics from LLM API invocation.
 
     Captures performance and cost data from calling an LLM provider.
-    Pure domain entity without persistence concerns.
-    UUID computation handled by mappers during ORM conversion.
+    UUID is computed from all metric fields.
     """
+
+    id: UUID = Field(
+        ...,
+        description="Deterministic UUID computed from all metric fields"
+    )
 
     latency_ms: float = Field(
         ...,
@@ -113,7 +144,7 @@ class LLMInvocationMetrics(BaseModel):
         completion_tokens: Optional[int] = None,
         total_tokens: Optional[int] = None,
     ) -> "LLMInvocationMetrics":
-        """Create LLMInvocationMetrics.
+        """Create LLMInvocationMetrics with computed UUID.
 
         Args:
             latency_ms: Inference time in milliseconds
@@ -125,9 +156,19 @@ class LLMInvocationMetrics(BaseModel):
             total_tokens: Total tokens used
 
         Returns:
-            LLMInvocationMetrics instance
+            LLMInvocationMetrics instance with computed ID
         """
+        metrics_id = compute_llm_invocation_metrics_uuid(
+            latency_ms=latency_ms,
+            retries=retries,
+            cost_estimate_usd=cost_estimate_usd,
+            generation_id=generation_id,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+        )
         return cls(
+            id=metrics_id,
             latency_ms=latency_ms,
             retries=retries,
             cost_estimate_usd=cost_estimate_usd,
@@ -145,9 +186,13 @@ class LLMScore(BaseModel):
     This represents the structured score that a ResponseParser extracts
     from raw LLM output text. All fields are optional to handle parse failures.
 
-    Pure domain entity without persistence concerns.
-    UUID computation handled by mappers during ORM conversion.
+    UUID is computed from (parser_spec_id, llm_response_text_id).
     """
+
+    id: UUID = Field(
+        ...,
+        description="Deterministic UUID computed from parser_spec_id and llm_response_text"
+    )
 
     llm_response_text: str = Field(
         ...,
@@ -184,24 +229,30 @@ class LLMScore(BaseModel):
     def create(
         cls,
         llm_response_text: str,
+        parser_spec_id: UUID,
         label: Optional[RelevanceScore] = None,
         confidence: Optional[float] = None,
         rationale: Optional[str] = None,
         warnings: Optional[list[BaseWarning]] = None,
     ) -> "LLMScore":
-        """Create an LLMScore.
+        """Create an LLMScore with computed UUID.
 
         Args:
             llm_response_text: Raw LLM response text that was parsed
+            parser_spec_id: Parser spec UUID (for UUID computation)
             label: Parsed relevance label
             confidence: Confidence score [0-1]
             rationale: Explanation for the judgement
             warnings: Parser warnings
 
         Returns:
-            LLMScore instance
+            LLMScore instance with computed ID
         """
+        llm_response_text_id = compute_llm_response_text_uuid(llm_response_text)
+        score_id = compute_llm_score_uuid(parser_spec_id, llm_response_text_id)
+
         return cls(
+            id=score_id,
             llm_response_text=llm_response_text,
             label=label,
             confidence=confidence,
@@ -229,9 +280,24 @@ class LLMJudgement(BaseModel):
     3. Parse response → LLMScore (llm_response_text + label/confidence/rationale)
     4. Create judgement
 
-    Pure domain entity without persistence concerns.
-    UUID computation handled by mappers during ORM conversion.
+    UUID is computed from (judged_dataset_id, llm_prompt_id).
+    Config IDs track which model and prompt were used for provenance.
     """
+
+    id: UUID = Field(
+        ...,
+        description="Deterministic UUID computed from judged_dataset_id and llm_prompt_id"
+    )
+
+    model_config_id: UUID = Field(
+        ...,
+        description="Model configuration used for this judgement (for provenance)"
+    )
+
+    prompt_template_id: UUID = Field(
+        ...,
+        description="Prompt template used for this judgement (for provenance)"
+    )
 
     llm_prompt: LLMPrompt = Field(
         ...,
@@ -256,19 +322,30 @@ class LLMJudgement(BaseModel):
         cls,
         llm_prompt: LLMPrompt,
         invocation_metrics: LLMInvocationMetrics,
+        model_config_id: UUID,
+        prompt_template_id: UUID,
+        judged_dataset_id: UUID,
         llm_score: Optional[LLMScore] = None,
     ) -> "LLMJudgement":
-        """Create an LLMJudgement.
+        """Create an LLMJudgement with computed UUID.
 
         Args:
             llm_prompt: Prompt sent to LLM (contains dataset_sample + prompt_text)
             invocation_metrics: Observability metrics
+            model_config_id: Model configuration UUID (for provenance)
+            prompt_template_id: Prompt template UUID (for provenance)
+            judged_dataset_id: Judged dataset UUID (for UUID computation)
             llm_score: Parsed score (contains llm_response_text + parsed fields, None if parsing failed)
 
         Returns:
-            LLMJudgement instance
+            LLMJudgement instance with computed ID
         """
+        judgement_id = compute_llm_judgement_uuid(judged_dataset_id, llm_prompt.id)
+
         return cls(
+            id=judgement_id,
+            model_config_id=model_config_id,
+            prompt_template_id=prompt_template_id,
             llm_prompt=llm_prompt,
             invocation_metrics=invocation_metrics,
             llm_score=llm_score,

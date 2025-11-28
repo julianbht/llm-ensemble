@@ -6,10 +6,12 @@ Based on OpenRouter API specification for maximum compatibility.
 
 from __future__ import annotations
 from typing import Optional, Literal, Any, Union
-from pydantic import BaseModel, Field
+from uuid import UUID
+from pydantic import BaseModel, Field, computed_field
 
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.schemas.base_config import BaseConfig
+from llm_ensemble.libs.db import compute_model_config_uuid
 
 
 class PricingInfo(BaseModel):

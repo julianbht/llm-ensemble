@@ -28,6 +28,7 @@ NAMESPACE_INGEST_RUN = uuid.UUID('d4e5f678-90ab-cdef-1234-567890abcdef')
 NAMESPACE_INFER_RUN = uuid.UUID('e5f67890-abcd-ef12-3456-7890abcdef12')
 NAMESPACE_AGGREGATE_RUN = uuid.UUID('f6789012-3456-7890-abcd-ef1234567890')
 NAMESPACE_LLM_PROMPT = uuid.UUID('a0b1c2d3-e4f5-6789-0abc-def123456789')
+NAMESPACE_LLM_PROMPT_TEXT = uuid.UUID('a0b1c2d3-e4f5-6789-0abc-def123456790')
 NAMESPACE_LLM_RESPONSE_TEXT = uuid.UUID('b1c2d3e4-f567-8901-2345-6789abcdef01')
 NAMESPACE_LLM_INVOCATION_METRICS = uuid.UUID('b2c3d4e5-f678-90ab-cdef-123456789abc')
 NAMESPACE_LLM_SCORE = uuid.UUID('c2d3e4f5-6789-0abc-def1-234567890abc')
@@ -179,6 +180,28 @@ def compute_llm_prompt_uuid(prompt: str, judging_sample_id: uuid.UUID) -> uuid.U
     prompt_hash = hashlib.sha256(prompt.encode()).hexdigest()
     natural_key = f"{judging_sample_id}:{prompt_hash}"
     return uuid.uuid5(NAMESPACE_LLM_PROMPT, natural_key)
+
+
+def compute_llm_prompt_text_uuid(
+    prompt_template_id: uuid.UUID,
+    dataset_sample_id: uuid.UUID,
+    prompt_text: str
+) -> uuid.UUID:
+    """Compute LLMPromptText UUID from natural key.
+
+    Natural key: (prompt_template_id, dataset_sample_id, prompt_text_hash)
+
+    Args:
+        prompt_template_id: Prompt template UUID
+        dataset_sample_id: Dataset sample UUID
+        prompt_text: Rendered prompt text
+
+    Returns:
+        Deterministic UUID for this prompt text
+    """
+    prompt_hash = hashlib.sha256(prompt_text.encode()).hexdigest()
+    natural_key = f"{prompt_template_id}:{dataset_sample_id}:{prompt_hash}"
+    return uuid.uuid5(NAMESPACE_LLM_PROMPT_TEXT, natural_key)
 
 
 def compute_llm_response_text_uuid(raw_response: str) -> uuid.UUID:

@@ -115,13 +115,13 @@ def run_aggregation(
     )
 
     # Instantiate adapters via dynamic loading from configs
-    strategy = aggregation_strategy_adapter_spec.get_strategy()
+    aggregation_strategy_adapter = aggregation_strategy_adapter_spec.get_adapter()
     reader = io_config.get_reader()
     writer = io_config.get_writer()
 
     logger.info(
         "starting_aggregation",
-        strategy=strategy.name,
+        strategy=aggregation_strategy_adapter.name,
         io_format=io_config_name,
         input_run_names=input_run_names,
     )
@@ -131,7 +131,7 @@ def run_aggregation(
     service = AggregationService(
         judgement_reader=reader,
         aggregated_judgement_writer=writer,
-        strategy=strategy,
+        aggregation_strategy_adapter=aggregation_strategy_adapter,
     )
     
     # Run aggregation pipeline

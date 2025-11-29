@@ -50,7 +50,7 @@ class AggregationService:
         self,
         judgement_reader: JudgementReader,
         aggregated_judgement_writer: AggregatedJudgementWriter,
-        strategy: AggregationStrategyPort,
+        aggregation_strategy_adapter: AggregationStrategyPort,
     ):
         """Initialize aggregation service with port dependencies.
 
@@ -61,7 +61,7 @@ class AggregationService:
         """
         self.judgement_reader = judgement_reader
         self.aggregated_judgement_writer = aggregated_judgement_writer
-        self.strategy = strategy
+        self.strategy = aggregation_strategy_adapter
         self.logger = get_logger(component="aggregation_service")
 
     def _validate_judged_datasets(

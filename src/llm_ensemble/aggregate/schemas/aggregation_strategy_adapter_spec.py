@@ -39,7 +39,7 @@ class AggregationStrategyAdapterSpec(BaseConfig):
         description="Strategy adapter class name in UpperCamelCase"
     )
 
-    def get_strategy(self) -> Any:
+    def get_adapter(self) -> Any:
         """Instantiate and return the aggregation strategy adapter.
 
         Dynamically imports the strategy module and instantiates the strategy class.

@@ -6,14 +6,13 @@ Ties are broken deterministically by choosing the lowest numeric label.
 
 from __future__ import annotations
 from collections import Counter
-from uuid import UUID
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
-from llm_ensemble.aggregate.ports import AggregationStrategy
+from llm_ensemble.aggregate.ports import AggregationStrategyPort
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
-class MajorityVoteAdapter(AggregationStrategy):
+class MajorityVoteAdapter(AggregationStrategyPort):
     """Simple majority vote aggregation strategy adapter.
 
     Counts votes for each label and selects the label with the most votes.
@@ -25,15 +24,13 @@ class MajorityVoteAdapter(AggregationStrategy):
 
     Implements pure voting logic in aggregate_raw(), returning simple dict.
     Domain object creation handled by base class.
+    Adapter owns its identity via strategy_name property.
     """
 
-    def __init__(self, aggregation_spec_id: UUID):
-        """Initialize majority vote adapter with aggregation spec ID.
-
-        Args:
-            aggregation_spec_id: UUID identifying the aggregation strategy config
-        """
-        super().__init__(aggregation_spec_id)
+    @property
+    def strategy_name(self) -> str:
+        """Natural key for AggregationStrategy entity."""
+        return "majority_vote"
 
     @property
     def name(self) -> str:

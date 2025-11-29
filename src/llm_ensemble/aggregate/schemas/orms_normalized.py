@@ -28,18 +28,18 @@ from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 class AggregationSpecORM(Base):
+    """Minimal entity tracking which aggregation strategy was used.
+
+    Just id + name - no wiring details (module/class paths).
+    Name comes from adapter's spec_name property (e.g., 'majority_vote').
+    """
     __tablename__ = "aggregation_specs"
     __table_args__ = {"schema": "aggregate"}
     __natural_key__ = "name"
     __uuid_function__ = "compute_aggregation_spec_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    name = Column(String(255), nullable=False, unique=True)
-    description = Column(Text, nullable=True)
-
-    # Dynamic adapter specification
-    strategy_module = Column(String(512), nullable=False)
-    strategy_class = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False, unique=True, comment="Natural key from adapter.spec_name (e.g., 'majority_vote')")
 
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 

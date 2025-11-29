@@ -18,10 +18,10 @@ These mappers handle the impedance mismatch for the write path.
 from __future__ import annotations
 from uuid import UUID
 
-from llm_ensemble.aggregate.schemas.ensemble_config_schema import EnsembleConfig
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.aggregated_vote import AggregatedVote
 from llm_ensemble.aggregate.schemas.aggregated_dataset import AggregatedDataset
+from llm_ensemble.aggregate.ports import AggregationStrategy
 from llm_ensemble.aggregate.schemas.orms_normalized import (
     AggregationSpecORM,
     AggregateRunORM,
@@ -30,31 +30,31 @@ from llm_ensemble.aggregate.schemas.orms_normalized import (
     AggregationVoteORM,
     AggregatedDatasetVoteORM,
 )
+from llm_ensemble.libs.db import compute_aggregation_spec_uuid
 
 
 # ============================================================================
 # AggregationSpec Mappers
 # ============================================================================
 
-def ensemble_config_to_aggregation_spec_orm(
-    ensemble_config: EnsembleConfig,
+def strategy_to_aggregation_spec_orm(
+    strategy: AggregationStrategy,
 ) -> AggregationSpecORM:
-    """Convert EnsembleConfig to AggregationSpecORM.
+    """Convert AggregationStrategy adapter to minimal AggregationSpecORM entity.
 
-    UUID is already computed in the ensemble_config.id property.
+    Adapter owns its spec identity via spec_name property.
+    UUID is computed from spec_name.
 
     Args:
-        ensemble_config: EnsembleConfig domain object
+        strategy: AggregationStrategy adapter instance
 
     Returns:
-        AggregationSpecORM model ready for persistence
+        AggregationSpecORM model ready for persistence (minimal entity: just id + name)
     """
+    spec_id = compute_aggregation_spec_uuid(strategy.spec_name)
     return AggregationSpecORM(
-        id=ensemble_config.id,
-        name=ensemble_config.name,
-        description=f"Aggregation strategy: {ensemble_config.strategy_class}",
-        strategy_module=ensemble_config.strategy_module,
-        strategy_class=ensemble_config.strategy_class,
+        id=spec_id,
+        name=strategy.spec_name,
     )
 
 

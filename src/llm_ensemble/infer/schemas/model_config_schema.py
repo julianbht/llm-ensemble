@@ -5,9 +5,9 @@ Based on OpenRouter API specification for maximum compatibility.
 """
 
 from __future__ import annotations
-from typing import Optional, Literal, Any, Union
+from typing import Optional, Literal, Any
 from uuid import UUID
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field
 
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.schemas.base_config import BaseConfig
@@ -34,11 +34,17 @@ class PricingInfo(BaseModel):
 
 
 class ModelConfig(BaseConfig):
-    """Domain model for model configuration (mirrors configs/models/*.yaml).
+    """Configuration entity for LLM models.
 
+    Config is persisted as ModelConfigORM with deterministic UUID.
     Explicit parameters are based on OpenRouter API common parameters.
     Makes frequently-used settings discoverable and type-safe.
     """
+
+    id: UUID = Field(
+        ...,
+        description="Deterministic UUID computed from config name (natural key)"
+    )
 
     # Identity
     model_id: str = Field(..., description="Model identifier")
@@ -129,6 +135,20 @@ class ModelConfig(BaseConfig):
         None,
         description="Cost information for this model (typically auto-updated via update_model_pricing.py)"
     )
+
+    @classmethod
+    def create(cls, name: str, **kwargs) -> "ModelConfig":
+        """Create ModelConfig with computed ID from name.
+
+        Args:
+            name: Config name (natural key, typically from filename)
+            **kwargs: Other config fields (model_id, provider, etc.)
+
+        Returns:
+            ModelConfig with computed ID
+        """
+        config_id = compute_model_config_uuid(name)
+        return cls(id=config_id, name=name, **kwargs)
 
     def get_provider(
         self,

@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from llm_ensemble.aggregate.schemas.aggregated_dataset import AggregatedDataset
 from llm_ensemble.aggregate.schemas.aggregated_vote import AggregatedVote
+from llm_ensemble.aggregate.schemas.aggregation_strategy import AggregationStrategy
 from llm_ensemble.aggregate.schemas.write_summary import WriteSummary
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.ports import AggregatedJudgementWriter
@@ -31,7 +32,7 @@ from llm_ensemble.libs.db import (
     compute_aggregate_run_uuid,
 )
 from llm_ensemble.aggregate.schemas.orms_normalized import (
-    AggregationSpecORM,
+    AggregationStrategyORM,
     AggregateRunORM,
     AggregatedDatasetORM,
     AggregatedVoteORM,
@@ -39,7 +40,7 @@ from llm_ensemble.aggregate.schemas.orms_normalized import (
     AggregatedDatasetVoteORM,
 )
 from llm_ensemble.aggregate.adapters.io.mappers_domain_to_orm import (
-    ensemble_config_to_aggregation_spec_orm,
+    aggregation_strategy_to_orm,
     aggregate_run_info_to_orm,
     aggregated_dataset_to_orm,
     aggregated_vote_to_orm,
@@ -83,8 +84,13 @@ class DbAggregatedDatasetWriter(AggregatedJudgementWriter):
         session = get_session(engine)
 
         try:
-            # Initialize run metadata (aggregation spec, aggregate run)
-            aggregation_spec_id, aggregate_run_id = self._initialize_run_metadata(
+            # Upsert AggregationStrategy (extract from first aggregated_vote)
+            if aggregated_dataset.aggregated_votes:
+                aggregation_strategy = aggregated_dataset.aggregated_votes[0].aggregation_strategy
+                self._upsert_aggregation_strategy(session, aggregation_strategy, write_summary)
+
+            # Initialize run metadata (aggregate run)
+            aggregate_run_id = self._initialize_run_metadata(
                 session, run_info, write_summary
             )
 
@@ -127,31 +133,43 @@ class DbAggregatedDatasetWriter(AggregatedJudgementWriter):
         finally:
             session.close()
 
+    def _upsert_aggregation_strategy(
+        self,
+        session: Session,
+        aggregation_strategy: "AggregationStrategy",
+        write_summary: WriteSummary,
+    ) -> None:
+        """Upsert AggregationStrategy entity.
+
+        Args:
+            session: Database session
+            aggregation_strategy: AggregationStrategy domain entity
+            write_summary: Summary tracker
+        """
+        strategy_id = self._upsert_entity(
+            session,
+            AggregationStrategyORM,
+            aggregation_strategy.id,
+            lambda: aggregation_strategy_to_orm(aggregation_strategy),
+            "aggregation_strategies",
+            write_summary
+        )
+
     def _initialize_run_metadata(
         self,
         session: Session,
         run_info: AggregateRunInfo,
         write_summary: WriteSummary,
-    ) -> tuple[uuid.UUID, uuid.UUID]:
-        """Initialize shared metadata entities.
+    ) -> uuid.UUID:
+        """Initialize run metadata.
 
         Returns:
-            Tuple of (aggregation_spec_id, aggregate_run_id)
+            aggregate_run_id
         """
-        # Upsert AggregationSpec (ID is computed in ensemble_config.id)
-        aggregation_spec_id = self._upsert_entity(
-            session,
-            AggregationSpecORM,
-            run_info.ensemble_config.id,
-            lambda: ensemble_config_to_aggregation_spec_orm(run_info.ensemble_config),
-            "aggregation_specs",
-            write_summary
-        )
-
         # Create AggregateRun
         aggregate_run_id = compute_aggregate_run_uuid(run_info.run_name)
         config_names = {
-            "aggregation_spec": run_info.ensemble_config.name,
+            "strategy_adapter_config": run_info.strategy_adapter_config.name,
             "io_config": run_info.io_config_name,
         }
         aggregate_run_orm = aggregate_run_info_to_orm(
@@ -163,7 +181,7 @@ class DbAggregatedDatasetWriter(AggregatedJudgementWriter):
         write_summary.add_aggregate_runs(created=1)
         session.commit()
 
-        return aggregation_spec_id, aggregate_run_id
+        return aggregate_run_id
 
     def _upsert_entity(
         self,

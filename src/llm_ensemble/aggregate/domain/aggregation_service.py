@@ -15,7 +15,7 @@ from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.aggregate_run_summary import AggregateRunSummary
 from llm_ensemble.aggregate.ports import (
     AggregatedJudgementWriter,
-    AggregationStrategy,
+    AggregationStrategyPort,
     JudgementReader,
 )
 from llm_ensemble.libs.logging import get_logger
@@ -50,7 +50,7 @@ class AggregationService:
         self,
         judgement_reader: JudgementReader,
         aggregated_judgement_writer: AggregatedJudgementWriter,
-        strategy: AggregationStrategy,
+        strategy: AggregationStrategyPort,
     ):
         """Initialize aggregation service with port dependencies.
 

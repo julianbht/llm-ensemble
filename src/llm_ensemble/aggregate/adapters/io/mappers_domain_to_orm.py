@@ -21,40 +21,37 @@ from uuid import UUID
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.aggregated_vote import AggregatedVote
 from llm_ensemble.aggregate.schemas.aggregated_dataset import AggregatedDataset
-from llm_ensemble.aggregate.ports import AggregationStrategy
+from llm_ensemble.aggregate.schemas.aggregation_strategy import AggregationStrategy
 from llm_ensemble.aggregate.schemas.orms_normalized import (
-    AggregationSpecORM,
+    AggregationStrategyORM,
     AggregateRunORM,
     AggregatedDatasetORM,
     AggregatedVoteORM,
     AggregationVoteORM,
     AggregatedDatasetVoteORM,
 )
-from llm_ensemble.libs.db import compute_aggregation_spec_uuid
 
 
 # ============================================================================
-# AggregationSpec Mappers
+# AggregationStrategy Mappers
 # ============================================================================
 
-def strategy_to_aggregation_spec_orm(
-    strategy: AggregationStrategy,
-) -> AggregationSpecORM:
-    """Convert AggregationStrategy adapter to minimal AggregationSpecORM entity.
+def aggregation_strategy_to_orm(
+    aggregation_strategy: AggregationStrategy,
+) -> AggregationStrategyORM:
+    """Convert AggregationStrategy entity to AggregationStrategyORM.
 
-    Adapter owns its spec identity via spec_name property.
-    UUID is computed from spec_name.
+    UUID is already computed in the entity.
 
     Args:
-        strategy: AggregationStrategy adapter instance
+        aggregation_strategy: AggregationStrategy domain entity
 
     Returns:
-        AggregationSpecORM model ready for persistence (minimal entity: just id + name)
+        AggregationStrategyORM model ready for persistence (minimal entity: just id + name)
     """
-    spec_id = compute_aggregation_spec_uuid(strategy.spec_name)
-    return AggregationSpecORM(
-        id=spec_id,
-        name=strategy.spec_name,
+    return AggregationStrategyORM(
+        id=aggregation_strategy.id,
+        name=aggregation_strategy.name,
     )
 
 
@@ -143,7 +140,7 @@ def aggregated_vote_to_orm(
     return AggregatedVoteORM(
         id=aggregated_vote.id,
         dataset_sample_id=dataset_sample_id,
-        aggregation_spec_id=aggregated_vote.aggregation_spec_id,
+        aggregation_strategy_id=aggregated_vote.aggregation_strategy.id,
         final_label=aggregated_vote.final_label,
         final_confidence=aggregated_vote.final_confidence,
         final_reasoning=aggregated_vote.final_reasoning,

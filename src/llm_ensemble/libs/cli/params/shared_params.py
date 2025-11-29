@@ -9,7 +9,7 @@ import typer
 
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.cli.params.types import (
-    EnsembleConfigParamType,
+    StrategyConfigParamType,
     LogConfigParamType,
     ModelConfigParamType,
     PromptConfigParamType,
@@ -119,13 +119,13 @@ PromptCfg = Annotated[
     ),
 ]
 
-EnsembleCfg = Annotated[
+StrategyCfg = Annotated[
     str,
     typer.Option(
         ...,
-        "--ensemble-cfg",
-        click_type=EnsembleConfigParamType(),
-        help=f"Ensemble config name. Configs in {PathManager.get_ensembles_dir().relative_to(PathManager.get_project_root())}",
+        "--strategy-cfg",
+        click_type=StrategyConfigParamType(),
+        help=f"Strategy config name. Configs in {PathManager.get_strategies_dir().relative_to(PathManager.get_project_root())}",
     ),
 ]
 

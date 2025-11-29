@@ -11,7 +11,7 @@ from .shared_params import (
     EndIdx,
     ModelCfg,
     PromptCfg,
-    EnsembleCfg,
+    StrategyCfg,
     RetryCfg,
     Tag,
 )
@@ -30,7 +30,7 @@ __all__ = [
     "EndIdx",
     "ModelCfg",
     "PromptCfg",
-    "EnsembleCfg",
+    "StrategyCfg",
     "RetryCfg",
     "Tag",
     "AggregateIoCfg",

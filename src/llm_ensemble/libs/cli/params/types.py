@@ -161,12 +161,12 @@ class PromptConfigParamType(ConfigParamType):
         )
 
 
-class EnsembleConfigParamType(ConfigParamType):
+class StrategyConfigParamType(ConfigParamType):
     def __init__(self) -> None:
         super().__init__(
-            param_name="--ensemble-cfg",
-            config_type_label="ensemble",
-            config_dir_provider=PathManager.get_ensembles_dir,
+            param_name="--strategy-cfg",
+            config_type_label="strategy",
+            config_dir_provider=PathManager.get_strategies_dir,
             example_fallback="weighted_majority_v1",
         )
 

@@ -27,24 +27,24 @@ from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
-class AggregationSpecORM(Base):
+class AggregationStrategyORM(Base):
     """Minimal entity tracking which aggregation strategy was used.
 
     Just id + name - no wiring details (module/class paths).
-    Name comes from adapter's spec_name property (e.g., 'majority_vote').
+    Name comes from adapter's strategy_name property (e.g., 'majority_vote').
     """
-    __tablename__ = "aggregation_specs"
+    __tablename__ = "aggregation_strategies"
     __table_args__ = {"schema": "aggregate"}
     __natural_key__ = "name"
     __uuid_function__ = "compute_aggregation_spec_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    name = Column(String(255), nullable=False, unique=True, comment="Natural key from adapter.spec_name (e.g., 'majority_vote')")
+    name = Column(String(255), nullable=False, unique=True, comment="Natural key from adapter.strategy_name (e.g., 'majority_vote')")
 
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     # Relationships
-    aggregated_votes = relationship("AggregatedVoteORM", back_populates="aggregation_spec")
+    aggregated_votes = relationship("AggregatedVoteORM", back_populates="aggregation_strategy")
 
 
 class AggregateRunORM(Base):
@@ -111,7 +111,7 @@ class AggregatedDatasetORM(Base):
 class AggregatedVoteORM(Base):
     __tablename__ = "aggregated_votes"
     __table_args__ = {"schema": "aggregate"}
-    __natural_key__ = ("dataset_sample_id", "aggregation_spec_id")
+    __natural_key__ = ("dataset_sample_id", "aggregation_strategy_id")
     __uuid_function__ = "compute_aggregated_vote_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -122,9 +122,9 @@ class AggregatedVoteORM(Base):
         nullable=False,
         comment="Which dataset sample this vote aggregated judgements for"
     )
-    aggregation_spec_id = Column(
+    aggregation_strategy_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("aggregate.aggregation_specs.id"),
+        ForeignKey("aggregate.aggregation_strategies.id"),
         nullable=False,
     )
 
@@ -150,14 +150,14 @@ class AggregatedVoteORM(Base):
     __table_args__ = (
         UniqueConstraint(
             "dataset_sample_id",
-            "aggregation_spec_id",
+            "aggregation_strategy_id",
             name="uq_aggregated_vote_identity",
         ),
         {"schema": "aggregate"},
     )
 
     # Relationships
-    aggregation_spec = relationship("AggregationSpecORM", back_populates="aggregated_votes")
+    aggregation_strategy = relationship("AggregationStrategyORM", back_populates="aggregated_votes")
     aggregation_votes = relationship("AggregationVoteORM", back_populates="aggregated_vote")
     # Many-to-many with AggregatedDatasetORM via join table
     aggregated_datasets = relationship(

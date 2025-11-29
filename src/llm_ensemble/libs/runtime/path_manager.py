@@ -70,13 +70,13 @@ class PathManager:
         return PathManager.get_configs_dir() / "prompts"
 
     @staticmethod
-    def get_ensembles_dir() -> Path:
-        """Get the configs/ensembles/ directory.
+    def get_strategies_dir() -> Path:
+        """Get the configs/strategies/ directory.
 
         Returns:
-            Path to ensembles configs directory
+            Path to strategy adapter configs directory
         """
-        return PathManager.get_configs_dir() / "ensembles"
+        return PathManager.get_configs_dir() / "strategies"
 
     @staticmethod
     def get_retries_dir() -> Path:

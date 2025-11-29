@@ -72,15 +72,8 @@ def load_yaml_config(
         data['name'] = config_name
 
     # Parse and validate against Pydantic schema
-    # Use .create() classmethod if available (for configs with computed IDs)
     try:
-        if hasattr(schema, 'create') and callable(getattr(schema, 'create')):
-            # Extract name and use create() method which computes ID
-            config_name_value = data.pop('name')
-            return schema.create(name=config_name_value, **data)
-        else:
-            # Direct instantiation for configs without .create()
-            return schema(**data)
+        return schema(**data)
     except Exception as e:
         raise ValueError(
             f"Failed to parse {config_type} config {config_path}: {e}"

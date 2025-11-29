@@ -1,18 +1,19 @@
 """Ensemble configuration schema."""
 
 from __future__ import annotations
-from typing import Optional, Any
+from typing import Any
 from uuid import UUID
-from pydantic import Field, computed_field
+from pydantic import Field
 
 from llm_ensemble.libs.schemas.base_config import BaseConfig
 from llm_ensemble.libs.db import compute_aggregation_spec_uuid
 
 
 class EnsembleConfig(BaseConfig):
-    """Configuration for ensemble aggregation strategies.
+    """Configuration entity for ensemble aggregation strategies.
 
     Specifies which strategy to use via dynamic adapter loading.
+    Config is persisted as AggregationSpecORM with deterministic UUID.
 
     Example YAML:
         strategy_module: llm_ensemble.aggregate.adapters.strategies.majority_vote_adapter
@@ -22,6 +23,11 @@ class EnsembleConfig(BaseConfig):
 
     Future enhancement: Add tie_breaking_strategy parameter for configurable tie resolution.
     """
+
+    id: UUID = Field(
+        ...,
+        description="Deterministic UUID computed from config name (natural key)"
+    )
 
     # Dynamic adapter loading
     strategy_module: str = Field(
@@ -33,17 +39,25 @@ class EnsembleConfig(BaseConfig):
         description="Strategy adapter class name in UpperCamelCase"
     )
 
-    @computed_field
-    @property
-    def id(self) -> UUID:
-        """Deterministic UUID computed from config name (natural key)."""
-        return compute_aggregation_spec_uuid(self.name)
+    @classmethod
+    def create(cls, name: str, **kwargs) -> "EnsembleConfig":
+        """Create EnsembleConfig with computed ID from name.
+
+        Args:
+            name: Config name (natural key, typically from filename)
+            **kwargs: Other config fields (strategy_module, strategy_class, etc.)
+
+        Returns:
+            EnsembleConfig with computed ID
+        """
+        config_id = compute_aggregation_spec_uuid(name)
+        return cls(id=config_id, name=name, **kwargs)
 
     def get_strategy(self) -> Any:
         """Instantiate and return the aggregation strategy adapter.
 
         Dynamically imports the strategy module and instantiates the strategy class
-        with the aggregation_spec_id (computed from config name).
+        with the aggregation_spec_id (from this config's ID).
 
         Returns:
             Instance of the aggregation strategy adapter

@@ -9,7 +9,6 @@ from collections import Counter
 from uuid import UUID
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
-from llm_ensemble.aggregate.schemas.aggregated_vote import AggregatedVote
 from llm_ensemble.aggregate.ports import AggregationStrategy
 from llm_ensemble.libs.schemas import RelevanceScore
 
@@ -23,6 +22,9 @@ class MajorityVoteAdapter(AggregationStrategy):
     numeric label deterministically (e.g., IRRELEVANT=0 beats RELEVANT=1).
 
     Confidence: Fraction of votes that went to the winning label.
+
+    Implements pure voting logic in aggregate_raw(), returning simple dict.
+    Domain object creation handled by base class.
     """
 
     def __init__(self, aggregation_spec_id: UUID):
@@ -31,24 +33,24 @@ class MajorityVoteAdapter(AggregationStrategy):
         Args:
             aggregation_spec_id: UUID identifying the aggregation strategy config
         """
-        self.aggregation_spec_id = aggregation_spec_id
+        super().__init__(aggregation_spec_id)
 
     @property
     def name(self) -> str:
         """Return human-readable name of this strategy for logging."""
         return "majority_vote"
 
-    def aggregate(
+    def aggregate_raw(
         self,
         judgements: list[LLMJudgement]
-    ) -> AggregatedVote:
-        """Apply majority vote aggregation to a list of model judgements.
+    ) -> dict:
+        """Apply majority vote logic - return raw vote data.
 
         Args:
             judgements: All model judgements for a single (query_id, docid) pair
 
         Returns:
-            AggregatedVote with majority vote result and metadata
+            dict with final_label, final_confidence, final_reasoning
         """
         # Extract valid labels for voting
         valid_labels: list[RelevanceScore] = []
@@ -60,13 +62,11 @@ class MajorityVoteAdapter(AggregationStrategy):
 
         # Handle edge case: no valid votes
         if not valid_labels:
-            return AggregatedVote.create(
-                aggregation_spec_id=self.aggregation_spec_id,
-                llm_judgements=judgements,
-                final_label=None,
-                final_confidence=0.0,
-                final_reasoning="No valid votes (all models failed to parse)",
-            )
+            return {
+                "final_label": None,
+                "final_confidence": 0.0,
+                "final_reasoning": "No valid votes (all models failed to parse)",
+            }
 
         # Count votes for each label
         vote_counts = Counter(valid_labels)
@@ -94,10 +94,8 @@ class MajorityVoteAdapter(AggregationStrategy):
         else:
             reasoning = f"{max_count}/{total_votes} models voted {final_label.label}"
 
-        return AggregatedVote.create(
-            aggregation_spec_id=self.aggregation_spec_id,
-            llm_judgements=judgements,
-            final_label=final_label,
-            final_confidence=final_confidence,
-            final_reasoning=reasoning,
-        )
+        return {
+            "final_label": final_label,
+            "final_confidence": final_confidence,
+            "final_reasoning": reasoning,
+        }

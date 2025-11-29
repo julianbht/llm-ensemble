@@ -1,148 +1,74 @@
-# Clean Naming Pattern: Config vs AdapterSpec vs Entity
+# Naming Pattern: Entity vs AdapterSpec
 
-## Overview
+## Core Principle
+Separate **domain entities** (persisted) from **adapter specifications** (wiring).
 
-Clear separation between wiring (how to load) and domain entities (what gets persisted).
+## The Pattern
 
-## Pattern
-
-### `{Thing}AdapterSpec` = Pure Wiring (NOT Persisted)
-
-Infrastructure specification for dynamic adapter loading.
-
-**Examples:**
-- `AggregationStrategyAdapterSpec` - wiring for aggregation strategy adapter
-- `PromptAdapterSpec` - wiring for prompt builder + parser adapters (planned)
-- `ProviderAdapterSpec` - wiring for provider adapter (planned)
-
-**Characteristics:**
-- Contains `*_module` and `*_class` fields
-- Has `get_{thing}()` method for adapter instantiation
-- **NO `id` field** - not an entity
-- Lives in `*_adapter_spec.py` files
-
-### `{Thing}` = Domain Entity (Persisted)
-
-Actual business domain objects that get persisted to database.
-
-**Examples:**
-- `AggregationStrategy` - minimal entity (id, name)
-- `PromptTemplate` - full entity (id, name, template_text)
-- `Parser` - minimal entity (id, name, code_hash)
-- `Provider` - minimal entity (id, name)
-- `Model` - full entity (id, name, all params)
-
-**Characteristics:**
-- Has `id: UUID` field
-- Has `.create(name, ...)` classmethod that computes ID
-- Corresponds to `{Thing}ORM` in database
-- Pure domain entities
-
-### `{Thing}Port` = Adapter Port (ABC)
-
-Abstract base class defining contract for adapters.
-
-**Examples:**
-- `AggregationStrategyPort` - ABC for strategy adapters
-- `PromptBuilderPort` - ABC for prompt builder adapters (planned)
-- `ResponseParserPort` - ABC for parser adapters (planned)
-
-**Characteristics:**
-- Inherits from `ABC`
-- Defines abstract methods adapters must implement
-- May include template method pattern (concrete + abstract methods)
-
-## Aggregate Pipeline Example
-
-### Wiring (AdapterSpec)
-
-```python
-# aggregation_strategy_adapter_spec.py
-class AggregationStrategyAdapterSpec(BaseConfig):
-    """Pure wiring spec - NOT persisted."""
-    strategy_module: str  # e.g., "...majority_vote_adapter"
-    strategy_class: str   # e.g., "MajorityVoteAdapter"
-    name_hint: Optional[str]  # for run naming only
-
-    def get_strategy(self) -> AggregationStrategyPort:
-        return self._instantiate_adapter(
-            self.strategy_module,
-            self.strategy_class
-        )
+```
+{Thing}                     → Domain entity (persisted, has UUID)
+{Thing}AdapterSpec          → Wiring spec (NOT persisted, module/class paths)
+{Thing}Port                 → ABC defining adapter contract
+{Thing}Adapter              → Concrete implementation
 ```
 
-### Entity
+## Example: AggregationStrategy
 
 ```python
-# aggregation_strategy.py
+# Entity (persisted to DB)
 class AggregationStrategy(BaseModel):
-    """Domain entity - persisted."""
     id: UUID
-    name: str  # e.g., "majority_vote"
-
+    name: str
     @classmethod
-    def create(cls, strategy_name: str) -> "AggregationStrategy":
-        strategy_id = compute_aggregation_spec_uuid(strategy_name)
-        return cls(id=strategy_id, name=strategy_name)
-```
+    def create(cls, name: str) -> "AggregationStrategy": ...
 
-### Port
+# Adapter Spec (wiring only)
+class AggregationStrategyAdapterSpec(BaseConfig):
+    strategy_module: str
+    strategy_class: str
+    def get_strategy(self) -> AggregationStrategyPort: ...
 
-```python
-# ports/aggregation_strategy.py
+# Port (ABC)
 class AggregationStrategyPort(ABC):
-    """Port for strategy adapters."""
-
     @property
     @abstractmethod
-    def strategy_name(self) -> str:
-        """Natural key - adapter owns its identity."""
-        pass
-
-    @abstractmethod
-    def aggregate_raw(self, judgements) -> dict:
-        """Pure logic - returns dict."""
-        pass
-
+    def strategy_name(self) -> str: ...
+    
     def aggregate(self, judgements) -> AggregatedVote:
-        """Template method - creates domain objects."""
-        vote_data = self.aggregate_raw(judgements)
+        # Template method: creates entity from adapter's strategy_name
+        data = self.aggregate_raw(judgements)
         strategy = AggregationStrategy.create(self.strategy_name)
-        return AggregatedVote.create(
-            aggregation_strategy=strategy,
-            llm_judgements=judgements,
-            **vote_data
-        )
-```
+        return AggregatedVote.create(aggregation_strategy=strategy, **data)
 
-### Adapter
-
-```python
-# adapters/strategies/majority_vote_adapter.py
+# Adapter (implementation)
 class MajorityVoteAdapter(AggregationStrategyPort):
-    """Concrete adapter - implements port."""
-
     @property
     def strategy_name(self) -> str:
         return "majority_vote"
-
+    
     def aggregate_raw(self, judgements) -> dict:
-        # Pure voting logic
-        return {"final_label": ..., "final_confidence": ..., "final_reasoning": ...}
+        return {"final_label": ..., "final_confidence": ...}
 ```
 
-## Key Principles
+## CLI Naming
 
-1. **AdapterSpec** = Wiring only (module/class paths) - NOT persisted
-2. **Entity** = Domain objects with IDs - persisted
-3. **Port** = ABC defining adapter contract
-4. **Adapter** = Concrete implementation, owns its entity identity via `{thing}_name` property
-5. **Port creates entities** using adapter's `{thing}_name` property (template method pattern)
+```python
+# Loader: load_{thing}_adapter(name: str) -> {Thing}AdapterSpec
+def load_aggregation_strategy_adapter(spec_name: str) -> AggregationStrategyAdapterSpec: ...
 
-## Benefits
+# Param type: {Thing}AdapterParamType
+class AggregationStrategyAdapterParamType(ConfigParamType): ...
 
-1. **Clear separation** - wiring vs domain
-2. **No ID injection** - adapter owns its identity
-3. **Minimal entities** - only essential data persisted
-4. **Clean testing** - adapters return simple dicts, port handles domain object creation
-5. **Explicit** - code clearly shows what's wiring vs what's business logic
+# Param annotation: {Thing}AdapterSpecName
+AggregationStrategyAdapterSpecName = Annotated[str, typer.Option(...)]
+
+# CLI variable: {thing}_adapter_spec_name
+def aggregate(aggregation_strategy_adapter_spec_name: AggregationStrategyAdapterSpecName): ...
+```
+
+## Rules
+1. AdapterSpec = wiring only (NOT persisted)
+2. Entity = domain object with UUID (persisted)
+3. Port creates entities via template methods
+4. Adapter owns identity via `{thing}_name` property
+5. Use full entity name in variables (e.g., `aggregation_strategy`, not `strategy`)

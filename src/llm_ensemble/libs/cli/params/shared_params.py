@@ -119,7 +119,7 @@ PromptCfg = Annotated[
     ),
 ]
 
-AggregationStrategyCfg = Annotated[
+AggregationStrategyAdapterSpecName = Annotated[
     str,
     typer.Option(
         ...,

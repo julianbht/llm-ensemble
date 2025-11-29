@@ -16,7 +16,7 @@ from llm_ensemble.libs.cli.params import (
     Official,
     Notes,
     Override,
-    AggregationStrategyCfg,
+    AggregationStrategyAdapterSpecName,
     AggregateIoCfg,
     InferRunInput,
     Tag,
@@ -35,7 +35,7 @@ app = typer.Typer(
 @app.command("aggregate")
 def aggregate(
     # Required parameters
-    aggregation_strategy_cfg: AggregationStrategyCfg,
+    aggregation_strategy_adapter_spec_name: AggregationStrategyAdapterSpecName,
     io_cfg: AggregateIoCfg,
     input_run_names: InferRunInput,
     # Optional parameters
@@ -52,7 +52,7 @@ def aggregate(
     resolved_run_names = [TagManager.resolve_input(rn, "infer") for rn in input_run_names]
 
     # Load configurations
-    aggregation_strategy_adapter_spec = load_aggregation_strategy_adapter(aggregation_strategy_cfg)
+    aggregation_strategy_adapter_spec = load_aggregation_strategy_adapter(aggregation_strategy_adapter_spec_name)
     io_config = load_io_config(io_cfg, cli_name="aggregate")
     logging_config = load_logging_config(log_cfg or "observability")
 
@@ -72,7 +72,7 @@ def aggregate(
         io_config=io_config,
         logging_config=logging_config,
         input_run_names=resolved_run_names,
-        aggregation_strategy_adapter_spec_name=aggregation_strategy_cfg,
+        aggregation_strategy_adapter_spec_name=aggregation_strategy_adapter_spec_name,
         io_config_name=io_cfg,
         run_name=run_name,
         official=official,

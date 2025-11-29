@@ -9,7 +9,7 @@ import typer
 
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.cli.params.types import (
-    StrategyConfigParamType,
+    AggregationStrategyAdapterParamType,
     LogConfigParamType,
     ModelConfigParamType,
     PromptConfigParamType,
@@ -119,13 +119,13 @@ PromptCfg = Annotated[
     ),
 ]
 
-StrategyCfg = Annotated[
+AggregationStrategyCfg = Annotated[
     str,
     typer.Option(
         ...,
-        "--strategy-cfg",
-        click_type=StrategyConfigParamType(),
-        help=f"Strategy config name. Configs in {PathManager.get_strategies_dir().relative_to(PathManager.get_project_root())}",
+        "--aggregation-strategy-cfg",
+        click_type=AggregationStrategyAdapterParamType(),
+        help=f"Aggregation strategy adapter spec name. Configs in {PathManager.get_strategies_dir().relative_to(PathManager.get_project_root())}",
     ),
 ]
 

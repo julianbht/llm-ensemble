@@ -4,7 +4,7 @@ from __future__ import annotations
 import typer
 
 from llm_ensemble.aggregate.orchestrator import run_aggregation
-from llm_ensemble.aggregate.config_loaders import load_strategy_adapter_config
+from llm_ensemble.aggregate.config_loaders import load_aggregation_strategy_adapter
 from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.config.logging_config_loader import load_logging_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
@@ -16,7 +16,7 @@ from llm_ensemble.libs.cli.params import (
     Official,
     Notes,
     Override,
-    StrategyCfg,
+    AggregationStrategyCfg,
     AggregateIoCfg,
     InferRunInput,
     Tag,
@@ -35,7 +35,7 @@ app = typer.Typer(
 @app.command("aggregate")
 def aggregate(
     # Required parameters
-    strategy_adapter_cfg: StrategyCfg,
+    aggregation_strategy_cfg: AggregationStrategyCfg,
     io_cfg: AggregateIoCfg,
     input_run_names: InferRunInput,
     # Optional parameters
@@ -52,7 +52,7 @@ def aggregate(
     resolved_run_names = [TagManager.resolve_input(rn, "infer") for rn in input_run_names]
 
     # Load configurations
-    strategy_adapter_config = load_strategy_adapter_config(strategy_adapter_cfg)
+    aggregation_strategy_adapter_spec = load_aggregation_strategy_adapter(aggregation_strategy_cfg)
     io_config = load_io_config(io_cfg, cli_name="aggregate")
     logging_config = load_logging_config(log_cfg or "observability")
 
@@ -61,18 +61,18 @@ def aggregate(
         overrides = parse_and_route_overrides(override)
 
         # Apply routed overrides to each config
-        if overrides.get('strategy_adapter'):
-            strategy_adapter_config = apply_overrides(strategy_adapter_config, overrides['strategy_adapter'])
+        if overrides.get('aggregation_strategy_adapter'):
+            aggregation_strategy_adapter_spec = apply_overrides(aggregation_strategy_adapter_spec, overrides['aggregation_strategy_adapter'])
         if overrides.get('io'):
             io_config = apply_overrides(io_config, overrides['io'])
 
     # Run aggregation with final configs
     run_aggregation(
-        strategy_adapter_config=strategy_adapter_config,
+        aggregation_strategy_adapter_spec=aggregation_strategy_adapter_spec,
         io_config=io_config,
         logging_config=logging_config,
         input_run_names=resolved_run_names,
-        strategy_adapter_config_name=strategy_adapter_cfg,
+        aggregation_strategy_adapter_spec_name=aggregation_strategy_cfg,
         io_config_name=io_cfg,
         run_name=run_name,
         official=official,

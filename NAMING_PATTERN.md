@@ -1,4 +1,4 @@
-# Clean Naming Pattern: Config vs AdapterConfig vs Entity
+# Clean Naming Pattern: Config vs AdapterSpec vs Entity
 
 ## Overview
 
@@ -6,20 +6,20 @@ Clear separation between wiring (how to load) and domain entities (what gets per
 
 ## Pattern
 
-### `{Thing}AdapterConfig` = Pure Wiring (NOT Persisted)
+### `{Thing}AdapterSpec` = Pure Wiring (NOT Persisted)
 
-Infrastructure configuration specifying module/class paths for dynamic adapter loading.
+Infrastructure specification for dynamic adapter loading.
 
 **Examples:**
-- `StrategyAdapterConfig` - wiring for aggregation strategy adapter
-- `PromptAdapterConfig` - wiring for prompt builder + parser adapters (planned)
-- `ProviderAdapterConfig` - wiring for provider adapter (planned)
+- `AggregationStrategyAdapterSpec` - wiring for aggregation strategy adapter
+- `PromptAdapterSpec` - wiring for prompt builder + parser adapters (planned)
+- `ProviderAdapterSpec` - wiring for provider adapter (planned)
 
 **Characteristics:**
 - Contains `*_module` and `*_class` fields
 - Has `get_{thing}()` method for adapter instantiation
 - **NO `id` field** - not an entity
-- Lives in `*_adapter_config.py` files
+- Lives in `*_adapter_spec.py` files
 
 ### `{Thing}` = Domain Entity (Persisted)
 
@@ -54,12 +54,12 @@ Abstract base class defining contract for adapters.
 
 ## Aggregate Pipeline Example
 
-### Wiring (AdapterConfig)
+### Wiring (AdapterSpec)
 
 ```python
-# strategy_adapter_config.py
-class StrategyAdapterConfig(BaseConfig):
-    """Pure wiring - NOT persisted."""
+# aggregation_strategy_adapter_spec.py
+class AggregationStrategyAdapterSpec(BaseConfig):
+    """Pure wiring spec - NOT persisted."""
     strategy_module: str  # e.g., "...majority_vote_adapter"
     strategy_class: str   # e.g., "MajorityVoteAdapter"
     name_hint: Optional[str]  # for run naming only
@@ -133,7 +133,7 @@ class MajorityVoteAdapter(AggregationStrategyPort):
 
 ## Key Principles
 
-1. **AdapterConfig** = Wiring only (module/class paths) - NOT persisted
+1. **AdapterSpec** = Wiring only (module/class paths) - NOT persisted
 2. **Entity** = Domain objects with IDs - persisted
 3. **Port** = ABC defining adapter contract
 4. **Adapter** = Concrete implementation, owns its entity identity via `{thing}_name` property

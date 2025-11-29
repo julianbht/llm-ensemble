@@ -161,11 +161,11 @@ class PromptConfigParamType(ConfigParamType):
         )
 
 
-class StrategyConfigParamType(ConfigParamType):
+class AggregationStrategyAdapterParamType(ConfigParamType):
     def __init__(self) -> None:
         super().__init__(
-            param_name="--strategy-cfg",
-            config_type_label="strategy",
+            param_name="--aggregation-strategy-cfg",
+            config_type_label="aggregation strategy adapter",
             config_dir_provider=PathManager.get_strategies_dir,
             example_fallback="weighted_majority_v1",
         )

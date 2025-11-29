@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Optional
 
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
-from llm_ensemble.aggregate.schemas.strategy_adapter_config import StrategyAdapterConfig
+from llm_ensemble.aggregate.schemas.aggregation_strategy_adapter_spec import AggregationStrategyAdapterSpec
 from llm_ensemble.aggregate.domain import AggregationService
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
 from llm_ensemble.libs.runtime.run_info import RunType
@@ -25,11 +25,11 @@ from llm_ensemble.libs.logging import configure_logger
 
 
 def run_aggregation(
-    strategy_adapter_config: StrategyAdapterConfig,
+    aggregation_strategy_adapter_spec: AggregationStrategyAdapterSpec,
     io_config: IOConfig,
     logging_config: LoggingConfig,
     input_run_names: list[str],
-    strategy_adapter_config_name: str,
+    aggregation_strategy_adapter_spec_name: str,
     io_config_name: str,
     run_name: Optional[str] = None,
     official: bool = False,
@@ -45,11 +45,11 @@ def run_aggregation(
     - Running aggregation and writing output
 
     Args:
-        strategy_adapter_config: Strategy adapter configuration (wiring for strategy selection)
+        aggregation_strategy_adapter_spec: Aggregation strategy adapter specification (wiring for strategy selection)
         io_config: I/O configuration (reader/writer adapters)
         logging_config: Logging configuration
         input_run_names: List of infer run identifiers to read judgements from
-        strategy_adapter_config_name: Name of the strategy adapter config file
+        aggregation_strategy_adapter_spec_name: Name of the aggregation strategy adapter spec file
         io_config_name: Name of the I/O config file
         run_name: Custom run ID (auto-generates if not provided)
         official: Mark as official run
@@ -64,7 +64,7 @@ def run_aggregation(
     # Generate or use provided run_name
     if run_name is None:
         run_name = generate_run_name([
-            strategy_adapter_config.name_hint,
+            aggregation_strategy_adapter_spec.name_hint,
             io_config.name_hint,
         ])
     
@@ -92,9 +92,9 @@ def run_aggregation(
         git_sha=git_info["git_sha"],
         git_clean=git_info["git_clean"],
         git_branch=git_info["git_branch"],
-        strategy_adapter_config_name=strategy_adapter_config_name,
+        aggregation_strategy_adapter_spec_name=aggregation_strategy_adapter_spec_name,
         io_config_name=io_config_name,
-        strategy_adapter_config=strategy_adapter_config,
+        aggregation_strategy_adapter_spec=aggregation_strategy_adapter_spec,
         io_config=io_config,
         input_run_names=input_run_names,
     )
@@ -115,7 +115,7 @@ def run_aggregation(
     )
 
     # Instantiate adapters via dynamic loading from configs
-    strategy = strategy_adapter_config.get_strategy()
+    strategy = aggregation_strategy_adapter_spec.get_strategy()
     reader = io_config.get_reader()
     writer = io_config.get_writer()
 

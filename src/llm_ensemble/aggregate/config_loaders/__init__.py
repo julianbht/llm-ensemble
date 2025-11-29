@@ -1,9 +1,9 @@
 """Configuration loaders for aggregate CLI."""
 
-from llm_ensemble.aggregate.config_loaders.strategy_adapter_config_loader import (
-    load_strategy_adapter_config,
+from llm_ensemble.aggregate.config_loaders.aggregation_strategy_adapter_loader import (
+    load_aggregation_strategy_adapter,
 )
 
 __all__ = [
-    "load_strategy_adapter_config",
+    "load_aggregation_strategy_adapter",
 ]

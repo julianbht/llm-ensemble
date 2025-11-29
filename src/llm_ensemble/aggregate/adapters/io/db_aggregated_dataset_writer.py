@@ -169,7 +169,7 @@ class DbAggregatedDatasetWriter(AggregatedJudgementWriter):
         # Create AggregateRun
         aggregate_run_id = compute_aggregate_run_uuid(run_info.run_name)
         config_names = {
-            "strategy_adapter_config": run_info.strategy_adapter_config.name,
+            "aggregation_strategy_adapter": run_info.aggregation_strategy_adapter_spec.name,
             "io_config": run_info.io_config_name,
         }
         aggregate_run_orm = aggregate_run_info_to_orm(

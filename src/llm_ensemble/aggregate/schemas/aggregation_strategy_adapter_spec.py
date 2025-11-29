@@ -1,7 +1,7 @@
-"""Strategy adapter configuration schema.
+"""Aggregation strategy adapter specification schema.
 
-Pure wiring config for loading aggregation strategy adapters.
-Not persisted - just infrastructure configuration.
+Pure wiring spec for loading aggregation strategy adapters.
+Not persisted - just infrastructure specification.
 """
 
 from __future__ import annotations
@@ -11,11 +11,11 @@ from pydantic import Field
 from llm_ensemble.libs.schemas.base_config import BaseConfig
 
 
-class StrategyAdapterConfig(BaseConfig):
-    """Pure wiring config for loading aggregation strategy adapters.
+class AggregationStrategyAdapterSpec(BaseConfig):
+    """Pure wiring spec for loading aggregation strategy adapters.
 
     Specifies which strategy adapter to load via dynamic adapter loading.
-    This is infrastructure configuration - NOT persisted to database.
+    This is infrastructure specification - NOT persisted to database.
 
     The actual persisted entity is AggregationStrategy (just id + name),
     which is created from the adapter's strategy_name property.

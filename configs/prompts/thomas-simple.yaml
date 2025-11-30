@@ -1,6 +1,6 @@
-name_hint: thomas-simple-json
+name_hint: thomas-simple
 description: |
-  Thomas et al. search quality rater prompt (simple version) with JSON parser.
+  Thomas et al. search quality rater prompt (simple version).
   Uses simple O-only format for relevance scoring (0, 1, or 2).
   Role and aspects features are disabled for minimal prompt.
 
@@ -13,9 +13,8 @@ prompt_config:
     prompt_builder_class: JinjaPromptBuilder
 
 parser_config:
-  name_hint: json-parser
-  parser_name: json_parser
-  score_field: O
+  name_hint: thomas-simple-parser
+  parser_name: thomas_simple_parser
   parser_adapter:
-    parser_module: llm_ensemble.infer.adapters.parsers.json_response_parser
-    parser_class: JsonResponseParser
+    parser_module: llm_ensemble.infer.adapters.parsers.thomas_simple_parser
+    parser_class: ThomasSimpleParser

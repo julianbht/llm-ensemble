@@ -67,11 +67,7 @@ class ParserSubConfig(BaseModel):
     )
     parser_name: str = Field(
         ...,
-        description="Natural key for Parser entity (e.g., 'json_parser')"
-    )
-    score_field: str = Field(
-        default="O",
-        description="Field name to extract score from (default: 'O')"
+        description="Natural key for Parser entity (e.g., 'thomas_simple_parser')"
     )
     parser_adapter: ParserAdapterConfig = Field(
         ...,
@@ -86,7 +82,7 @@ class PromptParserConfig(BaseConfig):
     This config includes both prompt and parser identity AND adapter wiring.
 
     Example YAML:
-        name_hint: thomas-simple-json
+        name_hint: thomas-simple
         prompt_config:
             name_hint: thomas-simple
             prompt_name: thomas_simple
@@ -95,12 +91,11 @@ class PromptParserConfig(BaseConfig):
                 prompt_builder_module: llm_ensemble.infer.adapters.prompts.jinja_prompt_builder
                 prompt_builder_class: JinjaPromptBuilder
         parser_config:
-            name_hint: json-parser
-            parser_name: json_parser
-            score_field: O
+            name_hint: thomas-simple-parser
+            parser_name: thomas_simple_parser
             parser_adapter:
-                parser_module: llm_ensemble.infer.adapters.parsers.json_response_parser
-                parser_class: JsonResponseParser
+                parser_module: llm_ensemble.infer.adapters.parsers.thomas_simple_parser
+                parser_class: ThomasSimpleParser
 
     Note: name_hint is inherited from BaseConfig and used for run_name generation.
     """
@@ -144,7 +139,7 @@ class PromptParserConfig(BaseConfig):
         """Instantiate and return the response parser adapter.
 
         Dynamically imports the parser module and instantiates the parser class.
-        Parser name and score field come from config.
+        Parser knows what to look for based on its implementation.
 
         Returns:
             Instance of the response parser adapter
@@ -155,7 +150,5 @@ class PromptParserConfig(BaseConfig):
         """
         return self._instantiate_adapter(
             self.parser_config.parser_adapter.parser_module,
-            self.parser_config.parser_adapter.parser_class,
-            parser_name=self.parser_config.parser_name,
-            score_field=self.parser_config.score_field
+            self.parser_config.parser_adapter.parser_class
         )

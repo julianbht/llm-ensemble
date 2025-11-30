@@ -1,6 +1,6 @@
-name_hint: thomas-advanced-json
+name_hint: thomas-advanced
 description: |
-  Thomas et al. search quality rater prompt (advanced version) with JSON parser.
+  Thomas et al. search quality rater prompt (advanced version).
   Uses M-T-O format with role description and aspects-based evaluation.
   - Role: Search quality rater context enabled
   - Aspects: Multi-dimensional scoring (Match, Trust, Overall)
@@ -14,9 +14,8 @@ prompt_config:
     prompt_builder_class: JinjaPromptBuilder
 
 parser_config:
-  name_hint: json-parser
-  parser_name: json_parser
-  score_field: O
+  name_hint: thomas-advanced-parser
+  parser_name: thomas_advanced_parser
   parser_adapter:
-    parser_module: llm_ensemble.infer.adapters.parsers.json_response_parser
-    parser_class: JsonResponseParser
+    parser_module: llm_ensemble.infer.adapters.parsers.thomas_advanced_parser
+    parser_class: ThomasAdvancedParser

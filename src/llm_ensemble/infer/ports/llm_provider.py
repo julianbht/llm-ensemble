@@ -42,15 +42,21 @@ class LLMProvider(ABC):
 
     def __init__(
         self,
+        provider_name: str,
+        model_name: str,
         retry_config: RetryConfig,
         logger: Optional[structlog.stdlib.BoundLogger] = None,
     ):
-        """Initialize provider with retry configuration.
+        """Initialize provider with identity from config.
 
         Args:
+            provider_name: Provider identifier (from config, e.g., 'openrouter')
+            model_name: Model identifier (from config, e.g., 'llama-4-maverick:free')
             retry_config: Retry configuration for exponential backoff
             logger: Optional logger for retry events (if None, no logging)
         """
+        self.provider_name = provider_name
+        self.model_name = model_name
         self.retry_config = retry_config
         self.logger = logger
 

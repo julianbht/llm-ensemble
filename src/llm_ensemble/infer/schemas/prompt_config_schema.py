@@ -1,39 +1,130 @@
-"""Prompt configuration schema.
+"""Prompt-parser configuration schema.
 
-Defines the Pydantic schema for prompt template configurations.
-
-Provides convenience methods for instantiating prompt builders and parsers
-from their module paths, enforcing the dynamic import pattern.
+Complete configuration for prompt building and response parsing.
+All configuration centralized here - adapters contain no metadata.
 """
 
 from __future__ import annotations
-from typing import Optional, Any
-from pydantic import Field
+from typing import Any, Optional
+from pydantic import Field, BaseModel
 
 from llm_ensemble.libs.schemas.base_config import BaseConfig
 
 
-class PromptConfig(BaseConfig):
-    """Configuration for a prompt template.
+class PromptBuilderAdapterConfig(BaseModel):
+    """Nested config for prompt builder adapter instantiation details."""
 
-    Specifies the builder module and parser module to use. The builder is
-    responsible for locating its own template (templates are colocated with builders).
+    prompt_builder_module: str = Field(
+        ...,
+        description="Full Python module path to prompt builder adapter"
+    )
+    prompt_builder_class: str = Field(
+        ...,
+        description="Prompt builder adapter class name in UpperCamelCase"
+    )
 
-    Provides convenience methods for instantiating prompt builders and response parsers
-    from their module paths, enforcing the dynamic import pattern.
+
+class PromptSubConfig(BaseModel):
+    """Nested config for prompt-specific settings."""
+
+    name_hint: str = Field(
+        ...,
+        description="Short name hint for this prompt config (used for logging/naming)"
+    )
+    prompt_name: str = Field(
+        ...,
+        description="Natural key for Prompt entity (e.g., 'thomas_simple')"
+    )
+    prompt_template_path: str = Field(
+        ...,
+        description="Path to prompt template file (relative to prompt templates dir)"
+    )
+    prompt_builder_adapter: PromptBuilderAdapterConfig = Field(
+        ...,
+        description="Adapter instantiation configuration for prompt builder"
+    )
+
+
+class ParserAdapterConfig(BaseModel):
+    """Nested config for parser adapter instantiation details."""
+
+    parser_module: str = Field(
+        ...,
+        description="Full Python module path to parser adapter"
+    )
+    parser_class: str = Field(
+        ...,
+        description="Parser adapter class name in UpperCamelCase"
+    )
+
+
+class ParserSubConfig(BaseModel):
+    """Nested config for parser-specific settings."""
+
+    name_hint: str = Field(
+        ...,
+        description="Short name hint for this parser config (used for logging/naming)"
+    )
+    parser_name: str = Field(
+        ...,
+        description="Natural key for Parser entity (e.g., 'json_parser')"
+    )
+    score_field: str = Field(
+        default="O",
+        description="Field name to extract score from (default: 'O')"
+    )
+    parser_adapter: ParserAdapterConfig = Field(
+        ...,
+        description="Adapter instantiation configuration for parser"
+    )
+
+
+class PromptParserConfig(BaseConfig):
+    """Complete configuration for prompt building and response parsing.
+
+    All config centralized here - adapters are pure implementation.
+    This config includes both prompt and parser identity AND adapter wiring.
+
+    Example YAML:
+        name_hint: thomas-simple-json
+        prompt_config:
+            name_hint: thomas-simple
+            prompt_name: thomas_simple
+            prompt_template_path: thomas-simple.jinja
+            prompt_builder_adapter:
+                prompt_builder_module: llm_ensemble.infer.adapters.prompts.jinja_prompt_builder
+                prompt_builder_class: JinjaPromptBuilder
+        parser_config:
+            name_hint: json-parser
+            parser_name: json_parser
+            score_field: O
+            parser_adapter:
+                parser_module: llm_ensemble.infer.adapters.parsers.json_response_parser
+                parser_class: JsonResponseParser
+
+    Note: name_hint is inherited from BaseConfig and used for run_name generation.
     """
 
-    description: Optional[str] = Field(None, description="Human-readable description of the prompt")
-    builder_module: str = Field(..., description="Full Python module path to prompt builder (e.g., 'llm_ensemble.infer.adapters.prompts.jinja_prompt_builder')")
-    builder_class: str = Field(..., description="Prompt builder class name in UpperCamelCase (e.g., 'JinjaPromptBuilder')")
-    parser_module: str = Field(..., description="Full Python module path to response parser (e.g., 'llm_ensemble.infer.adapters.parsers.json_response_parser')")
-    parser_class: str = Field(..., description="Response parser class name in UpperCamelCase (e.g., 'JsonResponseParser')")
+    prompt_config: PromptSubConfig = Field(
+        ...,
+        description="Prompt configuration including builder adapter"
+    )
+
+    parser_config: ParserSubConfig = Field(
+        ...,
+        description="Parser configuration including parser adapter"
+    )
+
+    description: Optional[str] = Field(
+        None,
+        description="Human-readable description of this prompt-parser combination"
+    )
 
     def get_prompt_builder(self) -> Any:
         """Instantiate and return the prompt builder adapter.
 
         Dynamically imports the builder module and instantiates the builder class.
-        The builder is responsible for locating and loading its own template.
+        Prompt name and template path come from config.
 
         Returns:
             Instance of the prompt builder adapter
@@ -42,15 +133,18 @@ class PromptConfig(BaseConfig):
             ImportError: If the builder module cannot be imported
             AttributeError: If the builder class doesn't exist in the module
         """
-        return self._instantiate_adapter(self.builder_module, self.builder_class)
+        return self._instantiate_adapter(
+            self.prompt_config.prompt_builder_adapter.prompt_builder_module,
+            self.prompt_config.prompt_builder_adapter.prompt_builder_class,
+            prompt_name=self.prompt_config.prompt_name,
+            template_path=self.prompt_config.prompt_template_path
+        )
 
-    def get_response_parser(self, score_field: str = "O") -> Any:
+    def get_response_parser(self) -> Any:
         """Instantiate and return the response parser adapter.
 
         Dynamically imports the parser module and instantiates the parser class.
-
-        Args:
-            score_field: Field name to extract score from (default: "O")
+        Parser name and score field come from config.
 
         Returns:
             Instance of the response parser adapter
@@ -59,4 +153,9 @@ class PromptConfig(BaseConfig):
             ImportError: If the parser module cannot be imported
             AttributeError: If the parser class doesn't exist in the module
         """
-        return self._instantiate_adapter(self.parser_module, self.parser_class, score_field=score_field)
+        return self._instantiate_adapter(
+            self.parser_config.parser_adapter.parser_module,
+            self.parser_config.parser_adapter.parser_class,
+            parser_name=self.parser_config.parser_name,
+            score_field=self.parser_config.score_field
+        )

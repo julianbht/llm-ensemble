@@ -29,13 +29,14 @@ class JsonResponseParser(ResponseParser):
     work with any JSON format that includes an "O" field for the overall score.
     """
 
-    def __init__(self, score_field: str = "O"):
-        """Initialize JSON response parser with its own logger.
+    def __init__(self, parser_name: str, score_field: str = "O"):
+        """Initialize JSON response parser with identity from config.
 
         Args:
-            score_field: Name of the JSON field containing the relevance score (default: "O")
+            parser_name: Natural key for Parser entity (from config)
+            score_field: Name of the JSON field containing the relevance score (from config, default: "O")
         """
-        self.score_field = score_field
+        super().__init__(parser_name, score_field)
         self.logger = get_logger(component="json_response_parser")
 
     def parse(self, raw_text: str) -> LLMScore:

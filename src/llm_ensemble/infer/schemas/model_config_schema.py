@@ -1,7 +1,7 @@
-"""Model configuration schema.
+"""Model configuration schema with centralized nested structure.
 
-Defines the Pydantic schema for LLM model configurations.
-Based on OpenRouter API specification for maximum compatibility.
+Complete configuration for LLM models.
+All configuration centralized here - adapters contain no metadata.
 """
 
 from __future__ import annotations
@@ -33,31 +33,64 @@ class PricingInfo(BaseModel):
     )
 
 
-class ModelConfig(BaseConfig):
-    """Configuration entity for LLM models.
+class ProviderAdapterConfig(BaseModel):
+    """Nested config for provider adapter instantiation details."""
 
-    Config is persisted as ModelConfigORM with deterministic UUID.
-    Explicit parameters are based on OpenRouter API common parameters.
-    Makes frequently-used settings discoverable and type-safe.
-    """
-
-    id: UUID = Field(
+    provider_module: str = Field(
         ...,
-        description="Deterministic UUID computed from config name (natural key)"
+        description="Full Python module path to provider adapter"
+    )
+    provider_class: str = Field(
+        ...,
+        description="Provider adapter class name in UpperCamelCase"
     )
 
-    # Identity
-    model_id: str = Field(..., description="Model identifier")
-    provider: Literal["hf", "ollama", "openrouter"] = Field(..., description="Provider name")
 
-    # Dynamic adapter loading
-    provider_module: str = Field(..., description="Full Python module path to provider adapter (e.g., 'llm_ensemble.infer.adapters.providers.openrouter_adapter')")
-    provider_class: str = Field(..., description="Provider adapter class name in UpperCamelCase (e.g., 'OpenRouterAdapter')")
+class ProviderSubConfig(BaseModel):
+    """Nested config for provider-specific settings."""
 
-    # Capacity
-    context_window: int = Field(..., gt=0, description="Maximum context window size in tokens")
+    name_hint: str = Field(
+        ...,
+        description="Short name hint for this provider config (used for logging/naming)"
+    )
+    provider_name: Literal["hf", "ollama", "openrouter"] = Field(
+        ...,
+        description="Provider name (hf, ollama, or openrouter)"
+    )
+    provider_adapter: ProviderAdapterConfig = Field(
+        ...,
+        description="Adapter instantiation configuration for provider"
+    )
 
-    # Core inference parameters (explicit for discoverability)
+    # Provider-specific fields
+    hf_endpoint_url: Optional[str] = Field(
+        None,
+        description="HF Inference Endpoint URL (HuggingFace only)"
+    )
+    hf_model_name: Optional[str] = Field(
+        None,
+        description="HF model repo name (HuggingFace only)"
+    )
+    openrouter_model_id: Optional[str] = Field(
+        None,
+        description="OpenRouter model ID (e.g., 'openai/gpt-4') (OpenRouter only)"
+    )
+
+
+class ModelSpecs(BaseModel):
+    """Nested config for model inference parameters."""
+
+    name_hint: str = Field(
+        ...,
+        description="Short name hint for this model spec (used for logging/naming)"
+    )
+    context_window: int = Field(
+        ...,
+        gt=0,
+        description="Maximum context window size in tokens"
+    )
+
+    # Core inference parameters
     temperature: Optional[float] = Field(
         None,
         ge=0.0,
@@ -114,26 +147,60 @@ class ModelConfig(BaseConfig):
         description="Model capabilities (e.g., multilingual, function_calling, vision)"
     )
 
-    # HuggingFace-specific fields
-    hf_endpoint_url: Optional[str] = Field(
-        None,
-        description="HF Inference Endpoint URL"
-    )
-    hf_model_name: Optional[str] = Field(
-        None,
-        description="HF model repo name"
+
+class ModelConfig(BaseConfig):
+    """Complete configuration for LLM models.
+
+    All config centralized here - adapters are pure implementation.
+    This config includes model identity, provider config, model specs, and pricing.
+
+    Example YAML:
+        name_hint: llama-4-maverick-free
+        model_name: llama-4-maverick:free
+        pricing_info:
+            prompt_cost_per_1m_tokens: 0.0
+            completion_cost_per_1m_tokens: 0.0
+            last_updated: "2025-01-01T00:00:00Z"
+        provider_config:
+            name_hint: openrouter
+            provider_name: openrouter
+            provider_adapter:
+                provider_module: llm_ensemble.infer.adapters.providers.openrouter_adapter
+                provider_class: OpenRouterAdapter
+            openrouter_model_id: meta-llama/llama-4-maverick:free
+        model_specs:
+            name_hint: default
+            context_window: 8192
+            temperature: null
+            max_tokens: null
+            ...
+
+    Note: name_hint is inherited from BaseConfig and used for run_name generation.
+    """
+
+    id: UUID = Field(
+        ...,
+        description="Deterministic UUID computed from config name (natural key)"
     )
 
-    # OpenRouter-specific fields
-    openrouter_model_id: Optional[str] = Field(
-        None,
-        description="OpenRouter model ID (e.g., 'openai/gpt-4')"
+    model_name: str = Field(
+        ...,
+        description="Model identifier (natural key for Model entity)"
     )
 
-    # Pricing information
-    pricing: Optional[PricingInfo] = Field(
+    pricing_info: Optional[PricingInfo] = Field(
         None,
-        description="Cost information for this model (typically auto-updated via update_model_pricing.py)"
+        description="Cost information for this model"
+    )
+
+    provider_config: ProviderSubConfig = Field(
+        ...,
+        description="Provider configuration including adapter"
+    )
+
+    model_specs: ModelSpecs = Field(
+        ...,
+        description="Model inference parameters and capabilities"
     )
 
     @classmethod
@@ -142,7 +209,7 @@ class ModelConfig(BaseConfig):
 
         Args:
             name: Config name (natural key, typically from filename)
-            **kwargs: Other config fields (model_id, provider, etc.)
+            **kwargs: Other config fields (model_name, provider_config, etc.)
 
         Returns:
             ModelConfig with computed ID
@@ -160,6 +227,7 @@ class ModelConfig(BaseConfig):
         """Instantiate and return the provider adapter.
 
         Dynamically imports the provider module and instantiates the provider class.
+        Provider name and model name come from config.
 
         Args:
             retry_config: Retry configuration for exponential backoff
@@ -174,9 +242,9 @@ class ModelConfig(BaseConfig):
             ImportError: If the provider module cannot be imported
             AttributeError: If the provider class doesn't exist in the module
         """
-        # Build kwargs based on what the provider needs
-        # Note: retry_config and logger are REQUIRED for all providers (base class requires them)
         kwargs = {
+            "provider_name": self.provider_config.provider_name,
+            "model_name": self.model_name,
             "retry_config": retry_config,
             "logger": logger,
             "timeout": timeout,
@@ -184,4 +252,8 @@ class ModelConfig(BaseConfig):
         if api_key is not None:
             kwargs["api_key"] = api_key
 
-        return self._instantiate_adapter(self.provider_module, self.provider_class, **kwargs)
+        return self._instantiate_adapter(
+            self.provider_config.provider_adapter.provider_module,
+            self.provider_config.provider_adapter.provider_class,
+            **kwargs
+        )

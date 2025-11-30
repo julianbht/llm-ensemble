@@ -14,7 +14,7 @@ from pydantic import ConfigDict, Field
 from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
-from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
+from llm_ensemble.infer.schemas.prompt_config_schema import PromptParserConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.db import compute_infer_run_uuid
 
@@ -77,9 +77,9 @@ class InferRunInfo(RunInfo):
         description="Model configuration used for this run"
     )
 
-    prompt_config: PromptConfig = Field(
+    prompt_parser_config: PromptParserConfig = Field(
         ...,
-        description="Prompt configuration used for this run"
+        description="Prompt-parser configuration used for this run"
     )
 
     retry_config: RetryConfig = Field(
@@ -120,7 +120,7 @@ class InferRunInfo(RunInfo):
         retry_config_name: str,
         io_config_name: str,
         model_cfg: ModelConfig,
-        prompt_config: PromptConfig,
+        prompt_parser_config: PromptParserConfig,
         retry_config: RetryConfig,
         io_config: IOConfig,
         input_run_name: str,
@@ -137,7 +137,7 @@ class InferRunInfo(RunInfo):
             retry_config_name: Retry config name
             io_config_name: I/O config name
             model_cfg: Full model configuration
-            prompt_config: Full prompt configuration
+            prompt_parser_config: Full prompt-parser configuration
             retry_config: Full retry configuration
             io_config: Full I/O configuration
             input_run_name: Ingest run name to read samples from
@@ -157,7 +157,7 @@ class InferRunInfo(RunInfo):
             retry_config_name=retry_config_name,
             io_config_name=io_config_name,
             model_cfg=model_cfg,
-            prompt_config=prompt_config,
+            prompt_parser_config=prompt_parser_config,
             retry_config=retry_config,
             io_config=io_config,
             input_run_name=input_run_name,

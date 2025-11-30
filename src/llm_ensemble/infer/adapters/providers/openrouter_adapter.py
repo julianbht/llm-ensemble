@@ -30,20 +30,24 @@ class OpenRouterAdapter(LLMProvider):
 
     def __init__(
         self,
+        provider_name: str,
+        model_name: str,
         retry_config: RetryConfig,
         api_key: Optional[str] = None,
         timeout: int = 30,
         logger: Optional[structlog.stdlib.BoundLogger] = None,
     ):
-        """Initialize OpenRouter adapter.
+        """Initialize OpenRouter adapter with identity from config.
 
         Args:
+            provider_name: Provider identifier (from config, e.g., 'openrouter')
+            model_name: Model identifier (from config, e.g., 'llama-4-maverick:free')
             retry_config: Retry configuration for exponential backoff
             api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
             timeout: Request timeout in seconds (default: 30)
             logger: Optional logger for retry events
         """
-        super().__init__(retry_config, logger)
+        super().__init__(provider_name, model_name, retry_config, logger)
 
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         self.timeout = timeout

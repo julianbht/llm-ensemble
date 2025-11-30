@@ -1,14 +1,22 @@
-name_hint: thomas-advanced
+name_hint: thomas-advanced-json
 description: |
-  Thomas et al. search quality rater prompt (advanced version).
+  Thomas et al. search quality rater prompt (advanced version) with JSON parser.
   Uses M-T-O format with role description and aspects-based evaluation.
   - Role: Search quality rater context enabled
   - Aspects: Multi-dimensional scoring (Match, Trust, Overall)
-  Template is colocated with the builder in adapters/prompts/templates/.
 
-# Adapter specifications (loaded dynamically)
-# Format: module paths are snake_case, class names are UpperCamelCase
-builder_module: llm_ensemble.infer.adapters.prompts.thomas_builder_advanced
-builder_class: ThomasBuilderAdvanced
-parser_module: llm_ensemble.infer.adapters.parsers.json_response_parser
-parser_class: JsonResponseParser
+prompt_config:
+  name_hint: thomas-advanced
+  prompt_name: thomas_advanced
+  prompt_template_path: thomas-advanced.jinja
+  prompt_builder_adapter:
+    prompt_builder_module: llm_ensemble.infer.adapters.prompts.jinja_prompt_builder
+    prompt_builder_class: JinjaPromptBuilder
+
+parser_config:
+  name_hint: json-parser
+  parser_name: json_parser
+  score_field: O
+  parser_adapter:
+    parser_module: llm_ensemble.infer.adapters.parsers.json_response_parser
+    parser_class: JsonResponseParser

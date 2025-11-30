@@ -3,7 +3,7 @@ from typing import Annotated
 import typer
 
 from llm_ensemble.infer.orchestrator import run_inference
-from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_config, load_retry_config
+from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_parser_config, load_retry_config
 from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.config.logging_config_loader import load_logging_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
@@ -62,7 +62,7 @@ def infer(
     
     # Load configurations
     model_config = load_model_config(model_cfg)
-    prompt_config = load_prompt_config(prompt_cfg)
+    prompt_parser_config = load_prompt_parser_config(prompt_cfg)
     retry_config = load_retry_config(retry_cfg)
     io_config = load_io_config(io_cfg, cli_name="infer")
     logging_config = load_logging_config(log_cfg or "observability")
@@ -75,14 +75,14 @@ def infer(
         if overrides['model']:
             model_config = apply_overrides(model_config, overrides['model'])
         if overrides['prompt']:
-            prompt_config = apply_overrides(prompt_config, overrides['prompt'])
+            prompt_parser_config = apply_overrides(prompt_parser_config, overrides['prompt'])
         if overrides['io']:
             io_config = apply_overrides(io_config, overrides['io'])
 
     # Run inference with final configs
     run_inference(
         model_config=model_config,
-        prompt_config=prompt_config,
+        prompt_parser_config=prompt_parser_config,
         retry_config=retry_config,
         io_config=io_config,
         logging_config=logging_config,

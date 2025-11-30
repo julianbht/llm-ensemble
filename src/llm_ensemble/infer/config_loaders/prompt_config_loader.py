@@ -1,23 +1,23 @@
-"""Prompt configuration loader.
+"""Prompt-parser configuration loader.
 
-Loads prompt YAML configurations from the centralized configs/prompts directory.
+Loads prompt-parser YAML configurations from the centralized configs/prompts directory.
 """
 
 from __future__ import annotations
 
-from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
+from llm_ensemble.infer.schemas.prompt_config_schema import PromptParserConfig
 from llm_ensemble.libs.config import load_yaml_config
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
-def load_prompt_config(prompt_name: str) -> PromptConfig:
-    """Load a prompt configuration from YAML file.
+def load_prompt_parser_config(prompt_name: str) -> PromptParserConfig:
+    """Load a prompt-parser configuration from YAML file.
 
     Args:
-        prompt_name: Prompt identifier (e.g., "thomas-et-al-prompt")
+        prompt_name: Prompt identifier (e.g., "thomas-simple")
 
     Returns:
-        PromptConfig object with all settings loaded from YAML
+        PromptParserConfig object with all settings loaded from YAML
 
     Raises:
         FileNotFoundError: If config file doesn't exist
@@ -26,6 +26,6 @@ def load_prompt_config(prompt_name: str) -> PromptConfig:
     return load_yaml_config(
         config_name=prompt_name,
         config_dir=PathManager.get_prompts_dir(),
-        schema=PromptConfig,
-        config_type="prompt",
+        schema=PromptParserConfig,
+        config_type="prompt_parser_config",
     )

@@ -3,6 +3,8 @@
 Defines the abstract contract that all prompt builder adapters must implement.
 This allows the system to work with different prompt formats and templates
 without coupling to specific implementations.
+
+Prompt identity (prompt_name) and template path come from config.
 """
 
 from __future__ import annotations
@@ -19,7 +21,20 @@ class PromptBuilder(ABC):
     while providing a consistent interface to the LLM provider adapters.
 
     Returns an LLMPrompt containing the dataset_sample and rendered prompt_text.
+
+    Prompt identity (prompt_name) and template path come from config and are
+    passed to constructor.
     """
+
+    def __init__(self, prompt_name: str, template_path: str):
+        """Initialize prompt builder with identity from config.
+
+        Args:
+            prompt_name: Natural key for Prompt entity (from config)
+            template_path: Path to template file relative to templates dir (from config)
+        """
+        self.prompt_name = prompt_name
+        self.template_path = template_path
 
     @abstractmethod
     def build(self, dataset_sample: DatasetSample) -> LLMPrompt:

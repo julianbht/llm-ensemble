@@ -7,7 +7,7 @@ etc.) without coupling to specific implementations.
 Uses template method pattern: aggregate() is concrete and handles DTO→Domain mapping,
 subclasses implement aggregate_raw() with pure voting logic.
 
-Adapter owns its identity via strategy_name property - no ID injection from config.
+Strategy identity comes from config, not from adapter.
 """
 
 from __future__ import annotations
@@ -28,21 +28,18 @@ class AggregationStrategyPort(ABC):
     Template Method Pattern:
     - aggregate() (concrete): calls aggregate_raw() and creates domain object
     - aggregate_raw() (abstract): subclasses implement voting logic
-    - strategy_name (abstract): adapter defines its own identity
 
     This separates pure algorithm logic from domain object creation.
-    Adapter owns its identity - no ID injection needed from config.
+    Strategy identity (strategy_name) comes from config and is passed to constructor.
     """
 
-    @property
-    @abstractmethod
-    def strategy_name(self) -> str:
-        """Natural key for AggregationStrategy entity.
+    def __init__(self, strategy_name: str):
+        """Initialize strategy adapter with identity from config.
 
-        This is the canonical identifier for the strategy (e.g., 'majority_vote').
-        Used to create AggregationStrategy domain entity.
+        Args:
+            strategy_name: Natural key for AggregationStrategy entity (from config)
         """
-        pass
+        self.strategy_name = strategy_name
 
     @abstractmethod
     def aggregate_raw(
@@ -96,9 +93,3 @@ class AggregationStrategyPort(ABC):
             final_confidence=vote_data.get("final_confidence"),
             final_reasoning=vote_data.get("final_reasoning"),
         )
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Return human-readable name of this strategy for logging."""
-        pass

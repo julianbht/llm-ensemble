@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Optional
 
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
-from llm_ensemble.aggregate.schemas.aggregation_strategy_adapter_spec import AggregationStrategyAdapterSpec
+from llm_ensemble.aggregate.schemas.aggregation_strategy_adapter_spec import AggregationStrategyConfig
 from llm_ensemble.aggregate.domain import AggregationService
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
 from llm_ensemble.libs.runtime.run_info import RunType
@@ -25,11 +25,11 @@ from llm_ensemble.libs.logging import configure_logger
 
 
 def run_aggregation(
-    aggregation_strategy_adapter_spec: AggregationStrategyAdapterSpec,
+    aggregation_strategy_config: AggregationStrategyConfig,
     io_config: IOConfig,
     logging_config: LoggingConfig,
     input_run_names: list[str],
-    aggregation_strategy_adapter_spec_name: str,
+    aggregation_strategy_config_name: str,
     io_config_name: str,
     run_name: Optional[str] = None,
     official: bool = False,
@@ -45,11 +45,11 @@ def run_aggregation(
     - Running aggregation and writing output
 
     Args:
-        aggregation_strategy_adapter_spec: Aggregation strategy adapter specification (wiring for strategy selection)
+        aggregation_strategy_config: Complete aggregation strategy configuration
         io_config: I/O configuration (reader/writer adapters)
         logging_config: Logging configuration
         input_run_names: List of infer run identifiers to read judgements from
-        aggregation_strategy_adapter_spec_name: Name of the aggregation strategy adapter spec file
+        aggregation_strategy_config_name: Name of the aggregation strategy config file
         io_config_name: Name of the I/O config file
         run_name: Custom run ID (auto-generates if not provided)
         official: Mark as official run
@@ -64,10 +64,10 @@ def run_aggregation(
     # Generate or use provided run_name
     if run_name is None:
         run_name = generate_run_name([
-            aggregation_strategy_adapter_spec.name_hint,
+            aggregation_strategy_config.name_hint,
             io_config.name_hint,
         ])
-    
+
     # Get run directory path and create it
     run_dir = PathManager.get_run_dir(
         cli_name="aggregate",
@@ -75,15 +75,15 @@ def run_aggregation(
         official=official
     )
     run_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Register tag if provided
     if tag:
         TagManager.register_tag(tag, "aggregate", run_name)
-    
-    
+
+
     # Get git info for reproducibility
     git_info = get_git_info()
-    
+
     # Create immutable run info
     run_info = AggregateRunInfo(
         run_name=run_name,
@@ -92,9 +92,9 @@ def run_aggregation(
         git_sha=git_info["git_sha"],
         git_clean=git_info["git_clean"],
         git_branch=git_info["git_branch"],
-        aggregation_strategy_adapter_spec_name=aggregation_strategy_adapter_spec_name,
+        aggregation_strategy_config_name=aggregation_strategy_config_name,
         io_config_name=io_config_name,
-        aggregation_strategy_adapter_spec=aggregation_strategy_adapter_spec,
+        aggregation_strategy_config=aggregation_strategy_config,
         io_config=io_config,
         input_run_names=input_run_names,
     )
@@ -115,13 +115,13 @@ def run_aggregation(
     )
 
     # Instantiate adapters via dynamic loading from configs
-    aggregation_strategy_adapter = aggregation_strategy_adapter_spec.get_adapter()
+    aggregation_strategy_adapter = aggregation_strategy_config.get_adapter()
     reader = io_config.get_reader()
     writer = io_config.get_writer()
 
     logger.info(
         "starting_aggregation",
-        strategy=aggregation_strategy_adapter.name,
+        strategy=aggregation_strategy_config.aggregation_strategy_name,
         io_format=io_config_name,
         input_run_names=input_run_names,
     )

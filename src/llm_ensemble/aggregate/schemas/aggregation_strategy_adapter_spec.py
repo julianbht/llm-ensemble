@@ -1,49 +1,60 @@
-"""Aggregation strategy adapter specification schema.
+"""Aggregation strategy configuration schema.
 
-Pure wiring spec for loading aggregation strategy adapters.
-Not persisted - just infrastructure specification.
+Complete configuration for aggregation strategies.
+All configuration centralized here - adapters contain no metadata.
 """
 
 from __future__ import annotations
 from typing import Any
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from llm_ensemble.libs.schemas.base_config import BaseConfig
 
 
-class AggregationStrategyAdapterSpec(BaseConfig):
-    """Pure wiring spec for loading aggregation strategy adapters.
+class AggregationStrategyAdapterConfig(BaseModel):
+    """Nested config for adapter instantiation details."""
 
-    Specifies which strategy adapter to load via dynamic adapter loading.
-    This is infrastructure specification - NOT persisted to database.
-
-    The actual persisted entity is AggregationStrategy (just id + name),
-    which is created from the adapter's strategy_name property.
-
-    Example YAML:
-        strategy_module: llm_ensemble.aggregate.adapters.strategies.majority_vote_adapter
-        strategy_class: MajorityVoteAdapter
-
-    Note: name_hint is inherited from BaseConfig and typically derived from filename.
-
-    Future enhancement: Add tie_breaking_strategy parameter for configurable tie resolution.
-    """
-
-    # Dynamic adapter loading (wiring only, not persisted)
-    strategy_module: str = Field(
+    aggregation_strategy_module: str = Field(
         ...,
         description="Full Python module path to strategy adapter"
     )
-    strategy_class: str = Field(
+    aggregation_strategy_class: str = Field(
         ...,
         description="Strategy adapter class name in UpperCamelCase"
+    )
+
+
+class AggregationStrategyConfig(BaseConfig):
+    """Complete configuration for aggregation strategy.
+
+    All strategy config centralized here - adapters are pure implementation.
+    This config includes both the strategy identity AND adapter wiring.
+
+    Example YAML:
+        name_hint: majority-vote
+        aggregation_strategy_name: majority_vote
+        aggregation_strategy_adapter:
+            aggregation_strategy_module: llm_ensemble.aggregate.adapters.strategies.majority_vote_adapter
+            aggregation_strategy_class: MajorityVoteAdapter
+
+    Note: name_hint is inherited from BaseConfig and used for run_name generation.
+    """
+
+    aggregation_strategy_name: str = Field(
+        ...,
+        description="Natural key for AggregationStrategy entity (e.g., 'majority_vote')"
+    )
+
+    aggregation_strategy_adapter: AggregationStrategyAdapterConfig = Field(
+        ...,
+        description="Adapter instantiation configuration"
     )
 
     def get_adapter(self) -> Any:
         """Instantiate and return the aggregation strategy adapter.
 
         Dynamically imports the strategy module and instantiates the strategy class.
-        Adapter defines its own strategy_name for entity identification.
+        Strategy name comes from config and is passed to adapter constructor.
 
         Returns:
             Instance of the aggregation strategy adapter
@@ -53,6 +64,7 @@ class AggregationStrategyAdapterSpec(BaseConfig):
             AttributeError: If the strategy class doesn't exist in the module
         """
         return self._instantiate_adapter(
-            self.strategy_module,
-            self.strategy_class
+            self.aggregation_strategy_adapter.aggregation_strategy_module,
+            self.aggregation_strategy_adapter.aggregation_strategy_class,
+            strategy_name=self.aggregation_strategy_name
         )

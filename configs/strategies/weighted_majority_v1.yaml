@@ -1,3 +1,5 @@
-name_hint: weighted_majority # used for run_name generation
-strategy_module: llm_ensemble.aggregate.adapters.strategies.weighted_majority_adapter
-strategy_class: WeightedMajorityAdapter
+name_hint: weighted_majority
+aggregation_strategy_name: weighted_majority
+aggregation_strategy_adapter:
+  aggregation_strategy_module: llm_ensemble.aggregate.adapters.strategies.weighted_majority_adapter
+  aggregation_strategy_class: WeightedMajorityAdapter

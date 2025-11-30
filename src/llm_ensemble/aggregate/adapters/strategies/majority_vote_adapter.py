@@ -24,18 +24,8 @@ class MajorityVoteAdapter(AggregationStrategyPort):
 
     Implements pure voting logic in aggregate_raw(), returning simple dict.
     Domain object creation handled by base class.
-    Adapter owns its identity via strategy_name property.
+    Strategy identity comes from config via constructor.
     """
-
-    @property
-    def strategy_name(self) -> str:
-        """Natural key for AggregationStrategy entity."""
-        return "majority_vote"
-
-    @property
-    def name(self) -> str:
-        """Return human-readable name of this strategy for logging."""
-        return "majority_vote"
 
     def aggregate_raw(
         self,

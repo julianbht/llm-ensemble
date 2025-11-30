@@ -10,7 +10,7 @@ import json
 import re
 
 from llm_ensemble.infer.ports import ResponseParser
-from llm_ensemble.infer.schemas.llm_judgement import LLMScore
+from llm_ensemble.infer.schemas.parsed_score_dto import ParsedScoreDTO
 from llm_ensemble.infer.schemas.warnings import ParserWarning, ParserWarningCode
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.schemas import RelevanceScore
@@ -29,24 +29,25 @@ class JsonResponseParser(ResponseParser):
     work with any JSON format that includes an "O" field for the overall score.
     """
 
-    def __init__(self, parser_name: str, score_field: str = "O"):
+    def __init__(self, parser_spec_id, score_field: str = "O"):
         """Initialize JSON response parser with identity from config.
 
         Args:
-            parser_name: Natural key for Parser entity (from config)
+            parser_spec_id: UUID of the parser spec entity
             score_field: Name of the JSON field containing the relevance score (from config, default: "O")
         """
-        super().__init__(parser_name, score_field)
+        super().__init__(parser_spec_id)
+        self.score_field = score_field
         self.logger = get_logger(component="json_response_parser")
 
-    def parse(self, raw_text: str) -> LLMScore:
-        """Parse JSON response to extract relevance label.
+    def parse_raw(self, raw_text: str) -> ParsedScoreDTO:
+        """Parse JSON response to extract relevance label (pure logic).
 
         Args:
             raw_text: Raw text response from the LLM
 
         Returns:
-            LLMScore with llm_response_text, extracted label, and any parsing warnings
+            ParsedScoreDTO with llm_response_text, extracted label, and any parsing warnings
         """
         warnings: list[ParserWarning] = []
 
@@ -63,7 +64,7 @@ class JsonResponseParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(llm_response_text=raw_text, warnings=warnings)
+            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
 
         json_str = json_match.group(0)
 
@@ -77,7 +78,7 @@ class JsonResponseParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(llm_response_text=raw_text, warnings=warnings)
+            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
 
         # Extract the score
         score = data.get(self.score_field)
@@ -90,7 +91,7 @@ class JsonResponseParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(llm_response_text=raw_text, warnings=warnings)
+            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
 
         # Validate the score is 0, 1, 2, or 3
         if not isinstance(score, int) or score not in [0, 1, 2, 3]:
@@ -101,7 +102,7 @@ class JsonResponseParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(llm_response_text=raw_text, warnings=warnings)
+            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
 
         # Convert to RelevanceScore enum
         try:
@@ -114,6 +115,6 @@ class JsonResponseParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(llm_response_text=raw_text, warnings=warnings)
+            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
 
-        return LLMScore(llm_response_text=raw_text, label=relevance_label, warnings=warnings)
+        return ParsedScoreDTO(llm_response_text=raw_text, label=relevance_label, warnings=warnings)

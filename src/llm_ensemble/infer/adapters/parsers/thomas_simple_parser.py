@@ -10,6 +10,7 @@ import re
 
 from llm_ensemble.infer.ports import ResponseParser
 from llm_ensemble.infer.schemas.llm_judgement import LLMScore
+from llm_ensemble.infer.schemas.parsed_score_dto import ParsedScoreDTO
 from llm_ensemble.infer.schemas.warnings import ParserWarning, ParserWarningCode
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.schemas import RelevanceScore
@@ -22,17 +23,18 @@ class ThomasSimpleParser(ResponseParser):
     The "O" field represents the overall relevance score.
     """
 
-    def __init__(self):
+    def __init__(self, parser_spec_id):
+        super().__init__(parser_spec_id)
         self.logger = get_logger(component="thomas_simple_parser")
 
-    def parse(self, raw_text: str) -> LLMScore:
-        """Parse JSON response to extract relevance label from "O" field.
+    def parse_raw(self, raw_text: str) -> ParsedScoreDTO:
+        """Parse JSON response to extract relevance label from "O" field (pure logic).
 
         Args:
             raw_text: Raw text response from the LLM
 
         Returns:
-            LLMScore with llm_response_text, extracted label, and any parsing warnings
+            ParsedScoreDTO with llm_response_text, extracted label, and any parsing warnings
         """
         warnings: list[ParserWarning] = []
 
@@ -48,7 +50,7 @@ class ThomasSimpleParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(llm_response_text=raw_text, warnings=warnings)
+            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
 
         json_str = json_match.group(0)
 
@@ -62,7 +64,7 @@ class ThomasSimpleParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(llm_response_text=raw_text, warnings=warnings)
+            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
 
         # Extract the "O" score
         score = data.get("O")
@@ -75,7 +77,7 @@ class ThomasSimpleParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(llm_response_text=raw_text, warnings=warnings)
+            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
 
         # Validate the score is 0, 1, 2, or 3
         if not isinstance(score, int) or score not in [0, 1, 2, 3]:
@@ -86,7 +88,7 @@ class ThomasSimpleParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(llm_response_text=raw_text, warnings=warnings)
+            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
 
         # Convert to RelevanceScore enum
         try:
@@ -99,6 +101,6 @@ class ThomasSimpleParser(ResponseParser):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return LLMScore(llm_response_text=raw_text, warnings=warnings)
+            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
 
-        return LLMScore(llm_response_text=raw_text, label=relevance_label, warnings=warnings)
+        return ParsedScoreDTO(llm_response_text=raw_text, label=relevance_label, warnings=warnings)

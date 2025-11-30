@@ -15,6 +15,7 @@ import structlog
 from llm_ensemble.infer.schemas.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.infer.schemas.llm_invocation_dto import LLMInvocationDTO
 from llm_ensemble.infer.ports import LLMProvider
 
 
@@ -27,6 +28,8 @@ class OllamaAdapter(LLMProvider):
 
     def __init__(
         self,
+        provider_name: str,
+        model_name: str,
         retry_config: RetryConfig,
         base_url: str = "http://localhost:11434",
         timeout: int = 60,
@@ -35,21 +38,23 @@ class OllamaAdapter(LLMProvider):
         """Initialize Ollama adapter.
 
         Args:
+            provider_name: Provider identifier (from config, e.g., 'ollama')
+            model_name: Model identifier (from config, e.g., 'llama2')
             retry_config: Retry configuration for exponential backoff
             base_url: Ollama server URL (default: http://localhost:11434)
             timeout: Request timeout in seconds (default: 60)
             logger: Optional logger for retry events
         """
-        super().__init__(retry_config, logger)
+        super().__init__(provider_name, model_name, retry_config, logger)
 
         self.base_url = base_url
         self.timeout = timeout
 
-    def _do_infer(
+    def _do_infer_raw(
         self,
         prompt: str,
         model_config: ModelConfig,
-    ) -> tuple[str, LLMInvocationMetrics]:
+    ) -> LLMInvocationDTO:
         """Perform the actual Ollama API call (called by base class retry logic).
 
         Args:
@@ -57,7 +62,7 @@ class OllamaAdapter(LLMProvider):
             model_config: Model configuration with provider and settings
 
         Returns:
-            Tuple of (raw_response_text, invocation_metrics without retry count)
+            LLMInvocationDTO with response text and metrics (without retry count)
 
         Raises:
             NotImplementedError: Ollama adapter not yet implemented

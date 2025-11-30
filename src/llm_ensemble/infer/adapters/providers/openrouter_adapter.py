@@ -18,6 +18,7 @@ import structlog
 from llm_ensemble.infer.schemas.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.infer.schemas.llm_invocation_dto import LLMInvocationDTO
 from llm_ensemble.infer.ports import LLMProvider
 
 
@@ -58,11 +59,11 @@ class OpenRouterAdapter(LLMProvider):
                 "or pass api_key parameter."
             )
 
-    def _do_infer(
+    def _do_infer_raw(
         self,
         prompt: str,
         model_config: ModelConfig,
-    ) -> tuple[str, LLMInvocationMetrics]:
+    ) -> LLMInvocationDTO:
         """Perform the actual OpenRouter API call (called by base class retry logic).
 
         Args:
@@ -70,7 +71,7 @@ class OpenRouterAdapter(LLMProvider):
             model_config: Model configuration with provider and settings
 
         Returns:
-            Tuple of (raw_response_text, invocation_metrics without retry count)
+            LLMInvocationDTO with response text and metrics (without retry count)
 
         Raises:
             ValueError: If openrouter_model_id is not configured
@@ -149,15 +150,13 @@ class OpenRouterAdapter(LLMProvider):
             completion_cost = (completion_tokens / 1_000_000) * model_config.pricing.completion_cost_per_1m_tokens
             cost_estimate_usd = prompt_cost + completion_cost
 
-        # Create invocation metrics (retry count will be added by base class)
-        invocation_metrics = LLMInvocationMetrics.create(
+        # Return DTO (base class will map to domain objects)
+        return LLMInvocationDTO(
+            response_text=raw_response,
             latency_ms=latency_ms,
-            retries=0,  # Will be set by base class retry logic
             cost_estimate_usd=cost_estimate_usd,
             generation_id=generation_id,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=total_tokens,
         )
-
-        return raw_response, invocation_metrics

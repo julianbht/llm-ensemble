@@ -26,14 +26,15 @@ class JinjaPromptBuilder(PromptBuilder):
     Template path is relative to the prompt templates directory.
     """
 
-    def __init__(self, prompt_name: str, template_path: str):
+    def __init__(self, prompt_name: str, template_path: str, prompt_template_id):
         """Initialize Jinja prompt builder.
 
         Args:
             prompt_name: Natural key for Prompt entity (from config)
             template_path: Path to template file relative to templates dir (from config)
+            prompt_template_id: UUID of the prompt template entity
         """
-        super().__init__(prompt_name, template_path)
+        super().__init__(prompt_name, template_path, prompt_template_id)
 
         # Load template using PathManager
         full_template_path = PathManager.get_prompt_templates_dir() / template_path
@@ -48,8 +49,8 @@ class JinjaPromptBuilder(PromptBuilder):
             self.template_text = f.read()
             self.template = Template(self.template_text)
 
-    def build(self, dataset_sample: DatasetSample) -> LLMPrompt:
-        """Build an LLMPrompt from a dataset sample.
+    def build_raw(self, dataset_sample: DatasetSample) -> tuple[DatasetSample, str]:
+        """Build prompt from dataset sample (pure building logic).
 
         Extracts the judging_sample and passes its attributes to the template:
         - query: Query text from judging_sample
@@ -59,7 +60,7 @@ class JinjaPromptBuilder(PromptBuilder):
             dataset_sample: DatasetSample containing judging_sample and context
 
         Returns:
-            LLMPrompt containing the dataset_sample and rendered prompt text
+            Tuple of (dataset_sample, prompt_text)
 
         Raises:
             Exception: If template rendering fails (unrecoverable error)
@@ -76,11 +77,7 @@ class JinjaPromptBuilder(PromptBuilder):
         # Render template
         prompt_text = self.template.render(**template_vars)
 
-        # Create LLMPrompt with dataset_sample and rendered text
-        return LLMPrompt.create(
-            dataset_sample=dataset_sample,
-            prompt_text=prompt_text
-        )
+        return dataset_sample, prompt_text
 
     def get_template_text(self) -> str:
         """Get the raw Jinja template text.

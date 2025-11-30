@@ -9,7 +9,6 @@ from jinja2 import Template
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.ports import PromptBuilder
-from llm_ensemble.infer.schemas.llm_judgement import LLMPrompt
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
@@ -27,26 +26,28 @@ class JinjaPromptBuilder(PromptBuilder):
     adapter with its own template.
     """
 
-    def __init__(self):
+    def __init__(self, prompt_name: str, template_path: str, prompt_template_id):
         """Initialize Jinja prompt builder.
 
         Loads the template from templates/thomas-simple.jinja using PathManager.
         """
+        super().__init__(prompt_name, template_path, prompt_template_id)
+        
         # Load template using PathManager
-        template_path = PathManager.get_prompt_templates_dir() / "thomas-simple.jinja"
+        full_template_path = PathManager.get_prompt_templates_dir() / template_path
 
-        if not template_path.exists():
+        if not full_template_path.exists():
             raise FileNotFoundError(
-                f"Template not found: {template_path}\n"
-                f"Expected template to be at: {template_path}"
+                f"Template not found: {full_template_path}\n"
+                f"Expected template to be at: {full_template_path}"
             )
 
-        with open(template_path, "r", encoding="utf-8") as f:
+        with open(full_template_path, "r", encoding="utf-8") as f:
             self.template_text = f.read()
             self.template = Template(self.template_text)
 
-    def build(self, dataset_sample: DatasetSample) -> LLMPrompt:
-        """Build an LLMPrompt from a dataset sample.
+    def build_raw(self, dataset_sample: DatasetSample) -> tuple[DatasetSample, str]:
+        """Build prompt from dataset sample (pure building logic).
 
         Extracts the judging_sample and passes its attributes to the template:
         - query: Query text from judging_sample
@@ -56,7 +57,7 @@ class JinjaPromptBuilder(PromptBuilder):
             dataset_sample: DatasetSample containing judging_sample and context
 
         Returns:
-            LLMPrompt containing the dataset_sample and rendered prompt text
+            Tuple of (dataset_sample, prompt_text)
 
         Raises:
             Exception: If template rendering fails (unrecoverable error)
@@ -73,11 +74,7 @@ class JinjaPromptBuilder(PromptBuilder):
         # Render template
         prompt_text = self.template.render(**template_vars)
 
-        # Create LLMPrompt with dataset_sample and rendered text
-        return LLMPrompt.create(
-            dataset_sample=dataset_sample,
-            prompt_text=prompt_text
-        )
+        return dataset_sample, prompt_text
 
     def get_template_text(self) -> str:
         """Get the raw Jinja template text.

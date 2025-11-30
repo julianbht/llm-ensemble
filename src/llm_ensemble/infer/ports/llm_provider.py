@@ -21,6 +21,7 @@ import structlog
 from llm_ensemble.infer.schemas.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.infer.schemas.llm_invocation_dto import LLMInvocationDTO
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
@@ -68,7 +69,8 @@ class LLMProvider(ABC):
         """Run inference with automatic retry logic (template method).
 
         This concrete method implements exponential backoff with jitter.
-        It calls the abstract _do_infer() method for the actual API call.
+        It calls the abstract _do_infer_raw() method for the actual API call
+        and maps the DTO to domain objects.
 
         Args:
             prompt: Pre-built prompt string (from PromptBuilder)
@@ -85,8 +87,20 @@ class LLMProvider(ABC):
         # Retry loop with exponential backoff
         for attempt in range(self.retry_config.max_retries + 1):
             try:
-                # Call the provider-specific implementation
-                raw_response_text, metrics = self._do_infer(prompt, model_config)
+                # Call the provider-specific implementation (returns DTO)
+                invocation_dto = self._do_infer_raw(prompt, model_config)
+                
+                # Map DTO to domain objects
+                raw_response_text = invocation_dto.response_text
+                metrics = LLMInvocationMetrics.create(
+                    latency_ms=invocation_dto.latency_ms,
+                    retries=0,  # Will be updated below
+                    cost_estimate_usd=invocation_dto.cost_estimate_usd,
+                    generation_id=invocation_dto.generation_id,
+                    prompt_tokens=invocation_dto.prompt_tokens,
+                    completion_tokens=invocation_dto.completion_tokens,
+                    total_tokens=invocation_dto.total_tokens,
+                )
 
                 # Success! Set retry count on metrics
                 # attempt = 0 means first try (no retries), attempt = 1 means one retry, etc.
@@ -149,24 +163,24 @@ class LLMProvider(ABC):
         raise RuntimeError("Retry loop exited unexpectedly")
 
     @abstractmethod
-    def _do_infer(
+    def _do_infer_raw(
         self,
         prompt: str,
         model_config: ModelConfig,
-    ) -> tuple[str, LLMInvocationMetrics]:
+    ) -> LLMInvocationDTO:
         """Perform the actual inference API call (implemented by subclasses).
 
         This is the method that provider adapters must implement.
-        It should make the API call and return raw response text and metrics.
+        It should make the API call and return a DTO with pure adapter output.
 
-        The base class infer() method handles retries and wraps this call.
+        The base class infer() method handles retries and maps DTO to domain objects.
 
         Args:
             prompt: Pre-built prompt string (from PromptBuilder)
             model_config: Model configuration with provider and settings
 
         Returns:
-            Tuple of (raw_response_text, invocation_metrics without retry count)
+            LLMInvocationDTO with response text and metrics (without retry count)
 
         Raises:
             APIError: If API call fails (will trigger retry in base class)

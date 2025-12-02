@@ -45,11 +45,14 @@ class JudgementWriter(ABC):
         normalized_dataset: NormalizedDataset,
         start_idx: int,
         end_idx: int,
+        prompt_name: str,
+        parser_name: str,
+        template_text: str,
     ) -> JudgementWriter:
         """Initialize writer with run directory, run context, input dataset, and computed indices.
 
         The run_info contains metadata about the inference run (model config,
-        prompt config, git SHA, etc.) and nullable start_idx/end_idx capturing user intent.
+        git SHA, etc.) and nullable start_idx/end_idx capturing user intent.
 
         The computed start_idx and end_idx represent the actual indices that will be
         processed (computed by the service from run_info + normalized_dataset).
@@ -62,10 +65,13 @@ class JudgementWriter(ABC):
 
         Args:
             run_dir: Run directory where output should be written (writer determines file structure)
-            run_info: Inference run context (metadata about model, prompt, git state, nullable indices)
+            run_info: Inference run context (metadata about model, git state, nullable indices)
             normalized_dataset: Input dataset being processed (used for provenance linking)
             start_idx: Computed start index (0-indexed, inclusive, defaults to 0 if not specified by user)
             end_idx: Computed end index (exclusive, defaults to sample_count if not specified by user)
+            prompt_name: Prompt name from registry (e.g., 'thomas-simple')
+            parser_name: Parser name from registry (e.g., 'thomas-simple')
+            template_text: Template text from prompt builder (for persistence)
 
         Returns:
             Self, to enable context manager usage

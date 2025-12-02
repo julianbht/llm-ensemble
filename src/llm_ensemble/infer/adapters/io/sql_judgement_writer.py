@@ -33,7 +33,7 @@ from llm_ensemble.libs.db import (
     compute_model_uuid,
     compute_model_config_uuid,
     compute_prompt_template_uuid,
-    compute_parser_spec_uuid,
+    compute_parser_spec_uuid_from_name,
     compute_infer_run_uuid,
     compute_llm_response_text_uuid,
     compute_llm_invocation_metrics_uuid,
@@ -57,8 +57,8 @@ from llm_ensemble.infer.adapters.io.mappers_domain_to_orm import (
     provider_name_to_orm,
     model_config_to_model_orm,
     model_config_to_orm,
-    prompt_config_to_template_orm,
-    prompt_config_to_parser_orm,
+    prompt_name_to_template_orm,
+    parser_name_to_orm,
     infer_run_info_to_orm,
     llm_prompt_to_orm,
     llm_response_text_to_orm,
@@ -100,6 +100,9 @@ class SqlJudgementWriter(JudgementWriter):
         normalized_dataset: NormalizedDataset,
         start_idx: int,
         end_idx: int,
+        prompt_name: str,
+        parser_name: str,
+        template_text: str,
     ) -> "SqlJudgementWriter":
         """Open database session and initialize run metadata."""
         if self._session is not None:
@@ -109,7 +112,10 @@ class SqlJudgementWriter(JudgementWriter):
         self._session = get_session(engine)
 
         # Initialize run metadata (providers, models, prompts, etc.)
-        self._initialize_run_metadata(run_info, normalized_dataset, start_idx, end_idx)
+        self._initialize_run_metadata(
+            run_info, normalized_dataset, start_idx, end_idx,
+            prompt_name, parser_name, template_text
+        )
 
         # Create JudgedDataset with same ID as InferRun (1:1 relationship)
         # sample_fingerprint computed in close() after all judgements written
@@ -197,6 +203,9 @@ class SqlJudgementWriter(JudgementWriter):
         normalized_dataset: NormalizedDataset,
         start_idx: int,
         end_idx: int,
+        prompt_name: str,
+        parser_name: str,
+        template_text: str,
     ) -> None:
         """Initialize shared metadata entities."""
         # Upsert Provider
@@ -224,25 +233,18 @@ class SqlJudgementWriter(JudgementWriter):
         )
 
         # Upsert PromptTemplate
-        builder = run_info.prompt_config.get_prompt_builder()
-        template_text = getattr(builder, "template_text", "")
         self._prompt_template_id = self._upsert_entity(
             PromptTemplateORM,
-            compute_prompt_template_uuid(run_info.prompt_config.name),
-            lambda: prompt_config_to_template_orm(run_info.prompt_config, template_text),
+            compute_prompt_template_uuid(prompt_name),
+            lambda: prompt_name_to_template_orm(prompt_name, template_text),
             "prompt_templates"
         )
 
         # Upsert ParserSpec
-        code_hash = "0" * 64  # Placeholder
         self._parser_spec_id = self._upsert_entity(
             ParserSpecORM,
-            compute_parser_spec_uuid(
-                run_info.prompt_config.parser_module,
-                run_info.prompt_config.parser_class,
-                code_hash
-            ),
-            lambda: prompt_config_to_parser_orm(run_info.prompt_config, code_hash),
+            compute_parser_spec_uuid_from_name(parser_name),
+            lambda: parser_name_to_orm(parser_name),
             "parser_specs"
         )
 
@@ -250,8 +252,8 @@ class SqlJudgementWriter(JudgementWriter):
         infer_run_id = compute_infer_run_uuid(run_info.run_name)
         config_names = {
             "model_config": run_info.model_cfg.name,
-            "prompt_template": run_info.prompt_config.name,
-            "parser_spec": f"{run_info.prompt_config.parser_module}:{run_info.prompt_config.parser_class}",
+            "prompt_name": prompt_name,
+            "parser_name": parser_name,
         }
         infer_run_orm = infer_run_info_to_orm(
             run_info,

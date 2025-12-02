@@ -57,6 +57,9 @@ class FullyPopulatedJsonWriter(JudgementWriter):
         normalized_dataset: NormalizedDataset,
         start_idx: int,
         end_idx: int,
+        prompt_name: str,
+        parser_name: str,
+        template_text: str,
     ) -> "FullyPopulatedJsonWriter":
         """Initialize writer, write manifest, and prepare for streaming.
 
@@ -66,6 +69,9 @@ class FullyPopulatedJsonWriter(JudgementWriter):
             normalized_dataset: Input dataset (not used by JSON writer)
             start_idx: Computed start index (not used by JSON writer)
             end_idx: Computed end index (not used by JSON writer)
+            prompt_name: Prompt name from registry (not used by JSON writer)
+            parser_name: Parser name from registry (not used by JSON writer)
+            template_text: Template text (not used by JSON writer)
 
         Returns:
             Self, to enable context manager usage

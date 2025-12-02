@@ -114,9 +114,15 @@ class InferenceService:
         prompt_template_id = compute_prompt_template_uuid(self.prompt_adapter.name)
         parser_spec_id = compute_parser_spec_uuid_from_name(self.parser_adapter.name)
 
+        # Extract template text from prompt builder for persistence
+        template_text = prompt_builder.get_template_text()
+
         # Open writer for streaming (context manager ensures proper cleanup)
-        # Pass computed indices to writer so it can create InferRun entity with actual range
-        with self.judgement_writer.open(run_dir, run_info, normalized_dataset, start_idx, end_idx) as writer:
+        # Pass computed indices, adapter names, and template text to writer
+        with self.judgement_writer.open(
+            run_dir, run_info, normalized_dataset, start_idx, end_idx,
+            self.prompt_adapter.name, self.parser_adapter.name, template_text
+        ) as writer:
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
                 # Build prompt from dataset_sample (adapter returns raw tuple)

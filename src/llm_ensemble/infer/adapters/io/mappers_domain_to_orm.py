@@ -19,7 +19,6 @@ from __future__ import annotations
 from uuid import UUID
 
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
-from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.llm_judgement import (
     LLMJudgement,
@@ -46,7 +45,7 @@ from llm_ensemble.libs.db import (
     compute_model_uuid,
     compute_model_config_uuid,
     compute_prompt_template_uuid,
-    compute_parser_spec_uuid,
+    compute_parser_spec_uuid_from_name,
     compute_llm_response_text_uuid,
     compute_llm_invocation_metrics_uuid,
     compute_llm_score_uuid,
@@ -140,19 +139,19 @@ def model_config_to_orm(
 # PromptTemplate Mappers
 # ============================================================================
 
-def prompt_config_to_template_orm(prompt_cfg: PromptConfig, template_text: str) -> PromptTemplateORM:
-    """Convert PromptConfig to PromptTemplateORM.
+def prompt_name_to_template_orm(prompt_name: str, template_text: str) -> PromptTemplateORM:
+    """Convert prompt name and template text to PromptTemplateORM.
 
     Args:
-        prompt_cfg: PromptConfig object
+        prompt_name: Prompt name from registry (e.g., 'thomas-simple')
         template_text: Template text (loaded from builder)
 
     Returns:
         PromptTemplateORM model ready for persistence
     """
     return PromptTemplateORM(
-        id=compute_prompt_template_uuid(prompt_cfg.name),
-        name=prompt_cfg.name,
+        id=compute_prompt_template_uuid(prompt_name),
+        name=prompt_name,
         template_text=template_text,
     )
 
@@ -161,28 +160,18 @@ def prompt_config_to_template_orm(prompt_cfg: PromptConfig, template_text: str) 
 # ParserSpec Mappers
 # ============================================================================
 
-def prompt_config_to_parser_orm(
-    prompt_cfg: PromptConfig,
-    code_hash: str,
-) -> ParserSpecORM:
-    """Convert PromptConfig to ParserSpecORM.
+def parser_name_to_orm(parser_name: str) -> ParserSpecORM:
+    """Convert parser name to ParserSpecORM.
 
     Args:
-        prompt_cfg: PromptConfig object
-        code_hash: Parser code hash (for versioning)
+        parser_name: Parser name from registry (e.g., 'thomas-simple')
 
     Returns:
         ParserSpecORM model ready for persistence
     """
     return ParserSpecORM(
-        id=compute_parser_spec_uuid(
-            prompt_cfg.parser_module,
-            prompt_cfg.parser_class,
-            code_hash
-        ),
-        code_hash=code_hash,
-        parser_module=prompt_cfg.parser_module,
-        parser_class=prompt_cfg.parser_class,
+        id=compute_parser_spec_uuid_from_name(parser_name),
+        name=parser_name,
     )
 
 
@@ -200,7 +189,7 @@ def infer_run_info_to_orm(
 
     Args:
         run_info: InferRunInfo context object
-        config_names: Config names dict {model_config, prompt_template, parser_spec}
+        config_names: Config names dict {model_config, prompt_name, parser_name}
         start_idx: Computed start index into NormalizedDataset.samples
         end_idx: Computed end index into NormalizedDataset.samples
 

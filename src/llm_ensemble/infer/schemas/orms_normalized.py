@@ -112,26 +112,24 @@ class PromptTemplateORM(Base):
 
 
 class ParserSpecORM(Base):
+    """Minimal entity tracking which response parser was used.
+
+    Just id + name - no wiring details (module/class paths).
+    Name comes from registry (e.g., 'thomas-simple').
+    """
     __tablename__ = "parser_specs"
-    __natural_key__ = ("parser_module", "parser_class", "code_hash")
-    __uuid_function__ = "compute_parser_spec_uuid"
+    __natural_key__ = "name"
+    __uuid_function__ = "compute_parser_spec_uuid_from_name"
+    __table_args__ = {"schema": "infer"}
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-
-    code_hash = Column(CHAR(64), nullable=False)
-    parser_module = Column(String(512), nullable=False)
-    parser_class = Column(String(255), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=utcnow)
-
-    __table_args__ = (
-        UniqueConstraint(
-            "parser_module",
-            "parser_class",
-            "code_hash",
-            name="uq_parser_spec_identity",
-        ),
-        {"schema": "infer"},
+    name = Column(
+        String(255),
+        nullable=False,
+        unique=True,
+        comment="Natural key from registry (e.g., 'thomas-simple')"
     )
+    created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
     scores = relationship("LLMScoreORM", back_populates="parser_spec")

@@ -9,10 +9,6 @@ from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
 
-# Import adapters to ensure decorators run and they're registered
-from llm_ensemble.infer.adapters.prompts import jinja_prompt_builder  # noqa: F401
-from llm_ensemble.infer.adapters.parsers import thomas_simple_parser  # noqa: F401
-
 from llm_ensemble.libs.cli.params import (
     RunName,
     LogCfg,

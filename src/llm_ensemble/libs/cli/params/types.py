@@ -192,44 +192,130 @@ class RetryConfigParamType(ConfigParamType):
         )
 
 
+class RegistryParamType(click.ParamType):
+    """Base Click parameter type for registry-based adapter selectors."""
+
+    name = "TEXT"
+
+    def __init__(
+        self,
+        *,
+        param_name: str,
+        adapter_type_label: str,
+        registry_provider: Callable,
+    ) -> None:
+        self.param_name = param_name
+        self.adapter_type_label = adapter_type_label
+        self._registry_provider = registry_provider
+
+    def _registry(self):
+        """Get registry instance."""
+        return self._registry_provider()
+
+    def _available(self) -> List[str]:
+        """Get list of registered adapter names."""
+        return list(self._registry().list_available().keys())
+
+    def convert(self, value, param, ctx):  # type: ignore[override]
+        if value in (None, ""):
+            self.fail(
+                f"Missing required --{self.param_name}.\n"
+                f"Available {self.adapter_type_label}s: {', '.join(self._available())}",
+                param,
+                ctx,
+            )
+
+        available = self._available()
+        if value not in available:
+            self.fail(
+                f"Unknown {self.adapter_type_label} '{value}'.\n"
+                f"Available: {', '.join(available)}",
+                param,
+                ctx,
+            )
+        return value
+
+    def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
+        """Provide shell completion for registered adapters."""
+        available = self._available()
+        return [
+            click.shell_completion.CompletionItem(
+                name,
+                help=self._registry()._registry[name].description
+            )
+            for name in available
+            if name.startswith(incomplete)
+        ]
+
+
+class PromptParamType(RegistryParamType):
+    """Click parameter type for prompt builder selection from registry."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            param_name="prompt",
+            adapter_type_label="prompt",
+            registry_provider=lambda: self._get_prompt_registry(),
+        )
+
+    def _get_prompt_registry(self):
+        from llm_ensemble.infer.adapters.prompts.registry import prompt_registry
+        return prompt_registry
+
+
+class ParserParamType(RegistryParamType):
+    """Click parameter type for response parser selection from registry."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            param_name="parser",
+            adapter_type_label="parser",
+            registry_provider=lambda: self._get_parser_registry(),
+        )
+
+    def _get_parser_registry(self):
+        from llm_ensemble.infer.adapters.parsers.registry import parser_registry
+        return parser_registry
+
+
 class RunInputParamType(click.ParamType):
     """Click parameter type for run inputs that support both run names and @tags.
-    
+
     Accepts either:
     - Direct run name: "20251117_102232_llmjudge-json"
     - Tagged reference: "@my-experiment"
-    
+
     Validates tagged references and provides helpful error messages with
     available tags when a tag doesn't exist.
-    
+
     Example:
         infer --input @my-experiment  # Resolves to ingest run tagged "my-experiment"
         infer --input 20251117_102232_llmjudge-json  # Uses run name directly
     """
-    
+
     name = "RUN"
-    
+
     def __init__(self, source_cli: str) -> None:
         """Initialize run input parameter type.
-        
+
         Args:
             source_cli: The CLI that created the runs (e.g., "ingest" for infer's input)
         """
         self.source_cli = source_cli
-    
+
     def get_metavar(self, param, ctx=None):  # type: ignore[override]
         return "RUN"
-    
+
     def convert(self, value, param, ctx):  # type: ignore[override]
         if value in (None, ""):
             return None
-        
+
         # If it starts with @, validate the tag exists
         if value.startswith("@"):
             tag_name = value[1:]
             if not TagManager.tag_exists(tag_name, self.source_cli):
                 available = TagManager.list_tags(self.source_cli)
-                
+
                 if available:
                     self.fail(
                         f"Tag '{tag_name}' not found for CLI '{self.source_cli}'.\n"
@@ -246,10 +332,10 @@ class RunInputParamType(click.ParamType):
                         param,
                         ctx,
                     )
-        
+
         # Return as-is (will be resolved later by TagManager.resolve_input)
         return value
-    
+
     def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
         """Provide shell completion for available tags (with @ prefix)."""
         # If user is typing @, complete with tags
@@ -261,6 +347,6 @@ class RunInputParamType(click.ParamType):
                 for tag in available
                 if tag.startswith(tag_prefix)
             ]
-        
+
         # Otherwise, could complete with run names (future enhancement)
         return []

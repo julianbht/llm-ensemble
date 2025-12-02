@@ -13,6 +13,8 @@ from llm_ensemble.libs.cli.params.types import (
     LogConfigParamType,
     ModelConfigParamType,
     PromptConfigParamType,
+    PromptParamType,
+    ParserParamType,
     RetryConfigParamType,
     RunInputParamType,
 )
@@ -116,6 +118,26 @@ PromptCfg = Annotated[
         "--prompt-cfg",
         click_type=PromptConfigParamType(),
         help=f"Prompt config name. Configs in {PathManager.get_prompts_dir().relative_to(PathManager.get_project_root())}",
+    ),
+]
+
+Prompt = Annotated[
+    str,
+    typer.Option(
+        ...,
+        "--prompt",
+        click_type=PromptParamType(),
+        help="Prompt builder name from registry (e.g., 'thomas-simple')",
+    ),
+]
+
+Parser = Annotated[
+    str,
+    typer.Option(
+        ...,
+        "--parser",
+        click_type=ParserParamType(),
+        help="Response parser name from registry (e.g., 'thomas-simple')",
     ),
 ]
 

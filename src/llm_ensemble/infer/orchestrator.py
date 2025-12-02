@@ -30,13 +30,13 @@ from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 def run_inference(
     model_config: ModelConfig,
-    prompt_parser_config: PromptParserConfig,
+    prompt_name: str,
+    parser_name: str,
     retry_config: RetryConfig,
     io_config: IOConfig,
     logging_config: LoggingConfig,
     input_run_name: str,
     model_config_name: str,
-    prompt_config_name: str,
     retry_config_name: str,
     io_config_name: str,
     run_name: Optional[str] = None,
@@ -52,20 +52,18 @@ def run_inference(
     - Reading NormalizedDataset and computing explicit indices
     - Setting up run directories and logging
     - Building manifest with git info and execution parameters
-    - Instantiating adapters dynamically from config specifications
+    - Instantiating adapters from registries
     - Running inference, attaching manifest metadata to each judgement, and writing output
 
-    Configs are provided as final, validated objects (CLI handles loading and overrides applied).
-
     Args:
-        model_config: Model configuration (already loaded and validated with overrides applied)
-        prompt_parser_config: Prompt-parser configuration (already loaded and validated with overrides applied)
-        retry_config: Retry configuration (already loaded and validated)
-        io_config: I/O configuration (already loaded and validated with overrides applied)
+        model_config: Model configuration
+        prompt_name: Prompt name for registry lookup (e.g., "thomas-simple")
+        parser_name: Parser name for registry lookup (e.g., "thomas-simple")
+        retry_config: Retry configuration
+        io_config: I/O configuration
         logging_config: Logging configuration (controls pretty printing and log saving)
         input_run_name: Ingest run identifier (e.g., "my_ingest_run")
         model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
-        prompt_config_name: Name of the prompt config file (e.g., "thomas-simple")
         retry_config_name: Name of the retry config file (e.g., "standard")
         io_config_name: Name of the I/O config file (e.g., "json")
         run_name: Custom run ID (auto-generates if not provided)
@@ -80,11 +78,12 @@ def run_inference(
         ValueError: If adapter is not recognized or config is invalid
     """
 
-    # Generate or use provided run_name (collect name hints from all configs)
+    # Generate or use provided run_name
     if run_name is None:
         run_name = generate_run_name([
             model_config.name_hint,
-            prompt_parser_config.name_hint,
+            prompt_name,
+            parser_name,
             io_config.name_hint,
         ])
 
@@ -147,20 +146,45 @@ def run_inference(
     )
     logger.info(InferLogEvent.RUN_DIRECTORY_CREATED, path=str(run_dir))
 
-    # Instantiate adapters directly from config
+    # Import registries
+    from llm_ensemble.infer.adapters.prompts.registry import prompt_registry
+    from llm_ensemble.infer.adapters.parsers.registry import parser_registry
+    from llm_ensemble.libs.registry import AdapterWithMetadata
+
+    # Instantiate adapters from registries
+    prompt_meta = prompt_registry.get_metadata(prompt_name)
+    parser_meta = parser_registry.get_metadata(parser_name)
+
+    # Instantiate prompt builder with template_path from registry
+    prompt_builder = prompt_meta.adapter_class(
+        template_path=prompt_meta.config["template_path"]
+    )
+
+    # Instantiate parser (no config needed)
+    response_parser = parser_meta.adapter_class()
+
+    # Wrap adapters with metadata for identity tracking
+    prompt_adapter = AdapterWithMetadata(
+        adapter=prompt_builder,
+        name=prompt_meta.name
+    )
+    parser_adapter = AdapterWithMetadata(
+        adapter=response_parser,
+        name=parser_meta.name
+    )
+
+    # Instantiate I/O and provider from configs (unchanged)
     reader = io_config.get_reader()
     writer = io_config.get_writer()
-    prompt_builder = prompt_parser_config.get_prompt_builder()
-    response_parser = prompt_parser_config.get_response_parser()
     provider = model_config.get_provider(retry_config=retry_config, logger=logger)
 
     # Create domain service (it handles its own logging)
     service = InferenceService(
         example_reader=reader,
         judgement_writer=writer,
-        prompt_builder=prompt_builder,
+        prompt_adapter=prompt_adapter,
         llm_provider=provider,
-        response_parser=response_parser,
+        parser_adapter=parser_adapter,
     )
 
     # Run inference pipeline

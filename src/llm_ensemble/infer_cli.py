@@ -1,14 +1,18 @@
 from __future__ import annotations
-from typing import Annotated
 import typer
 
 from llm_ensemble.infer.orchestrator import run_inference
-from llm_ensemble.infer.config_loaders import load_model_config, load_prompt_parser_config, load_retry_config
+from llm_ensemble.infer.config_loaders import load_model_config, load_retry_config
 from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.config.logging_config_loader import load_logging_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
+
+# Import adapters to ensure decorators run and they're registered
+from llm_ensemble.infer.adapters.prompts import jinja_prompt_builder  # noqa: F401
+from llm_ensemble.infer.adapters.parsers import thomas_simple_parser  # noqa: F401
+
 from llm_ensemble.libs.cli.params import (
     RunName,
     LogCfg,
@@ -18,7 +22,8 @@ from llm_ensemble.libs.cli.params import (
     StartIdx,
     EndIdx,
     ModelCfg,
-    PromptCfg,
+    Prompt,
+    Parser,
     InferIoCfg,
     RetryCfg,
     Tag,
@@ -39,7 +44,8 @@ app = typer.Typer(
 def infer(
     # Required parameters with validation
     model_cfg: ModelCfg,
-    prompt_cfg: PromptCfg,
+    prompt: Prompt,
+    parser: Parser,
     io_cfg: InferIoCfg,
     input_run_name: InferIngestRunInput,
     # Optional parameters
@@ -54,15 +60,19 @@ def infer(
     tag: Tag = None,
 ):
     """Run LLM inference on judging samples and output structured judgements.
+
+    Prompt and parser are selected by name from registries.
+    Tab-complete --prompt and --parser to see available options.
+
+    Environment variables:
         OPENROUTER_API_KEY: OpenRouter API key (required for OpenRouter models)
         HF_TOKEN: HuggingFace API token (required for HF models)
     """
     # Resolve tag if input starts with @ (already validated by RunInputParamType)
     input_run_name = TagManager.resolve_input(input_run_name, "ingest")
-    
-    # Load configurations
+
+    # Load configurations (only model, retry, io - no prompt config)
     model_config = load_model_config(model_cfg)
-    prompt_parser_config = load_prompt_parser_config(prompt_cfg)
     retry_config = load_retry_config(retry_cfg)
     io_config = load_io_config(io_cfg, cli_name="infer")
     logging_config = load_logging_config(log_cfg or "observability")
@@ -71,24 +81,22 @@ def infer(
     if override:
         overrides = parse_and_route_overrides(override)
 
-        # Apply routed overrides to each config
+        # Apply routed overrides to configs
         if overrides['model']:
             model_config = apply_overrides(model_config, overrides['model'])
-        if overrides['prompt']:
-            prompt_parser_config = apply_overrides(prompt_parser_config, overrides['prompt'])
         if overrides['io']:
             io_config = apply_overrides(io_config, overrides['io'])
 
-    # Run inference with final configs
+    # Run inference with registry-based prompt/parser selection
     run_inference(
         model_config=model_config,
-        prompt_parser_config=prompt_parser_config,
+        prompt_name=prompt,
+        parser_name=parser,
         retry_config=retry_config,
         io_config=io_config,
         logging_config=logging_config,
         input_run_name=input_run_name,
         model_config_name=model_cfg,
-        prompt_config_name=prompt_cfg,
         retry_config_name=retry_cfg,
         io_config_name=io_cfg,
         run_name=run_name,

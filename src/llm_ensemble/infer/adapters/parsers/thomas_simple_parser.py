@@ -1,4 +1,4 @@
-"""Thomas et al. simple prompt parser.
+"""Thomas et al. simple prompt parser with registry support.
 
 Parses JSON responses from the thomas-simple prompt which outputs {"O": N} format.
 Parser knows exactly what to look for - tightly coupled to the thomas-simple prompt.
@@ -12,10 +12,15 @@ from llm_ensemble.infer.ports import ResponseParser
 from llm_ensemble.infer.schemas.llm_judgement import LLMScore
 from llm_ensemble.infer.schemas.parsed_score_dto import ParsedScoreDTO
 from llm_ensemble.infer.schemas.warnings import ParserWarning, ParserWarningCode
+from llm_ensemble.infer.adapters.parsers.registry import parser_registry
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
+@parser_registry.register(
+    name="thomas-simple",
+    description="Parser for thomas-simple prompt (JSON format with O field)"
+)
 class ThomasSimpleParser(ResponseParser):
     """Parser for thomas-simple prompt responses.
 
@@ -23,8 +28,8 @@ class ThomasSimpleParser(ResponseParser):
     The "O" field represents the overall relevance score.
     """
 
-    def __init__(self, parser_spec_id):
-        super().__init__(parser_spec_id)
+    def __init__(self):
+        """Initialize parser (no identity params needed)."""
         self.logger = get_logger(component="thomas_simple_parser")
 
     def parse_raw(self, raw_text: str) -> ParsedScoreDTO:

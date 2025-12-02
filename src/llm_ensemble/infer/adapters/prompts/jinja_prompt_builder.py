@@ -1,48 +1,45 @@
-"""Jinja2-based prompt builder adapter.
+"""Jinja2-based prompt builder adapter with registry support.
 
 Generic Jinja2 prompt builder that can work with any template.
-Template path and prompt name come from config.
+Template path provided during construction from registry.
 """
 
 from __future__ import annotations
+from pathlib import Path
 from jinja2 import Template
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.ports import PromptBuilder
 from llm_ensemble.infer.schemas.llm_judgement import LLMPrompt
-from llm_ensemble.libs.runtime.path_manager import PathManager
+from llm_ensemble.infer.adapters.prompts.registry import prompt_registry
 
 
-class JinjaPromptBuilder(PromptBuilder):
-    """Generic Jinja2 prompt builder.
+@prompt_registry.register(
+    name="thomas-simple",
+    description="Thomas et al. simple binary relevance prompt",
+    template_path="thomas-simple.jinja"
+)
+class ThomasSimplePromptBuilder(PromptBuilder):
+    """Thomas et al. simple prompt (binary relevance scoring).
 
-    Loads any Jinja2 template from the templates/ directory.
-    Template path and prompt name come from config.
-
-    Passes JudgingSample Pydantic model attributes directly to the template:
+    Passes JudgingSample model attributes to the template:
     - {{ query }} - The query text
     - {{ document }} - The document text
-
-    Template path is relative to the prompt templates directory.
     """
 
-    def __init__(self, prompt_name: str, template_path: str, prompt_template_id):
-        """Initialize Jinja prompt builder.
+    def __init__(self, template_path: str):
+        """Initialize with template path.
 
         Args:
-            prompt_name: Natural key for Prompt entity (from config)
-            template_path: Path to template file relative to templates dir (from config)
-            prompt_template_id: UUID of the prompt template entity
+            template_path: Path to template file relative to templates dir
         """
-        super().__init__(prompt_name, template_path, prompt_template_id)
-
-        # Load template using PathManager
-        full_template_path = PathManager.get_prompt_templates_dir() / template_path
+        # Load template
+        templates_dir = Path(__file__).parent / "templates"
+        full_template_path = templates_dir / template_path
 
         if not full_template_path.exists():
             raise FileNotFoundError(
-                f"Template not found: {full_template_path}\n"
-                f"Expected template to be at: {full_template_path}"
+                f"Template not found: {full_template_path}"
             )
 
         with open(full_template_path, "r", encoding="utf-8") as f:

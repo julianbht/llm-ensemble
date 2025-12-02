@@ -14,7 +14,6 @@ from pydantic import ConfigDict, Field
 from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
-from llm_ensemble.infer.schemas.prompt_config_schema import PromptParserConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.db import compute_infer_run_uuid
 
@@ -55,9 +54,14 @@ class InferRunInfo(RunInfo):
         description="Name of the model config used (e.g., 'gpt-oss-20b')"
     )
 
-    prompt_config_name: str = Field(
+    prompt_name: str = Field(
         ...,
-        description="Name of the prompt config used (e.g., 'thomas-et-al-prompt')"
+        description="Name of the prompt used from registry (e.g., 'thomas-simple')"
+    )
+
+    parser_name: str = Field(
+        ...,
+        description="Name of the parser used from registry (e.g., 'thomas-simple')"
     )
 
     retry_config_name: str = Field(
@@ -75,11 +79,6 @@ class InferRunInfo(RunInfo):
     model_cfg: ModelConfig = Field(
         ...,
         description="Model configuration used for this run"
-    )
-
-    prompt_parser_config: PromptParserConfig = Field(
-        ...,
-        description="Prompt-parser configuration used for this run"
     )
 
     retry_config: RetryConfig = Field(
@@ -116,11 +115,11 @@ class InferRunInfo(RunInfo):
         cls,
         run_name: str,
         model_config_name: str,
-        prompt_config_name: str,
+        prompt_name: str,
+        parser_name: str,
         retry_config_name: str,
         io_config_name: str,
         model_cfg: ModelConfig,
-        prompt_parser_config: PromptParserConfig,
         retry_config: RetryConfig,
         io_config: IOConfig,
         input_run_name: str,
@@ -133,11 +132,11 @@ class InferRunInfo(RunInfo):
         Args:
             run_name: Run identifier (timestamp-based)
             model_config_name: Model config name
-            prompt_config_name: Prompt config name
+            prompt_name: Prompt name from registry
+            parser_name: Parser name from registry
             retry_config_name: Retry config name
             io_config_name: I/O config name
             model_cfg: Full model configuration
-            prompt_parser_config: Full prompt-parser configuration
             retry_config: Full retry configuration
             io_config: Full I/O configuration
             input_run_name: Ingest run name to read samples from
@@ -153,11 +152,11 @@ class InferRunInfo(RunInfo):
             id=run_info_id,
             run_name=run_name,
             model_config_name=model_config_name,
-            prompt_config_name=prompt_config_name,
+            prompt_name=prompt_name,
+            parser_name=parser_name,
             retry_config_name=retry_config_name,
             io_config_name=io_config_name,
             model_cfg=model_cfg,
-            prompt_parser_config=prompt_parser_config,
             retry_config=retry_config,
             io_config=io_config,
             input_run_name=input_run_name,

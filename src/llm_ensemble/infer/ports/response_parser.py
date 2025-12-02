@@ -22,47 +22,8 @@ class ResponseParser(ABC):
     what format to expect and what fields to extract.
 
     Adapters implement parse_raw() returning ParsedScoreDTO (pure parsing logic).
-    The parse() method wraps parse_raw() and maps DTO to LLMScore domain objects.
+    Adapters are pure implementations - they don't know their own identity.
     """
-
-    def __init__(self, parser_spec_id: UUID):
-        """Initialize parser with parser spec ID for domain object creation.
-
-        Args:
-            parser_spec_id: UUID of the parser spec entity (for LLMScore UUID computation)
-        """
-        self.parser_spec_id = parser_spec_id
-
-    def parse(self, raw_text: str) -> LLMScore:
-        """Parse LLM response to extract structured relevance score.
-
-        Calls parse_raw() to get DTO, then maps to LLMScore domain object.
-
-        Args:
-            raw_text: Raw text response from the LLM
-
-        Returns:
-            LLMScore with llm_response_text set to raw_text and extracted
-            label/confidence/rationale and warnings. Parsed fields may be None
-            if parsing failed.
-
-        Note:
-            The returned LLMScore must always include llm_response_text (set to raw_text).
-            If parsing completely fails, return LLMScore with llm_response_text set
-            and all parsed fields as None with appropriate warnings.
-        """
-        # Call adapter's pure parsing logic
-        dto = self.parse_raw(raw_text)
-        
-        # Map DTO to domain object
-        return LLMScore.create(
-            llm_response_text=dto.llm_response_text,
-            parser_spec_id=self.parser_spec_id,
-            label=dto.label,
-            confidence=dto.confidence,
-            rationale=dto.rationale,
-            warnings=dto.warnings,
-        )
 
     @abstractmethod
     def parse_raw(self, raw_text: str) -> ParsedScoreDTO:

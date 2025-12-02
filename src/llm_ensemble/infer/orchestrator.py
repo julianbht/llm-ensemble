@@ -94,11 +94,11 @@ def run_inference(
     run_info = InferRunInfo.create(
         run_name=run_name,
         model_config_name=model_config_name,
-        prompt_config_name=prompt_config_name,
+        prompt_name=prompt_name,
+        parser_name=parser_name,
         retry_config_name=retry_config_name,
         io_config_name=io_config_name,
         model_cfg=model_config,
-        prompt_parser_config=prompt_parser_config,
         retry_config=retry_config,
         io_config=io_config,
         input_run_name=input_run_name,

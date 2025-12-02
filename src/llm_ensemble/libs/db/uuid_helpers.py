@@ -171,8 +171,14 @@ def compute_provider_uuid(name: str) -> uuid.UUID:
 
 
 def compute_parser_spec_uuid(parser_module: str, parser_class: str, code_hash: str) -> uuid.UUID:
+    """Legacy: Compute parser spec UUID from module/class/code (deprecated)."""
     natural_key = f"{parser_module}:{parser_class}:{code_hash}"
     return uuid.uuid5(NAMESPACE_PARSER_SPEC, natural_key)
+
+
+def compute_parser_spec_uuid_from_name(parser_name: str) -> uuid.UUID:
+    """Compute parser spec UUID from parser name only (registry pattern)."""
+    return uuid.uuid5(NAMESPACE_PARSER_SPEC, parser_name)
 
 
 def compute_llm_prompt_uuid(prompt: str, judging_sample_id: uuid.UUID) -> uuid.UUID:

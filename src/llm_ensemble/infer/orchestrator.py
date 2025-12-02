@@ -15,7 +15,6 @@ from typing import Optional
 
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
-from llm_ensemble.infer.schemas.prompt_config_schema import PromptParserConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
 from llm_ensemble.infer.domain import InferenceService
@@ -139,7 +138,8 @@ def run_inference(
         model=model_config_name,
         provider=model_config.provider_config.provider_name,
         io_format=io_config_name,
-        prompt=prompt_config_name,
+        prompt=prompt_name,
+        parser=parser_name,
         input_run_name=input_run_name,
         start_idx=start_idx,
         end_idx=end_idx,

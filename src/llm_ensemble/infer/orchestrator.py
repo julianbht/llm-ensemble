@@ -143,14 +143,13 @@ def run_inference(
         start_idx=start_idx,
         end_idx=end_idx,
     )
-    logger.info(InferLogEvent.RUN_DIRECTORY_CREATED, path=str(run_dir))
 
+    # Instantiate adapters with factories
     prompt_builder = PromptAdapterBuilder.build(prompt_name)
     response_parser = ParserAdapterBuilder.build(parser_name)
-
-    # Instantiate I/O and provider from builders
     reader = IOAdapterBuilder.build_reader(io_name)
     writer = IOAdapterBuilder.build_writer(io_name)
+
     provider = model_config.get_provider(retry_config=retry_config, logger=logger)
 
     # Create domain service

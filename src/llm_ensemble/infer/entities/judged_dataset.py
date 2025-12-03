@@ -16,7 +16,7 @@ import uuid
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.entities.llm_judgement import LLMJudgement
 
 
 class JudgedDataset(BaseModel):

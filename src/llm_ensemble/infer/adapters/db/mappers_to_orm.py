@@ -20,13 +20,13 @@ from uuid import UUID
 
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
-from llm_ensemble.infer.schemas.llm_judgement import (
+from llm_ensemble.infer.entities.llm_judgement import (
     LLMJudgement,
-    LLMPrompt,
-    LLMInvocationMetrics,
-    LLMScore,
 )
-from llm_ensemble.infer.schemas.orms_normalized import (
+from llm_ensemble.infer.entities.llm_prompt import LLMPrompt
+from llm_ensemble.infer.entities.llm_invocation_metrics import LLMInvocationMetrics
+from llm_ensemble.infer.entities.llm_score import LLMScore
+from llm_ensemble.infer.adapters.db.orms import (
     ProviderORM,
     ModelORM,
     ModelConfigORM,

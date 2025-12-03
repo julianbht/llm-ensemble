@@ -7,7 +7,8 @@ It depends only on port abstractions and handles its own logging.
 from __future__ import annotations
 from pathlib import Path
 
-from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement, LLMScore
+from llm_ensemble.infer.entities.llm_judgement import LLMJudgement
+from llm_ensemble.infer.entities.llm_score import LLMScore
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary

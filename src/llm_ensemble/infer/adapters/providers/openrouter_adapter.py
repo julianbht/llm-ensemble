@@ -15,10 +15,10 @@ from typing import Optional
 from openai import OpenAI
 import structlog
 
-from llm_ensemble.infer.schemas.llm_judgement import LLMInvocationMetrics
+from llm_ensemble.infer.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.infer.schemas.llm_invocation_dto import LLMInvocationDTO
+from llm_ensemble.infer.entities.llm_invocation_dto import LLMInvocationDTO
 from llm_ensemble.infer.ports import LLMProvider
 
 

@@ -1,11 +1,5 @@
 model_id: mai-ds-r1:free
-provider: openrouter
 context_window: 8192
-
-# Adapter specifications (loaded dynamically)
-# Format: module paths are snake_case, class names are UpperCamelCase
-provider_module: llm_ensemble.infer.adapters.providers.openrouter_adapter
-provider_class: OpenRouterAdapter
 
 # Core inference parameters (all set to null - configure via CLI overrides if needed)
 temperature: null

@@ -18,7 +18,7 @@ from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
 from llm_ensemble.infer.schemas.parsed_score_dto import ParsedScoreDTO
 
 
-class ResponseParser(ABC):
+class ResponseParserPort(ABC):
     """Abstract base class for response parsers with built-in domain mapping.
 
     Implementations provide parsing logic in parse_raw(), which returns a simple DTO.

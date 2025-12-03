@@ -12,7 +12,7 @@ To add a new prompt:
 from __future__ import annotations
 from typing import Dict, Type, NamedTuple
 
-from llm_ensemble.infer.ports import PromptBuilder
+from llm_ensemble.infer.ports import PromptBuilderPort
 from llm_ensemble.infer.adapters.prompts.jinja_prompt_builder import (
     ThomasSimplePromptBuilder,
 )
@@ -20,7 +20,7 @@ from llm_ensemble.infer.adapters.prompts.jinja_prompt_builder import (
 
 class PromptConfig(NamedTuple):
     """Configuration for a prompt adapter."""
-    adapter_class: Type[PromptBuilder]
+    adapter_class: Type[PromptBuilderPort]
     template_path: str
     description: str
 
@@ -39,7 +39,7 @@ class PromptAdapterBuilder:
     """Builder for creating prompt adapter instances."""
 
     @staticmethod
-    def build(prompt_name: str) -> PromptBuilder:
+    def build(prompt_name: str) -> PromptBuilderPort:
         """Build and return a prompt adapter instance.
 
         Args:

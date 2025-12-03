@@ -9,13 +9,13 @@ concrete implementations.
 from llm_ensemble.infer.ports.llm_provider import LLMProviderPort
 from llm_ensemble.infer.ports.input_port import InputPort
 from llm_ensemble.infer.ports.output_port import OutputPort
-from llm_ensemble.infer.ports.prompt_builder import PromptBuilder
-from llm_ensemble.infer.ports.response_parser import ResponseParser
+from llm_ensemble.infer.ports.prompt_builder import PromptBuilderPort
+from llm_ensemble.infer.ports.response_parser import ResponseParserPort
 
 __all__ = [
     "LLMProviderPort",
     "InputPort",
     "OutputPort",
-    "PromptBuilder",
-    "ResponseParser",
+    "PromptBuilderPort",
+    "ResponseParserPort",
 ]

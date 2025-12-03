@@ -9,11 +9,11 @@ from pathlib import Path
 from jinja2 import Template
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
-from llm_ensemble.infer.ports import PromptBuilder
+from llm_ensemble.infer.ports import PromptBuilderPort
 from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
 
 
-class ThomasSimplePromptBuilder(PromptBuilder):
+class ThomasSimplePromptBuilder(PromptBuilderPort):
     """Thomas et al. simple prompt (binary relevance scoring).
 
     Passes JudgingSample model attributes to the template:

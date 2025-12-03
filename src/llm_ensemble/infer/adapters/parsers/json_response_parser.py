@@ -9,14 +9,14 @@ from __future__ import annotations
 import json
 import re
 
-from llm_ensemble.infer.ports import ResponseParser
+from llm_ensemble.infer.ports import ResponseParserPort
 from llm_ensemble.infer.schemas.parsed_score_dto import ParsedScoreDTO
 from llm_ensemble.infer.schemas.warnings import ParserWarning, ParserWarningCode
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
-class JsonResponseParser(ResponseParser):
+class JsonResponseParser(ResponseParserPort):
     """Parser for JSON-formatted LLM responses.
 
     Expects JSON output in one of two formats:

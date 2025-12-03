@@ -8,11 +8,11 @@ from __future__ import annotations
 from jinja2 import Template
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
-from llm_ensemble.infer.ports import PromptBuilder
+from llm_ensemble.infer.ports import PromptBuilderPort
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
-class ThomasBuilderAdvanced(PromptBuilder):
+class ThomasBuilderAdvanced(PromptBuilderPort):
     """Advanced Thomas et al. prompt builder with role and aspects enabled.
 
     Loads the thomas-et-al-prompt.jinja template and enables advanced features:

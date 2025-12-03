@@ -15,8 +15,8 @@ from llm_ensemble.infer.ports import (
     LLMProviderPort,
     InputPort,
     OutputPort,
-    ResponseParser,
-    PromptBuilder,
+    ResponseParserPort,
+    PromptBuilderPort,
 )
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
@@ -34,9 +34,9 @@ class InferenceService:
         self,
         example_reader: InputPort,
         judgement_writer: OutputPort,
-        prompt_builder: PromptBuilder,
+        prompt_builder: PromptBuilderPort,
         llm_provider: LLMProviderPort,
-        response_parser: ResponseParser,
+        response_parser: ResponseParserPort,
     ):
         """Initialize inference service with port dependencies.
 

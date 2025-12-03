@@ -8,14 +8,14 @@ from __future__ import annotations
 import json
 import re
 
-from llm_ensemble.infer.ports import ResponseParser
+from llm_ensemble.infer.ports import ResponseParserPort
 from llm_ensemble.infer.schemas.parsed_score_dto import ParsedScoreDTO
 from llm_ensemble.infer.schemas.warnings import ParserWarning, ParserWarningCode
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
-class ThomasAdvancedParser(ResponseParser):
+class ThomasAdvancedParser(ResponseParserPort):
     """Parser for thomas-advanced prompt responses.
 
     Expects JSON output: {"M": N, "T": N, "O": N} where:

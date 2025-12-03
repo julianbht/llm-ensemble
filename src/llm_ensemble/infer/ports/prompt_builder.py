@@ -19,7 +19,7 @@ from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
 
 
-class PromptBuilder(ABC):
+class PromptBuilderPort(ABC):
     """Abstract base class for prompt builders with built-in domain mapping.
 
     Implementations provide building logic in build_raw(), which returns a simple tuple.

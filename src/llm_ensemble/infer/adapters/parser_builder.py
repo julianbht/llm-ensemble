@@ -12,14 +12,14 @@ To add a new parser:
 from __future__ import annotations
 from typing import Dict, Type
 
-from llm_ensemble.infer.ports import ResponseParser
+from llm_ensemble.infer.ports import ResponseParserPort
 from llm_ensemble.infer.adapters.parsers.thomas_simple_parser import (
     ThomasSimpleParser,
 )
 
 
 # Explicit mapping of parser names to adapter classes
-PARSERS: Dict[str, Type[ResponseParser]] = {
+PARSERS: Dict[str, Type[ResponseParserPort]] = {
     "thomas-simple": ThomasSimpleParser,
 }
 
@@ -28,7 +28,7 @@ class ParserAdapterBuilder:
     """Builder for creating response parser instances."""
 
     @staticmethod
-    def build(parser_name: str) -> ResponseParser:
+    def build(parser_name: str) -> ResponseParserPort:
         """Build and return a parser adapter instance.
 
         Args:

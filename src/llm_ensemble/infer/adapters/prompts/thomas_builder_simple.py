@@ -8,11 +8,11 @@ from __future__ import annotations
 from jinja2 import Template
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
-from llm_ensemble.infer.ports import PromptBuilder
+from llm_ensemble.infer.ports import PromptBuilderPort
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
-class JinjaPromptBuilder(PromptBuilder):
+class JinjaPromptBuilder(PromptBuilderPort):
     """Prompt builder using Jinja2 templates.
 
     Loads the thomas-et-al-prompt.jinja template from the templates/ directory.

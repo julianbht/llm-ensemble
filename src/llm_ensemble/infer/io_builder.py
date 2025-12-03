@@ -16,7 +16,7 @@ To add a new IO format:
 from __future__ import annotations
 from typing import Dict, Type, NamedTuple
 
-from llm_ensemble.infer.ports import ExampleReader, JudgementWriter
+from llm_ensemble.infer.ports import InputPort, OutputPort
 from llm_ensemble.infer.adapters.io.db.sql_sample_reader import SQLJudgingSampleReader
 from llm_ensemble.infer.adapters.io.db.sql_repository import SQLJudgementRepository
 from llm_ensemble.infer.adapters.io.fully_populated_json_writer import FullyPopulatedJsonWriter
@@ -24,8 +24,8 @@ from llm_ensemble.infer.adapters.io.fully_populated_json_writer import FullyPopu
 
 class IOConfig(NamedTuple):
     """Configuration for an IO format."""
-    reader_class: Type[ExampleReader]
-    writer_class: Type[JudgementWriter]
+    reader_class: Type[InputPort]
+    writer_class: Type[OutputPort]
     description: str
 
 
@@ -48,7 +48,7 @@ class IOAdapterBuilder:
     """Builder for creating IO adapter instances."""
 
     @staticmethod
-    def build_reader(io_name: str) -> ExampleReader:
+    def build_reader(io_name: str) -> InputPort:
         """Build and return a reader adapter instance.
 
         Args:
@@ -71,7 +71,7 @@ class IOAdapterBuilder:
         return config.reader_class()
 
     @staticmethod
-    def build_writer(io_name: str) -> JudgementWriter:
+    def build_writer(io_name: str) -> OutputPort:
         """Build and return a writer adapter instance.
 
         Args:

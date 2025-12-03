@@ -8,14 +8,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
-from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.ports import (
-    LLMProvider,
-    ExampleReader,
-    JudgementWriter,
+    LLMProviderPort,
+    InputPort,
+    OutputPort,
     ResponseParser,
     PromptBuilder,
 )
@@ -33,10 +32,10 @@ class InferenceService:
 
     def __init__(
         self,
-        example_reader: ExampleReader,
-        judgement_writer: JudgementWriter,
+        example_reader: InputPort,
+        judgement_writer: OutputPort,
         prompt_builder: PromptBuilder,
-        llm_provider: LLMProvider,
+        llm_provider: LLMProviderPort,
         response_parser: ResponseParser,
     ):
         """Initialize inference service with port dependencies.
@@ -119,7 +118,7 @@ class InferenceService:
                 # Build prompt (port creates domain object)
                 llm_prompt = self.prompt_builder.build(dataset_sample)
 
-                # Run inference - returns raw text and metrics
+                # Run inference
                 self.logger.info(InferLogEvent.SENDING_REQUEST)
                 raw_response_text, invocation_metrics = self.llm_provider.infer(
                     llm_prompt.prompt_text,

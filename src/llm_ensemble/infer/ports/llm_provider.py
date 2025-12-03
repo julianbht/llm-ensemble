@@ -24,7 +24,7 @@ from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
-class LLMProvider(ABC):
+class LLMProviderPort(ABC):
     """Abstract base class for LLM inference providers with retry logic.
 
     Template Method Pattern:

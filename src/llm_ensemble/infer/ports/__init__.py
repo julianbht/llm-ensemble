@@ -6,16 +6,16 @@ the core application logic depends on these abstractions rather than
 concrete implementations.
 """
 
-from llm_ensemble.infer.ports.llm_provider import LLMProvider
-from llm_ensemble.infer.ports.example_reader import ExampleReader
-from llm_ensemble.infer.ports.judgement_writer import JudgementWriter
+from llm_ensemble.infer.ports.llm_provider import LLMProviderPort
+from llm_ensemble.infer.ports.input_port import InputPort
+from llm_ensemble.infer.ports.output_port import OutputPort
 from llm_ensemble.infer.ports.prompt_builder import PromptBuilder
 from llm_ensemble.infer.ports.response_parser import ResponseParser
 
 __all__ = [
-    "LLMProvider",
-    "ExampleReader",
-    "JudgementWriter",
+    "LLMProviderPort",
+    "InputPort",
+    "OutputPort",
     "PromptBuilder",
     "ResponseParser",
 ]

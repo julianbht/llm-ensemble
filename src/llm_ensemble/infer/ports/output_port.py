@@ -16,7 +16,7 @@ from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 
 
-class JudgementWriter(ABC):
+class OutputPort(ABC):
     """Abstract base class for writing LLM judgements with streaming support.
 
     Implementations can write to different sinks (JSON, Parquet, etc.)
@@ -48,7 +48,7 @@ class JudgementWriter(ABC):
         prompt_name: str,
         parser_name: str,
         template_text: str,
-    ) -> JudgementWriter:
+    ) -> OutputPort:
         """Initialize writer with run directory, run context, input dataset, and computed indices.
 
         The run_info contains metadata about the inference run (model config,
@@ -114,7 +114,7 @@ class JudgementWriter(ABC):
         """
         pass
 
-    def __enter__(self) -> "JudgementWriter":
+    def __enter__(self) -> "OutputPort":
         """Enter context manager.
 
         Returns:

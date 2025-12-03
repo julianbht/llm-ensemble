@@ -56,19 +56,11 @@ def infer(
     override: Override = [],
     tag: Tag = None,
 ):
-    """Run LLM inference on judging samples and output structured judgements.
-
-    Prompt and parser are selected by name from registries.
-    Tab-complete --prompt and --parser to see available options.
-
-    Environment variables:
-        OPENROUTER_API_KEY: OpenRouter API key (required for OpenRouter models)
-        HF_TOKEN: HuggingFace API token (required for HF models)
-    """
+    """Run LLM inference."""
     # Resolve tag if input starts with @ (already validated by RunInputParamType)
     input_run_name = TagManager.resolve_input(input_run_name, "ingest")
 
-    # Load configurations (only model, retry, logging - no IO config)
+    # Load configurations
     model_config = load_model_config(model_cfg)
     retry_config = load_retry_config(retry_cfg)
     logging_config = load_logging_config(log_cfg or "observability")
@@ -76,11 +68,8 @@ def infer(
     # Parse and route overrides if provided
     if override:
         overrides = parse_and_route_overrides(override)
-
-        # Apply routed overrides to configs
         if overrides['model']:
             model_config = apply_overrides(model_config, overrides['model'])
-        # Note: IO overrides no longer supported since IO is now registry-based
 
     # Run inference with registry-based adapter selection
     run_inference(

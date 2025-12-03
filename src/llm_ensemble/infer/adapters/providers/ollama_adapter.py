@@ -15,10 +15,10 @@ from llm_ensemble.infer.schemas.entities.llm_invocation_metrics import LLMInvoca
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.llm_invocation_dto import LLMInvocationDTO
-from llm_ensemble.infer.ports import LLMProvider
+from llm_ensemble.infer.ports import LLMProviderPort
 
 
-class OllamaAdapter(LLMProvider):
+class OllamaAdapter(LLMProviderPort):
     """Ollama implementation of the LLMProvider port.
 
     Pure API client that sends pre-built prompts to Ollama and returns raw responses.

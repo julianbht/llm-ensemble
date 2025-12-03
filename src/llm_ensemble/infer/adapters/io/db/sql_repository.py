@@ -24,7 +24,7 @@ from sqlalchemy import select
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
-from llm_ensemble.infer.ports import JudgementWriter
+from llm_ensemble.infer.ports import OutputPort
 from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.libs.logging import get_logger
@@ -60,7 +60,7 @@ from llm_ensemble.infer.adapters.io.db.mappers_to_orm import (
 from llm_ensemble.libs.logging.log_events import InferWriteEvent
 
 
-class SQLJudgementRepository(JudgementWriter):
+class SQLJudgementRepository(OutputPort):
     """Write LLMJudgement records to SQL database.
 
     Normalized schema: decomposes judgements into Provider, ModelConfig,

@@ -12,7 +12,7 @@ To add a new provider:
 from __future__ import annotations
 from typing import Dict, Type
 
-from llm_ensemble.infer.ports import LLMProvider
+from llm_ensemble.infer.ports import LLMProviderPort
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.adapters.providers.openrouter_adapter import OpenRouterAdapter
@@ -20,7 +20,7 @@ from llm_ensemble.infer.adapters.providers.ollama_adapter import OllamaAdapter
 
 
 # Explicit mapping of provider names to adapter classes
-PROVIDERS: Dict[str, Type[LLMProvider]] = {
+PROVIDERS: Dict[str, Type[LLMProviderPort]] = {
     "openrouter": OpenRouterAdapter,
     "ollama": OllamaAdapter,
 }
@@ -34,7 +34,7 @@ class ProviderAdapterBuilder:
         provider_name: str,
         model_config: ModelConfig,
         retry_config: RetryConfig,
-    ) -> LLMProvider:
+    ) -> LLMProviderPort:
         """Build and return a provider adapter instance.
 
         Args:

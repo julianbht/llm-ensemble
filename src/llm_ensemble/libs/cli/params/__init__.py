@@ -11,11 +11,10 @@ from .shared_params import (
     EndIdx,
     ModelCfg,
     PromptCfg,
-    AggregationStrategyAdapterSpecName,
     RetryCfg,
     Tag,
 )
-from .aggregate import AggregateIoCfg, InferRunInput
+from .aggregate import AggregationStrategy, AggregateIoCfg, InferRunInput
 from .ingest import IngestIoCfg, Limit
 from .infer import InferIoCfg, IngestRunInput as InferIngestRunInput
 
@@ -30,9 +29,9 @@ __all__ = [
     "EndIdx",
     "ModelCfg",
     "PromptCfg",
-    "AggregationStrategyAdapterSpecName",
     "RetryCfg",
     "Tag",
+    "AggregationStrategy",
     "AggregateIoCfg",
     "IngestIoCfg",
     "Limit",

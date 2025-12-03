@@ -9,9 +9,11 @@ from collections import Counter
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.ports import AggregationStrategyPort
+from llm_ensemble.aggregate.registry import AggregationStrategyRegistry
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
+@AggregationStrategyRegistry.register("majority_vote")
 class MajorityVoteAdapter(AggregationStrategyPort):
     """Simple majority vote aggregation strategy adapter.
 

@@ -1,5 +1,0 @@
-name_hint: weighted_majority
-aggregation_strategy_name: weighted_majority
-aggregation_strategy_adapter:
-  aggregation_strategy_module: llm_ensemble.aggregate.adapters.strategies.weighted_majority_adapter
-  aggregation_strategy_class: WeightedMajorityAdapter

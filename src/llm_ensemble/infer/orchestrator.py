@@ -24,6 +24,8 @@ from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
+from llm_ensemble.infer.prompt_builder import PromptAdapterBuilder
+from llm_ensemble.infer.parser_builder import ParserAdapterBuilder
 
 
 def run_inference(
@@ -144,10 +146,6 @@ def run_inference(
         end_idx=end_idx,
     )
     logger.info(InferLogEvent.RUN_DIRECTORY_CREATED, path=str(run_dir))
-
-    # Instantiate adapters from builders
-    from llm_ensemble.infer.prompt_builder import PromptAdapterBuilder
-    from llm_ensemble.infer.parser_builder import ParserAdapterBuilder
 
     prompt_builder = PromptAdapterBuilder.build(prompt_name)
     response_parser = ParserAdapterBuilder.build(parser_name)

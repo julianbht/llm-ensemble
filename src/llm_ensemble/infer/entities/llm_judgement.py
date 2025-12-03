@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from llm_ensemble.infer.entities.llm_prompt import LLMPrompt
 from llm_ensemble.infer.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.entities.llm_score import LLMScore
-from llm_ensemble.infer.entities.warnings import BaseWarning
+from llm_ensemble.infer.schemas.warnings import BaseWarning
 
 
 class LLMJudgement(BaseModel):

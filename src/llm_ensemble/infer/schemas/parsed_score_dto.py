@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 from pydantic import BaseModel, Field
 
-from llm_ensemble.infer.entities.warnings import BaseWarning
+from llm_ensemble.infer.schemas.warnings import BaseWarning
 from llm_ensemble.libs.schemas import RelevanceScore
 
 

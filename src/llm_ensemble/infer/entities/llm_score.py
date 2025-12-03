@@ -9,7 +9,7 @@ from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from llm_ensemble.infer.entities.warnings import BaseWarning
+from llm_ensemble.infer.schemas.warnings import BaseWarning
 from llm_ensemble.libs.schemas import RelevanceScore
 
 

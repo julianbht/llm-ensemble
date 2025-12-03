@@ -15,7 +15,7 @@ from abc import ABC, abstractmethod
 from uuid import UUID
 
 from llm_ensemble.infer.entities.llm_score import LLMScore
-from llm_ensemble.infer.entities.parsed_score_dto import ParsedScoreDTO
+from llm_ensemble.infer.schemas.parsed_score_dto import ParsedScoreDTO
 
 
 class ResponseParser(ABC):

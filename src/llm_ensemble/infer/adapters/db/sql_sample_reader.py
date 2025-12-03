@@ -40,7 +40,7 @@ from llm_ensemble.infer.ports import ExampleReader
 from llm_ensemble.libs.db import get_engine, get_session
 
 
-class SqlJudgingSampleReader(ExampleReader):
+class SQLJudgingSampleReader(ExampleReader):
     """Read JudgingSample records from SQL database by ingest run name.
 
     This adapter implements the ExampleReader port while handling the

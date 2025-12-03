@@ -4,23 +4,16 @@ from __future__ import annotations
 
 import click
 
-from llm_ensemble.aggregate.registry import AggregationStrategyRegistry
-from llm_ensemble.aggregate.strategy_registration import ensure_all_strategies_registered
+from llm_ensemble.aggregate.registry import AggregationStrategyBuilder
 
 
 class AggregationStrategyParamType(click.ParamType):
     """Click parameter type for aggregation strategy selection.
     
-    Reads available strategies from AggregationStrategyRegistry for validation and completion.
-    Ensures strategies are registered before use.
+    Reads available strategies from AggregationStrategyBuilder.
     """
     
     name = "AGGREGATION_STRATEGY"
-    
-    def __init__(self):
-        super().__init__()
-        # Ensure all strategies are registered when param type is created
-        ensure_all_strategies_registered()
     
     def convert(self, value, param, ctx):  # type: ignore[override]
         if value in (None, ""):
@@ -31,8 +24,8 @@ class AggregationStrategyParamType(click.ParamType):
                 ctx,
             )
         
-        if not AggregationStrategyRegistry.has_strategy(value):
-            available = AggregationStrategyRegistry.list_strategies()
+        if not AggregationStrategyBuilder.has_strategy(value):
+            available = AggregationStrategyBuilder.list_available()
             available_str = ", ".join(available) if available else "none"
             self.fail(
                 f"Aggregation strategy '{value}' not found.\n"
@@ -45,7 +38,7 @@ class AggregationStrategyParamType(click.ParamType):
     
     def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
         """Provide shell completion for available strategies."""
-        available = AggregationStrategyRegistry.list_strategies()
+        available = AggregationStrategyBuilder.list_available()
         return [
             click.shell_completion.CompletionItem(strategy)
             for strategy in available

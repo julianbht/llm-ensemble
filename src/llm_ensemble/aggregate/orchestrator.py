@@ -12,8 +12,7 @@ from __future__ import annotations
 from typing import Optional
 
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
-from llm_ensemble.aggregate.registry import AggregationStrategyRegistry
-from llm_ensemble.aggregate.strategy_registration import ensure_all_strategies_registered
+from llm_ensemble.aggregate.registry import AggregationStrategyBuilder
 from llm_ensemble.aggregate.domain import AggregationService
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
 from llm_ensemble.libs.runtime.run_info import RunType
@@ -41,7 +40,7 @@ def run_aggregation(
     Infrastructure orchestration that coordinates:
     - Setting up run directories and logging
     - Building manifest with git info and execution parameters
-    - Instantiating adapters from registry
+    - Instantiating adapters from builder
     - Running aggregation and writing output
 
     Args:
@@ -57,11 +56,8 @@ def run_aggregation(
 
     Raises:
         FileNotFoundError: If any run directory doesn't exist
-        ValueError: If strategy not found in registry
+        ValueError: If strategy not found
     """
-    
-    # Ensure all strategies are registered before attempting to get one
-    ensure_all_strategies_registered()
 
     # Generate or use provided run_name
     if run_name is None:
@@ -115,8 +111,8 @@ def run_aggregation(
         file_level=logging_config.file_level,
     )
 
-    # Instantiate adapters from registry and config
-    aggregation_strategy_adapter = AggregationStrategyRegistry.get(aggregation_strategy_name)
+    # Instantiate adapters from builder and config
+    aggregation_strategy_adapter = AggregationStrategyBuilder.build(aggregation_strategy_name)
     reader = io_config.get_reader()
     writer = io_config.get_writer()
 

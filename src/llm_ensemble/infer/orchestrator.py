@@ -158,7 +158,7 @@ def run_inference(
         retry_config=retry_config,
     )
 
-    # Create domain service
+    # Create domain service by injecting adapters
     service = InferenceService(
         example_reader=reader,
         judgement_writer=writer,

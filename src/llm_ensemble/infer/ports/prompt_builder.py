@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 from uuid import UUID
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
-from llm_ensemble.infer.entities.llm_prompt import LLMPrompt
+from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
 
 
 class PromptBuilder(ABC):

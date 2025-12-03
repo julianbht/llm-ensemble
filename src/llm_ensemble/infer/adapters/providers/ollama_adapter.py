@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Optional
 import structlog
 
-from llm_ensemble.infer.entities.llm_invocation_metrics import LLMInvocationMetrics
+from llm_ensemble.infer.schemas.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.llm_invocation_dto import LLMInvocationDTO

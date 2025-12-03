@@ -10,7 +10,7 @@ from jinja2 import Template
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.ports import PromptBuilder
-from llm_ensemble.infer.entities.llm_prompt import LLMPrompt
+from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
 
 
 class ThomasSimplePromptBuilder(PromptBuilder):

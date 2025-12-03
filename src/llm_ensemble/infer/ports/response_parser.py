@@ -14,7 +14,7 @@ import uuid
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from llm_ensemble.infer.entities.llm_score import LLMScore
+from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
 from llm_ensemble.infer.schemas.parsed_score_dto import ParsedScoreDTO
 
 

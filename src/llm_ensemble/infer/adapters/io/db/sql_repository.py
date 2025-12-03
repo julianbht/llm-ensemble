@@ -22,7 +22,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from llm_ensemble.infer.entities.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import JudgementWriter
 from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
@@ -33,7 +33,7 @@ from llm_ensemble.libs.db import (
     get_session,
     compute_judged_dataset_fingerprint,
 )
-from llm_ensemble.infer.adapters.db.orms import (
+from llm_ensemble.infer.adapters.io.db.orms import (
     ProviderORM,
     ModelORM,
     ModelConfigORM,
@@ -46,7 +46,7 @@ from llm_ensemble.infer.adapters.db.orms import (
     LLMInvocationMetricsORM,
     LLMScoreORM,
 )
-from llm_ensemble.infer.adapters.db.mappers_to_orm import (
+from llm_ensemble.infer.adapters.io.db.mappers_to_orm import (
     provider_name_to_orm,
     model_config_to_model_orm,
     model_config_to_orm,

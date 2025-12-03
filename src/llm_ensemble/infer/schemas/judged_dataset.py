@@ -17,7 +17,6 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
-from llm_ensemble.libs.db import compute_judged_dataset_fingerprint
 
 
 class JudgedDataset(BaseModel):

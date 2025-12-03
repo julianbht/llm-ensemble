@@ -44,7 +44,7 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     ModelORM,
     ModelConfigORM,
     PromptTemplateORM,
-    ParserSpecORM,
+    ParserORM,
     JudgedDatasetORM,
     InferRunORM,
     LLMPromptTextORM,

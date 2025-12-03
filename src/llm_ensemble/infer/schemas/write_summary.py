@@ -31,8 +31,8 @@ class WriteSummary(BaseModel):
     model_configs_skipped: int = Field(default=0, ge=0, description="Number of model configs skipped (already existed)")
     prompt_templates_created: int = Field(default=0, ge=0, description="Number of prompt templates created")
     prompt_templates_skipped: int = Field(default=0, ge=0, description="Number of prompt templates skipped (already existed)")
-    parser_specs_created: int = Field(default=0, ge=0, description="Number of parser specs created")
-    parser_specs_skipped: int = Field(default=0, ge=0, description="Number of parser specs skipped (already existed)")
+    parser_created: int = Field(default=0, ge=0, description="Number of parser specs created")
+    parser_skipped: int = Field(default=0, ge=0, description="Number of parser specs skipped (already existed)")
     infer_runs_created: int = Field(default=0, ge=0, description="Number of infer runs created")
     infer_runs_skipped: int = Field(default=0, ge=0, description="Number of infer runs skipped (already existed)")
 
@@ -73,10 +73,10 @@ class WriteSummary(BaseModel):
         self.prompt_templates_created += created
         self.prompt_templates_skipped += skipped
 
-    def add_parser_specs(self, created: int = 0, skipped: int = 0) -> None:
+    def add_parser(self, created: int = 0, skipped: int = 0) -> None:
         """Increment parser spec counts."""
-        self.parser_specs_created += created
-        self.parser_specs_skipped += skipped
+        self.parser_created += created
+        self.parser_skipped += skipped
 
     def add_infer_runs(self, created: int = 0, skipped: int = 0) -> None:
         """Increment infer run counts."""
@@ -125,7 +125,7 @@ class WriteSummary(BaseModel):
             + self.models_created
             + self.model_configs_created
             + self.prompt_templates_created
-            + self.parser_specs_created
+            + self.parser_created
             + self.infer_runs_created
             + self.judged_datasets_created
             + self.judged_dataset_junctions_created
@@ -144,7 +144,7 @@ class WriteSummary(BaseModel):
             + self.models_skipped
             + self.model_configs_skipped
             + self.prompt_templates_skipped
-            + self.parser_specs_skipped
+            + self.parser_skipped
             + self.infer_runs_skipped
             + self.judged_datasets_skipped
             + self.llm_prompts_skipped

@@ -111,13 +111,13 @@ class PromptTemplateORM(Base):
     prompt_texts = relationship("LLMPromptTextORM", back_populates="prompt_template")
 
 
-class ParserSpecORM(Base):
+class ParserORM(Base):
     """Minimal entity tracking which response parser was used.
 
     Just id + name - no wiring details (module/class paths).
     Name comes from registry (e.g., 'thomas-simple').
     """
-    __tablename__ = "parser_specs"
+    __tablename__ = "parser"
     __natural_key__ = "name"
     __uuid_function__ = "compute_parser_spec_uuid_from_name"
     __table_args__ = {"schema": "infer"}
@@ -303,7 +303,7 @@ class LLMScoreORM(Base):
 
     parser_spec_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.parser_specs.id"),
+        ForeignKey("infer.parser.id"),
         nullable=False,
     )
     llm_response_text_id = Column(

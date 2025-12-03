@@ -31,7 +31,7 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     ModelORM,
     ModelConfigORM,
     PromptTemplateORM,
-    ParserSpecORM,
+    ParserORM,
     InferRunORM,
     LLMPromptTextORM,
     LLMResponseTextORM,
@@ -160,7 +160,7 @@ def prompt_name_to_template_orm(prompt_name: str, template_text: str) -> PromptT
 # ParserSpec Mappers
 # ============================================================================
 
-def parser_name_to_orm(parser_name: str) -> ParserSpecORM:
+def parser_name_to_orm(parser_name: str) -> ParserORM:
     """Convert parser name to ParserSpecORM.
 
     Args:
@@ -169,7 +169,7 @@ def parser_name_to_orm(parser_name: str) -> ParserSpecORM:
     Returns:
         ParserSpecORM model ready for persistence
     """
-    return ParserSpecORM(
+    return ParserORM(
         id=compute_parser_spec_uuid_from_name(parser_name),
         name=parser_name,
     )

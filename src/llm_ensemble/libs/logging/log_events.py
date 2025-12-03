@@ -63,7 +63,7 @@ class InferWriteEvent(str, Enum):
     WRITE_MODELS = "write_models"
     WRITE_MODEL_CONFIGS = "write_model_configs"
     WRITE_PROMPT_TEMPLATES = "write_prompt_templates"
-    WRITE_PARSER_SPECS = "write_parser_specs"
+    WRITE_parser = "write_parser"
     WRITE_INFER_RUNS = "write_infer_runs"
 
     # Per-judgement entities (written during write_one)

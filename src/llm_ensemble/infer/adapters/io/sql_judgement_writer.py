@@ -38,7 +38,7 @@ from llm_ensemble.infer.schemas.orms_normalized import (
     ModelORM,
     ModelConfigORM,
     PromptTemplateORM,
-    ParserSpecORM,
+    ParserORM,
     InferRunORM,
     JudgedDatasetORM,
     LLMPromptTextORM,
@@ -240,10 +240,10 @@ class SqlJudgementWriter(JudgementWriter):
         # Upsert ParserSpec by name
         parser_spec_orm = parser_name_to_orm(parser_name)
         self._parser_spec_id = self._upsert_by_name(
-            ParserSpecORM,
+            ParserORM,
             parser_name,
             parser_spec_orm,
-            "parser_specs"
+            "parser"
         )
 
         # Create InferRun (always new)

@@ -18,7 +18,6 @@ from llm_ensemble.infer.ports import (
     ResponseParser,
     PromptBuilder,
 )
-from llm_ensemble.libs.registry import AdapterWithMetadata
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 from llm_ensemble.libs.logging.log_events import InferLogEvent
@@ -35,24 +34,24 @@ class InferenceService:
         self,
         example_reader: ExampleReader,
         judgement_writer: JudgementWriter,
-        prompt_adapter: AdapterWithMetadata,
+        prompt_builder: PromptBuilder,
         llm_provider: LLMProvider,
-        parser_adapter: AdapterWithMetadata,
+        response_parser: ResponseParser,
     ):
         """Initialize inference service with port dependencies.
 
         Args:
             example_reader: Port for reading judging examples
             judgement_writer: Port for writing model judgements
-            prompt_adapter: Prompt builder wrapped with metadata (adapter + name)
+            prompt_builder: Prompt builder with identity
             llm_provider: Port for LLM inference (accepts prompts, returns raw responses)
-            parser_adapter: Response parser wrapped with metadata (adapter + name)
+            response_parser: Response parser with identity
         """
         self.example_reader = example_reader
         self.judgement_writer = judgement_writer
-        self.prompt_adapter = prompt_adapter
+        self.prompt_builder = prompt_builder
         self.llm_provider = llm_provider
-        self.parser_adapter = parser_adapter
+        self.response_parser = response_parser
         self.logger = get_logger(component="inference_service")
 
     def run_inference(
@@ -105,28 +104,24 @@ class InferenceService:
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
-        # Extract adapters from wrappers
-        prompt_builder = self.prompt_adapter.adapter
-        response_parser = self.parser_adapter.adapter
-
-        # Compute UUIDs from identity (names from registry)
+        # Compute UUIDs from identity (names from adapters)
         from llm_ensemble.libs.db import compute_prompt_template_uuid, compute_parser_spec_uuid_from_name
-        prompt_template_id = compute_prompt_template_uuid(self.prompt_adapter.name)
-        parser_spec_id = compute_parser_spec_uuid_from_name(self.parser_adapter.name)
+        prompt_template_id = compute_prompt_template_uuid(self.prompt_builder.prompt_name)
+        parser_spec_id = compute_parser_spec_uuid_from_name(self.response_parser.parser_name)
 
         # Extract template text from prompt builder for persistence
-        template_text = prompt_builder.get_template_text()
+        template_text = self.prompt_builder.get_template_text()
 
         # Open writer for streaming (context manager ensures proper cleanup)
         # Pass computed indices, adapter names, and template text to writer
         with self.judgement_writer.open(
             run_dir, run_info, normalized_dataset, start_idx, end_idx,
-            self.prompt_adapter.name, self.parser_adapter.name, template_text
+            self.prompt_builder.prompt_name, self.response_parser.parser_name, template_text
         ) as writer:
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
                 # Build prompt from dataset_sample (adapter returns raw tuple)
-                ds, prompt_text = prompt_builder.build_raw(dataset_sample)
+                ds, prompt_text = self.prompt_builder.build_raw(dataset_sample)
 
                 # Create LLMPrompt domain object with identity from metadata
                 from llm_ensemble.infer.schemas.llm_judgement import LLMPrompt
@@ -145,7 +140,7 @@ class InferenceService:
 
                 # Parse response to extract structured score (adapter returns DTO)
                 from llm_ensemble.infer.schemas.llm_judgement import LLMScore
-                parsed_dto = response_parser.parse_raw(raw_response_text)
+                parsed_dto = self.response_parser.parse_raw(raw_response_text)
 
                 # Create LLMScore domain object with identity from metadata
                 llm_score = LLMScore.create(

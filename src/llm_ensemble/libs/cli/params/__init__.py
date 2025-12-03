@@ -10,9 +10,10 @@ from .shared_params import (
     StartIdx,
     EndIdx,
     ModelCfg,
-    PromptCfg,
     RetryCfg,
     Tag,
+    Prompt,
+    Parser,
 )
 from .aggregate import AggregationStrategy, AggregateIoCfg, InferRunInput
 from .ingest import IngestIoCfg, Limit
@@ -28,9 +29,10 @@ __all__ = [
     "StartIdx",
     "EndIdx",
     "ModelCfg",
-    "PromptCfg",
     "RetryCfg",
     "Tag",
+    "Prompt",
+    "Parser",
     "AggregationStrategy",
     "AggregateIoCfg",
     "IngestIoCfg",

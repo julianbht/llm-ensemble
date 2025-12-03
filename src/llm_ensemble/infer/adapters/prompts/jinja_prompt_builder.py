@@ -1,7 +1,7 @@
-"""Jinja2-based prompt builder adapter with registry support.
+"""Jinja2-based prompt builder adapter.
 
 Generic Jinja2 prompt builder that can work with any template.
-Template path provided during construction from registry.
+Template path provided during construction from builder.
 """
 
 from __future__ import annotations
@@ -11,14 +11,8 @@ from jinja2 import Template
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.ports import PromptBuilder
 from llm_ensemble.infer.schemas.llm_judgement import LLMPrompt
-from llm_ensemble.infer.adapters.prompts.registry import prompt_registry
 
 
-@prompt_registry.register(
-    name="thomas-simple",
-    description="Thomas et al. simple binary relevance prompt",
-    template_path="thomas-simple.jinja"
-)
 class ThomasSimplePromptBuilder(PromptBuilder):
     """Thomas et al. simple prompt (binary relevance scoring).
 
@@ -27,12 +21,15 @@ class ThomasSimplePromptBuilder(PromptBuilder):
     - {{ document }} - The document text
     """
 
-    def __init__(self, template_path: str):
-        """Initialize with template path.
+    def __init__(self, prompt_name: str, template_path: str):
+        """Initialize with identity and template path.
 
         Args:
+            prompt_name: Natural key for prompt identity (from builder)
             template_path: Path to template file relative to templates dir
         """
+        super().__init__(prompt_name)
+
         # Load template
         templates_dir = Path(__file__).parent / "templates"
         full_template_path = templates_dir / template_path

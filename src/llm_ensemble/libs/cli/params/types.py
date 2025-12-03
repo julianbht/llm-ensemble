@@ -151,26 +151,6 @@ class ModelConfigParamType(ConfigParamType):
         )
 
 
-class PromptConfigParamType(ConfigParamType):
-    def __init__(self) -> None:
-        super().__init__(
-            param_name="--prompt-cfg",
-            config_type_label="prompt",
-            config_dir_provider=PathManager.get_prompts_dir,
-            example_fallback="thomas-simple",
-        )
-
-
-class AggregationStrategyAdapterParamType(ConfigParamType):
-    def __init__(self) -> None:
-        super().__init__(
-            param_name="--aggregation-strategy-cfg",
-            config_type_label="aggregation strategy adapter",
-            config_dir_provider=PathManager.get_strategies_dir,
-            example_fallback="weighted_majority_v1",
-        )
-
-
 class LogConfigParamType(ConfigParamType):
     def __init__(self) -> None:
         super().__init__(
@@ -192,90 +172,95 @@ class RetryConfigParamType(ConfigParamType):
         )
 
 
-class RegistryParamType(click.ParamType):
-    """Base Click parameter type for registry-based adapter selectors."""
+class PromptParamType(click.ParamType):
+    """Click parameter type for prompt builder selection.
 
-    name = "TEXT"
+    Reads available prompts from PromptAdapterBuilder.
+    """
 
-    def __init__(
-        self,
-        *,
-        param_name: str,
-        adapter_type_label: str,
-        registry_provider: Callable,
-    ) -> None:
-        self.param_name = param_name
-        self.adapter_type_label = adapter_type_label
-        self._registry_provider = registry_provider
-
-    def _registry(self):
-        """Get registry instance."""
-        return self._registry_provider()
-
-    def _available(self) -> List[str]:
-        """Get list of registered adapter names."""
-        return list(self._registry().list_available().keys())
+    name = "PROMPT"
 
     def convert(self, value, param, ctx):  # type: ignore[override]
         if value in (None, ""):
+            from llm_ensemble.infer.prompt_builder import PromptAdapterBuilder
+            available = PromptAdapterBuilder.list_available()
+            available_str = ", ".join(available) if available else "none"
             self.fail(
-                f"Missing required --{self.param_name}.\n"
-                f"Available {self.adapter_type_label}s: {', '.join(self._available())}",
+                f"Prompt name is required. Use --prompt <name>.\n"
+                f"Available prompts: {available_str}",
                 param,
                 ctx,
             )
 
-        available = self._available()
-        if value not in available:
+        from llm_ensemble.infer.prompt_builder import PromptAdapterBuilder
+        if not PromptAdapterBuilder.has_prompt(value):
+            available = PromptAdapterBuilder.list_available()
+            available_str = ", ".join(available) if available else "none"
             self.fail(
-                f"Unknown {self.adapter_type_label} '{value}'.\n"
-                f"Available: {', '.join(available)}",
+                f"Prompt '{value}' not found.\n"
+                f"Available prompts: {available_str}",
                 param,
                 ctx,
             )
+
         return value
 
     def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
-        """Provide shell completion for registered adapters."""
-        available = self._available()
+        """Provide shell completion for available prompts."""
+        from llm_ensemble.infer.prompt_builder import PromptAdapterBuilder, PROMPTS
+        available = PromptAdapterBuilder.list_available()
         return [
             click.shell_completion.CompletionItem(
-                name,
-                help=self._registry()._registry[name].description
+                prompt,
+                help=PROMPTS[prompt].description
             )
-            for name in available
-            if name.startswith(incomplete)
+            for prompt in available
+            if prompt.startswith(incomplete)
         ]
 
 
-class PromptParamType(RegistryParamType):
-    """Click parameter type for prompt builder selection from registry."""
+class ParserParamType(click.ParamType):
+    """Click parameter type for response parser selection.
 
-    def __init__(self) -> None:
-        super().__init__(
-            param_name="prompt",
-            adapter_type_label="prompt",
-            registry_provider=lambda: self._get_prompt_registry(),
-        )
+    Reads available parsers from ParserAdapterBuilder.
+    """
 
-    def _get_prompt_registry(self):
-        from llm_ensemble.infer.adapters.prompts.registry import prompt_registry
-        return prompt_registry
+    name = "PARSER"
 
+    def convert(self, value, param, ctx):  # type: ignore[override]
+        if value in (None, ""):
+            from llm_ensemble.infer.parser_builder import ParserAdapterBuilder
+            available = ParserAdapterBuilder.list_available()
+            available_str = ", ".join(available) if available else "none"
+            self.fail(
+                f"Parser name is required. Use --parser <name>.\n"
+                f"Available parsers: {available_str}",
+                param,
+                ctx,
+            )
 
-class ParserParamType(RegistryParamType):
-    """Click parameter type for response parser selection from registry."""
+        from llm_ensemble.infer.parser_builder import ParserAdapterBuilder
+        if not ParserAdapterBuilder.has_parser(value):
+            available = ParserAdapterBuilder.list_available()
+            available_str = ", ".join(available) if available else "none"
+            self.fail(
+                f"Parser '{value}' not found.\n"
+                f"Available parsers: {available_str}",
+                param,
+                ctx,
+            )
 
-    def __init__(self) -> None:
-        super().__init__(
-            param_name="parser",
-            adapter_type_label="parser",
-            registry_provider=lambda: self._get_parser_registry(),
-        )
+        return value
 
-    def _get_parser_registry(self):
-        from llm_ensemble.infer.adapters.parsers.registry import parser_registry
-        return parser_registry
+    def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
+        """Provide shell completion for available parsers."""
+        from llm_ensemble.infer.parser_builder import ParserAdapterBuilder
+        available = ParserAdapterBuilder.list_available()
+        return [
+            click.shell_completion.CompletionItem(parser)
+            for parser in available
+            if parser.startswith(incomplete)
+        ]
 
 
 class RunInputParamType(click.ParamType):

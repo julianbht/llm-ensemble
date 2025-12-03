@@ -22,8 +22,16 @@ class ResponseParser(ABC):
     what format to expect and what fields to extract.
 
     Adapters implement parse_raw() returning ParsedScoreDTO (pure parsing logic).
-    Adapters are pure implementations - they don't know their own identity.
+    Adapter identity (parser_name) comes from builder and is stored in adapter.
     """
+
+    def __init__(self, parser_name: str):
+        """Initialize response parser with identity.
+
+        Args:
+            parser_name: Natural key for parser identity (from builder)
+        """
+        self.parser_name = parser_name
 
     @abstractmethod
     def parse_raw(self, raw_text: str) -> ParsedScoreDTO:

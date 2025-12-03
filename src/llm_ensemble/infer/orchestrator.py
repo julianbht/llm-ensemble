@@ -4,13 +4,12 @@ This module handles infrastructure concerns for the inference pipeline:
 - Loading configurations
 - Setting up run directories and logging
 - Building manifests with git info and execution parameters
-- Instantiating adapters dynamically from config specifications
-- Delegating business logic to domain service (which sets timing and finalizes manifest)
+- Instantiating adapters from builders
+- Delegating business logic to domain service
 
 It is separated from the CLI entry point (infer_cli.py) for testability.
 """
 from __future__ import annotations
-from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
@@ -146,45 +145,25 @@ def run_inference(
     )
     logger.info(InferLogEvent.RUN_DIRECTORY_CREATED, path=str(run_dir))
 
-    # Import registries
-    from llm_ensemble.infer.adapters.prompts.registry import prompt_registry
-    from llm_ensemble.infer.adapters.parsers.registry import parser_registry
-    from llm_ensemble.libs.registry import AdapterWithMetadata
+    # Instantiate adapters from builders
+    from llm_ensemble.infer.prompt_builder import PromptAdapterBuilder
+    from llm_ensemble.infer.parser_builder import ParserAdapterBuilder
 
-    # Instantiate adapters from registries
-    prompt_meta = prompt_registry.get_metadata(prompt_name)
-    parser_meta = parser_registry.get_metadata(parser_name)
+    prompt_builder = PromptAdapterBuilder.build(prompt_name)
+    response_parser = ParserAdapterBuilder.build(parser_name)
 
-    # Instantiate prompt builder with template_path from registry
-    prompt_builder = prompt_meta.adapter_class(
-        template_path=prompt_meta.config["template_path"]
-    )
-
-    # Instantiate parser (no config needed)
-    response_parser = parser_meta.adapter_class()
-
-    # Wrap adapters with metadata for identity tracking
-    prompt_adapter = AdapterWithMetadata(
-        adapter=prompt_builder,
-        name=prompt_meta.name
-    )
-    parser_adapter = AdapterWithMetadata(
-        adapter=response_parser,
-        name=parser_meta.name
-    )
-
-    # Instantiate I/O and provider from configs (unchanged)
+    # Instantiate I/O and provider from configs
     reader = io_config.get_reader()
     writer = io_config.get_writer()
     provider = model_config.get_provider(retry_config=retry_config, logger=logger)
 
-    # Create domain service (it handles its own logging)
+    # Create domain service
     service = InferenceService(
         example_reader=reader,
         judgement_writer=writer,
-        prompt_adapter=prompt_adapter,
+        prompt_builder=prompt_builder,
         llm_provider=provider,
-        parser_adapter=parser_adapter,
+        response_parser=response_parser,
     )
 
     # Run inference pipeline

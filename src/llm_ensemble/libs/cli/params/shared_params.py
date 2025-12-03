@@ -9,10 +9,8 @@ import typer
 
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.cli.params.types import (
-    AggregationStrategyAdapterParamType,
     LogConfigParamType,
     ModelConfigParamType,
-    PromptConfigParamType,
     PromptParamType,
     ParserParamType,
     RetryConfigParamType,
@@ -111,23 +109,13 @@ ModelCfg = Annotated[
     ),
 ]
 
-PromptCfg = Annotated[
-    str,
-    typer.Option(
-        ...,
-        "--prompt-cfg",
-        click_type=PromptConfigParamType(),
-        help=f"Prompt config name. Configs in {PathManager.get_prompts_dir().relative_to(PathManager.get_project_root())}",
-    ),
-]
-
 Prompt = Annotated[
     str,
     typer.Option(
         ...,
         "--prompt",
         click_type=PromptParamType(),
-        help="Prompt builder name from registry (e.g., 'thomas-simple')",
+        help="Prompt builder name from builder (e.g., 'thomas-simple')",
     ),
 ]
 
@@ -137,17 +125,7 @@ Parser = Annotated[
         ...,
         "--parser",
         click_type=ParserParamType(),
-        help="Response parser name from registry (e.g., 'thomas-simple')",
-    ),
-]
-
-AggregationStrategyAdapterSpecName = Annotated[
-    str,
-    typer.Option(
-        ...,
-        "--aggregation-strategy-cfg",
-        click_type=AggregationStrategyAdapterParamType(),
-        help=f"Aggregation strategy adapter spec name. Configs in {PathManager.get_strategies_dir().relative_to(PathManager.get_project_root())}",
+        help="Response parser name from builder (e.g., 'thomas-simple')",
     ),
 ]
 

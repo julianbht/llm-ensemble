@@ -25,8 +25,16 @@ class PromptBuilder(ABC):
     while providing a consistent interface to the LLM provider adapters.
 
     Adapters implement build_raw() returning (dataset_sample, prompt_text) tuple.
-    Adapters are pure implementations - they don't know their own identity.
+    Adapter identity (prompt_name) comes from builder and is stored in adapter.
     """
+
+    def __init__(self, prompt_name: str):
+        """Initialize prompt builder with identity.
+
+        Args:
+            prompt_name: Natural key for prompt identity (from builder)
+        """
+        self.prompt_name = prompt_name
 
     @abstractmethod
     def build_raw(self, dataset_sample: DatasetSample) -> tuple[DatasetSample, str]:

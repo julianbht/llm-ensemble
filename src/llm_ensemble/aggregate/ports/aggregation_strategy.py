@@ -16,7 +16,6 @@ from abc import ABC, abstractmethod
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.schemas.aggregated_vote import AggregatedVote
 from llm_ensemble.aggregate.schemas.aggregation_strategy import AggregationStrategy as AggregationStrategyEntity
-from llm_ensemble.libs.db import compute_aggregation_spec_uuid
 
 
 class AggregationStrategyPort(ABC):

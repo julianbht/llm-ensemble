@@ -7,7 +7,18 @@ from typing import Annotated
 import typer
 
 from llm_ensemble.libs.cli.params.types import IOConfigParamType, RunInputParamType
+from llm_ensemble.libs.cli.params.aggregation_strategy import AggregationStrategyParamType
 from llm_ensemble.libs.runtime.path_manager import PathManager
+
+AggregationStrategy = Annotated[
+    str,
+    typer.Option(
+        ...,
+        "--aggregation-strategy",
+        click_type=AggregationStrategyParamType(),
+        help="Aggregation strategy (e.g., 'majority_vote')",
+    ),
+]
 
 AggregateIoCfg = Annotated[
     str,

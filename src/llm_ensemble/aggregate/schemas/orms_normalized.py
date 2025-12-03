@@ -61,7 +61,7 @@ class AggregateRunORM(Base):
     config_names = Column(
         JSONB,
         nullable=False,
-        comment="Config names used: {aggregation_spec, io_config}"
+        comment="Config names used: {aggregation_strategy, io_config}"
     )
 
     # ACTUAL RESULT: What was actually aggregated (set in close())

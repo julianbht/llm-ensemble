@@ -9,16 +9,15 @@ from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.libs.schemas import IOConfig
-from llm_ensemble.aggregate.schemas.aggregation_strategy_adapter_spec import AggregationStrategyConfig
 
 
 class AggregateRunInfo(RunInfo):
     """Runtime context for aggregate CLI runs.
 
     Extends the base RunInfo with aggregate-specific configuration metadata:
-    - Which configs were used (aggregation strategy, I/O)
-    - Full configuration objects for reproducibility
-    - Input parameters (file paths from infer runs)
+    - Which aggregation strategy and I/O config were used
+    - Full I/O configuration object for reproducibility
+    - Input parameters (run names from infer runs)
 
     All fields in this class are immutable and known before processing begins,
     allowing AggregatedJudgement objects to embed complete provenance as soon as
@@ -35,9 +34,9 @@ class AggregateRunInfo(RunInfo):
     )
 
     # Configuration names (what user requested)
-    aggregation_strategy_config_name: str = Field(
+    aggregation_strategy_name: str = Field(
         ...,
-        description="Name of the aggregation strategy config used (e.g., 'majority_vote')"
+        description="Name of the aggregation strategy used (e.g., 'majority_vote')"
     )
 
     io_config_name: str = Field(
@@ -46,11 +45,6 @@ class AggregateRunInfo(RunInfo):
     )
 
     # Full configuration objects (for reproducibility)
-    aggregation_strategy_config: AggregationStrategyConfig = Field(
-        ...,
-        description="Complete aggregation strategy configuration used for this run"
-    )
-
     io_config: IOConfig = Field(
         ...,
         description="I/O configuration used for this run"

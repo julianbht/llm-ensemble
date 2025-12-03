@@ -69,7 +69,7 @@ def aggregate_run_info_to_orm(
     Args:
         run_info: AggregateRunInfo domain object
         aggregate_run_id: Pre-computed UUID for this run
-        config_names: Dict of config names (e.g., {"aggregation_spec": "majority_vote"})
+        config_names: Dict of config names (e.g., {"aggregation_strategy": "majority_vote", "io_config": "db"})
 
     Returns:
         AggregateRunORM model ready for persistence

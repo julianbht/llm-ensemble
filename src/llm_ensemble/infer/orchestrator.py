@@ -16,7 +16,7 @@ from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.schemas import LoggingConfig
-from llm_ensemble.infer.domain import InferenceService
+from llm_ensemble.infer.inference_service import InferenceService
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_name import generate_run_name
@@ -24,10 +24,10 @@ from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
-from llm_ensemble.infer.prompt_builder import PromptAdapterBuilder
-from llm_ensemble.infer.parser_builder import ParserAdapterBuilder
-from llm_ensemble.infer.io_builder import IOAdapterBuilder
-from llm_ensemble.infer.provider_builder import ProviderAdapterBuilder
+from llm_ensemble.infer.adapters.prompt_builder import PromptAdapterBuilder
+from llm_ensemble.infer.adapters.parser_builder import ParserAdapterBuilder
+from llm_ensemble.infer.adapters.io_builder import IOAdapterBuilder
+from llm_ensemble.infer.adapters.provider_builder import ProviderAdapterBuilder
 
 
 def run_inference(

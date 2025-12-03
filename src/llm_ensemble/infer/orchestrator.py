@@ -32,6 +32,7 @@ from llm_ensemble.infer.provider_builder import ProviderAdapterBuilder
 
 def run_inference(
     model_config: ModelConfig,
+    provider_name: str,
     prompt_name: str,
     parser_name: str,
     retry_config: RetryConfig,
@@ -58,6 +59,7 @@ def run_inference(
 
     Args:
         model_config: Model configuration
+        provider_name: Provider name for registry lookup (e.g., "openrouter", "ollama")
         prompt_name: Prompt name for registry lookup (e.g., "thomas-simple")
         parser_name: Parser name for registry lookup (e.g., "thomas-simple")
         retry_config: Retry configuration
@@ -136,7 +138,7 @@ def run_inference(
     logger.info(
         InferLogEvent.INFER_STARTED,
         model=model_config_name,
-        provider=model_config.provider_config.provider_name,
+        provider=provider_name,
         io_format=io_name,
         prompt=prompt_name,
         parser=parser_name,
@@ -151,7 +153,7 @@ def run_inference(
     reader = IOAdapterBuilder.build_reader(io_name)
     writer = IOAdapterBuilder.build_writer(io_name)
     provider = ProviderAdapterBuilder.build(
-        provider_name=model_config.provider_config.provider_name,
+        provider_name=provider_name,
         model_config=model_config,
         retry_config=retry_config,
     )

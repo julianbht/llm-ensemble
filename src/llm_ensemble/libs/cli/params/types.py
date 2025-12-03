@@ -263,6 +263,50 @@ class ParserParamType(click.ParamType):
         ]
 
 
+class ProviderParamType(click.ParamType):
+    """Click parameter type for provider adapter selection.
+
+    Reads available providers from ProviderAdapterBuilder.
+    """
+
+    name = "PROVIDER"
+
+    def convert(self, value, param, ctx):  # type: ignore[override]
+        if value in (None, ""):
+            from llm_ensemble.infer.provider_builder import ProviderAdapterBuilder
+            available = ProviderAdapterBuilder.list_available()
+            available_str = ", ".join(available) if available else "none"
+            self.fail(
+                f"Provider name is required. Use --provider <name>.\n"
+                f"Available providers: {available_str}",
+                param,
+                ctx,
+            )
+
+        from llm_ensemble.infer.provider_builder import ProviderAdapterBuilder
+        if not ProviderAdapterBuilder.has_provider(value):
+            available = ProviderAdapterBuilder.list_available()
+            available_str = ", ".join(available) if available else "none"
+            self.fail(
+                f"Provider '{value}' not found.\n"
+                f"Available providers: {available_str}",
+                param,
+                ctx,
+            )
+
+        return value
+
+    def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
+        """Provide shell completion for available providers."""
+        from llm_ensemble.infer.provider_builder import ProviderAdapterBuilder
+        available = ProviderAdapterBuilder.list_available()
+        return [
+            click.shell_completion.CompletionItem(provider)
+            for provider in available
+            if provider.startswith(incomplete)
+        ]
+
+
 class RunInputParamType(click.ParamType):
     """Click parameter type for run inputs that support both run names and @tags.
 

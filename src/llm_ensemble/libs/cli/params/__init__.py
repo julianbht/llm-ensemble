@@ -17,7 +17,7 @@ from .shared_params import (
 )
 from .aggregate import AggregationStrategy, AggregateIoCfg, InferRunInput
 from .ingest import IngestIoCfg, Limit
-from .infer import InferIoCfg, IngestRunInput as InferIngestRunInput
+from .infer import InferIoCfg, IngestRunInput as InferIngestRunInput, Provider
 
 __all__ = [
     "InputPath",
@@ -33,6 +33,7 @@ __all__ = [
     "Tag",
     "Prompt",
     "Parser",
+    "Provider",
     "AggregationStrategy",
     "AggregateIoCfg",
     "IngestIoCfg",

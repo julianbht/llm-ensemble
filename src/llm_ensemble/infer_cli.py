@@ -19,6 +19,7 @@ from llm_ensemble.libs.cli.params import (
     ModelCfg,
     Prompt,
     Parser,
+    Provider,
     InferIoCfg,
     RetryCfg,
     Tag,
@@ -39,6 +40,7 @@ app = typer.Typer(
 def infer(
     # Required parameters with validation
     model_cfg: ModelCfg,
+    provider: Provider,
     prompt: Prompt,
     parser: Parser,
     io_cfg: InferIoCfg,
@@ -83,6 +85,7 @@ def infer(
     # Run inference with registry-based adapter selection
     run_inference(
         model_config=model_config,
+        provider_name=provider,
         prompt_name=prompt,
         parser_name=parser,
         retry_config=retry_config,

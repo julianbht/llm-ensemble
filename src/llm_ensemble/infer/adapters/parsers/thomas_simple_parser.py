@@ -9,7 +9,6 @@ import json
 import re
 
 from llm_ensemble.infer.ports import ResponseParser
-from llm_ensemble.infer.schemas.llm_judgement import LLMScore
 from llm_ensemble.infer.schemas.parsed_score_dto import ParsedScoreDTO
 from llm_ensemble.infer.schemas.warnings import ParserWarning, ParserWarningCode
 from llm_ensemble.libs.logging import get_logger

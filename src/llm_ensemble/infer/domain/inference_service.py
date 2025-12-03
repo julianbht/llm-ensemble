@@ -104,11 +104,6 @@ class InferenceService:
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
-        # Compute UUIDs from identity (names from adapters)
-        from llm_ensemble.libs.db import compute_prompt_template_uuid, compute_parser_spec_uuid_from_name
-        prompt_template_id = compute_prompt_template_uuid(self.prompt_builder.prompt_name)
-        parser_spec_id = compute_parser_spec_uuid_from_name(self.response_parser.parser_name)
-
         # Extract template text from prompt builder for persistence
         template_text = self.prompt_builder.get_template_text()
 
@@ -120,16 +115,8 @@ class InferenceService:
         ) as writer:
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
-                # Build prompt from dataset_sample (adapter returns raw tuple)
-                ds, prompt_text = self.prompt_builder.build_raw(dataset_sample)
-
-                # Create LLMPrompt domain object with identity from metadata
-                from llm_ensemble.infer.schemas.llm_judgement import LLMPrompt
-                llm_prompt = LLMPrompt.create(
-                    dataset_sample=ds,
-                    prompt_text=prompt_text,
-                    prompt_template_id=prompt_template_id,
-                )
+                # Build prompt (port creates domain object)
+                llm_prompt = self.prompt_builder.build(dataset_sample)
 
                 # Run inference - returns raw text and metrics
                 self.logger.info(InferLogEvent.SENDING_REQUEST)
@@ -138,19 +125,8 @@ class InferenceService:
                     model_config
                 )
 
-                # Parse response to extract structured score (adapter returns DTO)
-                from llm_ensemble.infer.schemas.llm_judgement import LLMScore
-                parsed_dto = self.response_parser.parse_raw(raw_response_text)
-
-                # Create LLMScore domain object with identity from metadata
-                llm_score = LLMScore.create(
-                    llm_response_text=parsed_dto.llm_response_text,
-                    parser_spec_id=parser_spec_id,
-                    label=parsed_dto.label,
-                    confidence=parsed_dto.confidence,
-                    rationale=parsed_dto.rationale,
-                    warnings=parsed_dto.warnings,
-                )
+                # Parse response (port creates domain object)
+                llm_score = self.response_parser.parse(raw_response_text)
 
                 # Create judgement from nested components
                 judgement = LLMJudgement.create(

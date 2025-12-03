@@ -6,11 +6,13 @@ Each parser is tightly coupled to its specific prompt and knows what to look for
 Uses template method pattern: parse() is concrete and handles DTO→Domain mapping,
 subclasses implement parse_raw() with pure parsing logic.
 
-Adapter identity (parser_name) comes from builder and is used to create entities.
+Adapter identity (parser_name and parser_spec_id) comes from builder.
 """
 
 from __future__ import annotations
+import uuid
 from abc import ABC, abstractmethod
+from uuid import UUID
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMScore
 from llm_ensemble.infer.schemas.parsed_score_dto import ParsedScoreDTO
@@ -27,16 +29,18 @@ class ResponseParser(ABC):
     - parse_raw() (abstract): subclasses implement parsing logic
 
     This separates pure parsing logic from domain object creation.
-    Parser identity (parser_name) comes from builder and is passed to constructor.
+    Parser identity (parser_name and parser_spec_id) comes from builder.
     """
 
-    def __init__(self, parser_name: str):
+    def __init__(self, parser_name: str, parser_spec_id: UUID | None = None):
         """Initialize response parser with identity.
 
         Args:
             parser_name: Natural key for parser identity (from builder)
+            parser_spec_id: UUID for this parser spec (random if None)
         """
         self.parser_name = parser_name
+        self.parser_spec_id = parser_spec_id or uuid.uuid4()
 
     @abstractmethod
     def parse_raw(self, raw_text: str) -> ParsedScoreDTO:
@@ -69,14 +73,9 @@ class ResponseParser(ABC):
         # Call subclass implementation (returns DTO)
         parsed_dto = self.parse_raw(raw_text)
 
-        # Compute UUID from parser name
-        from llm_ensemble.libs.db import compute_parser_spec_uuid_from_name
-        parser_spec_id = compute_parser_spec_uuid_from_name(self.parser_name)
-
         # Map to domain entity (port layer's responsibility)
-        return LLMScore.create(
+        return LLMScore(
             llm_response_text=parsed_dto.llm_response_text,
-            parser_spec_id=parser_spec_id,
             label=parsed_dto.label,
             confidence=parsed_dto.confidence,
             rationale=parsed_dto.rationale,

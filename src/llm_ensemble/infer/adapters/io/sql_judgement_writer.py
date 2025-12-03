@@ -11,6 +11,7 @@ Architecture:
 - Per-judgement entities created in write_one() using mappers
 - Immediate commits for fault tolerance
 - JudgedDataset finalized in close()
+- Deduplication via natural key queries (not deterministic UUIDs)
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
@@ -29,15 +31,6 @@ from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.db import (
     get_engine,
     get_session,
-    compute_provider_uuid,
-    compute_model_uuid,
-    compute_model_config_uuid,
-    compute_prompt_template_uuid,
-    compute_parser_spec_uuid_from_name,
-    compute_infer_run_uuid,
-    compute_llm_response_text_uuid,
-    compute_llm_invocation_metrics_uuid,
-    compute_llm_score_uuid,
     compute_judged_dataset_fingerprint,
 )
 from llm_ensemble.infer.schemas.orms_normalized import (
@@ -76,7 +69,7 @@ class SqlJudgementWriter(JudgementWriter):
     PromptTemplate, ParserSpec, InferRun, LLMPromptText, LLMResponseText,
     LLMInvocationMetrics, LLMScore, DatasetJudgement, LLMJudgement entities.
 
-    Deduplication via deterministic UUIDs + unique constraints.
+    Deduplication via natural key queries + unique constraints.
     """
 
     def __init__(self):
@@ -151,7 +144,7 @@ class SqlJudgementWriter(JudgementWriter):
         llm_invocation_metrics_id = self._upsert_llm_invocation_metrics(judgement)
 
         # Upsert LLMScore (if present)
-        llm_score_id = self._upsert_llm_score(judgement, llm_response_text_id) if judgement.llm_score else None
+        llm_score_id = self._upsert_llm_score(judgement, llm_response_text_id, self._parser_spec_id) if judgement.llm_score else None
 
         # Create LLMJudgement (directly linked to JudgedDataset)
         llm_judgement_orm = llm_judgement_to_orm(
@@ -208,48 +201,52 @@ class SqlJudgementWriter(JudgementWriter):
         template_text: str,
     ) -> None:
         """Initialize shared metadata entities."""
-        # Upsert Provider
-        self._provider_id = self._upsert_entity(
+        # Upsert Provider by name
+        provider_orm = provider_name_to_orm(run_info.model_cfg.provider)
+        self._provider_id = self._upsert_by_name(
             ProviderORM,
-            compute_provider_uuid(run_info.model_cfg.provider),
-            lambda: provider_name_to_orm(run_info.model_cfg.provider),
+            run_info.model_cfg.provider,
+            provider_orm,
             "providers"
         )
 
-        # Upsert Model
-        self._model_id = self._upsert_entity(
+        # Upsert Model by name
+        model_orm = model_config_to_model_orm(run_info.model_cfg)
+        self._model_id = self._upsert_by_name(
             ModelORM,
-            compute_model_uuid(run_info.model_cfg.model_id),
-            lambda: model_config_to_model_orm(run_info.model_cfg),
+            run_info.model_cfg.model_name,
+            model_orm,
             "models"
         )
 
-        # Upsert ModelConfig
-        self._model_config_id = self._upsert_entity(
+        # Upsert ModelConfig by name
+        model_config_orm = model_config_to_orm(run_info.model_cfg, self._model_id, self._provider_id)
+        self._model_config_id = self._upsert_by_name(
             ModelConfigORM,
-            compute_model_config_uuid(run_info.model_cfg.name),
-            lambda: model_config_to_orm(run_info.model_cfg, self._model_id, self._provider_id),
+            run_info.model_cfg.name,
+            model_config_orm,
             "model_configs"
         )
 
-        # Upsert PromptTemplate
-        self._prompt_template_id = self._upsert_entity(
+        # Upsert PromptTemplate by name
+        prompt_template_orm = prompt_name_to_template_orm(prompt_name, template_text)
+        self._prompt_template_id = self._upsert_by_name(
             PromptTemplateORM,
-            compute_prompt_template_uuid(prompt_name),
-            lambda: prompt_name_to_template_orm(prompt_name, template_text),
+            prompt_name,
+            prompt_template_orm,
             "prompt_templates"
         )
 
-        # Upsert ParserSpec
-        self._parser_spec_id = self._upsert_entity(
+        # Upsert ParserSpec by name
+        parser_spec_orm = parser_name_to_orm(parser_name)
+        self._parser_spec_id = self._upsert_by_name(
             ParserSpecORM,
-            compute_parser_spec_uuid_from_name(parser_name),
-            lambda: parser_name_to_orm(parser_name),
+            parser_name,
+            parser_spec_orm,
             "parser_specs"
         )
 
-        # Create InferRun
-        infer_run_id = compute_infer_run_uuid(run_info.run_name)
+        # Create InferRun (always new)
         config_names = {
             "model_config": run_info.model_cfg.name,
             "prompt_name": prompt_name,
@@ -262,99 +259,140 @@ class SqlJudgementWriter(JudgementWriter):
             end_idx,
         )
         self._session.add(infer_run_orm)
-        self._infer_run_id = infer_run_id
+        self._infer_run_id = run_info.id
         self._write_summary.add_infer_runs(created=1, skipped=0)
 
         self._session.commit()
 
-    def _upsert_entity(self, orm_class, entity_id: uuid.UUID, create_fn, entity_name: str) -> uuid.UUID:
-        """Generic upsert helper."""
-        existing = self._session.get(orm_class, entity_id)
+    def _upsert_by_name(self, orm_class, name: str, new_entity_orm, entity_name: str) -> uuid.UUID:
+        """Upsert entity by name (natural key for simple config entities).
+        
+        Args:
+            orm_class: ORM class to query
+            name: Natural key value
+            new_entity_orm: New entity instance with random UUID
+            entity_name: Entity name for metrics tracking
+            
+        Returns:
+            UUID of existing or newly created entity
+        """
+        # Query by natural key
+        stmt = select(orm_class).where(orm_class.name == name)
+        existing = self._session.execute(stmt).scalar_one_or_none()
+        
         if existing:
             # Track skip
             attr_name = f"add_{entity_name}"
             if hasattr(self._write_summary, attr_name):
                 getattr(self._write_summary, attr_name)(created=0, skipped=1)
-            return entity_id
+            return existing.id
 
-        entity_orm = create_fn()
-        self._session.add(entity_orm)
-
+        # Create new
+        self._session.add(new_entity_orm)
+        
         # Track create
         attr_name = f"add_{entity_name}"
         if hasattr(self._write_summary, attr_name):
             getattr(self._write_summary, attr_name)(created=1, skipped=0)
 
-        return entity_id
+        return new_entity_orm.id
 
     def _upsert_llm_prompt_text(self, judgement: LLMJudgement) -> uuid.UUID:
-        """Upsert LLMPromptText from judgement."""
+        """Upsert LLMPromptText by natural key (prompt_template_id, dataset_sample_id, prompt_text)."""
         llm_prompt_text_orm = llm_prompt_to_orm(
             judgement.llm_prompt,
-            self._prompt_template_id,
+            judgement.prompt_template_id,
             judgement.llm_prompt.dataset_sample.id,
         )
-        existing = self._session.get(LLMPromptTextORM, llm_prompt_text_orm.id)
-        if not existing:
-            self._session.add(llm_prompt_text_orm)
-            self._write_summary.add_llm_prompts(created=1, skipped=0)
-            self.logger.info(InferWriteEvent.WRITE_LLM_PROMPTS, created=1, skipped=0)
-        else:
+        
+        # Query by natural key
+        stmt = select(LLMPromptTextORM).where(
+            LLMPromptTextORM.prompt_template_id == judgement.prompt_template_id,
+            LLMPromptTextORM.dataset_sample_id == judgement.llm_prompt.dataset_sample.id,
+            LLMPromptTextORM.prompt_text == judgement.llm_prompt.prompt_text
+        )
+        existing = self._session.execute(stmt).scalar_one_or_none()
+        
+        if existing:
             self._write_summary.add_llm_prompts(created=0, skipped=1)
             self.logger.info(InferWriteEvent.WRITE_LLM_PROMPTS, created=0, skipped=1)
+            return existing.id
+        
+        self._session.add(llm_prompt_text_orm)
+        self._write_summary.add_llm_prompts(created=1, skipped=0)
+        self.logger.info(InferWriteEvent.WRITE_LLM_PROMPTS, created=1, skipped=0)
         return llm_prompt_text_orm.id
 
     def _upsert_llm_response_text(self, judgement: LLMJudgement) -> uuid.UUID:
-        """Upsert LLMResponseText from judgement."""
+        """Upsert LLMResponseText by natural key (llm_response_text)."""
         response_text = judgement.llm_score.llm_response_text if judgement.llm_score else ""
-        response_id = compute_llm_response_text_uuid(response_text)
-        existing = self._session.get(LLMResponseTextORM, response_id)
-        if not existing:
-            response_orm = llm_response_text_to_orm(response_text)
-            self._session.add(response_orm)
-            self._write_summary.add_llm_responses(created=1, skipped=0)
-            self.logger.info(InferWriteEvent.WRITE_LLM_RESPONSES, created=1, skipped=0)
-        else:
+        response_orm = llm_response_text_to_orm(response_text)
+        
+        # Query by natural key
+        stmt = select(LLMResponseTextORM).where(
+            LLMResponseTextORM.llm_response_text == response_text
+        )
+        existing = self._session.execute(stmt).scalar_one_or_none()
+        
+        if existing:
             self._write_summary.add_llm_responses(created=0, skipped=1)
             self.logger.info(InferWriteEvent.WRITE_LLM_RESPONSES, created=0, skipped=1)
-        return response_id
+            return existing.id
+        
+        self._session.add(response_orm)
+        self._write_summary.add_llm_responses(created=1, skipped=0)
+        self.logger.info(InferWriteEvent.WRITE_LLM_RESPONSES, created=1, skipped=0)
+        return response_orm.id
 
     def _upsert_llm_invocation_metrics(self, judgement: LLMJudgement) -> uuid.UUID:
-        """Upsert LLMInvocationMetrics from judgement."""
-        metrics_id = compute_llm_invocation_metrics_uuid(
-            latency_ms=judgement.invocation_metrics.latency_ms,
-            retries=judgement.invocation_metrics.retries,
-            cost_estimate_usd=judgement.invocation_metrics.cost_estimate_usd,
-            generation_id=judgement.invocation_metrics.generation_id,
-            prompt_tokens=judgement.invocation_metrics.prompt_tokens,
-            completion_tokens=judgement.invocation_metrics.completion_tokens,
-            total_tokens=judgement.invocation_metrics.total_tokens,
+        """Upsert LLMInvocationMetrics by natural key (all metric fields)."""
+        metrics_orm = llm_invocation_metrics_to_orm(judgement.invocation_metrics)
+        
+        # Query by natural key (all fields)
+        stmt = select(LLMInvocationMetricsORM).where(
+            LLMInvocationMetricsORM.latency_ms == judgement.invocation_metrics.latency_ms,
+            LLMInvocationMetricsORM.retries == judgement.invocation_metrics.retries,
+            LLMInvocationMetricsORM.cost_estimate_usd == judgement.invocation_metrics.cost_estimate_usd,
+            LLMInvocationMetricsORM.generation_id == judgement.invocation_metrics.generation_id,
+            LLMInvocationMetricsORM.prompt_tokens == judgement.invocation_metrics.prompt_tokens,
+            LLMInvocationMetricsORM.completion_tokens == judgement.invocation_metrics.completion_tokens,
+            LLMInvocationMetricsORM.total_tokens == judgement.invocation_metrics.total_tokens
         )
-        existing = self._session.get(LLMInvocationMetricsORM, metrics_id)
-        if not existing:
-            metrics_orm = llm_invocation_metrics_to_orm(judgement.invocation_metrics)
-            self._session.add(metrics_orm)
-            self._write_summary.add_llm_invocation_metrics(created=1, skipped=0)
-            self.logger.info(InferWriteEvent.WRITE_LLM_INVOCATION_METRICS, created=1, skipped=0)
-        else:
+        existing = self._session.execute(stmt).scalar_one_or_none()
+        
+        if existing:
             self._write_summary.add_llm_invocation_metrics(created=0, skipped=1)
             self.logger.info(InferWriteEvent.WRITE_LLM_INVOCATION_METRICS, created=0, skipped=1)
-        return metrics_id
+            return existing.id
+        
+        self._session.add(metrics_orm)
+        self._write_summary.add_llm_invocation_metrics(created=1, skipped=0)
+        self.logger.info(InferWriteEvent.WRITE_LLM_INVOCATION_METRICS, created=1, skipped=0)
+        return metrics_orm.id
 
-    def _upsert_llm_score(self, judgement: LLMJudgement, llm_response_text_id: uuid.UUID) -> uuid.UUID:
-        """Upsert LLMScore from judgement."""
-        score_id = compute_llm_score_uuid(self._parser_spec_id, llm_response_text_id)
-        existing = self._session.get(LLMScoreORM, score_id)
-        if not existing:
-            score_orm = llm_score_to_orm(
-                judgement.llm_score,
-                self._parser_spec_id,
-                llm_response_text_id,
-            )
-            self._session.add(score_orm)
-            self._write_summary.add_llm_scores(created=1, skipped=0)
-            self.logger.info(InferWriteEvent.WRITE_LLM_SCORES, created=1, skipped=0)
-        else:
+    def _upsert_llm_score(self, judgement: LLMJudgement, llm_response_text_id: uuid.UUID, parser_spec_id: uuid.UUID) -> uuid.UUID:
+        """Upsert LLMScore by natural key (parser_spec_id, llm_response_text_id)."""
+        score_orm = llm_score_to_orm(
+            judgement.llm_score,
+            parser_spec_id,
+            llm_response_text_id,
+        )
+        
+        # Query by natural key
+        stmt = select(LLMScoreORM).where(
+            LLMScoreORM.parser_spec_id == parser_spec_id,
+            LLMScoreORM.llm_response_text_id == llm_response_text_id
+        )
+        existing = self._session.execute(stmt).scalar_one_or_none()
+        
+        if existing:
             self._write_summary.add_llm_scores(created=0, skipped=1)
+            self.logger.info(InferWriteEvent.WRITE_LLM_SCORES, created=0, skipped=1)
+            return existing.id
+        
+        self._session.add(score_orm)
+        self._write_summary.add_llm_scores(created=1, skipped=0)
+        self.logger.info(InferWriteEvent.WRITE_LLM_SCORES, created=1, skipped=0)
+        return score_orm.id
             self.logger.info(InferWriteEvent.WRITE_LLM_SCORES, created=0, skipped=1)
         return score_id

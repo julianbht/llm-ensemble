@@ -92,9 +92,9 @@ class LLMProvider(ABC):
                 
                 # Map DTO to domain objects
                 raw_response_text = invocation_dto.response_text
-                metrics = LLMInvocationMetrics.create(
+                metrics = LLMInvocationMetrics(
                     latency_ms=invocation_dto.latency_ms,
-                    retries=0,  # Will be updated below
+                    retries=attempt,
                     cost_estimate_usd=invocation_dto.cost_estimate_usd,
                     generation_id=invocation_dto.generation_id,
                     prompt_tokens=invocation_dto.prompt_tokens,
@@ -102,20 +102,7 @@ class LLMProvider(ABC):
                     total_tokens=invocation_dto.total_tokens,
                 )
 
-                # Success! Set retry count on metrics
-                # attempt = 0 means first try (no retries), attempt = 1 means one retry, etc.
-                # Create new metrics object with updated retry count
-                updated_metrics = LLMInvocationMetrics.create(
-                    latency_ms=metrics.latency_ms,
-                    retries=attempt,
-                    cost_estimate_usd=metrics.cost_estimate_usd,
-                    generation_id=metrics.generation_id,
-                    prompt_tokens=metrics.prompt_tokens,
-                    completion_tokens=metrics.completion_tokens,
-                    total_tokens=metrics.total_tokens,
-                )
-
-                return raw_response_text, updated_metrics
+                return raw_response_text, metrics
 
             except APIError as e:
 

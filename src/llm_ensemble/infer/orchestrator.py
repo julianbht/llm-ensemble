@@ -88,8 +88,8 @@ def run_inference(
     # Get git info for reproducibility
     git_info = get_git_info()
 
-    # Create immutable run info using create() method (runtime context known before run starts)
-    run_info = InferRunInfo.create(
+    # Create immutable run info (runtime context known before run starts)
+    run_info = InferRunInfo(
         run_name=run_name,
         model_config_name=model_config_name,
         prompt_name=prompt_name,

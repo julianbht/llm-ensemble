@@ -129,10 +129,12 @@ class InferenceService:
                 llm_score = self.response_parser.parse(raw_response_text)
 
                 # Create judgement from nested components
-                judgement = LLMJudgement.create(
+                judgement = LLMJudgement(
                     llm_prompt=llm_prompt,
                     invocation_metrics=invocation_metrics,
                     llm_score=llm_score,
+                    model_config_id=model_config.id,
+                    prompt_template_id=self.prompt_builder.prompt_template_id,
                 )
 
                 # Log each completed judgement

@@ -7,6 +7,7 @@ waiting for the run to complete.
 """
 
 from __future__ import annotations
+import uuid
 from typing import Optional
 from uuid import UUID
 from pydantic import ConfigDict, Field
@@ -15,7 +16,6 @@ from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.libs.db import compute_infer_run_uuid
 
 
 class InferRunInfo(RunInfo):
@@ -32,14 +32,12 @@ class InferRunInfo(RunInfo):
 
     This is separate from InferRunSummary which contains post-run metrics like
     judgement counts, timing statistics, and warnings summary.
-    
-    The id field is a mandatory deterministic UUID computed from run_name.
     """
 
-    # Deterministic UUID
+    # Random UUID
     id: UUID = Field(
-        ...,
-        description="Deterministic UUID computed from run_name"
+        default_factory=uuid.uuid4,
+        description="Random UUID for this run"
     )
 
     # Override cli_name from base RunInfo to automatically set it to "infer"
@@ -109,58 +107,3 @@ class InferRunInfo(RunInfo):
     )
 
     model_config = ConfigDict(frozen=True)
-    
-    @classmethod
-    def create(
-        cls,
-        run_name: str,
-        model_config_name: str,
-        prompt_name: str,
-        parser_name: str,
-        retry_config_name: str,
-        io_config_name: str,
-        model_cfg: ModelConfig,
-        retry_config: RetryConfig,
-        io_config: IOConfig,
-        input_run_name: str,
-        start_idx: Optional[int] = None,
-        end_idx: Optional[int] = None,
-        **kwargs
-    ) -> "InferRunInfo":
-        """Create an InferRunInfo with computed deterministic UUID.
-
-        Args:
-            run_name: Run identifier (timestamp-based)
-            model_config_name: Model config name
-            prompt_name: Prompt name from registry
-            parser_name: Parser name from registry
-            retry_config_name: Retry config name
-            io_config_name: I/O config name
-            model_cfg: Full model configuration
-            retry_config: Full retry configuration
-            io_config: Full I/O configuration
-            input_run_name: Ingest run name to read samples from
-            start_idx: Start index into NormalizedDataset (None = start from beginning)
-            end_idx: End index into NormalizedDataset (None = process until end)
-            **kwargs: Additional fields from base RunInfo (git_sha, etc.)
-
-        Returns:
-            InferRunInfo instance with computed id
-        """
-        run_info_id = compute_infer_run_uuid(run_name)
-        return cls(
-            id=run_info_id,
-            run_name=run_name,
-            model_config_name=model_config_name,
-            prompt_name=prompt_name,
-            parser_name=parser_name,
-            retry_config_name=retry_config_name,
-            io_config_name=io_config_name,
-            model_cfg=model_cfg,
-            retry_config=retry_config,
-            io_config=io_config,
-            input_run_name=input_run_name,
-            start_idx=start_idx,
-            end_idx=end_idx,
-            **kwargs
-        )

@@ -7,11 +7,13 @@ without coupling to specific implementations.
 Uses template method pattern: build() is concrete and handles tuple→Domain mapping,
 subclasses implement build_raw() with pure building logic.
 
-Adapter identity (prompt_name) comes from builder and is used to create entities.
+Adapter identity (prompt_name and prompt_template_id) comes from builder.
 """
 
 from __future__ import annotations
+import uuid
 from abc import ABC, abstractmethod
+from uuid import UUID
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.schemas.llm_judgement import LLMPrompt
@@ -28,16 +30,18 @@ class PromptBuilder(ABC):
     - build_raw() (abstract): subclasses implement building logic
 
     This separates pure template logic from domain object creation.
-    Prompt identity (prompt_name) comes from builder and is passed to constructor.
+    Prompt identity (prompt_name and prompt_template_id) comes from builder.
     """
 
-    def __init__(self, prompt_name: str):
+    def __init__(self, prompt_name: str, prompt_template_id: UUID | None = None):
         """Initialize prompt builder with identity.
 
         Args:
             prompt_name: Natural key for prompt identity (from builder)
+            prompt_template_id: UUID for this prompt template (random if None)
         """
         self.prompt_name = prompt_name
+        self.prompt_template_id = prompt_template_id or uuid.uuid4()
 
     @abstractmethod
     def build_raw(self, dataset_sample: DatasetSample) -> tuple[DatasetSample, str]:
@@ -71,15 +75,10 @@ class PromptBuilder(ABC):
         # Call subclass implementation (returns tuple)
         ds, prompt_text = self.build_raw(dataset_sample)
 
-        # Compute UUID from prompt name
-        from llm_ensemble.libs.db import compute_prompt_template_uuid
-        prompt_template_id = compute_prompt_template_uuid(self.prompt_name)
-
         # Map to domain entity (port layer's responsibility)
-        return LLMPrompt.create(
+        return LLMPrompt(
             dataset_sample=ds,
             prompt_text=prompt_text,
-            prompt_template_id=prompt_template_id,
         )
 
     @abstractmethod

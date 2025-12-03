@@ -12,6 +12,7 @@ For resumability, the orchestrator can:
 """
 
 from __future__ import annotations
+import uuid
 from uuid import UUID
 from pydantic import BaseModel, Field
 
@@ -34,8 +35,8 @@ class JudgedDataset(BaseModel):
     """
 
     id: UUID = Field(
-        ...,
-        description="Same as InferRun.id (1:1 relationship)"
+        default_factory=uuid.uuid4,
+        description="Random UUID for this dataset"
     )
     model_config_id: UUID = Field(
         ...,
@@ -49,42 +50,6 @@ class JudgedDataset(BaseModel):
         ...,
         description="LLM judgements, one per dataset_sample"
     )
-
-    @classmethod
-    def create(
-        cls,
-        id: UUID,
-        model_config_id: UUID,
-        llm_judgements: list[LLMJudgement]
-    ) -> "JudgedDataset":
-        """Create JudgedDataset with computed sample_fingerprint.
-
-        Args:
-            id: JudgedDataset ID (same as InferRun.id)
-            model_config_id: Which model config was used
-            llm_judgements: List of LLM judgements
-
-        Returns:
-            JudgedDataset with computed sample_fingerprint
-
-        Note: sample_fingerprint is computed from sorted dataset_sample IDs
-        (via llm_judgement → llm_prompt_text → dataset_sample).
-        """
-        # Extract dataset_sample IDs for fingerprint computation
-        dataset_sample_ids = [
-            j.llm_prompt.dataset_sample.id
-            for j in llm_judgements
-        ]
-
-        # Compute fingerprint from sorted dataset_sample IDs
-        sample_fingerprint = compute_judged_dataset_fingerprint(dataset_sample_ids)
-
-        return cls(
-            id=id,
-            model_config_id=model_config_id,
-            sample_fingerprint=sample_fingerprint,
-            llm_judgements=llm_judgements,
-        )
 
     @property
     def judgement_count(self) -> int:

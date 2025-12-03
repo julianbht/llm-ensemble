@@ -5,13 +5,13 @@ All configuration centralized here - adapters contain no metadata.
 """
 
 from __future__ import annotations
+import uuid
 from typing import Optional, Literal, Any
 from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.schemas.base_config import BaseConfig
-from llm_ensemble.libs.db import compute_model_config_uuid
 
 
 class PricingInfo(BaseModel):
@@ -179,8 +179,8 @@ class ModelConfig(BaseConfig):
     """
 
     id: UUID = Field(
-        ...,
-        description="Deterministic UUID computed from config name (natural key)"
+        default_factory=uuid.uuid4,
+        description="Random UUID for this model config"
     )
 
     model_name: str = Field(
@@ -202,20 +202,6 @@ class ModelConfig(BaseConfig):
         ...,
         description="Model inference parameters and capabilities"
     )
-
-    @classmethod
-    def create(cls, name: str, **kwargs) -> "ModelConfig":
-        """Create ModelConfig with computed ID from name.
-
-        Args:
-            name: Config name (natural key, typically from filename)
-            **kwargs: Other config fields (model_name, provider_config, etc.)
-
-        Returns:
-            ModelConfig with computed ID
-        """
-        config_id = compute_model_config_uuid(name)
-        return cls(id=config_id, name=name, **kwargs)
 
     def get_provider(
         self,

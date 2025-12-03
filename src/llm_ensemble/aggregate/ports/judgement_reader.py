@@ -6,7 +6,7 @@ Defines the abstract contract for reading JudgedDataset from storage.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
-from llm_ensemble.infer.schemas.judged_dataset import JudgedDataset
+from llm_ensemble.infer.schemas.entities.judged_dataset import JudgedDataset
 
 
 class JudgementReader(ABC):

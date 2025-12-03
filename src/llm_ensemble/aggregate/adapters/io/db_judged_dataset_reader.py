@@ -7,8 +7,8 @@ objects for use in the aggregation pipeline.
 
 from __future__ import annotations
 
-from llm_ensemble.infer.schemas.judged_dataset import JudgedDataset
-from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.entities.judged_dataset import JudgedDataset
+from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.orms_normalized import (
     InferRunORM,
     LLMJudgementORM,

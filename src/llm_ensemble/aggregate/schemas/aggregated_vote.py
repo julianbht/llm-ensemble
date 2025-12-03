@@ -12,7 +12,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.schemas import RelevanceScore
-from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.schemas.aggregation_strategy import AggregationStrategy
 from llm_ensemble.libs.db import compute_aggregated_vote_uuid
 

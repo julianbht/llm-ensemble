@@ -8,8 +8,8 @@ from __future__ import annotations
 from uuid import UUID
 from collections import defaultdict
 
-from llm_ensemble.infer.schemas.judged_dataset import JudgedDataset
-from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.entities.judged_dataset import JudgedDataset
+from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.schemas import AggregatedDataset, AggregatedVote
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.aggregate_run_summary import AggregateRunSummary

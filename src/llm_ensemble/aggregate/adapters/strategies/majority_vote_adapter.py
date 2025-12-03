@@ -7,7 +7,7 @@ Ties are broken deterministically by choosing the lowest numeric label.
 from __future__ import annotations
 from collections import Counter
 
-from llm_ensemble.infer.schemas.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.ports import AggregationStrategyPort
 from llm_ensemble.libs.schemas import RelevanceScore
 

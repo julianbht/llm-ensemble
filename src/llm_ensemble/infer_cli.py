@@ -3,7 +3,6 @@ import typer
 
 from llm_ensemble.infer.orchestrator import run_inference
 from llm_ensemble.infer.config_loaders import load_model_config, load_retry_config
-from llm_ensemble.libs.config import load_io_config
 from llm_ensemble.libs.config.logging_config_loader import load_logging_config
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.runtime.tag_manager import TagManager
@@ -67,10 +66,9 @@ def infer(
     # Resolve tag if input starts with @ (already validated by RunInputParamType)
     input_run_name = TagManager.resolve_input(input_run_name, "ingest")
 
-    # Load configurations (only model, retry, io - no prompt config)
+    # Load configurations (only model, retry, logging - no IO config)
     model_config = load_model_config(model_cfg)
     retry_config = load_retry_config(retry_cfg)
-    io_config = load_io_config(io_cfg, cli_name="infer")
     logging_config = load_logging_config(log_cfg or "observability")
 
     # Parse and route overrides if provided
@@ -80,21 +78,19 @@ def infer(
         # Apply routed overrides to configs
         if overrides['model']:
             model_config = apply_overrides(model_config, overrides['model'])
-        if overrides['io']:
-            io_config = apply_overrides(io_config, overrides['io'])
+        # Note: IO overrides no longer supported since IO is now registry-based
 
-    # Run inference with registry-based prompt/parser selection
+    # Run inference with registry-based adapter selection
     run_inference(
         model_config=model_config,
         prompt_name=prompt,
         parser_name=parser,
         retry_config=retry_config,
-        io_config=io_config,
+        io_name=io_cfg,
         logging_config=logging_config,
         input_run_name=input_run_name,
         model_config_name=model_cfg,
         retry_config_name=retry_cfg,
-        io_config_name=io_cfg,
         run_name=run_name,
         start_idx=start_idx,
         end_idx=end_idx,

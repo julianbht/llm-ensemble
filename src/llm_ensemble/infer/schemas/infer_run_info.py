@@ -13,7 +13,6 @@ from uuid import UUID
 from pydantic import ConfigDict, Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
-from llm_ensemble.libs.schemas import IOConfig
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 
@@ -67,9 +66,9 @@ class InferRunInfo(RunInfo):
         description="Name of the retry config used (e.g., 'standard')"
     )
 
-    io_config_name: str = Field(
+    io_name: str = Field(
         ...,
-        description="Name of the I/O config used (e.g., 'json')"
+        description="Name of the I/O format used (e.g., 'db_to_json', 'db_to_db')"
     )
 
     # Full configuration objects (for reproducibility)
@@ -82,11 +81,6 @@ class InferRunInfo(RunInfo):
     retry_config: RetryConfig = Field(
         ...,
         description="Retry configuration used for this run"
-    )
-
-    io_config: IOConfig = Field(
-        ...,
-        description="I/O configuration used for this run"
     )
 
     # Input parameters

@@ -15,7 +15,7 @@ from typing import Optional
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
+from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.infer.domain import InferenceService
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
@@ -26,6 +26,7 @@ from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 from llm_ensemble.infer.prompt_builder import PromptAdapterBuilder
 from llm_ensemble.infer.parser_builder import ParserAdapterBuilder
+from llm_ensemble.infer.io_builder import IOAdapterBuilder
 
 
 def run_inference(
@@ -33,12 +34,11 @@ def run_inference(
     prompt_name: str,
     parser_name: str,
     retry_config: RetryConfig,
-    io_config: IOConfig,
+    io_name: str,
     logging_config: LoggingConfig,
     input_run_name: str,
     model_config_name: str,
     retry_config_name: str,
-    io_config_name: str,
     run_name: Optional[str] = None,
     start_idx: int = 0,
     end_idx: Optional[int] = None,
@@ -60,12 +60,11 @@ def run_inference(
         prompt_name: Prompt name for registry lookup (e.g., "thomas-simple")
         parser_name: Parser name for registry lookup (e.g., "thomas-simple")
         retry_config: Retry configuration
-        io_config: I/O configuration
+        io_name: I/O format name (e.g., "db_to_json", "db_to_db")
         logging_config: Logging configuration (controls pretty printing and log saving)
         input_run_name: Ingest run identifier (e.g., "my_ingest_run")
         model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
         retry_config_name: Name of the retry config file (e.g., "standard")
-        io_config_name: Name of the I/O config file (e.g., "json")
         run_name: Custom run ID (auto-generates if not provided)
         start_idx: Start index into NormalizedDataset (default: 0)
         end_idx: End index into NormalizedDataset (None = full dataset)
@@ -84,7 +83,7 @@ def run_inference(
             model_config.name_hint,
             prompt_name,
             parser_name,
-            io_config.name_hint,
+            io_name,
         ])
 
     # Get git info for reproducibility
@@ -97,10 +96,9 @@ def run_inference(
         prompt_name=prompt_name,
         parser_name=parser_name,
         retry_config_name=retry_config_name,
-        io_config_name=io_config_name,
+        io_name=io_name,
         model_cfg=model_config,
         retry_config=retry_config,
-        io_config=io_config,
         input_run_name=input_run_name,
         start_idx=start_idx,
         end_idx=end_idx,
@@ -138,7 +136,7 @@ def run_inference(
         InferLogEvent.INFER_STARTED,
         model=model_config_name,
         provider=model_config.provider_config.provider_name,
-        io_format=io_config_name,
+        io_format=io_name,
         prompt=prompt_name,
         parser=parser_name,
         input_run_name=input_run_name,
@@ -150,9 +148,9 @@ def run_inference(
     prompt_builder = PromptAdapterBuilder.build(prompt_name)
     response_parser = ParserAdapterBuilder.build(parser_name)
 
-    # Instantiate I/O and provider from configs
-    reader = io_config.get_reader()
-    writer = io_config.get_writer()
+    # Instantiate I/O and provider from builders
+    reader = IOAdapterBuilder.build_reader(io_name)
+    writer = IOAdapterBuilder.build_writer(io_name)
     provider = model_config.get_provider(retry_config=retry_config, logger=logger)
 
     # Create domain service

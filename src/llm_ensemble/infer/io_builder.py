@@ -1,0 +1,137 @@
+"""Builder for IO adapters.
+
+Simple, explicit mapping of IO format names to reader/writer adapter classes.
+No decorators, no hidden registration - just a clear dictionary.
+
+IO formats use explicit read→write naming to show the full pipeline:
+- db_to_db: Read from PostgreSQL, write to PostgreSQL
+- db_to_json: Read from PostgreSQL, write JSON array
+
+To add a new IO format:
+1. Create adapter classes that extend ExampleReader and JudgementWriter ports
+2. Import them here
+3. Add to IO_FORMATS dict with descriptive read→write name
+"""
+
+from __future__ import annotations
+from typing import Dict, Type, NamedTuple
+
+from llm_ensemble.infer.ports import ExampleReader, JudgementWriter
+from llm_ensemble.infer.adapters.io.db.sql_sample_reader import SQLJudgingSampleReader
+from llm_ensemble.infer.adapters.io.db.sql_repository import SQLJudgementRepository
+from llm_ensemble.infer.adapters.io.fully_populated_json_writer import FullyPopulatedJsonWriter
+
+
+class IOConfig(NamedTuple):
+    """Configuration for an IO format."""
+    reader_class: Type[ExampleReader]
+    writer_class: Type[JudgementWriter]
+    description: str
+
+
+# Explicit mapping of IO format names to adapter configurations
+IO_FORMATS: Dict[str, IOConfig] = {
+    "db_to_db": IOConfig(
+        reader_class=SQLJudgingSampleReader,
+        writer_class=SQLJudgementRepository,
+        description="Read from PostgreSQL, write to PostgreSQL"
+    ),
+    "db_to_json": IOConfig(
+        reader_class=SQLJudgingSampleReader,
+        writer_class=FullyPopulatedJsonWriter,
+        description="Read from PostgreSQL, write JSON array"
+    ),
+}
+
+
+class IOAdapterBuilder:
+    """Builder for creating IO adapter instances."""
+
+    @staticmethod
+    def build_reader(io_name: str) -> ExampleReader:
+        """Build and return a reader adapter instance.
+
+        Args:
+            io_name: Name of the IO format (e.g., 'db_to_json')
+
+        Returns:
+            Instantiated reader adapter
+
+        Raises:
+            ValueError: If IO format not found
+        """
+        if io_name not in IO_FORMATS:
+            available = ", ".join(sorted(IO_FORMATS.keys()))
+            raise ValueError(
+                f"IO format '{io_name}' not found. "
+                f"Available: {available}"
+            )
+
+        config = IO_FORMATS[io_name]
+        return config.reader_class()
+
+    @staticmethod
+    def build_writer(io_name: str) -> JudgementWriter:
+        """Build and return a writer adapter instance.
+
+        Args:
+            io_name: Name of the IO format (e.g., 'db_to_json')
+
+        Returns:
+            Instantiated writer adapter
+
+        Raises:
+            ValueError: If IO format not found
+        """
+        if io_name not in IO_FORMATS:
+            available = ", ".join(sorted(IO_FORMATS.keys()))
+            raise ValueError(
+                f"IO format '{io_name}' not found. "
+                f"Available: {available}"
+            )
+
+        config = IO_FORMATS[io_name]
+        return config.writer_class()
+
+    @staticmethod
+    def list_available() -> list[str]:
+        """List all available IO format names.
+
+        Returns:
+            Sorted list of IO format names
+        """
+        return sorted(IO_FORMATS.keys())
+
+    @staticmethod
+    def has_format(io_name: str) -> bool:
+        """Check if IO format is available.
+
+        Args:
+            io_name: Name of the IO format
+
+        Returns:
+            True if IO format exists
+        """
+        return io_name in IO_FORMATS
+
+    @staticmethod
+    def get_description(io_name: str) -> str:
+        """Get description for an IO format.
+
+        Args:
+            io_name: Name of the IO format
+
+        Returns:
+            Description string
+
+        Raises:
+            ValueError: If IO format not found
+        """
+        if io_name not in IO_FORMATS:
+            available = ", ".join(sorted(IO_FORMATS.keys()))
+            raise ValueError(
+                f"IO format '{io_name}' not found. "
+                f"Available: {available}"
+            )
+
+        return IO_FORMATS[io_name].description

@@ -38,26 +38,16 @@ class ProviderORM(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     # Relationships
-    model_configs = relationship("ModelConfigORM", back_populates="provider")
-
-
-class ModelORM(Base):
-    __tablename__ = "models"
-    __table_args__ = {"schema": "infer"}
-    __natural_key__ = "name"
-    __uuid_function__ = "compute_model_uuid"
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    name = Column(String(255), nullable=False, unique=True)
-    context_window = Column(Integer, nullable=False)
-    capabilities = Column(JSONB, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=utcnow)
-
-    # Relationships
-    model_configs = relationship("ModelConfigORM", back_populates="model")
+    judged_datasets = relationship("JudgedDatasetORM", back_populates="provider")
 
 
 class ModelConfigORM(Base):
+    """Complete model configuration used for an inference run.
+
+    Pure configuration data - model identity, capabilities, and inference parameters.
+    No provider reference - provider is a runtime fact on JudgedDataset.
+    No separate Model entity - this is the complete configuration snapshot.
+    """
     __tablename__ = "model_configs"
     __natural_key__ = "name"
     __uuid_function__ = "compute_model_config_uuid"
@@ -66,18 +56,14 @@ class ModelConfigORM(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
 
-    model_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.models.id"),
-        nullable=False
-    )
-    provider_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.providers.id"),
-        nullable=False
-    )
+    # Model identity
+    model_id = Column(String(255), nullable=False, comment="Model identifier (e.g., 'gpt-4', 'llama-3-70b')")
 
-    # Explicit inference parameters for SQL querying
+    # Model capabilities (from model_specs in config)
+    context_window = Column(Integer, nullable=False)
+    capabilities = Column(JSONB, nullable=True, comment="Model capabilities (e.g., multilingual, function_calling)")
+
+    # Inference parameters (from model_specs in config)
     temperature = Column(Float, nullable=True)
     max_tokens = Column(Integer, nullable=True)
     top_p = Column(Float, nullable=True)
@@ -91,8 +77,6 @@ class ModelConfigORM(Base):
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    model = relationship("ModelORM", back_populates="model_configs")
-    provider = relationship("ProviderORM", back_populates="model_configs")
     judged_datasets = relationship("JudgedDatasetORM", back_populates="model_config")
 
 
@@ -136,6 +120,10 @@ class ParserORM(Base):
 
 
 class JudgedDatasetORM(Base):
+    """Dataset of LLM judgements produced by an inference run.
+
+    Captures both what was configured (model_config) and where it ran (provider).
+    """
     __tablename__ = "judged_datasets"
     __table_args__ = {"schema": "infer"}
     __natural_key__ = None  # 1:1 with InferRun, uses same ID
@@ -150,6 +138,13 @@ class JudgedDatasetORM(Base):
         comment="Which model configuration was used for all judgements in this dataset"
     )
 
+    provider_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.providers.id"),
+        nullable=False,
+        comment="Which provider/service was used to run inference (runtime fact)"
+    )
+
     sample_fingerprint = Column(
         CHAR(64),
         nullable=True,
@@ -159,6 +154,7 @@ class JudgedDatasetORM(Base):
 
     # Relationships
     model_config = relationship("ModelConfigORM", back_populates="judged_datasets")
+    provider = relationship("ProviderORM", back_populates="judged_datasets")
     llm_judgements = relationship("LLMJudgementORM", back_populates="judged_dataset")
     infer_run = relationship("InferRunORM", back_populates="judged_dataset", uselist=False)
 

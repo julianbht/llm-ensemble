@@ -14,14 +14,13 @@ from __future__ import annotations
 import random
 import time
 from abc import ABC, abstractmethod
-from typing import Optional
 from openai import APIError
-import structlog
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.llm_invocation_dto import LLMInvocationDTO
+from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
@@ -46,7 +45,6 @@ class LLMProvider(ABC):
         provider_name: str,
         model_name: str,
         retry_config: RetryConfig,
-        logger: Optional[structlog.stdlib.BoundLogger] = None,
     ):
         """Initialize provider with identity from config.
 
@@ -54,12 +52,11 @@ class LLMProvider(ABC):
             provider_name: Provider identifier (from config, e.g., 'openrouter')
             model_name: Model identifier (from config, e.g., 'llama-4-maverick:free')
             retry_config: Retry configuration for exponential backoff
-            logger: Optional logger for retry events (if None, no logging)
         """
         self.provider_name = provider_name
         self.model_name = model_name
         self.retry_config = retry_config
-        self.logger = logger
+        self.logger = get_logger(component=f"{provider_name}_provider")
 
     def infer(
         self,
@@ -113,14 +110,13 @@ class LLMProvider(ABC):
 
                 # If not retryable or out of retries, raise
                 if not is_retryable or attempt >= self.retry_config.max_retries:
-                    # Log the final failure if logger available
-                    if self.logger:
-                        self.logger.warning(
-                            InferLogEvent.RETRY_EXHAUSTED,
-                            retry_count=attempt,
-                            error_type=type(e).__name__,
-                            status_code=getattr(e, 'status_code', None),
-                        )
+                    # Log the final failure
+                    self.logger.warning(
+                        InferLogEvent.RETRY_EXHAUSTED,
+                        retry_count=attempt,
+                        error_type=type(e).__name__,
+                        status_code=getattr(e, 'status_code', None),
+                    )
 
                     raise
 
@@ -132,16 +128,15 @@ class LLMProvider(ABC):
                 jitter = random.uniform(0, delay * 0.1)  # 10% jitter
                 total_delay = delay + jitter
 
-                # Log retry attempt if logger available
-                if self.logger:
-                    self.logger.info(
-                        InferLogEvent.RETRY_ATTEMPT,
-                        attempt=attempt + 1,
-                        max_retries=self.retry_config.max_retries + 1,
-                        backoff_seconds=round(total_delay, 2),
-                        error_type=type(e).__name__,
-                        status_code=getattr(e, 'status_code', None),
-                    )
+                # Log retry attempt
+                self.logger.info(
+                    InferLogEvent.RETRY_ATTEMPT,
+                    attempt=attempt + 1,
+                    max_retries=self.retry_config.max_retries + 1,
+                    backoff_seconds=round(total_delay, 2),
+                    error_type=type(e).__name__,
+                    status_code=getattr(e, 'status_code', None),
+                )
 
                 # Sleep before retry
                 time.sleep(total_delay)

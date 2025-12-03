@@ -35,7 +35,6 @@ from llm_ensemble.libs.db import (
 )
 from llm_ensemble.infer.adapters.io.db.orms import (
     ProviderORM,
-    ModelORM,
     ModelConfigORM,
     PromptTemplateORM,
     ParserORM,
@@ -48,7 +47,6 @@ from llm_ensemble.infer.adapters.io.db.orms import (
 )
 from llm_ensemble.infer.adapters.io.db.mappers_to_orm import (
     provider_name_to_orm,
-    model_config_to_model_orm,
     model_config_to_orm,
     prompt_name_to_template_orm,
     parser_name_to_orm,
@@ -76,7 +74,6 @@ class SQLJudgementRepository(JudgementWriter):
         super().__init__()
         self._session: Optional[Session] = None
         self._provider_id: Optional[uuid.UUID] = None
-        self._model_id: Optional[uuid.UUID] = None
         self._model_config_id: Optional[uuid.UUID] = None
         self._prompt_template_id: Optional[uuid.UUID] = None
         self._parser_spec_id: Optional[uuid.UUID] = None
@@ -116,6 +113,7 @@ class SQLJudgementRepository(JudgementWriter):
         judged_dataset_orm = JudgedDatasetORM(
             id=self._judged_dataset_id,
             model_config_id=self._model_config_id,
+            provider_id=self._provider_id,
             sample_fingerprint=None,
         )
         self._session.add(judged_dataset_orm)
@@ -202,28 +200,19 @@ class SQLJudgementRepository(JudgementWriter):
     ) -> None:
         """Initialize shared metadata entities."""
         # Upsert Provider by name
-        provider_orm = provider_name_to_orm(run_info.model_cfg.provider)
+        provider_orm = provider_name_to_orm(run_info.model_cfg.provider_config.provider_name)
         self._provider_id = self._upsert_by_name(
             ProviderORM,
-            run_info.model_cfg.provider,
+            run_info.model_cfg.provider_config.provider_name,
             provider_orm,
             "providers"
         )
 
-        # Upsert Model by name
-        model_orm = model_config_to_model_orm(run_info.model_cfg)
-        self._model_id = self._upsert_by_name(
-            ModelORM,
-            run_info.model_cfg.model_name,
-            model_orm,
-            "models"
-        )
-
-        # Upsert ModelConfig by name
-        model_config_orm = model_config_to_orm(run_info.model_cfg, self._model_id, self._provider_id)
+        # Upsert ModelConfig by name (no separate Model entity)
+        model_config_orm = model_config_to_orm(run_info.model_cfg)
         self._model_config_id = self._upsert_by_name(
             ModelConfigORM,
-            run_info.model_cfg.name,
+            run_info.model_cfg.name_hint,
             model_config_orm,
             "model_configs"
         )

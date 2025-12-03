@@ -13,7 +13,6 @@ import os
 import time
 from typing import Optional
 from openai import OpenAI
-import structlog
 
 from llm_ensemble.infer.schemas.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
@@ -36,7 +35,6 @@ class OpenRouterAdapter(LLMProvider):
         retry_config: RetryConfig,
         api_key: Optional[str] = None,
         timeout: int = 30,
-        logger: Optional[structlog.stdlib.BoundLogger] = None,
     ):
         """Initialize OpenRouter adapter with identity from config.
 
@@ -46,9 +44,8 @@ class OpenRouterAdapter(LLMProvider):
             retry_config: Retry configuration for exponential backoff
             api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
             timeout: Request timeout in seconds (default: 30)
-            logger: Optional logger for retry events
         """
-        super().__init__(provider_name, model_name, retry_config, logger)
+        super().__init__(provider_name, model_name, retry_config)
 
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         self.timeout = timeout

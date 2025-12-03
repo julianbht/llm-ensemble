@@ -28,7 +28,6 @@ from llm_ensemble.infer.schemas.entities.llm_invocation_metrics import LLMInvoca
 from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
 from llm_ensemble.infer.adapters.io.db.orms import (
     ProviderORM,
-    ModelORM,
     ModelConfigORM,
     PromptTemplateORM,
     ParserORM,
@@ -42,7 +41,6 @@ from llm_ensemble.infer.adapters.io.db.orms import (
 )
 from llm_ensemble.libs.db import (
     compute_provider_uuid,
-    compute_model_uuid,
     compute_model_config_uuid,
     compute_prompt_template_uuid,
     compute_parser_spec_uuid_from_name,
@@ -77,60 +75,41 @@ def provider_name_to_orm(provider_name: str) -> ProviderORM:
 
 
 # ============================================================================
-# Model Mappers
+# ModelConfig Mappers
 # ============================================================================
 
-def model_config_to_model_orm(model_cfg: ModelConfig) -> ModelORM:
-    """Convert ModelConfig to ModelORM (base model entity).
-
-    Args:
-        model_cfg: ModelConfig object
-
-    Returns:
-        ModelORM model ready for persistence
-    """
-    model_id = compute_model_uuid(model_cfg.model_id)
-    return ModelORM(
-        id=model_id,
-        name=model_cfg.model_id,
-        context_window=model_cfg.context_window,
-        capabilities=model_cfg.capabilities if model_cfg.capabilities else None,
-    )
-
-
-def model_config_to_orm(
-    model_cfg: ModelConfig,
-    model_id: UUID,
-    provider_id: UUID,
-) -> ModelConfigORM:
+def model_config_to_orm(model_cfg: ModelConfig) -> ModelConfigORM:
     """Convert ModelConfig to ModelConfigORM.
 
+    Collapses model identity, capabilities, and inference params into single ORM.
+    No separate Model entity - ModelConfig is the complete configuration.
+    Provider is tracked on JudgedDataset (runtime fact), not here (configuration).
+
     Args:
         model_cfg: ModelConfig object
-        model_id: Model UUID (for foreign key)
-        provider_id: Provider UUID (for foreign key)
 
     Returns:
         ModelConfigORM model ready for persistence
     """
     # Prepare additional_params (catch-all for non-explicit fields)
-    additional_params = model_cfg.additional_params.copy() if model_cfg.additional_params else {}
-    if model_cfg.stop:
-        additional_params["stop"] = model_cfg.stop
-    if model_cfg.response_format:
-        additional_params["response_format"] = model_cfg.response_format
+    additional_params = model_cfg.model_specs.additional_params.copy() if model_cfg.model_specs.additional_params else {}
+    if model_cfg.model_specs.stop:
+        additional_params["stop"] = model_cfg.model_specs.stop
+    if model_cfg.model_specs.response_format:
+        additional_params["response_format"] = model_cfg.model_specs.response_format
 
     return ModelConfigORM(
-        id=compute_model_config_uuid(model_cfg.name),
-        name=model_cfg.name,
-        model_id=model_id,
-        provider_id=provider_id,
-        temperature=model_cfg.temperature,
-        max_tokens=model_cfg.max_tokens,
-        top_p=model_cfg.top_p,
-        frequency_penalty=model_cfg.frequency_penalty,
-        presence_penalty=model_cfg.presence_penalty,
-        seed=model_cfg.seed,
+        id=compute_model_config_uuid(model_cfg.name_hint),
+        name=model_cfg.name_hint,
+        model_id=model_cfg.model_name,
+        context_window=model_cfg.model_specs.context_window,
+        capabilities=model_cfg.model_specs.capabilities if model_cfg.model_specs.capabilities else None,
+        temperature=model_cfg.model_specs.temperature,
+        max_tokens=model_cfg.model_specs.max_tokens,
+        top_p=model_cfg.model_specs.top_p,
+        frequency_penalty=model_cfg.model_specs.frequency_penalty,
+        presence_penalty=model_cfg.model_specs.presence_penalty,
+        seed=model_cfg.model_specs.seed,
         additional_params=additional_params if additional_params else None,
     )
 

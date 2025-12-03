@@ -10,7 +10,6 @@ from typing import Optional, Literal, Any
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.schemas.base_config import BaseConfig
 
 
@@ -202,44 +201,3 @@ class ModelConfig(BaseConfig):
         ...,
         description="Model inference parameters and capabilities"
     )
-
-    def get_provider(
-        self,
-        retry_config: RetryConfig,
-        logger: Optional[Any] = None,
-        api_key: Optional[str] = None,
-        timeout: int = 30,
-    ) -> Any:
-        """Instantiate and return the provider adapter.
-
-        Dynamically imports the provider module and instantiates the provider class.
-        Provider name and model name come from config.
-
-        Args:
-            retry_config: Retry configuration for exponential backoff
-            logger: Optional logger for retry events
-            api_key: Optional API key (if not provided, adapter will use env vars)
-            timeout: Request timeout in seconds (default: 30)
-
-        Returns:
-            Instance of the provider adapter (LLMProvider)
-
-        Raises:
-            ImportError: If the provider module cannot be imported
-            AttributeError: If the provider class doesn't exist in the module
-        """
-        kwargs = {
-            "provider_name": self.provider_config.provider_name,
-            "model_name": self.model_name,
-            "retry_config": retry_config,
-            "logger": logger,
-            "timeout": timeout,
-        }
-        if api_key is not None:
-            kwargs["api_key"] = api_key
-
-        return self._instantiate_adapter(
-            self.provider_config.provider_adapter.provider_module,
-            self.provider_config.provider_adapter.provider_class,
-            **kwargs
-        )

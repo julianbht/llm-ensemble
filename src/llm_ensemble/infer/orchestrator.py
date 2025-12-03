@@ -27,6 +27,7 @@ from llm_ensemble.libs.logging.log_events import InferLogEvent
 from llm_ensemble.infer.prompt_builder import PromptAdapterBuilder
 from llm_ensemble.infer.parser_builder import ParserAdapterBuilder
 from llm_ensemble.infer.io_builder import IOAdapterBuilder
+from llm_ensemble.infer.provider_builder import ProviderAdapterBuilder
 
 
 def run_inference(
@@ -149,8 +150,11 @@ def run_inference(
     response_parser = ParserAdapterBuilder.build(parser_name)
     reader = IOAdapterBuilder.build_reader(io_name)
     writer = IOAdapterBuilder.build_writer(io_name)
-
-    provider = model_config.get_provider(retry_config=retry_config, logger=logger)
+    provider = ProviderAdapterBuilder.build(
+        provider_name=model_config.provider_config.provider_name,
+        model_config=model_config,
+        retry_config=retry_config,
+    )
 
     # Create domain service
     service = InferenceService(

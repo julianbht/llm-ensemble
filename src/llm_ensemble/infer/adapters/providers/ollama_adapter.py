@@ -10,7 +10,6 @@ ResponseParser's job). The InferenceService orchestrates all port interactions.
 
 from __future__ import annotations
 from typing import Optional
-import structlog
 
 from llm_ensemble.infer.schemas.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
@@ -33,7 +32,6 @@ class OllamaAdapter(LLMProvider):
         retry_config: RetryConfig,
         base_url: str = "http://localhost:11434",
         timeout: int = 60,
-        logger: Optional[structlog.stdlib.BoundLogger] = None,
     ):
         """Initialize Ollama adapter.
 
@@ -43,9 +41,8 @@ class OllamaAdapter(LLMProvider):
             retry_config: Retry configuration for exponential backoff
             base_url: Ollama server URL (default: http://localhost:11434)
             timeout: Request timeout in seconds (default: 60)
-            logger: Optional logger for retry events
         """
-        super().__init__(provider_name, model_name, retry_config, logger)
+        super().__init__(provider_name, model_name, retry_config)
 
         self.base_url = base_url
         self.timeout = timeout

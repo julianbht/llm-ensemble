@@ -88,12 +88,7 @@ class DBWriter(OutputPort):
         run_dir: Path,
         run_info: InferRunInfo,
         normalized_dataset: NormalizedDataset,
-        start_idx: int,
-        end_idx: int,
-        prompt_name: str,
-        parser_name: str,
-        template_text: str,
-    ) -> "SqlJudgementWriter":
+    ) -> "DBWriter":
         """Open database session and initialize run metadata."""
         if self._session is not None:
             raise RuntimeError("Writer is already open")
@@ -101,26 +96,29 @@ class DBWriter(OutputPort):
         engine = get_engine()
         self._session = get_session(engine)
 
-        # Initialize run metadata (providers, models, prompts, etc.)
-        self._initialize_run_metadata(
-            run_info, normalized_dataset, start_idx, end_idx,
-            prompt_name, parser_name, template_text
-        )
+        # Compute actual start_idx and end_idx from run_info
+        start_idx = run_info.start_idx if run_info.start_idx is not None else 0
+        end_idx = run_info.end_idx if run_info.end_idx is not None else len(normalized_dataset.samples)
 
-        # Create JudgedDataset with same ID as InferRun (1:1 relationship)
-        # sample_fingerprint computed in close() after all judgements written
-        self._judged_dataset_id = self._infer_run_id
-        judged_dataset_orm = JudgedDatasetORM(
-            id=self._judged_dataset_id,
-            model_config_id=self._model_config_id,
-            provider_id=self._provider_id,
-            sample_fingerprint=None,
+        # Create InferRun (always new)
+        config_names = {
+            "model_config": run_info.model_cfg.name_hint,
+            # prompt_name and parser_name will be added from first judgement
+        }
+        infer_run_orm = infer_run_info_to_orm(
+            run_info,
+            config_names,
+            start_idx,
+            end_idx,
         )
-        self._session.add(judged_dataset_orm)
+        self._session.add(infer_run_orm)
+        self._infer_run_id = run_info.id
+        self._write_summary.add_infer_runs(created=1, skipped=0)
         self._session.commit()
 
-        self._write_summary.add_judged_datasets(created=1, skipped=0)
-        self.logger.info(InferWriteEvent.WRITE_JUDGED_DATASETS, created=1, skipped=0)
+        # JudgedDataset will be created on first write_one() call
+        # (needs provider_id and model_config_id from judgement)
+        self._judged_dataset_id = None
 
         return self
 
@@ -129,10 +127,14 @@ class DBWriter(OutputPort):
         if self._session is None:
             raise RuntimeError("Writer is not open")
 
+        # On first call, upsert shared metadata and create JudgedDataset
+        if self._judged_dataset_id is None:
+            self._initialize_judged_dataset(judgement)
+
         # Track dataset_sample ID for fingerprint computation in close()
         self._dataset_sample_ids.append(judgement.llm_prompt.dataset_sample.id)
 
-        # Upsert LLMPromptText
+        # Upsert LLMPromptText (includes prompt_template upsert)
         llm_prompt_text_id = self._upsert_llm_prompt_text(judgement)
 
         # Upsert LLMResponseText
@@ -141,8 +143,8 @@ class DBWriter(OutputPort):
         # Upsert LLMInvocationMetrics
         llm_invocation_metrics_id = self._upsert_llm_invocation_metrics(judgement)
 
-        # Upsert LLMScore (if present)
-        llm_score_id = self._upsert_llm_score(judgement, llm_response_text_id, self._parser_spec_id) if judgement.llm_score else None
+        # Upsert LLMScore (if present, includes parser upsert)
+        llm_score_id = self._upsert_llm_score(judgement, llm_response_text_id) if judgement.llm_score else None
 
         # Create LLMJudgement (directly linked to JudgedDataset)
         llm_judgement_orm = llm_judgement_to_orm(
@@ -188,70 +190,42 @@ class DBWriter(OutputPort):
         self._write_summary = WriteSummary()
         return summary
 
-    def _initialize_run_metadata(
-        self,
-        run_info: InferRunInfo,
-        normalized_dataset: NormalizedDataset,
-        start_idx: int,
-        end_idx: int,
-        prompt_name: str,
-        parser_name: str,
-        template_text: str,
-    ) -> None:
-        """Initialize shared metadata entities."""
-        # Upsert Provider by name
-        provider_orm = provider_name_to_orm(run_info.model_cfg.provider_config.provider_name)
+    def _initialize_judged_dataset(self, judgement: LLMJudgement) -> None:
+        """Initialize JudgedDataset on first judgement write.
+
+        Extracts provider and model_config from judgement and upserts them.
+        """
+        # Upsert Provider from judgement
+        provider_orm = provider_name_to_orm(judgement.provider.name)
         self._provider_id = self._upsert_by_name(
             ProviderORM,
-            run_info.model_cfg.provider_config.provider_name,
+            judgement.provider.name,
             provider_orm,
             "providers"
         )
 
-        # Upsert ModelConfig by name (no separate Model entity)
-        model_config_orm = model_config_to_orm(run_info.model_cfg)
+        # Upsert ModelConfig from judgement
+        model_config_orm = model_config_to_orm(judgement.model_config)
         self._model_config_id = self._upsert_by_name(
             ModelConfigORM,
-            run_info.model_cfg.name_hint,
+            judgement.model_config.name_hint,
             model_config_orm,
             "model_configs"
         )
 
-        # Upsert PromptTemplate by name
-        prompt_template_orm = prompt_name_to_template_orm(prompt_name, template_text)
-        self._prompt_template_id = self._upsert_by_name(
-            PromptTemplateORM,
-            prompt_name,
-            prompt_template_orm,
-            "prompt_templates"
+        # Create JudgedDataset with same ID as InferRun (1:1 relationship)
+        self._judged_dataset_id = self._infer_run_id
+        judged_dataset_orm = JudgedDatasetORM(
+            id=self._judged_dataset_id,
+            model_config_id=self._model_config_id,
+            provider_id=self._provider_id,
+            sample_fingerprint=None,  # Computed in close()
         )
-
-        # Upsert ParserSpec by name
-        parser_spec_orm = parser_name_to_orm(parser_name)
-        self._parser_spec_id = self._upsert_by_name(
-            ParserORM,
-            parser_name,
-            parser_spec_orm,
-            "parser"
-        )
-
-        # Create InferRun (always new)
-        config_names = {
-            "model_config": run_info.model_cfg.name,
-            "prompt_name": prompt_name,
-            "parser_name": parser_name,
-        }
-        infer_run_orm = infer_run_info_to_orm(
-            run_info,
-            config_names,
-            start_idx,
-            end_idx,
-        )
-        self._session.add(infer_run_orm)
-        self._infer_run_id = run_info.id
-        self._write_summary.add_infer_runs(created=1, skipped=0)
-
+        self._session.add(judged_dataset_orm)
         self._session.commit()
+
+        self._write_summary.add_judged_datasets(created=1, skipped=0)
+        self.logger.info(InferWriteEvent.WRITE_JUDGED_DATASETS, created=1, skipped=0)
 
     def _upsert_by_name(self, orm_class, name: str, new_entity_orm, entity_name: str) -> uuid.UUID:
         """Upsert entity by name (natural key for simple config entities).

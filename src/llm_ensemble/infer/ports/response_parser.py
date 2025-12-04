@@ -68,13 +68,23 @@ class ResponseParserPort(ABC):
             raw_text: Raw text response from the LLM
 
         Returns:
-            LLMScore domain object with parsed fields and identity
+            LLMScore domain object with parsed fields, parser, and identity
         """
         # Call subclass implementation (returns DTO)
         parsed_dto = self.parse_raw(raw_text)
 
+        # Import here to avoid circular dependency
+        from llm_ensemble.infer.schemas.entities.parser import Parser
+
+        # Create parser object
+        parser = Parser(
+            id=self.parser_spec_id,
+            name=self.parser_name,
+        )
+
         # Map to domain entity (port layer's responsibility)
         return LLMScore(
+            parser=parser,
             llm_response_text=parsed_dto.llm_response_text,
             label=parsed_dto.label,
             confidence=parsed_dto.confidence,

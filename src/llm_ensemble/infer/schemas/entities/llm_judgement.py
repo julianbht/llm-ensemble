@@ -12,29 +12,31 @@ from pydantic import BaseModel, Field
 from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
 from llm_ensemble.infer.schemas.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
+from llm_ensemble.infer.schemas.entities.provider import Provider
+from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.warnings import BaseWarning
 
 
 class LLMJudgement(BaseModel):
     """A complete LLM relevance judgement - pure domain model.
 
-    Nested structure matching ORM semantics:
-    - llm_prompt: Contains the dataset_sample (prompt built FROM sample)
+    Nested structure capturing complete context:
+    - model_config: Full model configuration used for inference
+    - provider: Which service/platform ran the inference
+    - llm_prompt: Contains the dataset_sample and prompt_template
     - invocation_metrics: Performance data from the LLM API call
-    - llm_score: Contains the llm_response_text (score parsed FROM response)
+    - llm_score: Contains the llm_response_text and parser
 
     This captures the complete data lineage for a single inference:
     what was judged (in llm_prompt.dataset_sample), what prompt was sent,
-    what response came back (in llm_score.llm_response_text), how the call
-    performed, and what score was extracted.
+    what model and provider were used, what response came back,
+    how the call performed, and what score was extracted.
 
     The structure mirrors the inference workflow:
-    1. Build prompt from dataset sample → LLMPrompt (dataset_sample + prompt_text)
+    1. Build prompt from dataset sample → LLMPrompt (with prompt_template)
     2. Invoke LLM → response_text + LLMInvocationMetrics
-    3. Parse response → LLMScore (llm_response_text + label/confidence/rationale)
-    4. Create judgement
-
-    Config IDs track which model and prompt were used for provenance.
+    3. Parse response → LLMScore (with parser)
+    4. Create judgement with full context
     """
 
     id: UUID = Field(
@@ -42,19 +44,19 @@ class LLMJudgement(BaseModel):
         description="Random UUID for this judgement"
     )
 
-    model_config_id: UUID = Field(
+    model_config: ModelConfig = Field(
         ...,
-        description="Model configuration used for this judgement (for provenance)"
+        description="Complete model configuration used for this judgement"
     )
 
-    prompt_template_id: UUID = Field(
+    provider: Provider = Field(
         ...,
-        description="Prompt template used for this judgement (for provenance)"
+        description="Provider/service that executed the inference"
     )
 
     llm_prompt: LLMPrompt = Field(
         ...,
-        description="The prompt sent to the LLM (contains dataset_sample + prompt_text)"
+        description="The prompt sent to the LLM (contains dataset_sample and prompt_template)"
     )
 
     invocation_metrics: LLMInvocationMetrics = Field(
@@ -65,7 +67,7 @@ class LLMJudgement(BaseModel):
     llm_score: Optional[LLMScore] = Field(
         None,
         description=(
-            "The parsed score (contains llm_response_text + label/confidence/rationale). "
+            "The parsed score (contains llm_response_text, parser, and label/confidence/rationale). "
             "None if response parsing completely failed."
         )
     )

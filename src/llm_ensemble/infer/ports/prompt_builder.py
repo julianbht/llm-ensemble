@@ -70,13 +70,24 @@ class PromptBuilderPort(ABC):
             dataset_sample: DatasetSample containing judging_sample and context
 
         Returns:
-            LLMPrompt domain object with prompt text and identity
+            LLMPrompt domain object with prompt text, template, and identity
         """
         # Call subclass implementation (returns tuple)
         ds, prompt_text = self.build_raw(dataset_sample)
 
+        # Import here to avoid circular dependency
+        from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
+
+        # Create prompt template object
+        prompt_template = PromptTemplate(
+            id=self.prompt_template_id,
+            name=self.prompt_name,
+            template_text=self.get_template_text(),
+        )
+
         # Map to domain entity (port layer's responsibility)
         return LLMPrompt(
+            prompt_template=prompt_template,
             dataset_sample=ds,
             prompt_text=prompt_text,
         )

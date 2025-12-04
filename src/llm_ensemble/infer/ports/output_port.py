@@ -43,35 +43,25 @@ class OutputPort(ABC):
         run_dir: Path,
         run_info: InferRunInfo,
         normalized_dataset: NormalizedDataset,
-        start_idx: int,
-        end_idx: int,
-        prompt_name: str,
-        parser_name: str,
-        template_text: str,
     ) -> OutputPort:
-        """Initialize writer with run directory, run context, input dataset, and computed indices.
+        """Initialize writer with run directory, run context, and input dataset.
 
         The run_info contains metadata about the inference run (model config,
-        git SHA, etc.) and nullable start_idx/end_idx capturing user intent.
-
-        The computed start_idx and end_idx represent the actual indices that will be
-        processed (computed by the service from run_info + normalized_dataset).
+        git SHA, etc.) including nullable start_idx/end_idx capturing user intent.
 
         The normalized_dataset is used to link InferRun to the source ingest run for provenance.
+        The writer will compute actual start_idx and end_idx from run_info defaults.
 
-        For SQL writers, this creates the JudgedDataset entity with NULL fingerprint
-        and InferRun with explicit start_idx/end_idx (computed actuals, not nullable intent).
-        The fingerprint is computed and set during close() after all judgements written.
+        All other metadata (provider, model_config, prompt_template, parser)
+        is extracted from the judgement objects during write_one().
+
+        For SQL writers, this creates the InferRun entity and prepares for streaming writes.
+        JudgedDataset is created on first write_one() with metadata from the judgement.
 
         Args:
             run_dir: Run directory where output should be written (writer determines file structure)
-            run_info: Inference run context (metadata about model, git state, nullable indices)
+            run_info: Inference run context (metadata about model, git state, user-specified indices)
             normalized_dataset: Input dataset being processed (used for provenance linking)
-            start_idx: Computed start index (0-indexed, inclusive, defaults to 0 if not specified by user)
-            end_idx: Computed end index (exclusive, defaults to sample_count if not specified by user)
-            prompt_name: Prompt name from registry (e.g., 'thomas-simple')
-            parser_name: Parser name from registry (e.g., 'thomas-simple')
-            template_text: Template text from prompt builder (for persistence)
 
         Returns:
             Self, to enable context manager usage

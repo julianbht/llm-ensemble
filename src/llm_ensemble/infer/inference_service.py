@@ -104,15 +104,17 @@ class InferenceService:
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
-        # Extract template text from prompt builder for persistence
-        template_text = self.prompt_builder.get_template_text()
+        # Create Provider object from model_config
+        from llm_ensemble.infer.schemas.entities.provider import Provider
+        from llm_ensemble.libs.db import compute_provider_uuid
 
-        # Open writer for streaming (context manager ensures proper cleanup)
-        # Pass computed indices, adapter names, and template text to writer
-        with self.output_port.open(
-            run_dir, run_info, normalized_dataset, start_idx, end_idx,
-            self.prompt_builder.prompt_name, self.response_parser.parser_name, template_text
-        ) as writer:
+        provider = Provider(
+            id=compute_provider_uuid(model_config.provider_config.provider_name),
+            name=model_config.provider_config.provider_name,
+        )
+
+        # Open writer for streaming (simplified signature - metadata extracted from judgements)
+        with self.output_port.open(run_dir, run_info, normalized_dataset) as writer:
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
                 # Build prompt (port creates domain object)
@@ -125,16 +127,16 @@ class InferenceService:
                     model_config
                 )
 
-                # Parse response (port creates domain object)
+                # Parse response (port creates domain object with parser)
                 llm_score = self.response_parser.parse(raw_response_text)
 
-                # Create judgement from nested components
+                # Create judgement with full context objects
                 judgement = LLMJudgement(
-                    llm_prompt=llm_prompt,
+                    model_config=model_config,
+                    provider=provider,
+                    llm_prompt=llm_prompt,  # Contains prompt_template
                     invocation_metrics=invocation_metrics,
-                    llm_score=llm_score,
-                    model_config_id=model_config.id,
-                    prompt_template_id=self.prompt_builder.prompt_template_id,
+                    llm_score=llm_score,  # Contains parser
                 )
 
                 # Log each completed judgement

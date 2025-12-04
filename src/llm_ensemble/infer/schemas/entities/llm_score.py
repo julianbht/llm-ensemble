@@ -10,13 +10,15 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.infer.schemas.warnings import BaseWarning
+from llm_ensemble.infer.schemas.entities.parser import Parser
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
 class LLMScore(BaseModel):
     """Parsed relevance assessment extracted from LLM response.
 
-    Captures the semantic relationship: score is parsed FROM llm_response_text.
+    Captures the semantic relationship: score is parsed FROM llm_response_text
+    using a specific parser.
     This represents the structured score that a ResponseParser extracts
     from raw LLM output text. All fields are optional to handle parse failures.
     """
@@ -24,6 +26,11 @@ class LLMScore(BaseModel):
     id: UUID = Field(
         default_factory=uuid.uuid4,
         description="Random UUID for this score"
+    )
+
+    parser: Parser = Field(
+        ...,
+        description="The parser used to extract this score from the response"
     )
 
     llm_response_text: str = Field(

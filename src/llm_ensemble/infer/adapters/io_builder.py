@@ -32,7 +32,7 @@ class IOConfig(NamedTuple):
 # Explicit mapping of IO format names to adapter configurations
 IO_FORMATS: Dict[str, IOConfig] = {
     "db_to_db": IOConfig(
-        reader_class=DBWriter,
+        reader_class=DBReader,
         writer_class=DBWriter,
         description="Read from PostgreSQL, write to PostgreSQL"
     ),

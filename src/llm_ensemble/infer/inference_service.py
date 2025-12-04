@@ -32,11 +32,11 @@ class InferenceService:
 
     def __init__(
         self,
-        input_port: InputPort,
-        output_port: OutputPort,
-        prompt_builder_port: PromptBuilderPort,
-        llm_provider_port: LLMProviderPort,
-        response_parser_port: ResponseParserPort,
+        input_adapter: InputPort,
+        output_adapter: OutputPort,
+        prompt_builder_adapter: PromptBuilderPort,
+        llm_provider_adapter: LLMProviderPort,
+        response_parser_adapter: ResponseParserPort,
     ):
         """Initialize inference service with port dependencies.
 
@@ -47,11 +47,11 @@ class InferenceService:
             llm_provider: Port for LLM inference (accepts prompts, returns raw responses)
             response_parser: Response parser with identity
         """
-        self.input_port = input_port
-        self.output_port = output_port
-        self.prompt_builder_port = prompt_builder_port
-        self.llm_provider_port = llm_provider_port
-        self.response_parser_port = response_parser_port
+        self.input_adapter = input_adapter
+        self.output_adapter = output_adapter
+        self.prompt_builder_adapter = prompt_builder_adapter
+        self.llm_provider_adapter = llm_provider_adapter
+        self.response_parser_adapter = response_parser_adapter
         self.logger = get_logger(component="inference_service")
 
     def run_inference(
@@ -92,7 +92,7 @@ class InferenceService:
         summary_builder.set_start_time()
 
         # Read full NormalizedDataset
-        normalized_dataset = self.input_port.read(run_name)
+        normalized_dataset = self.input_adapter.read(run_name)
 
         # Compute actual start_idx and end_idx from run_info
         start_idx = run_info.start_idx if run_info.start_idx is not None else 0
@@ -105,24 +105,24 @@ class InferenceService:
         llm_judgements: list[LLMJudgement] = []
 
         # Get Provider object from LLM provider port
-        provider = self.llm_provider_port.get_provider()
+        provider = self.llm_provider_adapter.get_provider()
 
         # Open writer for streaming (simplified signature - metadata extracted from judgements)
-        with self.output_port.open(run_dir, run_info, normalized_dataset) as writer:
+        with self.output_adapter.open(run_dir, run_info, normalized_dataset) as writer:
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
                 # Build prompt (port creates domain object)
-                llm_prompt = self.prompt_builder_port.build(dataset_sample)
+                llm_prompt = self.prompt_builder_adapter.build(dataset_sample)
 
                 # Run inference
                 self.logger.info(InferLogEvent.SENDING_REQUEST)
-                raw_response_text, invocation_metrics = self.llm_provider_port.infer(
+                raw_response_text, invocation_metrics = self.llm_provider_adapter.infer(
                     llm_prompt.prompt_text,
                     model_config
                 )
 
                 # Parse response (port creates domain object with parser)
-                llm_score = self.response_parser_port.parse(raw_response_text)
+                llm_score = self.response_parser_adapter.parse(raw_response_text)
 
                 # Create judgement with full context objects
                 judgement = LLMJudgement(
@@ -161,7 +161,7 @@ class InferenceService:
                 llm_judgements.append(judgement)
 
         # Retrieve aggregate write summary after context manager closes (writer logged directly)
-        write_summary = self.output_port.get_summary()
+        write_summary = self.output_adapter.get_summary()
 
         # Calculate aggregate statistics from judgements (for summary)
         count = len(llm_judgements)

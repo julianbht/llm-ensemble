@@ -148,11 +148,11 @@ def run_inference(
     )
 
     # Instantiate adapters with factories
-    prompt_builder = PromptAdapterBuilder.build(prompt_name)
-    response_parser = ParserAdapterBuilder.build(parser_name)
-    reader = IOAdapterBuilder.build_reader(io_name)
-    writer = IOAdapterBuilder.build_writer(io_name)
-    provider = ProviderAdapterBuilder.build(
+    prompt_builder_adapter = PromptAdapterBuilder.build(prompt_name)
+    response_parser_adapter = ParserAdapterBuilder.build(parser_name)
+    input_adapter = IOAdapterBuilder.build_reader(io_name)
+    output_adapter = IOAdapterBuilder.build_writer(io_name)
+    provider_adapter = ProviderAdapterBuilder.build(
         provider_name=provider_name,
         model_config=model_config,
         retry_config=retry_config,
@@ -160,11 +160,11 @@ def run_inference(
 
     # Create domain service by injecting adapters
     service = InferenceService(
-        input_port=reader,
-        output_port=writer,
-        prompt_builder_port=prompt_builder,
-        llm_provider_port=provider,
-        response_parser_port=response_parser,
+        input_adapter=input_adapter,
+        output_adapter=output_adapter,
+        prompt_builder_adapter=prompt_builder_adapter,
+        llm_provider_adapter=provider_adapter,
+        response_parser_adapter=response_parser_adapter,
     )
 
     # Run inference pipeline

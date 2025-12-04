@@ -162,9 +162,9 @@ def run_inference(
     service = InferenceService(
         input_port=reader,
         output_port=writer,
-        prompt_builder=prompt_builder,
-        llm_provider=provider,
-        response_parser=response_parser,
+        prompt_builder_port=prompt_builder,
+        llm_provider_port=provider,
+        response_parser_port=response_parser,
     )
 
     # Run inference pipeline

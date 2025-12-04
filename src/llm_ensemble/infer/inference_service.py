@@ -34,9 +34,9 @@ class InferenceService:
         self,
         input_port: InputPort,
         output_port: OutputPort,
-        prompt_builder: PromptBuilderPort,
-        llm_provider: LLMProviderPort,
-        response_parser: ResponseParserPort,
+        prompt_builder_port: PromptBuilderPort,
+        llm_provider_port: LLMProviderPort,
+        response_parser_port: ResponseParserPort,
     ):
         """Initialize inference service with port dependencies.
 
@@ -49,9 +49,9 @@ class InferenceService:
         """
         self.input_port = input_port
         self.output_port = output_port
-        self.prompt_builder = prompt_builder
-        self.llm_provider = llm_provider
-        self.response_parser = response_parser
+        self.prompt_builder_port = prompt_builder_port
+        self.llm_provider_port = llm_provider_port
+        self.response_parser_port = response_parser_port
         self.logger = get_logger(component="inference_service")
 
     def run_inference(
@@ -105,24 +105,24 @@ class InferenceService:
         llm_judgements: list[LLMJudgement] = []
 
         # Get Provider object from LLM provider port
-        provider = self.llm_provider.get_provider()
+        provider = self.llm_provider_port.get_provider()
 
         # Open writer for streaming (simplified signature - metadata extracted from judgements)
         with self.output_port.open(run_dir, run_info, normalized_dataset) as writer:
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
                 # Build prompt (port creates domain object)
-                llm_prompt = self.prompt_builder.build(dataset_sample)
+                llm_prompt = self.prompt_builder_port.build(dataset_sample)
 
                 # Run inference
                 self.logger.info(InferLogEvent.SENDING_REQUEST)
-                raw_response_text, invocation_metrics = self.llm_provider.infer(
+                raw_response_text, invocation_metrics = self.llm_provider_port.infer(
                     llm_prompt.prompt_text,
                     model_config
                 )
 
                 # Parse response (port creates domain object with parser)
-                llm_score = self.response_parser.parse(raw_response_text)
+                llm_score = self.response_parser_port.parse(raw_response_text)
 
                 # Create judgement with full context objects
                 judgement = LLMJudgement(

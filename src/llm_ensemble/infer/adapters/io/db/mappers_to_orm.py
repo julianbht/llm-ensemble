@@ -32,7 +32,7 @@ from llm_ensemble.infer.adapters.io.db.orms import (
     PromptTemplateORM,
     ParserORM,
     InferRunORM,
-    LLMPromptTextORM,
+    LLMPromptORM,
     LLMResponseTextORM,
     LLMInvocationMetricsORM,
     LLMScoreORM,
@@ -198,7 +198,7 @@ def llm_prompt_to_orm(
     llm_prompt: LLMPrompt,
     prompt_template_id: UUID,
     dataset_sample_id: UUID,
-) -> LLMPromptTextORM:
+) -> LLMPromptORM:
     """Convert LLMPrompt domain object to LLMPromptTextORM.
 
     UUID is computed from (prompt_template_id, dataset_sample_id, prompt_text).
@@ -221,7 +221,7 @@ def llm_prompt_to_orm(
         f"{prompt_template_id}:{dataset_sample_id}:{prompt_hash}"
     )
 
-    return LLMPromptTextORM(
+    return LLMPromptORM(
         id=prompt_id,
         prompt_template_id=prompt_template_id,
         dataset_sample_id=dataset_sample_id,

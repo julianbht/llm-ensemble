@@ -40,7 +40,7 @@ from llm_ensemble.infer.adapters.io.db.orms import (
     ParserORM,
     InferRunORM,
     JudgedDatasetORM,
-    LLMPromptTextORM,
+    LLMPromptORM,
     LLMResponseTextORM,
     LLMInvocationMetricsORM,
     LLMScoreORM,
@@ -269,10 +269,10 @@ class DBWriter(OutputPort):
         )
         
         # Query by natural key
-        stmt = select(LLMPromptTextORM).where(
-            LLMPromptTextORM.prompt_template_id == judgement.prompt_template_id,
-            LLMPromptTextORM.dataset_sample_id == judgement.llm_prompt.dataset_sample.id,
-            LLMPromptTextORM.prompt_text == judgement.llm_prompt.prompt_text
+        stmt = select(LLMPromptORM).where(
+            LLMPromptORM.prompt_template_id == judgement.prompt_template_id,
+            LLMPromptORM.dataset_sample_id == judgement.llm_prompt.dataset_sample.id,
+            LLMPromptORM.prompt_text == judgement.llm_prompt.prompt_text
         )
         existing = self._session.execute(stmt).scalar_one_or_none()
         

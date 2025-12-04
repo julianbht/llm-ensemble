@@ -207,8 +207,8 @@ class InferRunORM(Base):
     judged_dataset = relationship("JudgedDatasetORM", back_populates="infer_run", uselist=False)
 
 
-class LLMPromptTextORM(Base):
-    __tablename__ = "llm_prompt_texts"
+class LLMPromptORM(Base):
+    __tablename__ = "llm_prompt"
     __natural_key__ = ("prompt_template_id", "dataset_sample_id", "prompt_text")
     __uuid_function__ = "compute_llm_prompt_text_uuid"
 
@@ -347,7 +347,7 @@ class LLMJudgementORM(Base):
     )
     llm_prompt_text_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_prompt_texts.id"),
+        ForeignKey("infer.llm_prompt.id"),
         nullable=False,
     )
     llm_invocation_metrics_id = Column(

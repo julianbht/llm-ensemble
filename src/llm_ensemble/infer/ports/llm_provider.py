@@ -14,6 +14,7 @@ from __future__ import annotations
 import random
 import time
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 from openai import APIError
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMInvocationMetrics
@@ -22,6 +23,9 @@ from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.llm_invocation_dto import LLMInvocationDTO
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
+
+if TYPE_CHECKING:
+    from llm_ensemble.infer.schemas.entities.provider import Provider
 
 
 class LLMProviderPort(ABC):
@@ -57,6 +61,15 @@ class LLMProviderPort(ABC):
         self.model_name = model_name
         self.retry_config = retry_config
         self.logger = get_logger(component=f"{provider_name}_provider")
+
+    def get_provider(self) -> Provider:
+        """Get Provider domain object for this provider.
+
+        Returns:
+            Provider entity with random UUID and provider name
+        """
+        from llm_ensemble.infer.schemas.entities.provider import Provider
+        return Provider(name=self.provider_name)
 
     def infer(
         self,

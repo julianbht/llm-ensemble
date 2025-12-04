@@ -17,7 +17,7 @@ class Parser(BaseModel):
 
     id: UUID = Field(
         default_factory=uuid.uuid4,
-        description="Random UUID for this parser (upsert uses natural key)"
+        description="Random UUID for this parser"
     )
 
     name: str = Field(

@@ -104,14 +104,8 @@ class InferenceService:
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
-        # Create Provider object from model_config
-        from llm_ensemble.infer.schemas.entities.provider import Provider
-        from llm_ensemble.libs.db import compute_provider_uuid
-
-        provider = Provider(
-            id=compute_provider_uuid(model_config.provider_config.provider_name),
-            name=model_config.provider_config.provider_name,
-        )
+        # Get Provider object from LLM provider port
+        provider = self.llm_provider.get_provider()
 
         # Open writer for streaming (simplified signature - metadata extracted from judgements)
         with self.output_port.open(run_dir, run_info, normalized_dataset) as writer:
@@ -134,9 +128,9 @@ class InferenceService:
                 judgement = LLMJudgement(
                     model_config=model_config,
                     provider=provider,
-                    llm_prompt=llm_prompt,  # Contains prompt_template
+                    llm_prompt=llm_prompt,  
                     invocation_metrics=invocation_metrics,
-                    llm_score=llm_score,  # Contains parser
+                    llm_score=llm_score,
                 )
 
                 # Log each completed judgement

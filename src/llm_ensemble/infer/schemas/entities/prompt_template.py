@@ -17,7 +17,7 @@ class PromptTemplate(BaseModel):
 
     id: UUID = Field(
         default_factory=uuid.uuid4,
-        description="Random UUID for this prompt template (upsert uses natural key)"
+        description="Random UUID for this prompt template"
     )
 
     name: str = Field(

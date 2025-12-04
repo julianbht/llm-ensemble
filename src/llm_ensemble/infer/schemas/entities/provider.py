@@ -18,7 +18,7 @@ class Provider(BaseModel):
 
     id: UUID = Field(
         default_factory=uuid.uuid4,
-        description="Random UUID for this provider (upsert uses natural key)"
+        description="Random UUID for this provider"
     )
 
     name: str = Field(

@@ -10,28 +10,18 @@ To add a new prompt:
 """
 
 from __future__ import annotations
-from typing import Dict, Type, NamedTuple
+from typing import Dict, Type
 
 from llm_ensemble.infer.ports import PromptBuilderPort
-from llm_ensemble.infer.adapters.prompts.jinja_prompt_builder import (
+from llm_ensemble.infer.adapters.prompts.thomas_simple_prompt_builder import (
     ThomasSimplePromptBuilder,
 )
 
 
-class PromptConfig(NamedTuple):
-    """Configuration for a prompt adapter."""
-    adapter_class: Type[PromptBuilderPort]
-    template_path: str
-    description: str
-
-
-# Explicit mapping of prompt names to adapter configurations
-PROMPTS: Dict[str, PromptConfig] = {
-    "thomas-simple": PromptConfig(
-        adapter_class=ThomasSimplePromptBuilder,
-        template_path="thomas-simple.jinja",
-        description="Thomas et al. simple binary relevance prompt",
-    ),
+# Explicit mapping of prompt names to adapter classes
+# Each adapter owns its template as a class constant
+PROMPTS: Dict[str, Type[PromptBuilderPort]] = {
+    "thomas-simple": ThomasSimplePromptBuilder,
 }
 
 
@@ -58,11 +48,8 @@ class PromptAdapterBuilder:
                 f"Available: {available}"
             )
 
-        config = PROMPTS[prompt_name]
-        return config.adapter_class(
-            prompt_name=prompt_name,
-            template_path=config.template_path
-        )
+        adapter_class = PROMPTS[prompt_name]
+        return adapter_class()
 
     @staticmethod
     def list_available() -> list[str]:
@@ -93,7 +80,7 @@ class PromptAdapterBuilder:
             prompt_name: Name of the prompt
 
         Returns:
-            Description string
+            Description string from adapter's docstring
 
         Raises:
             ValueError: If prompt not found
@@ -105,4 +92,5 @@ class PromptAdapterBuilder:
                 f"Available: {available}"
             )
 
-        return PROMPTS[prompt_name].description
+        adapter_class = PROMPTS[prompt_name]
+        return adapter_class.__doc__.strip().split('\n')[0] if adapter_class.__doc__ else prompt_name

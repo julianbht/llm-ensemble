@@ -1,105 +1,55 @@
 """Port interface for prompt builders.
 
 Defines the abstract contract that all prompt builder adapters must implement.
-This allows the system to work with different prompt formats and templates
-without coupling to specific implementations.
-
-Uses template method pattern: build() is concrete and handles tuple→Domain mapping,
-subclasses implement build_raw() with pure building logic.
-
-Adapter identity (prompt_name and prompt_template_id) comes from builder.
+Adapters render prompt strings and provide template metadata.
 """
 
 from __future__ import annotations
-import uuid
 from abc import ABC, abstractmethod
-from uuid import UUID
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
-from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
+from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
 
 
 class PromptBuilderPort(ABC):
-    """Abstract base class for prompt builders with built-in domain mapping.
+    """Abstract interface for prompt builders.
 
-    Implementations provide building logic in build_raw(), which returns a simple tuple.
-    The base class handles conversion to LLMPrompt domain objects.
+    Adapters implement this interface to:
+    1. Render prompt text from DatasetSample (pure string transformation)
+    2. Provide template metadata as a PromptTemplate entity
 
-    Template Method Pattern:
-    - build() (concrete): calls build_raw() and creates domain object
-    - build_raw() (abstract): subclasses implement building logic
+    The service layer orchestrates domain entity creation using the
+    rendered string and template metadata from the adapter.
 
-    This separates pure template logic from domain object creation.
-    Prompt identity (prompt_name and prompt_template_id) comes from builder.
+    In hexagonal architecture, adapters can depend on domain entities
+    (PromptTemplate) - this is the correct dependency direction.
     """
 
-    def __init__(self, prompt_name: str, prompt_template_id: UUID | None = None):
-        """Initialize prompt builder with identity.
-
-        Args:
-            prompt_name: Natural key for prompt identity (from builder)
-            prompt_template_id: UUID for this prompt template (random if None)
-        """
-        self.prompt_name = prompt_name
-        self.prompt_template_id = prompt_template_id or uuid.uuid4()
-
+    @property
     @abstractmethod
-    def build_raw(self, dataset_sample: DatasetSample) -> tuple[DatasetSample, str]:
-        """Build prompt from dataset sample (pure adapter logic).
-
-        Subclasses implement this with pure building logic.
-
-        Args:
-            dataset_sample: DatasetSample containing judging_sample and context
+    def template(self) -> PromptTemplate:
+        """Template metadata for this builder.
 
         Returns:
-            Tuple of (dataset_sample, prompt_text)
-
-        Raises:
-            Exception: For unrecoverable errors (e.g., template file missing).
+            PromptTemplate entity with id, name, and template_text
         """
         pass
 
-    def build(self, dataset_sample: DatasetSample) -> LLMPrompt:
-        """Build prompt and create LLMPrompt domain object.
+    @abstractmethod
+    def render(self, dataset_sample: DatasetSample) -> str:
+        """Render prompt text from dataset sample.
 
-        Public interface called by service. Internally calls build_raw()
-        and maps result to domain object.
+        Extracts variables from dataset_sample and substitutes them
+        into the template to produce final prompt text.
 
         Args:
             dataset_sample: DatasetSample containing judging_sample and context
 
         Returns:
-            LLMPrompt domain object with prompt text, template, and identity
-        """
-        # Call subclass implementation (returns tuple)
-        ds, prompt_text = self.build_raw(dataset_sample)
+            Rendered prompt text string
 
-        # Import here to avoid circular dependency
-        from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
-
-        # Create prompt template object
-        prompt_template = PromptTemplate(
-            id=self.prompt_template_id,
-            name=self.prompt_name,
-            template_text=self.get_template_text(),
-        )
-
-        # Map to domain entity (port layer's responsibility)
-        return LLMPrompt(
-            prompt_template=prompt_template,
-            dataset_sample=ds,
-            prompt_text=prompt_text,
-        )
-
-    @abstractmethod
-    def get_template_text(self) -> str:
-        """Get the raw template text for database storage.
-
-        Returns the unrendered template string (e.g., Jinja template source).
-        This enables storing templates in the database for analysis and filtering.
-
-        Returns:
-            Raw template text (before variable substitution)
+        Raises:
+            KeyError: If template variables missing from dataset
+            Exception: For unrecoverable rendering errors
         """
         pass

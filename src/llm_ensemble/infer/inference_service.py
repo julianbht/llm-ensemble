@@ -8,6 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
@@ -111,8 +112,15 @@ class InferenceService:
         with self.output_adapter.open(run_dir, run_info, normalized_dataset) as writer:
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
-                # Build prompt (port creates domain object)
-                llm_prompt = self.prompt_builder_adapter.build(dataset_sample)
+                # Render prompt text using adapter
+                prompt_text = self.prompt_builder_adapter.render(dataset_sample)
+
+                # Create LLMPrompt domain entity (service orchestrates entity creation)
+                llm_prompt = LLMPrompt(
+                    prompt_template=self.prompt_builder_adapter.template,
+                    dataset_sample=dataset_sample,
+                    prompt_text=prompt_text
+                )
 
                 # Run inference
                 self.logger.info(InferLogEvent.SENDING_REQUEST)
@@ -126,9 +134,9 @@ class InferenceService:
 
                 # Create judgement with full context objects
                 judgement = LLMJudgement(
-                    model_config=model_config,
+                    model_cfg=model_config,
                     provider=provider,
-                    llm_prompt=llm_prompt,  
+                    llm_prompt=llm_prompt,
                     invocation_metrics=invocation_metrics,
                     llm_score=llm_score,
                 )

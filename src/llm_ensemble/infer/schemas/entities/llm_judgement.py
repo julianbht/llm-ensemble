@@ -44,7 +44,7 @@ class LLMJudgement(BaseModel):
         description="Random UUID for this judgement"
     )
 
-    model_config: ModelConfig = Field(
+    model_cfg: ModelConfig = Field(
         ...,
         description="Complete model configuration used for this judgement"
     )

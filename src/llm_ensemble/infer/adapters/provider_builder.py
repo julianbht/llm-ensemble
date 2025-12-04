@@ -13,7 +13,6 @@ from __future__ import annotations
 from typing import Dict, Type
 
 from llm_ensemble.infer.ports import LLMProviderPort
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.adapters.providers.openrouter_adapter import OpenRouterAdapter
 from llm_ensemble.infer.adapters.providers.ollama_adapter import OllamaAdapter
@@ -33,17 +32,15 @@ class ProviderAdapterBuilder:
     def build(
         provider_name: str,
         model_config: ModelConfig,
-        retry_config: RetryConfig,
     ) -> LLMProviderPort:
         """Build and return a provider adapter instance.
 
         Adapters handle their own defaults (timeouts, base URLs, API keys from env).
-        Builder just passes common parameters.
+        Retry logic is handled by a separate wrapper.
 
         Args:
             provider_name: Name of the provider (e.g., 'openrouter', 'ollama')
             model_config: Model configuration with provider-specific settings
-            retry_config: Retry configuration for exponential backoff
 
         Returns:
             Instantiated provider adapter
@@ -64,7 +61,6 @@ class ProviderAdapterBuilder:
         return adapter_class(
             provider_name=provider_name,
             model_name=model_config.model_name,
-            retry_config=retry_config,
         )
 
     @staticmethod

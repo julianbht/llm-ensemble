@@ -152,11 +152,14 @@ def run_inference(
     response_parser_adapter = ParserAdapterBuilder.build(parser_name)
     input_adapter = IOAdapterBuilder.build_reader(io_name)
     output_adapter = IOAdapterBuilder.build_writer(io_name)
-    provider_adapter = ProviderAdapterBuilder.build(
+
+    # Build provider and wrap with retry logic
+    base_provider = ProviderAdapterBuilder.build(
         provider_name=provider_name,
         model_config=model_config,
-        retry_config=retry_config,
     )
+    from llm_ensemble.infer.adapters.retrying_provider import RetryingProvider
+    provider_adapter = RetryingProvider(base_provider, retry_config)
 
     # Create domain service by injecting adapters
     service = InferenceService(

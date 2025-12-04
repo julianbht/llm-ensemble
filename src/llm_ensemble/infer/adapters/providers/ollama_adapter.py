@@ -13,8 +13,6 @@ from typing import Optional
 
 from llm_ensemble.infer.schemas.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.infer.schemas.llm_invocation_dto import LLMInvocationDTO
 from llm_ensemble.infer.ports import LLMProviderPort
 
 
@@ -29,7 +27,6 @@ class OllamaAdapter(LLMProviderPort):
         self,
         provider_name: str,
         model_name: str,
-        retry_config: RetryConfig,
         base_url: str = "http://localhost:11434",
         timeout: int = 60,
     ):
@@ -38,31 +35,30 @@ class OllamaAdapter(LLMProviderPort):
         Args:
             provider_name: Provider identifier (from config, e.g., 'ollama')
             model_name: Model identifier (from config, e.g., 'llama2')
-            retry_config: Retry configuration for exponential backoff
             base_url: Ollama server URL (default: http://localhost:11434)
             timeout: Request timeout in seconds (default: 60)
         """
-        super().__init__(provider_name, model_name, retry_config)
+        super().__init__(provider_name, model_name)
 
         self.base_url = base_url
         self.timeout = timeout
 
-    def _do_infer_raw(
+    def infer(
         self,
         prompt: str,
         model_config: ModelConfig,
-    ) -> LLMInvocationDTO:
-        """Perform the actual Ollama API call (called by base class retry logic).
+    ) -> tuple[str, LLMInvocationMetrics]:
+        """Perform Ollama API call and return response.
 
         Args:
             prompt: Pre-built prompt string (from PromptBuilder)
             model_config: Model configuration with provider and settings
 
         Returns:
-            LLMInvocationDTO with response text and metrics (without retry count)
+            Tuple of (raw_response_text, invocation_metrics)
 
         Raises:
             NotImplementedError: Ollama adapter not yet implemented
-            APIError: If API request fails (triggers retry in base class)
+            APIError: If API request fails
         """
         raise NotImplementedError("Ollama adapter not yet implemented")

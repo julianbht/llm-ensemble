@@ -16,8 +16,6 @@ from openai import OpenAI
 
 from llm_ensemble.infer.schemas.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.schemas import ModelConfig
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.infer.schemas.llm_invocation_dto import LLMInvocationDTO
 from llm_ensemble.infer.ports import LLMProviderPort
 
 
@@ -32,7 +30,6 @@ class OpenRouterAdapter(LLMProviderPort):
         self,
         provider_name: str,
         model_name: str,
-        retry_config: RetryConfig,
         api_key: Optional[str] = None,
         timeout: int = 30,
     ):
@@ -41,11 +38,10 @@ class OpenRouterAdapter(LLMProviderPort):
         Args:
             provider_name: Provider identifier (from config, e.g., 'openrouter')
             model_name: Model identifier (from config, e.g., 'llama-4-maverick:free')
-            retry_config: Retry configuration for exponential backoff
             api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
             timeout: Request timeout in seconds (default: 30)
         """
-        super().__init__(provider_name, model_name, retry_config)
+        super().__init__(provider_name, model_name)
 
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         self.timeout = timeout
@@ -56,23 +52,23 @@ class OpenRouterAdapter(LLMProviderPort):
                 "or pass api_key parameter."
             )
 
-    def _do_infer_raw(
+    def infer(
         self,
         prompt: str,
         model_config: ModelConfig,
-    ) -> LLMInvocationDTO:
-        """Perform the actual OpenRouter API call (called by base class retry logic).
+    ) -> tuple[str, LLMInvocationMetrics]:
+        """Perform OpenRouter API call and return response.
 
         Args:
             prompt: Pre-built prompt string (from PromptBuilder)
             model_config: Model configuration with provider and settings
 
         Returns:
-            LLMInvocationDTO with response text and metrics (without retry count)
+            Tuple of (raw_response_text, invocation_metrics)
 
         Raises:
             ValueError: If openrouter_model_id is not configured
-            APIError: If API request fails (triggers retry in base class)
+            APIError: If API request fails
         """
         if not model_config.openrouter_model_id:
             raise ValueError(
@@ -117,7 +113,6 @@ class OpenRouterAdapter(LLMProviderPort):
         start_time = time.time()
 
         # Send request with all configured parameters
-        # Note: APIError exceptions will be caught and handled by base class retry logic
         response = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             **api_params
@@ -126,7 +121,7 @@ class OpenRouterAdapter(LLMProviderPort):
         latency_ms = (time.time() - start_time) * 1000
 
         # Extract response text
-        raw_response = response.choices[0].message.content
+        raw_response_text = response.choices[0].message.content
 
         # Extract generation ID for async cost queries
         generation_id = getattr(response, "id", None)
@@ -147,13 +142,15 @@ class OpenRouterAdapter(LLMProviderPort):
             completion_cost = (completion_tokens / 1_000_000) * model_config.pricing.completion_cost_per_1m_tokens
             cost_estimate_usd = prompt_cost + completion_cost
 
-        # Return DTO (base class will map to domain objects)
-        return LLMInvocationDTO(
-            response_text=raw_response,
+        # Create metrics (retry count will be added by wrapper)
+        metrics = LLMInvocationMetrics(
             latency_ms=latency_ms,
+            retries=0,  # Will be set by RetryingProvider wrapper
             cost_estimate_usd=cost_estimate_usd,
             generation_id=generation_id,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=total_tokens,
         )
+
+        return raw_response_text, metrics

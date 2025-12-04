@@ -2,10 +2,10 @@
 
 from llm_ensemble.infer.adapters.io.fully_populated_json_writer import FullyPopulatedJsonWriter
 from llm_ensemble.infer.adapters.io.db.db_reader import DBReader
-from llm_ensemble.infer.adapters.io.db.db_writer import DBReader
+from llm_ensemble.infer.adapters.io.db.db_writer import DBWriter
 
 __all__ = [
     "FullyPopulatedJsonWriter",
-    "DBReader",
-    "DBReader",
+    "DBWriter",
+    "DBWriter",
 ]

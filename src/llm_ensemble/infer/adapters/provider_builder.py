@@ -37,6 +37,9 @@ class ProviderAdapterBuilder:
     ) -> LLMProviderPort:
         """Build and return a provider adapter instance.
 
+        Adapters handle their own defaults (timeouts, base URLs, API keys from env).
+        Builder just passes common parameters.
+
         Args:
             provider_name: Name of the provider (e.g., 'openrouter', 'ollama')
             model_config: Model configuration with provider-specific settings
@@ -57,23 +60,12 @@ class ProviderAdapterBuilder:
 
         adapter_class = PROVIDERS[provider_name]
 
-        # Build provider-specific kwargs
-        kwargs = {
-            "provider_name": provider_name,
-            "model_name": model_config.model_name,
-            "retry_config": retry_config,
-        }
-
-        # Add provider-specific parameters based on provider type
-        if provider_name == "openrouter":
-            # OpenRouterAdapter-specific parameters (api_key comes from env)
-            kwargs["timeout"] = 30
-        elif provider_name == "ollama":
-            # OllamaAdapter-specific parameters
-            kwargs["base_url"] = "http://localhost:11434"
-            kwargs["timeout"] = 60
-
-        return adapter_class(**kwargs)
+        # Adapters own their configuration (timeouts, URLs, API keys)
+        return adapter_class(
+            provider_name=provider_name,
+            model_name=model_config.model_name,
+            retry_config=retry_config,
+        )
 
     @staticmethod
     def list_available() -> list[str]:

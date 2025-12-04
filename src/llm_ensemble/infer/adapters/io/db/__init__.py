@@ -3,10 +3,10 @@
 ORMs, repositories, and mappers for SQL persistence.
 """
 
-from llm_ensemble.infer.adapters.io.db.sql_repository import SQLJudgementRepository
-from llm_ensemble.infer.adapters.io.db.sql_sample_reader import SQLJudgingSampleReader
+from llm_ensemble.infer.adapters.io.db.db_writer import DBReader
+from llm_ensemble.infer.adapters.io.db.db_reader import DBReader
 
 __all__ = [
-    "SQLJudgementRepository",
-    "SQLJudgingSampleReader",
+    "DBReader",
+    "DBReader",
 ]

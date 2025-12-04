@@ -60,7 +60,7 @@ from llm_ensemble.infer.adapters.io.db.mappers_to_orm import (
 from llm_ensemble.libs.logging.log_events import InferWriteEvent
 
 
-class SQLJudgementRepository(OutputPort):
+class DBReader(OutputPort):
     """Write LLMJudgement records to SQL database.
 
     Normalized schema: decomposes judgements into Provider, ModelConfig,

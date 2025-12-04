@@ -32,8 +32,8 @@ class InferenceService:
 
     def __init__(
         self,
-        example_reader: InputPort,
-        judgement_writer: OutputPort,
+        input_port: InputPort,
+        output_port: OutputPort,
         prompt_builder: PromptBuilderPort,
         llm_provider: LLMProviderPort,
         response_parser: ResponseParserPort,
@@ -47,8 +47,8 @@ class InferenceService:
             llm_provider: Port for LLM inference (accepts prompts, returns raw responses)
             response_parser: Response parser with identity
         """
-        self.example_reader = example_reader
-        self.judgement_writer = judgement_writer
+        self.input_port = input_port
+        self.output_port = output_port
         self.prompt_builder = prompt_builder
         self.llm_provider = llm_provider
         self.response_parser = response_parser
@@ -92,7 +92,7 @@ class InferenceService:
         summary_builder.set_start_time()
 
         # Read full NormalizedDataset
-        normalized_dataset = self.example_reader.read(run_name)
+        normalized_dataset = self.input_port.read(run_name)
 
         # Compute actual start_idx and end_idx from run_info
         start_idx = run_info.start_idx if run_info.start_idx is not None else 0
@@ -109,7 +109,7 @@ class InferenceService:
 
         # Open writer for streaming (context manager ensures proper cleanup)
         # Pass computed indices, adapter names, and template text to writer
-        with self.judgement_writer.open(
+        with self.output_port.open(
             run_dir, run_info, normalized_dataset, start_idx, end_idx,
             self.prompt_builder.prompt_name, self.response_parser.parser_name, template_text
         ) as writer:
@@ -165,7 +165,7 @@ class InferenceService:
                 llm_judgements.append(judgement)
 
         # Retrieve aggregate write summary after context manager closes (writer logged directly)
-        write_summary = self.judgement_writer.get_summary()
+        write_summary = self.output_port.get_summary()
 
         # Calculate aggregate statistics from judgements (for summary)
         count = len(llm_judgements)

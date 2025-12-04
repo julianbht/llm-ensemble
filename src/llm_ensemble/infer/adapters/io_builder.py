@@ -17,8 +17,8 @@ from __future__ import annotations
 from typing import Dict, Type, NamedTuple
 
 from llm_ensemble.infer.ports import InputPort, OutputPort
-from llm_ensemble.infer.adapters.io.db.sql_sample_reader import SQLJudgingSampleReader
-from llm_ensemble.infer.adapters.io.db.sql_repository import SQLJudgementRepository
+from llm_ensemble.infer.adapters.io.db.db_reader import DBReader
+from llm_ensemble.infer.adapters.io.db.db_writer import DBReader
 from llm_ensemble.infer.adapters.io.fully_populated_json_writer import FullyPopulatedJsonWriter
 
 
@@ -32,12 +32,12 @@ class IOConfig(NamedTuple):
 # Explicit mapping of IO format names to adapter configurations
 IO_FORMATS: Dict[str, IOConfig] = {
     "db_to_db": IOConfig(
-        reader_class=SQLJudgingSampleReader,
-        writer_class=SQLJudgementRepository,
+        reader_class=DBReader,
+        writer_class=DBReader,
         description="Read from PostgreSQL, write to PostgreSQL"
     ),
     "db_to_json": IOConfig(
-        reader_class=SQLJudgingSampleReader,
+        reader_class=DBReader,
         writer_class=FullyPopulatedJsonWriter,
         description="Read from PostgreSQL, write JSON array"
     ),

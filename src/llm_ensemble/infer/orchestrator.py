@@ -160,8 +160,8 @@ def run_inference(
 
     # Create domain service by injecting adapters
     service = InferenceService(
-        example_reader=reader,
-        judgement_writer=writer,
+        input_port=reader,
+        output_port=writer,
         prompt_builder=prompt_builder,
         llm_provider=provider,
         response_parser=response_parser,

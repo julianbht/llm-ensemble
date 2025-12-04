@@ -63,7 +63,7 @@ def infer(
     # Load configurations
     model_config = load_model_config(model_cfg)
     retry_config = load_retry_config(retry_cfg)
-    logging_config = load_logging_config(log_cfg or "observability")
+    logging_config = load_logging_config(log_cfg)
 
     # Parse and route overrides if provided
     if override:

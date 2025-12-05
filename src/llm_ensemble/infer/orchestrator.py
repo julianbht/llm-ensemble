@@ -165,9 +165,9 @@ def run_inference(
     service = InferenceService(
         input_adapter=input_adapter,
         output_adapter=output_adapter,
-        prompt_builder_adapter=prompt_builder_adapter,
-        llm_provider_adapter=provider_adapter,
-        response_parser_adapter=response_parser_adapter,
+        prompt_builder=prompt_builder_adapter,
+        llm_provider=provider_adapter,
+        response_parser=response_parser_adapter,
     )
 
     # Run inference pipeline

@@ -11,6 +11,7 @@ from textwrap import dedent
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.ports import PromptBuilderPort
 from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
+from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
 
 
 class ThomasSimplePromptBuilder(PromptBuilderPort):
@@ -60,14 +61,32 @@ class ThomasSimplePromptBuilder(PromptBuilderPort):
             template_text=self.TEMPLATE_TEXT
         )
 
-    @property
-    def template(self) -> PromptTemplate:
-        """Return cached template metadata."""
-        return self._template
+    def build_prompt(self, dataset_sample: DatasetSample) -> LLMPrompt:
+        """Build complete LLMPrompt entity from dataset sample.
 
-    def render(self, dataset_sample: DatasetSample) -> str:
+        Renders the prompt text and constructs an LLMPrompt domain entity
+        with template metadata, sample context, and rendered text.
+
+        Args:
+            dataset_sample: DatasetSample containing judging_sample and context
+
+        Returns:
+            LLMPrompt domain entity ready for inference
+
+        Raises:
+            KeyError: If template variables missing from dataset
+        """
+        prompt_text = self._render(dataset_sample)
+        return LLMPrompt(
+            prompt_template=self._template,
+            dataset_sample=dataset_sample,
+            prompt_text=prompt_text
+        )
+
+    def _render(self, dataset_sample: DatasetSample) -> str:
         """Render prompt text from dataset sample.
 
+        Pure, testable rendering function with no domain dependencies.
         Extracts query and document text from dataset_sample and
         substitutes into template using string formatting.
 
@@ -80,12 +99,10 @@ class ThomasSimplePromptBuilder(PromptBuilderPort):
         Raises:
             KeyError: If template variables missing from dataset
         """
-        # Extract data from dataset sample
         judging_sample = dataset_sample.judging_sample
         query_text = judging_sample.query.query_text
         document_text = judging_sample.document.doc_text
 
-        # Render prompt using simple string formatting
         return self.TEMPLATE_TEXT.format(
             query=query_text,
             document=document_text

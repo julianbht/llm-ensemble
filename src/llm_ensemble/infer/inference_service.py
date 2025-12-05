@@ -8,7 +8,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
-from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
 from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
@@ -35,24 +34,24 @@ class InferenceService:
         self,
         input_adapter: InputPort,
         output_adapter: OutputPort,
-        prompt_builder_adapter: PromptBuilderPort,
-        llm_provider_adapter: LLMProviderPort,
-        response_parser_adapter: ResponseParserPort,
+        prompt_builder: PromptBuilderPort,
+        llm_provider: LLMProviderPort,
+        response_parser: ResponseParserPort,
     ):
         """Initialize inference service with port dependencies.
 
         Args:
-            example_reader: Port for reading judging examples
-            judgement_writer: Port for writing model judgements
-            prompt_builder: Prompt builder with identity
-            llm_provider: Port for LLM inference (accepts prompts, returns raw responses)
-            response_parser: Response parser with identity
+            input_adapter: Port for reading input data
+            output_adapter: Port for writing output data
+            prompt_builder: Port for building prompts from samples
+            llm_provider: Port for LLM inference
+            response_parser: Port for parsing LLM responses
         """
         self.input_adapter = input_adapter
         self.output_adapter = output_adapter
-        self.prompt_builder_adapter = prompt_builder_adapter
-        self.llm_provider_adapter = llm_provider_adapter
-        self.response_parser_adapter = response_parser_adapter
+        self.prompt_builder = prompt_builder
+        self.llm_provider = llm_provider
+        self.response_parser = response_parser
         self.logger = get_logger(component="inference_service")
 
     def run_inference(
@@ -106,31 +105,24 @@ class InferenceService:
         llm_judgements: list[LLMJudgement] = []
 
         # Get Provider object from LLM provider port
-        provider = self.llm_provider_adapter.get_provider()
+        provider = self.llm_provider.get_provider()
 
         # Open writer for streaming (simplified signature - metadata extracted from judgements)
         with self.output_adapter.open(run_dir, run_info, normalized_dataset) as writer:
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
-                # Render prompt text using adapter
-                prompt_text = self.prompt_builder_adapter.render(dataset_sample)
-
-                # Create LLMPrompt domain entity (service orchestrates entity creation)
-                llm_prompt = LLMPrompt(
-                    prompt_template=self.prompt_builder_adapter.template,
-                    dataset_sample=dataset_sample,
-                    prompt_text=prompt_text
-                )
+                # Build LLMPrompt entity (adapter constructs domain entity)
+                llm_prompt = self.prompt_builder.build_prompt(dataset_sample)
 
                 # Run inference
                 self.logger.info(InferLogEvent.SENDING_REQUEST)
-                raw_response_text, invocation_metrics = self.llm_provider_adapter.infer(
+                raw_response_text, invocation_metrics = self.llm_provider.infer(
                     llm_prompt.prompt_text,
                     model_config
                 )
 
                 # Parse response (port creates domain object with parser)
-                llm_score = self.response_parser_adapter.parse(raw_response_text)
+                llm_score = self.response_parser.parse(raw_response_text)
 
                 # Create judgement with full context objects
                 judgement = LLMJudgement(

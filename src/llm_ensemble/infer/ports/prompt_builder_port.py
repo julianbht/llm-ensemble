@@ -1,52 +1,41 @@
 """Port interface for prompt builders.
 
 Defines the abstract contract that all prompt builder adapters must implement.
-Adapters render prompt strings and provide template metadata.
+Adapters translate template rendering concerns into domain LLMPrompt entities.
 """
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
-from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
+from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
 
 
 class PromptBuilderPort(ABC):
     """Abstract interface for prompt builders.
 
-    Adapters implement this interface to:
-    1. Render prompt text from DatasetSample (pure string transformation)
-    2. Provide template metadata as a PromptTemplate entity
+    Adapters implement this interface to build LLMPrompt domain entities
+    from DatasetSample objects. The adapter is responsible for:
+    1. Rendering prompt text from template (internal implementation detail)
+    2. Constructing and returning complete LLMPrompt entities
 
-    The service layer orchestrates domain entity creation using the
-    rendered string and template metadata from the adapter.
-
-    In hexagonal architecture, adapters can depend on domain entities
-    (PromptTemplate) - this is the correct dependency direction.
+    This follows proper hexagonal architecture - adapters (outer layer)
+    depend on domain entities (inner layer), translating external concerns
+    (templates, rendering) into domain concepts the service can work with.
     """
 
-    @property
     @abstractmethod
-    def template(self) -> PromptTemplate:
-        """Template metadata for this builder.
+    def build_prompt(self, dataset_sample: DatasetSample) -> LLMPrompt:
+        """Build complete LLMPrompt entity from dataset sample.
 
-        Returns:
-            PromptTemplate entity with id, name, and template_text
-        """
-        pass
-
-    @abstractmethod
-    def render(self, dataset_sample: DatasetSample) -> str:
-        """Render prompt text from dataset sample.
-
-        Extracts variables from dataset_sample and substitutes them
-        into the template to produce final prompt text.
+        Renders the prompt text and constructs an LLMPrompt domain entity
+        with all necessary context (template metadata, sample, rendered text).
 
         Args:
             dataset_sample: DatasetSample containing judging_sample and context
 
         Returns:
-            Rendered prompt text string
+            LLMPrompt domain entity ready for inference
 
         Raises:
             KeyError: If template variables missing from dataset

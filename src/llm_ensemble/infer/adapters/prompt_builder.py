@@ -16,12 +16,16 @@ from llm_ensemble.infer.ports import PromptBuilderPort
 from llm_ensemble.infer.adapters.prompts.thomas_simple_prompt_builder import (
     ThomasSimplePromptBuilder,
 )
+from llm_ensemble.infer.adapters.prompts.thomas_advanced_prompt_builder import (
+    ThomasAdvancedPromptBuilder,
+)
 
 
 # Explicit mapping of prompt names to adapter classes
 # Each adapter owns its template as a class constant
 PROMPTS: Dict[str, Type[PromptBuilderPort]] = {
     "thomas-simple": ThomasSimplePromptBuilder,
+    "thomas-advanced": ThomasAdvancedPromptBuilder,
 }
 
 

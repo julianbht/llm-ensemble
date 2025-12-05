@@ -49,7 +49,7 @@ class LLMJudgement(BaseModel):
         description="Complete model configuration used for this judgement"
     )
 
-    provider: Provider = Field(
+    llm_provider: Provider = Field(
         ...,
         description="Provider/service that executed the inference"
     )
@@ -59,7 +59,7 @@ class LLMJudgement(BaseModel):
         description="The prompt sent to the LLM (contains dataset_sample and prompt_template)"
     )
 
-    invocation_metrics: LLMInvocationMetrics = Field(
+    llm_invocation_metrics: LLMInvocationMetrics = Field(
         ...,
         description="Observability data from the LLM API call (latency, retries, cost, tokens)"
     )

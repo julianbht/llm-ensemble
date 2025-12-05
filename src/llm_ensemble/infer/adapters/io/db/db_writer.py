@@ -196,10 +196,10 @@ class DBWriter(OutputPort):
         Extracts provider and model_config from judgement and upserts them.
         """
         # Upsert Provider from judgement
-        provider_orm = provider_name_to_orm(judgement.provider.name)
+        provider_orm = provider_name_to_orm(judgement.llm_provider.name)
         self._provider_id = self._upsert_by_name(
             ProviderORM,
-            judgement.provider.name,
+            judgement.llm_provider.name,
             provider_orm,
             "providers"
         )
@@ -309,17 +309,17 @@ class DBWriter(OutputPort):
 
     def _upsert_llm_invocation_metrics(self, judgement: LLMJudgement) -> uuid.UUID:
         """Upsert LLMInvocationMetrics by natural key (all metric fields)."""
-        metrics_orm = llm_invocation_metrics_to_orm(judgement.invocation_metrics)
+        metrics_orm = llm_invocation_metrics_to_orm(judgement.llm_invocation_metrics)
         
         # Query by natural key (all fields)
         stmt = select(LLMInvocationMetricsORM).where(
-            LLMInvocationMetricsORM.latency_ms == judgement.invocation_metrics.latency_ms,
-            LLMInvocationMetricsORM.retries == judgement.invocation_metrics.retries,
-            LLMInvocationMetricsORM.cost_estimate_usd == judgement.invocation_metrics.cost_estimate_usd,
-            LLMInvocationMetricsORM.generation_id == judgement.invocation_metrics.generation_id,
-            LLMInvocationMetricsORM.prompt_tokens == judgement.invocation_metrics.prompt_tokens,
-            LLMInvocationMetricsORM.completion_tokens == judgement.invocation_metrics.completion_tokens,
-            LLMInvocationMetricsORM.total_tokens == judgement.invocation_metrics.total_tokens
+            LLMInvocationMetricsORM.latency_ms == judgement.llm_invocation_metrics.latency_ms,
+            LLMInvocationMetricsORM.retries == judgement.llm_invocation_metrics.retries,
+            LLMInvocationMetricsORM.cost_estimate_usd == judgement.llm_invocation_metrics.cost_estimate_usd,
+            LLMInvocationMetricsORM.generation_id == judgement.llm_invocation_metrics.generation_id,
+            LLMInvocationMetricsORM.prompt_tokens == judgement.llm_invocation_metrics.prompt_tokens,
+            LLMInvocationMetricsORM.completion_tokens == judgement.llm_invocation_metrics.completion_tokens,
+            LLMInvocationMetricsORM.total_tokens == judgement.llm_invocation_metrics.total_tokens
         )
         existing = self._session.execute(stmt).scalar_one_or_none()
         

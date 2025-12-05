@@ -1,58 +1,91 @@
 """JSON response parser adapter.
 
-Parses JSON-formatted LLM judge outputs to extract relevance labels.
-Supports both simple and multi-aspect formats.
-Handles its own logging.
+Generic parser for JSON-formatted LLM judge outputs to extract relevance labels.
+Supports both simple and multi-aspect formats with configurable score field.
 """
 
 from __future__ import annotations
 import json
 import re
+import uuid
+from typing import Optional
 
 from llm_ensemble.infer.ports import ResponseParserPort
-from llm_ensemble.infer.schemas.parsed_score_dto import ParsedScoreDTO
+from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
+from llm_ensemble.infer.schemas.entities.parser import Parser
 from llm_ensemble.infer.schemas.warnings import ParserWarning, ParserWarningCode
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
 class JsonResponseParser(ResponseParserPort):
-    """Parser for JSON-formatted LLM responses.
+    """Generic parser for JSON-formatted LLM responses.
 
-    Expects JSON output in one of two formats:
-    - Simple: {"O": 2}
-    - Multi-aspect: {"M": 2, "T": 1, "O": 1}
+    Parses JSON output with configurable score field.
+    Default format: {"O": N} where N is 0, 1, 2, or 3.
 
-    Where O is the final relevance score (0, 1, or 2).
-
-    This implementation is based on the Thomas et al. prompt format but can
-    work with any JSON format that includes an "O" field for the overall score.
+    Can also handle multi-aspect formats like {"M": 2, "T": 1, "O": 1}.
     """
 
-    def __init__(self, parser_spec_id, score_field: str = "O"):
-        """Initialize JSON response parser with identity from config.
+    PARSER_NAME = "json-generic"
+    PARSER_ID = uuid.uuid5(uuid.NAMESPACE_DNS, "llm-ensemble.json-generic-parser-v1")
+
+    def __init__(self, score_field: str = "O"):
+        """Initialize JSON response parser.
 
         Args:
-            parser_spec_id: UUID of the parser spec entity
-            score_field: Name of the JSON field containing the relevance score (from config, default: "O")
+            score_field: Name of the JSON field containing the relevance score (default: "O")
         """
-        super().__init__(parser_spec_id)
+        self._parser = Parser(
+            id=self.PARSER_ID,
+            name=self.PARSER_NAME,
+        )
         self.score_field = score_field
         self.logger = get_logger(component="json_response_parser")
 
-    def parse_raw(self, raw_text: str) -> ParsedScoreDTO:
-        """Parse JSON response to extract relevance label (pure logic).
+    def parse(self, raw_text: str) -> LLMScore:
+        """Parse JSON response and create LLMScore domain entity.
+
+        Extracts the configured score field from JSON response and constructs
+        an LLMScore with parser metadata, extracted label, and any warnings.
 
         Args:
             raw_text: Raw text response from the LLM
 
         Returns:
-            ParsedScoreDTO with llm_response_text, extracted label, and any parsing warnings
+            LLMScore domain entity with parsed fields and parser metadata
         """
         warnings: list[ParserWarning] = []
+        label: Optional[RelevanceScore] = None
 
-        # Try to find JSON object in the response
-        # Look for patterns like {"O": N} or {"M": N, "T": N, "O": N}
+        # Extract and validate score using testable helper methods
+        json_data = self._extract_json(raw_text, warnings)
+        if json_data is not None:
+            score_value = self._extract_score_field(json_data, warnings)
+            if score_value is not None:
+                label = self._validate_score(score_value, warnings)
+
+        return LLMScore(
+            parser=self._parser,
+            llm_response_text=raw_text,
+            label=label,
+            confidence=None,
+            rationale=None,
+            warnings=warnings,
+        )
+
+    def _extract_json(self, raw_text: str, warnings: list[ParserWarning]) -> Optional[dict]:
+        """Extract JSON object with score field from raw text.
+
+        Pure, testable function for JSON extraction logic.
+
+        Args:
+            raw_text: Raw text response from the LLM
+            warnings: List to append warnings to
+
+        Returns:
+            Parsed JSON dict if successful, None otherwise
+        """
         json_pattern = r'\{[^}]*"' + self.score_field + r'"\s*:\s*\d+[^}]*\}'
         json_match = re.search(json_pattern, raw_text)
 
@@ -64,12 +97,12 @@ class JsonResponseParser(ResponseParserPort):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
+            return None
 
         json_str = json_match.group(0)
 
         try:
-            data = json.loads(json_str)
+            return json.loads(json_str)
         except json.JSONDecodeError as e:
             warning = ParserWarning(
                 code=ParserWarningCode.PARSE_ERROR,
@@ -78,10 +111,21 @@ class JsonResponseParser(ResponseParserPort):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
+            return None
 
-        # Extract the score
-        score = data.get(self.score_field)
+    def _extract_score_field(self, json_data: dict, warnings: list[ParserWarning]) -> Optional[int]:
+        """Extract the score field from parsed JSON.
+
+        Pure, testable function for field extraction logic.
+
+        Args:
+            json_data: Parsed JSON dict
+            warnings: List to append warnings to
+
+        Returns:
+            Score value if present, None otherwise
+        """
+        score = json_data.get(self.score_field)
 
         if score is None:
             warning = ParserWarning(
@@ -91,30 +135,40 @@ class JsonResponseParser(ResponseParserPort):
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
+            return None
 
-        # Validate the score is 0, 1, 2, or 3
-        if not isinstance(score, int) or score not in [0, 1, 2, 3]:
+        return score
+
+    def _validate_score(self, score_value: int, warnings: list[ParserWarning]) -> Optional[RelevanceScore]:
+        """Validate score value and convert to RelevanceScore enum.
+
+        Pure, testable function for validation logic.
+
+        Args:
+            score_value: Raw score value from JSON
+            warnings: List to append warnings to
+
+        Returns:
+            RelevanceScore enum if valid, None otherwise
+        """
+        if not isinstance(score_value, int) or score_value not in [0, 1, 2, 3]:
             warning = ParserWarning(
                 code=ParserWarningCode.VALIDATION_ERROR,
-                message=f"Invalid {self.score_field} score: {score} (expected 0, 1, 2, or 3)",
-                metadata={"field_name": self.score_field, "actual_value": str(score)}
+                message=f"Invalid {self.score_field} score: {score_value} (expected 0, 1, 2, or 3)",
+                metadata={"field_name": self.score_field, "actual_value": str(score_value)}
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
+            return None
 
-        # Convert to RelevanceScore enum
         try:
-            relevance_label = RelevanceScore(score)
+            return RelevanceScore(score_value)
         except ValueError:
             warning = ParserWarning(
                 code=ParserWarningCode.VALIDATION_ERROR,
-                message=f"Invalid score value: {score}",
-                metadata={"value": score}
+                message=f"Invalid score value: {score_value}",
+                metadata={"value": score_value}
             )
             warnings.append(warning)
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
-            return ParsedScoreDTO(llm_response_text=raw_text, warnings=warnings)
-
-        return ParsedScoreDTO(llm_response_text=raw_text, label=relevance_label, warnings=warnings)
+            return None

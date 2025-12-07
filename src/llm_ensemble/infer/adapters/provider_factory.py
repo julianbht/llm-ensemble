@@ -25,11 +25,11 @@ PROVIDERS: Dict[str, Type[LLMProviderPort]] = {
 }
 
 
-class ProviderAdapterBuilder:
+class ProviderFactory:
     """Builder for creating provider adapter instances."""
 
     @staticmethod
-    def build(
+    def create(
         provider_name: str,
         model_config: ModelConfig,
     ) -> LLMProviderPort:

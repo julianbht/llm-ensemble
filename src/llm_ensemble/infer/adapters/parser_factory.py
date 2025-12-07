@@ -24,11 +24,11 @@ PARSERS: Dict[str, Type[ResponseParserPort]] = {
 }
 
 
-class ParserAdapterBuilder:
+class ParserAdapterFactory:
     """Builder for creating response parser instances."""
 
     @staticmethod
-    def build(parser_name: str) -> ResponseParserPort:
+    def create(parser_name: str) -> ResponseParserPort:
         """Build and return a parser adapter instance.
 
         Args:

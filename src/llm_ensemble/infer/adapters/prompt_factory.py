@@ -29,11 +29,11 @@ PROMPTS: Dict[str, Type[PromptBuilderPort]] = {
 }
 
 
-class PromptAdapterBuilder:
+class PromptAdapterFactory:
     """Builder for creating prompt adapter instances."""
 
     @staticmethod
-    def build(prompt_name: str) -> PromptBuilderPort:
+    def create(prompt_name: str) -> PromptBuilderPort:
         """Build and return a prompt adapter instance.
 
         Args:

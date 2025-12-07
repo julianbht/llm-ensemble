@@ -44,11 +44,11 @@ IO_FORMATS: Dict[str, IOConfig] = {
 }
 
 
-class IOAdapterBuilder:
+class IOAdapterFactory:
     """Builder for creating IO adapter instances."""
 
     @staticmethod
-    def build_reader(io_name: str) -> InputPort:
+    def create_reader(io_name: str) -> InputPort:
         """Build and return a reader adapter instance.
 
         Args:
@@ -71,7 +71,7 @@ class IOAdapterBuilder:
         return config.reader_class()
 
     @staticmethod
-    def build_writer(io_name: str) -> OutputPort:
+    def create_writer(io_name: str) -> OutputPort:
         """Build and return a writer adapter instance.
 
         Args:

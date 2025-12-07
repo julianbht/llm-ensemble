@@ -24,10 +24,10 @@ from llm_ensemble.libs.runtime.git_utils import get_git_info
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
-from llm_ensemble.infer.adapters.prompt_builder import PromptAdapterBuilder
-from llm_ensemble.infer.adapters.parser_builder import ParserAdapterBuilder
-from llm_ensemble.infer.adapters.io_builder import IOAdapterBuilder
-from llm_ensemble.infer.adapters.provider_builder import ProviderAdapterBuilder
+from llm_ensemble.infer.adapters.prompt_factory import PromptAdapterFactory
+from llm_ensemble.infer.adapters.parser_factory import ParserAdapterFactory
+from llm_ensemble.infer.adapters.io_factory import IOAdapterFactory
+from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
 
 
 def run_inference(
@@ -148,13 +148,13 @@ def run_inference(
     )
 
     # Instantiate adapters with factories
-    prompt_builder_adapter = PromptAdapterBuilder.build(prompt_name)
-    response_parser_adapter = ParserAdapterBuilder.build(parser_name)
-    input_adapter = IOAdapterBuilder.build_reader(io_name)
-    output_adapter = IOAdapterBuilder.build_writer(io_name)
+    prompt_builder_adapter = PromptAdapterFactory.create(prompt_name)
+    response_parser_adapter = ParserAdapterFactory.create(parser_name)
+    input_adapter = IOAdapterFactory.create_reader(io_name)
+    output_adapter = IOAdapterFactory.create_writer(io_name)
 
     # Build provider and wrap with retry logic
-    base_provider = ProviderAdapterBuilder.build(
+    base_provider = ProviderFactory.create(
         provider_name=provider_name,
         model_config=model_config,
     )

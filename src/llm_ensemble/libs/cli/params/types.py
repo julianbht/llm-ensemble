@@ -182,8 +182,8 @@ class PromptParamType(click.ParamType):
 
     def convert(self, value, param, ctx):  # type: ignore[override]
         if value in (None, ""):
-            from llm_ensemble.infer.adapters.prompt_builder import PromptAdapterBuilder
-            available = PromptAdapterBuilder.list_available()
+            from llm_ensemble.infer.adapters.prompt_factory import PromptAdapterFactory
+            available = PromptAdapterFactory.list_available()
             available_str = ", ".join(available) if available else "none"
             self.fail(
                 f"Prompt name is required. Use --prompt <name>.\n"
@@ -192,9 +192,9 @@ class PromptParamType(click.ParamType):
                 ctx,
             )
 
-        from llm_ensemble.infer.adapters.prompt_builder import PromptAdapterBuilder
-        if not PromptAdapterBuilder.has_prompt(value):
-            available = PromptAdapterBuilder.list_available()
+        from llm_ensemble.infer.adapters.prompt_factory import PromptAdapterFactory
+        if not PromptAdapterFactory.has_prompt(value):
+            available = PromptAdapterFactory.list_available()
             available_str = ", ".join(available) if available else "none"
             self.fail(
                 f"Prompt '{value}' not found.\n"
@@ -207,8 +207,8 @@ class PromptParamType(click.ParamType):
 
     def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
         """Provide shell completion for available prompts."""
-        from llm_ensemble.infer.adapters.prompt_builder import PromptAdapterBuilder, PROMPTS
-        available = PromptAdapterBuilder.list_available()
+        from llm_ensemble.infer.adapters.prompt_factory import PromptAdapterFactory, PROMPTS
+        available = PromptAdapterFactory.list_available()
         return [
             click.shell_completion.CompletionItem(
                 prompt,
@@ -229,8 +229,8 @@ class ParserParamType(click.ParamType):
 
     def convert(self, value, param, ctx):  # type: ignore[override]
         if value in (None, ""):
-            from llm_ensemble.infer.adapters.parser_builder import ParserAdapterBuilder
-            available = ParserAdapterBuilder.list_available()
+            from llm_ensemble.infer.adapters.parser_factory import ParserAdapterFactory
+            available = ParserAdapterFactory.list_available()
             available_str = ", ".join(available) if available else "none"
             self.fail(
                 f"Parser name is required. Use --parser <name>.\n"
@@ -239,9 +239,9 @@ class ParserParamType(click.ParamType):
                 ctx,
             )
 
-        from llm_ensemble.infer.adapters.parser_builder import ParserAdapterBuilder
-        if not ParserAdapterBuilder.has_parser(value):
-            available = ParserAdapterBuilder.list_available()
+        from llm_ensemble.infer.adapters.parser_factory import ParserAdapterFactory
+        if not ParserAdapterFactory.has_parser(value):
+            available = ParserAdapterFactory.list_available()
             available_str = ", ".join(available) if available else "none"
             self.fail(
                 f"Parser '{value}' not found.\n"
@@ -254,8 +254,8 @@ class ParserParamType(click.ParamType):
 
     def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
         """Provide shell completion for available parsers."""
-        from llm_ensemble.infer.adapters.parser_builder import ParserAdapterBuilder
-        available = ParserAdapterBuilder.list_available()
+        from llm_ensemble.infer.adapters.parser_factory import ParserAdapterFactory
+        available = ParserAdapterFactory.list_available()
         return [
             click.shell_completion.CompletionItem(parser)
             for parser in available
@@ -273,8 +273,8 @@ class ProviderParamType(click.ParamType):
 
     def convert(self, value, param, ctx):  # type: ignore[override]
         if value in (None, ""):
-            from llm_ensemble.infer.adapters.provider_builder import ProviderAdapterBuilder
-            available = ProviderAdapterBuilder.list_available()
+            from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
+            available = ProviderFactory.list_available()
             available_str = ", ".join(available) if available else "none"
             self.fail(
                 f"Provider name is required. Use --provider <name>.\n"
@@ -283,9 +283,9 @@ class ProviderParamType(click.ParamType):
                 ctx,
             )
 
-        from llm_ensemble.infer.adapters.provider_builder import ProviderAdapterBuilder
-        if not ProviderAdapterBuilder.has_provider(value):
-            available = ProviderAdapterBuilder.list_available()
+        from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
+        if not ProviderFactory.has_provider(value):
+            available = ProviderFactory.list_available()
             available_str = ", ".join(available) if available else "none"
             self.fail(
                 f"Provider '{value}' not found.\n"
@@ -298,8 +298,8 @@ class ProviderParamType(click.ParamType):
 
     def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
         """Provide shell completion for available providers."""
-        from llm_ensemble.infer.adapters.provider_builder import ProviderAdapterBuilder
-        available = ProviderAdapterBuilder.list_available()
+        from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
+        available = ProviderFactory.list_available()
         return [
             click.shell_completion.CompletionItem(provider)
             for provider in available

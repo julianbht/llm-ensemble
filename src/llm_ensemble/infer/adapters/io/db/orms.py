@@ -1,7 +1,6 @@
 """
 SQLAlchemy ORM models for INFER CLI.
 Pure SQLAlchemy models for database persistence.
-All models use deterministic UUID primary keys computed via uuid_helpers.
 """
 
 from __future__ import annotations
@@ -31,7 +30,6 @@ class ProviderORM(Base):
     __tablename__ = "providers"
     __table_args__ = {"schema": "infer"}
     __natural_key__ = "name"
-    __uuid_function__ = "compute_provider_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
@@ -50,7 +48,6 @@ class ModelConfigORM(Base):
     """
     __tablename__ = "model_configs"
     __natural_key__ = "name"
-    __uuid_function__ = "compute_model_config_uuid"
     __table_args__ = {"schema": "infer"}
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -84,7 +81,6 @@ class PromptTemplateORM(Base):
     __tablename__ = "prompt_templates"
     __table_args__ = {"schema": "infer"}
     __natural_key__ = "name"
-    __uuid_function__ = "compute_prompt_template_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
@@ -103,7 +99,6 @@ class ParserORM(Base):
     """
     __tablename__ = "parser"
     __natural_key__ = "name"
-    __uuid_function__ = "compute_parser_spec_uuid_from_name"
     __table_args__ = {"schema": "infer"}
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -127,7 +122,6 @@ class JudgedDatasetORM(Base):
     __tablename__ = "judged_datasets"
     __table_args__ = {"schema": "infer"}
     __natural_key__ = None  # 1:1 with InferRun, uses same ID
-    __uuid_function__ = None  # ID comes from InferRun
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, comment="Same as InferRun.id (1:1 relationship)")
 
@@ -162,7 +156,6 @@ class JudgedDatasetORM(Base):
 class InferRunORM(Base):
     __tablename__ = "infer_runs"
     __natural_key__ = "run_name"
-    __uuid_function__ = "compute_infer_run_uuid"
     __table_args__ = {"schema": "infer"}
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -210,7 +203,6 @@ class InferRunORM(Base):
 class LLMPromptORM(Base):
     __tablename__ = "llm_prompt"
     __natural_key__ = ("prompt_template_id", "dataset_sample_id", "prompt_text")
-    __uuid_function__ = "compute_llm_prompt_text_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
@@ -245,7 +237,6 @@ class LLMPromptORM(Base):
 class LLMResponseTextORM(Base):
     __tablename__ = "llm_response_texts"
     __natural_key__ = ("llm_response_text",)
-    __uuid_function__ = "compute_llm_response_text_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     llm_response_text = Column(Text, nullable=False, unique=True)
@@ -263,7 +254,6 @@ class LLMInvocationMetricsORM(Base):
         "latency_ms", "retries", "cost_estimate_usd", "generation_id",
         "prompt_tokens", "completion_tokens", "total_tokens"
     )
-    __uuid_function__ = "compute_llm_invocation_metrics_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
@@ -293,7 +283,6 @@ class LLMInvocationMetricsORM(Base):
 class LLMScoreORM(Base):
     __tablename__ = "llm_scores"
     __natural_key__ = ("parser_spec_id", "llm_response_id")
-    __uuid_function__ = "compute_llm_score_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
@@ -336,7 +325,6 @@ class LLMScoreORM(Base):
 class LLMJudgementORM(Base):
     __tablename__ = "llm_judgements"
     __natural_key__ = ("judged_dataset_id", "llm_prompt_text_id")
-    __uuid_function__ = "compute_llm_judgement_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 

@@ -36,7 +36,6 @@ class AggregationStrategyORM(Base):
     __tablename__ = "aggregation_strategies"
     __table_args__ = {"schema": "aggregate"}
     __natural_key__ = "name"
-    __uuid_function__ = "compute_aggregation_spec_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True, comment="Natural key from adapter.strategy_name (e.g., 'majority_vote')")
@@ -51,7 +50,6 @@ class AggregateRunORM(Base):
     __tablename__ = "aggregate_runs"
     __table_args__ = {"schema": "aggregate"}
     __natural_key__ = "run_name"
-    __uuid_function__ = "compute_aggregate_run_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
@@ -86,7 +84,6 @@ class AggregatedDatasetORM(Base):
     __tablename__ = "aggregated_datasets"
     __table_args__ = {"schema": "aggregate"}
     __natural_key__ = ("fingerprint",)
-    __uuid_function__ = "compute_aggregated_dataset_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 

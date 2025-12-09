@@ -41,7 +41,6 @@ from llm_ensemble.infer.adapters.io.db.orms import (
 )
 from llm_ensemble.libs.db import (
     compute_judged_dataset_uuid,
-    compute_infer_run_uuid,
 )
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 

@@ -13,22 +13,21 @@ Design:
 """
 
 from __future__ import annotations
-from uuid import UUID
+from uuid import UUID, uuid4
 from typing import Optional
+import hashlib
 from pydantic import BaseModel, Field, field_validator
 
 from llm_ensemble.ingest.schemas import JudgingSample
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
-from llm_ensemble.libs.db import compute_normalized_dataset_uuid
-from llm_ensemble.libs.db import compute_normalized_dataset_fingerprint
 
 
 class NormalizedDataset(BaseModel):
-    """Internal dataset with deterministic fingerprint.
+    """Internal dataset with fingerprint for deduplication.
 
-    Represents a specific collection of dataset samples with a deterministic
-    fingerprint computed from sorted judging sample IDs. This enables:
-    - Idempotent ingest runs (same samples = same fingerprint = same entity)
+    Represents a specific collection of dataset samples with a fingerprint
+    computed from sorted judging sample IDs. This enables:
+    - Deduplication detection via database unique constraint on fingerprint
     - Reproducible sample ordering for start/end slicing
     - Efficient validation in aggregate CLI (compare fingerprints)
 
@@ -41,12 +40,12 @@ class NormalizedDataset(BaseModel):
     """
 
     id: UUID = Field(
-        ...,
-        description="Deterministic UUID computed from fingerprint"
+        default_factory=uuid4,
+        description="Random UUID identifier"
     )
     fingerprint: str = Field(
         ...,
-        description="SHA256 hash of sorted sample IDs (deterministic identifier)"
+        description="SHA256 hash of sorted sample IDs for deduplication detection"
     )
     external_dataset_name: Optional[str] = Field(
         None,
@@ -77,28 +76,29 @@ class NormalizedDataset(BaseModel):
         samples: list[JudgingSample],
         external_dataset_name: Optional[str] = None
     ) -> "NormalizedDataset":
-        """Create NormalizedDataset with computed fingerprint and ID.
+        """Create NormalizedDataset with computed fingerprint and random ID.
 
         Args:
             samples: List of judging samples (will be sorted by ID and wrapped in DatasetSample)
             external_dataset_name: Optional name of the external source dataset
 
         Returns:
-            NormalizedDataset with computed fingerprint and deterministic ID
+            NormalizedDataset with computed fingerprint and random UUID
         """
+
+        # Generate random UUID for this dataset
+        dataset_id = uuid4()
 
         # Sort samples by ID for deterministic ordering
         sorted_samples = sorted(samples, key=lambda s: s.id)
 
-        # Compute fingerprint from sorted sample IDs (before wrapping)
-        fingerprint = compute_normalized_dataset_fingerprint(sorted_samples)
-
-        # Compute deterministic UUID from fingerprint
-        dataset_id = compute_normalized_dataset_uuid(fingerprint)
+        # Compute fingerprint from sorted sample IDs
+        sample_ids_str = ":".join(str(s.id) for s in sorted_samples)
+        fingerprint = hashlib.sha256(sample_ids_str.encode()).hexdigest()
 
         # Wrap each JudgingSample in a DatasetSample with sequence number
         dataset_samples = [
-            DatasetSample.create(
+            DatasetSample(
                 normalized_dataset_id=dataset_id,
                 judging_sample=sample,
                 sequence_number=idx,

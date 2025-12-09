@@ -69,13 +69,13 @@ class LLMJudgeDatasetReader(DatasetReader):
         """
         paths = LlmJudgePaths(Path(input_path))
 
-        # Load queries and documents into memory (content-based IDs)
+        # Load queries and documents into memory
         queries = self._read_queries(paths.queries)
         docs = self._read_documents(paths.documents)
 
         # Process qrels and join with queries/documents
-        # Use dict to deduplicate by content-based sample.id
-        samples_by_id = {}
+        # Use dict to deduplicate by content hashes (query_hash:doc_hash)
+        samples_by_content = {}
         for qid, docid, relevance in self._read_qrels(paths.qrels):
             q = queries.get(qid)
             d = docs.get(docid)
@@ -90,22 +90,23 @@ class LLMJudgeDatasetReader(DatasetReader):
                     f"Document '{docid}' referenced in qrels but not found in documents file"
                 )
 
-            # Create complete JudgingSample (content-based ID)
-            sample = JudgingSample.create(
+            # Create complete JudgingSample
+            sample = JudgingSample(
                 query=q,
                 document=d,
                 gold_score=RelevanceScore(relevance),
             )
 
-            # Deduplicate by content-based ID (keep first occurrence)
-            if sample.id not in samples_by_id:
-                samples_by_id[sample.id] = sample
+            # Deduplicate by content (query_hash:doc_hash, keep first occurrence)
+            content_key = f"{q.content_hash}:{d.content_hash}"
+            if content_key not in samples_by_content:
+                samples_by_content[content_key] = sample
 
             # Stop if limit reached
-            if limit is not None and len(samples_by_id) >= limit:
+            if limit is not None and len(samples_by_content) >= limit:
                 break
 
-        samples = list(samples_by_id.values())
+        samples = list(samples_by_content.values())
         return NormalizedDataset.create(
             samples=samples,
             external_dataset_name="llmjudge"
@@ -118,7 +119,7 @@ class LLMJudgeDatasetReader(DatasetReader):
             path: Path to queries TSV file
 
         Returns:
-            Dictionary mapping external query_id to Query objects (with content-based IDs)
+            Dictionary mapping external query_id to Query objects
 
         Raises:
             FileNotFoundError: If queries file doesn't exist
@@ -135,7 +136,7 @@ class LLMJudgeDatasetReader(DatasetReader):
                 if len(parts) != 2:
                     raise ValueError(f"Invalid query line {i}: {line!r}")
                 qid, qtext = parts[0].strip(), parts[1].strip()
-                out[qid] = Query.create(qtext)
+                out[qid] = Query(query_text=qtext)
         return out
 
     def _read_documents(self, path: Path) -> Dict[str, Document]:
@@ -145,7 +146,7 @@ class LLMJudgeDatasetReader(DatasetReader):
             path: Path to documents JSONL file
 
         Returns:
-            Dictionary mapping external docid to Document objects (with content-based IDs)
+            Dictionary mapping external docid to Document objects
 
         Raises:
             FileNotFoundError: If documents file doesn't exist
@@ -165,7 +166,7 @@ class LLMJudgeDatasetReader(DatasetReader):
                 doc = obj.get("doc")
                 if not (isinstance(docid, str) and isinstance(doc, str)):
                     raise ValueError(f"Missing docid/doc at line {i}")
-                out[docid] = Document.create(doc)
+                out[docid] = Document(doc_text=doc)
         return out
 
     def _read_qrels(self, path: Path) -> list[tuple[str, str, int]]:

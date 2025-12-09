@@ -1,6 +1,7 @@
 """SQL writer adapter for persisting judging samples to database.
 
-Uses pure SQLAlchemy ORM models with deterministic UUIDs.
+Uses pure SQLAlchemy ORM models with random UUIDs.
+Duplicate detection via database constraint violations (IntegrityError).
 Handles its own logging and returns write summary as metadata.
 
 This adapter delegates ORM mapping to the mappers module for bidirectional symmetry.
@@ -11,6 +12,7 @@ from typing import List, Dict, Tuple
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from llm_ensemble.ingest.schemas import (
     JudgingSample,

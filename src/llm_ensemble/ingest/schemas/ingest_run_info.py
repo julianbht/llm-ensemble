@@ -8,12 +8,11 @@ waiting for the run to complete.
 
 from __future__ import annotations
 from typing import Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 from pydantic import ConfigDict, Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.libs.schemas import IOConfig
-from llm_ensemble.libs.db import compute_ingest_run_uuid
 
 
 class IngestRunInfo(RunInfo):
@@ -30,14 +29,14 @@ class IngestRunInfo(RunInfo):
 
     This is separate from IngestRunSummary which contains post-run metrics like
     sample counts and timing statistics.
-    
-    The id field is a mandatory deterministic UUID computed from run_name.
+
+    The id field is a random UUID (v4).
     """
 
-    # Deterministic UUID
+    # Random UUID
     id: UUID = Field(
-        ...,
-        description="Deterministic UUID computed from run_name"
+        default_factory=uuid4,
+        description="Random UUID identifier"
     )
 
     # Override cli_name from base RunInfo to automatically set it to "ingest"
@@ -81,8 +80,8 @@ class IngestRunInfo(RunInfo):
         limit: Optional[int] = None,
         **kwargs
     ) -> "IngestRunInfo":
-        """Create an IngestRunInfo with computed deterministic UUID.
-        
+        """Create an IngestRunInfo with random UUID.
+
         Args:
             run_name: Run identifier (timestamp-based)
             io_config_name: I/O config name
@@ -90,13 +89,11 @@ class IngestRunInfo(RunInfo):
             input_path: Input directory path
             limit: Optional sample limit
             **kwargs: Additional fields from base RunInfo (git_sha, etc.)
-        
+
         Returns:
-            IngestRunInfo instance with computed id
+            IngestRunInfo instance with random UUID
         """
-        run_info_id = compute_ingest_run_uuid(run_name)
         return cls(
-            id=run_info_id,
             run_name=run_name,
             io_config_name=io_config_name,
             io_config=io_config,

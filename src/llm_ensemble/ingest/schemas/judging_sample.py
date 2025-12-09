@@ -16,7 +16,7 @@ Design:
 from __future__ import annotations
 from uuid import UUID, uuid4
 import hashlib
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 from llm_ensemble.libs.schemas import RelevanceScore
 
@@ -41,17 +41,12 @@ class Query(BaseModel):
     )
     query_text: str = Field(..., description="The natural language query text")
 
-    @field_validator('content_hash', mode='before')
-    @classmethod
-    def compute_content_hash(cls, v, info):
+    @model_validator(mode='after')
+    def compute_content_hash(self):
         """Compute content_hash from query_text if not provided."""
-        if v:  # If explicitly provided, use it
-            return v
-        # Compute from query_text
-        query_text = info.data.get('query_text')
-        if query_text:
-            return hashlib.sha256(query_text.encode()).hexdigest()
-        return v
+        if not self.content_hash:
+            self.content_hash = hashlib.sha256(self.query_text.encode()).hexdigest()
+        return self
 
 
 class Document(BaseModel):
@@ -74,17 +69,12 @@ class Document(BaseModel):
     )
     doc_text: str = Field(..., description="The document text content")
 
-    @field_validator('content_hash', mode='before')
-    @classmethod
-    def compute_content_hash(cls, v, info):
+    @model_validator(mode='after')
+    def compute_content_hash(self):
         """Compute content_hash from doc_text if not provided."""
-        if v:  # If explicitly provided, use it
-            return v
-        # Compute from doc_text
-        doc_text = info.data.get('doc_text')
-        if doc_text:
-            return hashlib.sha256(doc_text.encode()).hexdigest()
-        return v
+        if not self.content_hash:
+            self.content_hash = hashlib.sha256(self.doc_text.encode()).hexdigest()
+        return self
 
 
 class JudgingSample(BaseModel):

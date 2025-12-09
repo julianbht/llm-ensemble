@@ -4,9 +4,10 @@ All UUIDs are computed using UUIDv5 with entity-specific namespace UUIDs.
 This ensures:
 - Same logical entity → same UUID (idempotent writes)
 - Different entity types → different UUIDs (no collisions)
-- Because using combined UUID's as primary keys is essentially the same as enforcing
-unique constraints on the db level, we ensure that the uuid computation matches the 
-db unique constraints with automated tests.
+
+Note: Ingest entities (Query, Document, JudgingSample, etc.) now use random UUIDs
+with constraint-based duplicate detection, so their UUID computation functions have
+been removed.
 """
 
 import uuid
@@ -18,13 +19,7 @@ import hashlib
 # Each entity type has its own namespace UUID to ensure no collisions
 # between different entity types even if they have the same natural key.
 
-NAMESPACE_QUERY = uuid.UUID('a1b2c3d4-e5f6-7890-abcd-ef1234567890')
-NAMESPACE_DOCUMENT = uuid.UUID('b2c3d4e5-f678-90ab-cdef-123456789012')
-NAMESPACE_JUDGING_SAMPLE = uuid.UUID('c3d4e5f6-7890-abcd-ef12-34567890abcd')
-NAMESPACE_NORMALIZED_DATASET = uuid.UUID('c4d5e6f7-8901-bcde-f234-567890abcdef')
-NAMESPACE_DATASET_SAMPLE = uuid.UUID('c5d6e7f8-9012-cdef-1234-567890abcdef')
 NAMESPACE_JUDGED_DATASET = uuid.UUID('c5d6e7f8-9012-cdef-3456-67890abcdef0')
-NAMESPACE_INGEST_RUN = uuid.UUID('d4e5f678-90ab-cdef-1234-567890abcdef')
 NAMESPACE_INFER_RUN = uuid.UUID('e5f67890-abcd-ef12-3456-7890abcdef12')
 NAMESPACE_AGGREGATE_RUN = uuid.UUID('f6789012-3456-7890-abcd-ef1234567890')
 NAMESPACE_LLM_PROMPT = uuid.UUID('a0b1c2d3-e4f5-6789-0abc-def123456789')
@@ -51,65 +46,11 @@ NAMESPACE_AGGREGATION_VOTE = uuid.UUID('c34567f0-1234-5678-9012-3456789abcde')
 # Run Info UUIDs
 # ========================================================================
 
-def compute_ingest_run_uuid(run_name: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE_INGEST_RUN, run_name)
-
 def compute_infer_run_uuid(run_name: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE_INFER_RUN, run_name)
 
 def compute_aggregate_run_uuid(run_name: str) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE_AGGREGATE_RUN, run_name)
-
-
-# ========================================================================
-# Ingest Entitie UUIDs
-# ========================================================================
-
-def compute_query_uuid(content_hash: str) -> uuid.UUID:
-    """Compute query UUID from content hash.
-
-    Args:
-        content_hash: SHA256 hex digest of query text
-    """
-    return uuid.uuid5(NAMESPACE_QUERY, content_hash)
-
-
-def compute_document_uuid(content_hash: str) -> uuid.UUID:
-    """Compute document UUID from content hash.
-
-    Args:
-        content_hash: SHA256 hex digest of document text
-    """
-    return uuid.uuid5(NAMESPACE_DOCUMENT, content_hash)
-
-
-def compute_judging_sample_uuid(
-    query_id: str,
-    document_id: str
-) -> uuid.UUID:
-    natural_key = f"{query_id}:{document_id}"
-    return uuid.uuid5(NAMESPACE_JUDGING_SAMPLE, natural_key)
-
-
-def compute_normalized_dataset_fingerprint(samples: list) -> str:
-    # Extract and sort sample IDs (already sorted, but ensure determinism)
-    sorted_ids = sorted([str(s.id) for s in samples])
-    # Create comma-separated string of UUIDs
-    id_string = ",".join(sorted_ids)
-    # Compute SHA256 hash
-    return hashlib.sha256(id_string.encode()).hexdigest()
-
-
-def compute_normalized_dataset_uuid(fingerprint: str) -> uuid.UUID:
-    return uuid.uuid5(NAMESPACE_NORMALIZED_DATASET, fingerprint)
-
-
-def compute_dataset_sample_uuid(
-    normalized_dataset_id: uuid.UUID,
-    judging_sample_id: uuid.UUID
-) -> uuid.UUID:
-    natural_key = f"{normalized_dataset_id}:{judging_sample_id}"
-    return uuid.uuid5(NAMESPACE_DATASET_SAMPLE, natural_key)
 
 
 def compute_judged_dataset_fingerprint(dataset_sample_ids: list[uuid.UUID]) -> str:

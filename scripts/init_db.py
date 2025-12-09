@@ -39,30 +39,29 @@ from llm_ensemble.ingest.schemas.orms import (
 )
 
 # Infer CLI ORMs
-from llm_ensemble.infer.schemas.orms_normalized import (
+from llm_ensemble.infer.adapters.io.db.orms import (
     ProviderORM,
-    ModelORM,
-    ModelConfigORM,
-    PromptTemplateORM,
     ParserORM,
+    PromptBuilderORM,
+    AdapterConfigORM,
+    ModelConfigORM,
     JudgedDatasetORM,
     InferRunORM,
     LLMPromptTextORM,
     LLMResponseTextORM,
-    LLMInvocationMetricsORM,
     LLMScoreORM,
     LLMJudgementORM,
 )
 
 # Aggregate CLI ORMs
-from llm_ensemble.aggregate.schemas.orms_normalized import (
-    AggregationSpecORM,
-    AggregateRunORM,
-    AggregatedDatasetORM,
-    AggregatedVoteORM,
-    AggregatedDatasetVoteORM,
-    AggregationVoteORM,
-)
+# from llm_ensemble.aggregate.schemas.orms_normalized import (
+#     AggregationSpecORM,
+#     AggregateRunORM,
+#     AggregatedDatasetORM,
+#     AggregatedVoteORM,
+#     AggregatedDatasetVoteORM,
+#     AggregationVoteORM,
+# )
 
 
 def main():

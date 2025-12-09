@@ -32,7 +32,6 @@ from llm_ensemble.libs.schemas import RelevanceScore
 class QueryORM(Base):
     __tablename__ = "queries"
     __natural_key__ = ("content_hash",)
-    __uuid_function__ = "compute_query_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     content_hash = Column(CHAR(64), nullable=False, unique=True)
@@ -48,7 +47,6 @@ class QueryORM(Base):
 class DocumentORM(Base):
     __tablename__ = "documents"
     __natural_key__ = ("content_hash",)
-    __uuid_function__ = "compute_document_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     content_hash = Column(CHAR(64), nullable=False, unique=True)
@@ -65,7 +63,6 @@ class NormalizedDatasetORM(Base):
     __tablename__ = "normalized_datasets"
     __table_args__ = {"schema": "ingest"}
     __natural_key__ = ("fingerprint",)
-    __uuid_function__ = "compute_normalized_dataset_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     fingerprint = Column(CHAR(64), nullable=False, unique=True)
@@ -85,7 +82,6 @@ class NormalizedDatasetORM(Base):
 class DatasetSampleORM(Base):
     __tablename__ = "dataset_sample"
     __natural_key__ = ("normalized_dataset_id", "judging_sample_id")
-    __uuid_function__ = "compute_dataset_sample_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     normalized_dataset_id = Column(
@@ -111,7 +107,6 @@ class IngestRunORM(Base):
     __tablename__ = "ingest_runs"
     __table_args__ = {"schema": "ingest"}
     __natural_key__ = ("run_name",)
-    __uuid_function__ = "compute_ingest_run_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
@@ -136,7 +131,6 @@ class IngestRunORM(Base):
 class JudgingSampleORM(Base):
     __tablename__ = "judging_samples"
     __natural_key__ = ("query_id", "document_id")
-    __uuid_function__ = "compute_judging_sample_uuid"
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     query_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.queries.id"), nullable=False)

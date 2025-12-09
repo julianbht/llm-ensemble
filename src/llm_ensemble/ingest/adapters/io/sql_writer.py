@@ -55,7 +55,8 @@ class SqlWriter(DatasetWriter):
     and handles ORM relationships.
 
     Features:
-    - Idempotent writes via merge (insert or update if exists)
+    - Duplicate detection via database constraints (catches IntegrityError)
+    - Natural key deduplication (content_hash for Query/Document, fingerprint for Dataset)
     - Uses session_context() for transaction management
     - Logs write operations directly
 
@@ -76,7 +77,8 @@ class SqlWriter(DatasetWriter):
     ) -> WriteSummary:
         """Write normalized dataset to SQL database with direct logging.
 
-        Idempotent operation - merges entities (insert if new, update if exists).
+        Duplicate detection via database constraint violations (IntegrityError).
+        Tracks created vs skipped entities in WriteSummary.
         Logs each entity type write and summary.
 
         Args:
@@ -171,6 +173,8 @@ class SqlWriter(DatasetWriter):
     ) -> Tuple[int, int]:
         """Save ingest run entity to database using mapper.
 
+        Uses constraint-based duplicate detection via IntegrityError on run_name.
+
         Args:
             session: SQLAlchemy session
             run_info: IngestRunInfo context object
@@ -179,13 +183,15 @@ class SqlWriter(DatasetWriter):
         Returns:
             Tuple of (created_count, skipped_count)
         """
-        existing = session.get(IngestRunORM, run_info.id)
-        if existing:
+        try:
+            savepoint = session.begin_nested()
+            ingest_run_orm = ingest_run_info_to_orm(run_info, normalized_dataset_id)
+            session.add(ingest_run_orm)
+            session.flush()
+            return (1, 0)
+        except IntegrityError:
+            savepoint.rollback()
             return (0, 1)
-
-        ingest_run_orm = ingest_run_info_to_orm(run_info, normalized_dataset_id)
-        session.merge(ingest_run_orm)
-        return (1, 0)
 
     def _collect_unique_entities(
         self, samples: List[DatasetSample]
@@ -208,6 +214,8 @@ class SqlWriter(DatasetWriter):
     ) -> Tuple[int, int]:
         """Save query entities to database using mapper.
 
+        Uses constraint-based duplicate detection via IntegrityError on content_hash.
+
         Args:
             session: SQLAlchemy session
             queries: Dictionary of Query domain objects keyed by ID
@@ -219,14 +227,15 @@ class SqlWriter(DatasetWriter):
         skipped = 0
 
         for query in queries.values():
-            existing = session.get(QueryORM, query.id)
-            if existing:
+            try:
+                savepoint = session.begin_nested()
+                query_orm = query_to_orm(query)
+                session.add(query_orm)
+                session.flush()
+                created += 1
+            except IntegrityError:
+                savepoint.rollback()
                 skipped += 1
-                continue
-
-            query_orm = query_to_orm(query)
-            session.merge(query_orm)
-            created += 1
 
         return (created, skipped)
 
@@ -234,6 +243,8 @@ class SqlWriter(DatasetWriter):
         self, session: Session, documents: Dict[UUID, Document]
     ) -> Tuple[int, int]:
         """Save document entities to database using mapper.
+
+        Uses constraint-based duplicate detection via IntegrityError on content_hash.
 
         Args:
             session: SQLAlchemy session
@@ -246,14 +257,15 @@ class SqlWriter(DatasetWriter):
         skipped = 0
 
         for document in documents.values():
-            existing = session.get(DocumentORM, document.id)
-            if existing:
+            try:
+                savepoint = session.begin_nested()
+                doc_orm = document_to_orm(document)
+                session.add(doc_orm)
+                session.flush()
+                created += 1
+            except IntegrityError:
+                savepoint.rollback()
                 skipped += 1
-                continue
-
-            doc_orm = document_to_orm(document)
-            session.merge(doc_orm)
-            created += 1
 
         return (created, skipped)
 
@@ -262,7 +274,7 @@ class SqlWriter(DatasetWriter):
     ) -> Tuple[int, int]:
         """Save judging sample entities to database.
 
-        Idempotent operation - reuses existing samples with same ID.
+        Uses constraint-based duplicate detection via IntegrityError on (query_id, document_id).
 
         Args:
             session: SQLAlchemy session
@@ -275,26 +287,27 @@ class SqlWriter(DatasetWriter):
         skipped = 0
 
         for sample in samples:
-            existing = session.get(JudgingSampleORM, sample.id)
-            if existing:
+            try:
+                savepoint = session.begin_nested()
+                sample_orm = judging_sample_to_orm(sample)
+                session.add(sample_orm)
+                session.flush()
+                created += 1
+            except IntegrityError:
+                savepoint.rollback()
                 skipped += 1
-                continue
-
-            sample_orm = judging_sample_to_orm(sample)
-            session.merge(sample_orm)
-            created += 1
 
         return (created, skipped)
 
     def _save_normalized_dataset_entity(
         self, session: Session, normalized_dataset: NormalizedDataset
     ) -> Tuple[int, int]:
-        """Save NormalizedDataset entity (step 5 in dependency order).
+        """Save NormalizedDataset entity (step 4 in dependency order).
 
-        Idempotent operation - reuses existing NormalizedDataset with same fingerprint.
+        Uses constraint-based duplicate detection via IntegrityError on fingerprint.
 
-        Note: This MUST be called before _save_normalized_dataset_junction because
-        junction records have FK to NormalizedDataset.
+        Note: This MUST be called before _save_dataset_samples because
+        DatasetSample records have FK to NormalizedDataset.
 
         Args:
             session: SQLAlchemy session
@@ -303,23 +316,23 @@ class SqlWriter(DatasetWriter):
         Returns:
             Tuple of (created_count, skipped_count)
         """
-        # Check if NormalizedDataset already exists (idempotency via fingerprint)
-        existing = session.get(NormalizedDatasetORM, normalized_dataset.id)
-        if existing:
+        try:
+            savepoint = session.begin_nested()
+            normalized_dataset_orm = normalized_dataset_to_orm(normalized_dataset)
+            session.add(normalized_dataset_orm)
+            session.flush()
+            return (1, 0)
+        except IntegrityError:
+            savepoint.rollback()
             return (0, 1)
-
-        # Create NormalizedDataset entity
-        normalized_dataset_orm = normalized_dataset_to_orm(normalized_dataset)
-        session.merge(normalized_dataset_orm)
-
-        return (1, 0)
 
     def _save_dataset_samples(
         self, session: Session, normalized_dataset: NormalizedDataset
     ) -> Tuple[int, int]:
         """Save DatasetSample records (step 5 in dependency order).
 
-        Idempotent operation - reuses existing DatasetSamples with same ID.
+        Uses constraint-based duplicate detection via IntegrityError on
+        (normalized_dataset_id, judging_sample_id).
 
         Note: This MUST be called after _save_normalized_dataset_entity because
         DatasetSample has FK to NormalizedDataset.
@@ -334,20 +347,21 @@ class SqlWriter(DatasetWriter):
         created = 0
         skipped = 0
 
-        # Create DatasetSample records with sequence numbers and computed IDs
+        # Create DatasetSample records with sequence numbers
         for sample in normalized_dataset.samples:
-            existing = session.get(DatasetSampleORM, sample.id)
-            if existing:
+            try:
+                savepoint = session.begin_nested()
+                dataset_sample = DatasetSampleORM(
+                    id=sample.id,
+                    normalized_dataset_id=sample.normalized_dataset_id,
+                    judging_sample_id=sample.judging_sample.id,
+                    sequence_number=sample.sequence_number,
+                )
+                session.add(dataset_sample)
+                session.flush()
+                created += 1
+            except IntegrityError:
+                savepoint.rollback()
                 skipped += 1
-                continue
-
-            dataset_sample = DatasetSampleORM(
-                id=sample.id,
-                normalized_dataset_id=sample.normalized_dataset_id,
-                judging_sample_id=sample.judging_sample.id,
-                sequence_number=sample.sequence_number,
-            )
-            session.merge(dataset_sample)
-            created += 1
 
         return (created, skipped)

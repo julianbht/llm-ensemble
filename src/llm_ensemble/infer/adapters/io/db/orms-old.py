@@ -36,99 +36,15 @@ class ProviderORM(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     # Relationships
-    adapter_configs = relationship("AdapterConfigORM", back_populates="provider")
-
-
-class ParserORM(Base):
-    """Response text parser specification.
-
-    Tracks which parser was used to extract structured data from LLM responses.
-    Name comes from registry (e.g., 'thomas-simple').
-    """
-    __tablename__ = "parsers"
-    __natural_key__ = "name"
-    __table_args__ = {"schema": "infer"}
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    name = Column(
-        String(255),
-        nullable=False,
-        unique=True,
-        comment="Natural key from registry (e.g., 'thomas-simple')"
-    )
-    created_at = Column(DateTime, nullable=False, default=utcnow)
-
-    # Relationships
-    adapter_configs = relationship("AdapterConfigORM", back_populates="parser")
-
-
-class PromptBuilderORM(Base):
-    """Prompt builder with inlined template text.
-
-    Contains both the prompt template and the builder configuration.
-    """
-    __tablename__ = "prompt_builders"
-    __table_args__ = {"schema": "infer"}
-    __natural_key__ = "name"
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    name = Column(String(255), nullable=False, unique=True)
-    template_text = Column(Text, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=utcnow)
-
-    # Relationships
-    adapter_configs = relationship("AdapterConfigORM", back_populates="prompt_builder")
-
-
-class AdapterConfigORM(Base):
-    """Complete adapter configuration for an inference run.
-
-    Bundles together the prompt builder, response parser, and provider.
-    Multiple judged datasets can share the same adapter configuration.
-    """
-    __tablename__ = "adapter_configs"
-    __natural_key__ = ("prompt_builder_id", "parser_id", "provider_id")
-    __table_args__ = (
-        UniqueConstraint(
-            "prompt_builder_id",
-            "parser_id",
-            "provider_id",
-            name="uq_adapter_config",
-        ),
-        {"schema": "infer"},
-    )
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
-
-    prompt_builder_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.prompt_builders.id"),
-        nullable=False,
-    )
-    parser_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.parsers.id"),
-        nullable=False,
-    )
-    provider_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.providers.id"),
-        nullable=False,
-    )
-
-    created_at = Column(DateTime, nullable=False, default=utcnow)
-
-    # Relationships
-    prompt_builder = relationship("PromptBuilderORM", back_populates="adapter_configs")
-    parser = relationship("ParserORM", back_populates="adapter_configs")
-    provider = relationship("ProviderORM", back_populates="adapter_configs")
-    judged_datasets = relationship("JudgedDatasetORM", back_populates="adapter_config")
+    judged_datasets = relationship("JudgedDatasetORM", back_populates="provider")
 
 
 class ModelConfigORM(Base):
     """Complete model configuration used for an inference run.
 
     Pure configuration data - model identity, capabilities, and inference parameters.
+    No provider reference - provider is a runtime fact on JudgedDataset.
+    No separate Model entity - this is the complete configuration snapshot.
     """
     __tablename__ = "model_configs"
     __natural_key__ = "name"
@@ -161,10 +77,47 @@ class ModelConfigORM(Base):
     judged_datasets = relationship("JudgedDatasetORM", back_populates="model_config")
 
 
+class PromptTemplateORM(Base):
+    __tablename__ = "prompt_templates"
+    __table_args__ = {"schema": "infer"}
+    __natural_key__ = "name"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    name = Column(String(255), nullable=False, unique=True)
+    template_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    # Relationships
+    prompt_texts = relationship("LLMPromptTextORM", back_populates="prompt_template")
+
+
+class ParserORM(Base):
+    """Minimal entity tracking which response parser was used.
+
+    Just id + name - no wiring details (module/class paths).
+    Name comes from registry (e.g., 'thomas-simple').
+    """
+    __tablename__ = "parser"
+    __natural_key__ = "name"
+    __table_args__ = {"schema": "infer"}
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    name = Column(
+        String(255),
+        nullable=False,
+        unique=True,
+        comment="Natural key from registry (e.g., 'thomas-simple')"
+    )
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    # Relationships
+    scores = relationship("LLMScoreORM", back_populates="parser_spec")
+
+
 class JudgedDatasetORM(Base):
     """Dataset of LLM judgements produced by an inference run.
 
-    Combines model configuration and adapter configuration (prompt, parser, provider).
+    Captures both what was configured (model_config) and where it ran (provider).
     """
     __tablename__ = "judged_datasets"
     __table_args__ = {"schema": "infer"}
@@ -179,11 +132,11 @@ class JudgedDatasetORM(Base):
         comment="Which model configuration was used for all judgements in this dataset"
     )
 
-    adapter_config_id = Column(
+    provider_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.adapter_configs.id"),
+        ForeignKey("infer.providers.id"),
         nullable=False,
-        comment="Which adapter configuration (prompt builder, parser, provider) was used"
+        comment="Which provider/service was used to run inference (runtime fact)"
     )
 
     sample_fingerprint = Column(
@@ -195,7 +148,7 @@ class JudgedDatasetORM(Base):
 
     # Relationships
     model_config = relationship("ModelConfigORM", back_populates="judged_datasets")
-    adapter_config = relationship("AdapterConfigORM", back_populates="judged_datasets")
+    provider = relationship("ProviderORM", back_populates="judged_datasets")
     llm_judgements = relationship("LLMJudgementORM", back_populates="judged_dataset")
     infer_run = relationship("InferRunORM", back_populates="judged_dataset", uselist=False)
 
@@ -213,7 +166,7 @@ class InferRunORM(Base):
     config_names = Column(
         JSONB,
         nullable=False,
-        comment="Config names used: {model_config, prompt_builder, parser, provider}"
+        comment="Config names used: {model_config, prompt_template, parser_spec}"
     )
 
     # INTENT: What range of NormalizedDataset to process (set in open())
@@ -247,64 +200,95 @@ class InferRunORM(Base):
     judged_dataset = relationship("JudgedDatasetORM", back_populates="infer_run", uselist=False)
 
 
-class LLMPromptTextORM(Base):
-    """Deduplicated LLM prompt texts.
-
-    Stores unique prompt text values with no foreign keys.
-    Multiple judgements can reference the same prompt text.
-    """
-    __tablename__ = "llm_prompt_texts"
-    __natural_key__ = ("prompt_text",)
-    __table_args__ = {"schema": "infer"}
+class LLMPromptORM(Base):
+    __tablename__ = "llm_prompt"
+    __natural_key__ = ("prompt_template_id", "dataset_sample_id", "prompt_text")
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    prompt_text = Column(Text, nullable=False, unique=True)
+
+    prompt_template_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.prompt_templates.id"),
+        nullable=False,
+    )
+    dataset_sample_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ingest.dataset_sample.id"),
+        nullable=False,
+    )
+    prompt_text = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
+    __table_args__ = (
+        UniqueConstraint(
+            "prompt_template_id",
+            "dataset_sample_id",
+            "prompt_text",
+            name="uq_prompt_template_sample_text",
+        ),
+        {"schema": "infer"},
+    )
+
     # Relationships
+    prompt_template = relationship("PromptTemplateORM", back_populates="prompt_texts")
     llm_judgements = relationship("LLMJudgementORM", back_populates="llm_prompt_text")
 
 
 class LLMResponseTextORM(Base):
-    """Deduplicated LLM response texts.
-
-    Stores unique raw response text values.
-    Multiple scores and judgements can reference the same response text.
-    """
     __tablename__ = "llm_response_texts"
     __natural_key__ = ("llm_response_text",)
-    __table_args__ = {"schema": "infer"}
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     llm_response_text = Column(Text, nullable=False, unique=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
+    __table_args__ = {"schema": "infer"}
+
     # Relationships
-    llm_judgements = relationship("LLMJudgementORM", back_populates="llm_response_text")
+    scores = relationship("LLMScoreORM", back_populates="llm_response_text")
 
 
-class LLMScoreORM(Base):
-    """Parsed and structured LLM score from response text.
-
-    Represents the result of applying a parser to a response text.
-    Deduplicated by (parser_id, llm_response_text_id).
-    """
-    __tablename__ = "llm_scores"
-    __natural_key__ = ("parser_id", "llm_response_text_id")
-    __table_args__ = (
-        UniqueConstraint(
-            "parser_id",
-            "llm_response_text_id",
-            name="uq_score_parser_response",
-        ),
-        {"schema": "infer"},
+class LLMInvocationMetricsORM(Base):
+    __tablename__ = "llm_invocation_metrics"
+    __natural_key__ = (
+        "latency_ms", "retries", "cost_estimate_usd", "generation_id",
+        "prompt_tokens", "completion_tokens", "total_tokens"
     )
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
-    parser_id = Column(
+    latency_ms = Column(Float, nullable=False)
+    retries = Column(Integer, nullable=False, default=0)
+    cost_estimate_usd = Column(Float, nullable=True)
+    generation_id = Column(String(255), nullable=True)
+    prompt_tokens = Column(Integer, nullable=True)
+    completion_tokens = Column(Integer, nullable=True)
+    total_tokens = Column(Integer, nullable=True)
+
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "latency_ms", "retries", "cost_estimate_usd", "generation_id",
+            "prompt_tokens", "completion_tokens", "total_tokens",
+            name="uq_invocation_metrics",
+        ),
+        {"schema": "infer"},
+    )
+
+    # Relationships
+    llm_judgements = relationship("LLMJudgementORM", back_populates="llm_invocation_metrics")
+
+
+class LLMScoreORM(Base):
+    __tablename__ = "llm_scores"
+    __natural_key__ = ("parser_spec_id", "llm_response_id")
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+
+    parser_spec_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.parsers.id"),
+        ForeignKey("infer.parser.id"),
         nullable=False,
     )
     llm_response_text_id = Column(
@@ -313,7 +297,7 @@ class LLMScoreORM(Base):
         nullable=False,
     )
 
-    # Parsed/derived fields
+    # Derived / parsed info
     label = Column(SQLEnum(RelevanceScore, schema="public"), nullable=False)
     confidence = Column(Float, nullable=True)
     rationale = Column(Text, nullable=True)
@@ -323,34 +307,24 @@ class LLMScoreORM(Base):
 
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
+    __table_args__ = (
+        UniqueConstraint(
+            "parser_spec_id",
+            "llm_response_text_id",
+            name="uq_score_parser_response",
+        ),
+        {"schema": "infer"},
+    )
+
     # Relationships
-    parser = relationship("ParserORM")
-    llm_response_text = relationship("LLMResponseTextORM")
+    parser_spec = relationship("ParserSpecORM", back_populates="scores")
+    llm_response_text = relationship("LLMResponseTextORM", back_populates="scores")
     llm_judgements = relationship("LLMJudgementORM", back_populates="llm_score")
 
 
 class LLMJudgementORM(Base):
-    """Single LLM judgement on a dataset sample.
-
-    Central fact table connecting:
-    - judged_dataset (which run produced this)
-    - dataset_sample (what was judged)
-    - llm_prompt_text (what was asked)
-    - llm_response_text (what was returned)
-    - llm_score (parsed result)
-
-    Includes inlined invocation metrics (latency, tokens, cost, etc.).
-    """
     __tablename__ = "llm_judgements"
-    __natural_key__ = ("judged_dataset_id", "dataset_sample_id")
-    __table_args__ = (
-        UniqueConstraint(
-            "judged_dataset_id",
-            "dataset_sample_id",
-            name="uq_judgement_dataset_sample",
-        ),
-        {"schema": "infer"},
-    )
+    __natural_key__ = ("judged_dataset_id", "llm_prompt_text_id")
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
@@ -359,20 +333,14 @@ class LLMJudgementORM(Base):
         ForeignKey("infer.judged_datasets.id", ondelete="CASCADE"),
         nullable=False,
     )
-    dataset_sample_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("ingest.dataset_samples.id"),
-        nullable=False,
-        comment="Which sample from the ingest dataset was judged"
-    )
     llm_prompt_text_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_prompt_texts.id"),
+        ForeignKey("infer.llm_prompt.id"),
         nullable=False,
     )
-    llm_response_text_id = Column(
+    llm_invocation_metrics_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_response_texts.id"),
+        ForeignKey("infer.llm_invocation_metrics.id"),
         nullable=False,
     )
     llm_score_id = Column(
@@ -381,19 +349,19 @@ class LLMJudgementORM(Base):
         nullable=False,
     )
 
-    # Inlined invocation metrics (previously separate table)
-    latency_ms = Column(Float, nullable=False)
-    retries = Column(Integer, nullable=False, default=0)
-    cost_estimate_usd = Column(Float, nullable=True)
-    generation_id = Column(String(255), nullable=True, comment="Provider-specific generation/request ID")
-    prompt_tokens = Column(Integer, nullable=True)
-    completion_tokens = Column(Integer, nullable=True)
-    total_tokens = Column(Integer, nullable=True)
-
     created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "judged_dataset_id",
+            "llm_prompt_text_id",
+            name="uq_judgement_identity",
+        ),
+        {"schema": "infer"},
+    )
 
     # Relationships
     judged_dataset = relationship("JudgedDatasetORM", back_populates="llm_judgements")
     llm_prompt_text = relationship("LLMPromptTextORM", back_populates="llm_judgements")
-    llm_response_text = relationship("LLMResponseTextORM", back_populates="llm_judgements")
+    llm_invocation_metrics = relationship("LLMInvocationMetricsORM", back_populates="llm_judgements")
     llm_score = relationship("LLMScoreORM", back_populates="llm_judgements")

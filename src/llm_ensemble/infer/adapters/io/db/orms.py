@@ -284,48 +284,33 @@ class LLMResponseTextORM(Base):
 
 
 class LLMScoreORM(Base):
-    """Parsed and structured LLM score from response text.
+    """Parsed and structured LLM score - pure value object.
 
-    Represents the result of applying a parser to a response text.
-    Deduplicated by (parser_id, llm_response_text_id).
+    Deduplicated by content (label, confidence, rationale).
+    No foreign keys - judgement connects response_text → score separately.
     """
     __tablename__ = "llm_scores"
-    __natural_key__ = ("parser_id", "llm_response_text_id")
+    __natural_key__ = ("label", "confidence", "rationale")
     __table_args__ = (
         UniqueConstraint(
-            "parser_id",
-            "llm_response_text_id",
-            name="uq_score_parser_response",
+            "label",
+            "confidence",
+            "rationale",
+            name="uq_score_content",
         ),
         {"schema": "infer"},
     )
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
-    parser_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.parsers.id"),
-        nullable=False,
-    )
-    llm_response_text_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.llm_response_texts.id"),
-        nullable=False,
-    )
-
     # Parsed/derived fields
     label = Column(SQLEnum(RelevanceScore, schema="public"), nullable=False)
     confidence = Column(Float, nullable=True)
     rationale = Column(Text, nullable=True)
 
-    # Parser warnings as JSONB array (data quality issues during parsing)
-    parser_warnings = Column(ARRAY(JSONB), nullable=False, default=[])
-
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    parser = relationship("ParserORM")
-    llm_response_text = relationship("LLMResponseTextORM")
     llm_judgements = relationship("LLMJudgementORM", back_populates="llm_score")
 
 
@@ -361,7 +346,7 @@ class LLMJudgementORM(Base):
     )
     dataset_sample_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("ingest.dataset_samples.id"),
+        ForeignKey("ingest.dataset_sample.id"),
         nullable=False,
         comment="Which sample from the ingest dataset was judged"
     )
@@ -389,6 +374,9 @@ class LLMJudgementORM(Base):
     prompt_tokens = Column(Integer, nullable=True)
     completion_tokens = Column(Integer, nullable=True)
     total_tokens = Column(Integer, nullable=True)
+
+    # Parser warnings as JSONB array (data quality issues during parsing)
+    parser_warnings = Column(ARRAY(JSONB), nullable=False, default=[])
 
     created_at = Column(DateTime, nullable=False, default=utcnow)
 

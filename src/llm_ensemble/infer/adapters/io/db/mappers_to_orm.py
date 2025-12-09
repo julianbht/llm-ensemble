@@ -40,16 +40,8 @@ from llm_ensemble.infer.adapters.io.db.orms import (
     JudgedDatasetORM,
 )
 from llm_ensemble.libs.db import (
-    compute_provider_uuid,
-    compute_model_config_uuid,
-    compute_prompt_template_uuid,
-    compute_parser_spec_uuid_from_name,
-    compute_llm_response_text_uuid,
-    compute_llm_invocation_metrics_uuid,
-    compute_llm_score_uuid,
     compute_judged_dataset_uuid,
     compute_infer_run_uuid,
-    compute_llm_judgement_uuid,
 )
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
@@ -58,19 +50,18 @@ from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 # Provider Mappers
 # ============================================================================
 
-def provider_name_to_orm(provider_name: str) -> ProviderORM:
-    """Convert provider name string to ProviderORM.
+def provider_to_orm(provider: "Provider") -> ProviderORM:
+    """Convert Provider domain object to ProviderORM.
 
     Args:
-        provider_name: Provider name (e.g., 'openrouter', 'ollama', 'hf')
+        provider: Provider domain object (already has random UUID)
 
     Returns:
         ProviderORM model ready for persistence
     """
-    provider_id = compute_provider_uuid(provider_name)
     return ProviderORM(
-        id=provider_id,
-        name=provider_name,
+        id=provider.id,
+        name=provider.name,
     )
 
 
@@ -99,7 +90,7 @@ def model_config_to_orm(model_cfg: ModelConfig) -> ModelConfigORM:
         additional_params["response_format"] = model_cfg.model_specs.response_format
 
     return ModelConfigORM(
-        id=compute_model_config_uuid(model_cfg.name_hint),
+        id=model_cfg.id,
         name=model_cfg.name_hint,
         model_id=model_cfg.model_name,
         context_window=model_cfg.model_specs.context_window,
@@ -118,20 +109,19 @@ def model_config_to_orm(model_cfg: ModelConfig) -> ModelConfigORM:
 # PromptTemplate Mappers
 # ============================================================================
 
-def prompt_name_to_template_orm(prompt_name: str, template_text: str) -> PromptTemplateORM:
-    """Convert prompt name and template text to PromptTemplateORM.
+def prompt_template_to_orm(prompt_template: "PromptTemplate") -> PromptTemplateORM:
+    """Convert PromptTemplate domain object to PromptTemplateORM.
 
     Args:
-        prompt_name: Prompt name from registry (e.g., 'thomas-simple')
-        template_text: Template text (loaded from builder)
+        prompt_template: PromptTemplate domain object (already has random UUID)
 
     Returns:
         PromptTemplateORM model ready for persistence
     """
     return PromptTemplateORM(
-        id=compute_prompt_template_uuid(prompt_name),
-        name=prompt_name,
-        template_text=template_text,
+        id=prompt_template.id,
+        name=prompt_template.name,
+        template_text=prompt_template.template_text,
     )
 
 
@@ -139,18 +129,18 @@ def prompt_name_to_template_orm(prompt_name: str, template_text: str) -> PromptT
 # ParserSpec Mappers
 # ============================================================================
 
-def parser_name_to_orm(parser_name: str) -> ParserORM:
-    """Convert parser name to ParserSpecORM.
+def parser_to_orm(parser: "Parser") -> ParserORM:
+    """Convert Parser domain object to ParserORM.
 
     Args:
-        parser_name: Parser name from registry (e.g., 'thomas-simple')
+        parser: Parser domain object (already has random UUID)
 
     Returns:
-        ParserSpecORM model ready for persistence
+        ParserORM model ready for persistence
     """
     return ParserORM(
-        id=compute_parser_spec_uuid_from_name(parser_name),
-        name=parser_name,
+        id=parser.id,
+        name=parser.name,
     )
 
 
@@ -176,7 +166,7 @@ def infer_run_info_to_orm(
         InferRunORM model ready for persistence (without judged_dataset_id)
     """
     return InferRunORM(
-        id=compute_infer_run_uuid(run_info.run_name),
+        id=run_info.id,
         run_name=run_info.run_name,
         run_type=run_info.run_type,
         config_names=config_names,

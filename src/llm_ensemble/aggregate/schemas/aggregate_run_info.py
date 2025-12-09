@@ -5,6 +5,8 @@ starts and remains immutable throughout execution.
 """
 
 from __future__ import annotations
+import uuid
+from uuid import UUID
 from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
@@ -15,6 +17,7 @@ class AggregateRunInfo(RunInfo):
     """Runtime context for aggregate CLI runs.
 
     Extends the base RunInfo with aggregate-specific configuration metadata:
+    - Random UUID for this run
     - Which aggregation strategy and I/O config were used
     - Full I/O configuration object for reproducibility
     - Input parameters (run names from infer runs)
@@ -26,6 +29,12 @@ class AggregateRunInfo(RunInfo):
     This is separate from AggregateRunSummary which contains post-run metrics like
     judgement counts, tie statistics, and warnings summary.
     """
+
+    # Random UUID
+    id: UUID = Field(
+        default_factory=uuid.uuid4,
+        description="Random UUID for this run"
+    )
 
     # Override cli_name from base RunInfo to automatically set it to "aggregate"
     cli_name: str = Field(

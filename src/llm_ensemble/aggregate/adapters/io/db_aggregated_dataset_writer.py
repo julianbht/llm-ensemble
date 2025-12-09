@@ -29,7 +29,6 @@ from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.db import (
     get_engine,
     get_session,
-    compute_aggregate_run_uuid,
 )
 from llm_ensemble.aggregate.schemas.orms_normalized import (
     AggregationStrategyORM,

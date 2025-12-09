@@ -2,17 +2,14 @@
 
 This is the output of the aggregate pipeline and represents the aggregated results.
 Similar to NormalizedDataset in ingest and JudgedDataset in infer.
-
-Idempotent design: Multiple aggregate runs can produce the same AggregatedDataset
-if they aggregate the same set of samples (identified by fingerprint).
 """
 
 from __future__ import annotations
-from uuid import UUID
+import hashlib
+from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
 from llm_ensemble.aggregate.schemas.aggregated_vote import AggregatedVote
-from llm_ensemble.libs.db import compute_aggregated_dataset_uuid, compute_aggregated_dataset_fingerprint
 
 
 class AggregatedDataset(BaseModel):
@@ -21,19 +18,16 @@ class AggregatedDataset(BaseModel):
     The fingerprint is computed from the sorted list of dataset_sample IDs.
     This identifies which query-document pairs were aggregated, independent of
     which aggregation strategy was used.
-
-    Idempotent: Multiple aggregate runs aggregating the same samples will produce
-    the same AggregatedDataset (same fingerprint → same UUID).
     """
 
     id: UUID = Field(
-        ...,
-        description="Deterministic UUID computed from fingerprint"
+        default_factory=uuid4,
+        description="Random UUID identifier"
     )
 
     fingerprint: str = Field(
-        ...,
-        description="SHA256 hash of sorted dataset_sample IDs (deterministic identifier)"
+        default="",
+        description="SHA256 hash of sorted dataset_sample IDs (computed automatically)"
     )
 
     aggregated_votes: list[AggregatedVote] = Field(
@@ -46,13 +40,13 @@ class AggregatedDataset(BaseModel):
         cls,
         aggregated_votes: list[AggregatedVote]
     ) -> "AggregatedDataset":
-        """Create AggregatedDataset with computed fingerprint and ID.
+        """Create AggregatedDataset with computed fingerprint.
 
         Args:
             aggregated_votes: List of aggregated votes
 
         Returns:
-            AggregatedDataset with computed fingerprint and deterministic ID
+            AggregatedDataset with computed fingerprint and random UUID
 
         Note: Fingerprint is computed from sorted dataset_sample IDs, which
         identifies which query-document pairs were aggregated.
@@ -69,13 +63,10 @@ class AggregatedDataset(BaseModel):
         sorted_sample_ids = sorted(dataset_sample_ids)
 
         # Compute fingerprint from sorted dataset_sample IDs
-        fingerprint = compute_aggregated_dataset_fingerprint(sorted_sample_ids)
-
-        # Compute deterministic UUID from fingerprint
-        dataset_id = compute_aggregated_dataset_uuid(fingerprint)
+        sample_ids_str = ":".join(str(sid) for sid in sorted_sample_ids)
+        fingerprint = hashlib.sha256(sample_ids_str.encode()).hexdigest()
 
         return cls(
-            id=dataset_id,
             fingerprint=fingerprint,
             aggregated_votes=aggregated_votes,
         )

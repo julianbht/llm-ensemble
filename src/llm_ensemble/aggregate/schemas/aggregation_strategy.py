@@ -5,10 +5,8 @@ Created from adapter's strategy_name property.
 """
 
 from __future__ import annotations
-from uuid import UUID
+from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
-
-from llm_ensemble.libs.db import compute_aggregation_spec_uuid
 
 
 class AggregationStrategy(BaseModel):
@@ -21,24 +19,11 @@ class AggregationStrategy(BaseModel):
     """
 
     id: UUID = Field(
-        ...,
-        description="Deterministic UUID computed from strategy name"
+        default_factory=uuid4,
+        description="Random UUID identifier"
     )
 
     name: str = Field(
         ...,
         description="Strategy name (e.g., 'majority_vote')"
     )
-
-    @classmethod
-    def create(cls, strategy_name: str) -> "AggregationStrategy":
-        """Create AggregationStrategy entity with computed ID.
-
-        Args:
-            strategy_name: Natural key for the strategy (e.g., 'majority_vote')
-
-        Returns:
-            AggregationStrategy with computed ID
-        """
-        strategy_id = compute_aggregation_spec_uuid(strategy_name)
-        return cls(id=strategy_id, name=strategy_name)

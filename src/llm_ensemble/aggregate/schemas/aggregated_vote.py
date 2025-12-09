@@ -8,20 +8,19 @@ This replaces the old AggregatedScore schema to match the new ORM structure.
 
 from __future__ import annotations
 from typing import Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.schemas import RelevanceScore
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.schemas.aggregation_strategy import AggregationStrategy
-from llm_ensemble.libs.db import compute_aggregated_vote_uuid
 
 
 class AggregatedVote(BaseModel):
     """Result from applying an ensemble strategy to multiple model predictions.
 
     Contains:
-    - id: Deterministic UUID from (dataset_sample_id, aggregation_strategy.id)
+    - id: Random UUID identifier
     - aggregation_strategy: Which aggregation strategy was used (full entity)
     - llm_judgements: All LLM judgements that were aggregated (full objects, all for same dataset_sample)
     - final_label: Consensus label chosen by the strategy
@@ -30,17 +29,11 @@ class AggregatedVote(BaseModel):
 
     Design: Stores full LLMJudgement objects for self-contained domain model.
     Each LLMJudgement comes from a different judged_dataset (different model config).
-
-    Globally unique: An AggregatedVote represents applying a specific strategy to
-    judgements for a specific sample. It can belong to multiple AggregatedDatasets.
-
-    Natural key: (dataset_sample_id, aggregation_strategy.id)
-    where dataset_sample_id is extracted from llm_judgements[0].llm_prompt.dataset_sample.id
     """
 
     id: UUID = Field(
-        ...,
-        description="Deterministic UUID computed from dataset_sample_id and aggregation_strategy.id"
+        default_factory=uuid4,
+        description="Random UUID identifier"
     )
 
     aggregation_strategy: AggregationStrategy = Field(
@@ -86,7 +79,7 @@ class AggregatedVote(BaseModel):
         final_confidence: Optional[float] = None,
         final_reasoning: Optional[str] = None,
     ) -> "AggregatedVote":
-        """Create AggregatedVote with computed ID.
+        """Create AggregatedVote with validation.
 
         Args:
             aggregation_strategy: Which aggregation strategy was used (full entity)
@@ -96,7 +89,7 @@ class AggregatedVote(BaseModel):
             final_reasoning: Explanation of how consensus was reached
 
         Returns:
-            AggregatedVote with deterministic UUID
+            AggregatedVote with random UUID
 
         Raises:
             ValueError: If llm_judgements is empty or judgements have different dataset_sample_ids
@@ -115,14 +108,7 @@ class AggregatedVote(BaseModel):
                     f"Expected {dataset_sample_id}, got {judgement.llm_prompt.dataset_sample.id}"
                 )
 
-        # Compute deterministic UUID from dataset_sample_id and aggregation_strategy.id
-        aggregated_vote_id = compute_aggregated_vote_uuid(
-            dataset_sample_id,
-            aggregation_strategy.id
-        )
-
         return cls(
-            id=aggregated_vote_id,
             aggregation_strategy=aggregation_strategy,
             llm_judgements=llm_judgements,
             final_label=final_label,

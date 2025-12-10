@@ -1,6 +1,7 @@
 """LLMJudgement entity for the infer CLI.
 
-A complete LLM relevance judgement combining prompt, metrics, and score.
+A complete LLM relevance judgement - mirrors LLMJudgementORM structure.
+Configs stored at JudgedDataset level, not on individual judgements.
 """
 
 from __future__ import annotations
@@ -9,34 +10,31 @@ from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
+from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.schemas.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
-from llm_ensemble.infer.schemas.entities.provider import Provider
-from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.warnings import BaseWarning
 
 
 class LLMJudgement(BaseModel):
     """A complete LLM relevance judgement - pure domain model.
 
-    Nested structure capturing complete context:
-    - model_config: Full model configuration used for inference
-    - provider: Which service/platform ran the inference
-    - llm_prompt: Contains the dataset_sample and prompt_template
-    - invocation_metrics: Performance data from the LLM API call
-    - llm_score: Contains the llm_response_text and parser
+    Mirrors LLMJudgementORM structure with embedded objects (not IDs):
+    - dataset_sample: The query-document pair being judged
+    - prompt_text: The rendered prompt sent to the LLM
+    - response_text: The raw LLM response
+    - llm_invocation_metrics: Performance data (latency, cost, tokens)
+    - llm_score: Parsed score (label, confidence, rationale, warnings)
 
-    This captures the complete data lineage for a single inference:
-    what was judged (in llm_prompt.dataset_sample), what prompt was sent,
-    what model and provider were used, what response came back,
-    how the call performed, and what score was extracted.
+    Configurations (ModelConfig, AdapterConfig with PromptBuilder/Parser/Provider)
+    are NOT stored here - they live at the JudgedDataset level.
 
-    The structure mirrors the inference workflow:
-    1. Build prompt from dataset sample → LLMPrompt (with prompt_template)
-    2. Invoke LLM → response_text + LLMInvocationMetrics
-    3. Parse response → LLMScore (with parser)
-    4. Create judgement with full context
+    This captures the complete data for a single inference:
+    - What was judged (dataset_sample)
+    - What prompt was sent (prompt_text)
+    - What response came back (response_text)
+    - How the call performed (llm_invocation_metrics)
+    - What score was extracted (llm_score)
     """
 
     id: UUID = Field(
@@ -44,19 +42,19 @@ class LLMJudgement(BaseModel):
         description="Random UUID for this judgement"
     )
 
-    model_cfg: ModelConfig = Field(
+    dataset_sample: DatasetSample = Field(
         ...,
-        description="Complete model configuration used for this judgement"
+        description="The query-document pair being judged"
     )
 
-    llm_provider: Provider = Field(
+    prompt_text: str = Field(
         ...,
-        description="Provider/service that executed the inference"
+        description="The rendered prompt text sent to the LLM"
     )
 
-    llm_prompt: LLMPrompt = Field(
+    response_text: str = Field(
         ...,
-        description="The prompt sent to the LLM (contains dataset_sample and prompt_template)"
+        description="The raw LLM response text"
     )
 
     llm_invocation_metrics: LLMInvocationMetrics = Field(
@@ -67,7 +65,7 @@ class LLMJudgement(BaseModel):
     llm_score: Optional[LLMScore] = Field(
         None,
         description=(
-            "The parsed score (contains llm_response_text, parser, and label/confidence/rationale). "
+            "The parsed score (label/confidence/rationale/warnings). "
             "None if response parsing completely failed."
         )
     )

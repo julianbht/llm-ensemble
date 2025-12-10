@@ -1,7 +1,7 @@
 """JudgedDataset - set of LLM judgements produced during inference.
 
 This is the output of the infer pipeline and represents the actual judgements
-from a single model configuration.
+from a single model configuration and adapter configuration.
 
 Provenance to input NormalizedDataset is tracked via:
   JudgedDataset → InferRun → IngestRun → NormalizedDataset
@@ -17,14 +17,18 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.entities.adapter_config import AdapterConfig
+from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 
 
 class JudgedDataset(BaseModel):
-    """Set of LLM judgements produced during inference with a single model config.
+    """Set of LLM judgements produced during inference.
 
-    The sample_fingerprint is computed from the sorted list of dataset_sample IDs
-    (via llm_judgement → llm_prompt_text → dataset_sample).
-    This identifies which samples were judged, independent of model/prompt used.
+    Captures both model configuration (which model) and adapter configuration
+    (which prompt builder, parser, provider) used to produce all judgements.
+
+    The sample_fingerprint is computed from the sorted list of dataset_sample IDs.
+    This identifies which samples were judged, independent of model/adapters used.
 
     Provenance to input NormalizedDataset is tracked via:
       JudgedDataset → InferRun → IngestRun → NormalizedDataset
@@ -37,14 +41,22 @@ class JudgedDataset(BaseModel):
         default_factory=uuid.uuid4,
         description="Random UUID for this dataset"
     )
-    model_config_id: UUID = Field(
+
+    model_config: ModelConfig = Field(
         ...,
-        description="Which model configuration was used for all judgements"
+        description="Model configuration used for all judgements in this dataset"
     )
+
+    adapter_config: AdapterConfig = Field(
+        ...,
+        description="Adapter configuration (prompt builder, parser, provider) used for all judgements"
+    )
+
     sample_fingerprint: str = Field(
         ...,
         description="SHA256 hash of sorted dataset_sample IDs (deterministic identifier)"
     )
+
     llm_judgements: list[LLMJudgement] = Field(
         ...,
         description="LLM judgements, one per dataset_sample"

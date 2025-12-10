@@ -8,6 +8,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
+from llm_ensemble.infer.schemas.entities.parser import Parser
 
 
 class ResponseParserPort(ABC):
@@ -17,6 +18,7 @@ class ResponseParserPort(ABC):
     from raw LLM response text. The adapter is responsible for:
     1. Parsing the response text (internal implementation detail)
     2. Constructing and returning complete LLMScore entities
+    3. Providing metadata about the parser (via get_parser())
 
     This follows proper hexagonal architecture - adapters (outer layer)
     depend on domain entities (inner layer), translating external concerns
@@ -28,15 +30,23 @@ class ResponseParserPort(ABC):
         """Parse LLM response and create LLMScore domain entity.
 
         Extracts structured data from the raw response text and constructs
-        an LLMScore domain entity with all necessary context (parser metadata,
-        extracted fields, warnings).
+        an LLMScore domain entity with parsed fields and warnings.
 
         Args:
             raw_text: Raw text response from the LLM
 
         Returns:
-            LLMScore domain entity with parsed fields and parser metadata.
+            LLMScore domain entity with parsed fields (no parser metadata).
             All parsed fields may be None if parsing failed.
             Never raises exceptions - always returns a result with warnings.
+        """
+        pass
+
+    @abstractmethod
+    def get_parser(self) -> Parser:
+        """Get Parser metadata for this adapter.
+
+        Returns:
+            Parser entity with id and name
         """
         pass

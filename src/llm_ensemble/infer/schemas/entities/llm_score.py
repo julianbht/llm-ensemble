@@ -1,6 +1,7 @@
 """LLMScore entity for the infer CLI.
 
 Parsed relevance assessment extracted from LLM response.
+Mirrors LLMScoreORM structure - just the parsed fields.
 """
 
 from __future__ import annotations
@@ -10,32 +11,23 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.infer.schemas.warnings import BaseWarning
-from llm_ensemble.infer.schemas.entities.parser import Parser
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
 class LLMScore(BaseModel):
     """Parsed relevance assessment extracted from LLM response.
 
-    Captures the semantic relationship: score is parsed FROM llm_response_text
-    using a specific parser.
     This represents the structured score that a ResponseParser extracts
     from raw LLM output text. All fields are optional to handle parse failures.
+
+    The parser used and the response text are not stored here - they are:
+    - parser: stored in AdapterConfig (at JudgedDataset level)
+    - response_text: stored directly on LLMJudgement
     """
 
     id: UUID = Field(
         default_factory=uuid.uuid4,
         description="Random UUID for this score"
-    )
-
-    parser: Parser = Field(
-        ...,
-        description="The parser used to extract this score from the response"
-    )
-
-    llm_response_text: str = Field(
-        ...,
-        description="The raw LLM response text that was parsed to extract this score"
     )
 
     label: Optional[RelevanceScore] = Field(

@@ -4,7 +4,9 @@ Flat configuration for LLM models matching the database ORM structure.
 """
 
 from __future__ import annotations
+import uuid
 from typing import Optional, Any, Dict
+from uuid import UUID
 from pydantic import Field
 
 from llm_ensemble.libs.schemas.base_config import BaseConfig
@@ -28,6 +30,11 @@ class ModelConfig(BaseConfig):
             stop: ["END"]
             response_format: {"type": "json_object"}
     """
+
+    id: UUID = Field(
+        default_factory=uuid.uuid4,
+        description="Random UUID for this model config"
+    )
 
     # Model identity
     model_id: str = Field(

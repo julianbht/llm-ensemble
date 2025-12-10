@@ -67,7 +67,7 @@ def provider_to_orm(provider: Provider) -> ProviderORM:
 def model_config_to_orm(model_cfg: ModelConfig) -> ModelConfigORM:
     """Convert ModelConfig to ModelConfigORM.
 
-    Collapses model identity, capabilities, and inference params into single ORM.
+    Direct 1:1 mapping from flat domain object to flat ORM.
 
     Args:
         model_cfg: ModelConfig object (already has random UUID)
@@ -75,26 +75,19 @@ def model_config_to_orm(model_cfg: ModelConfig) -> ModelConfigORM:
     Returns:
         ModelConfigORM model ready for persistence
     """
-    # Prepare additional_params (catch-all for non-explicit fields)
-    additional_params = model_cfg.model_specs.additional_params.copy() if model_cfg.model_specs.additional_params else {}
-    if model_cfg.model_specs.stop:
-        additional_params["stop"] = model_cfg.model_specs.stop
-    if model_cfg.model_specs.response_format:
-        additional_params["response_format"] = model_cfg.model_specs.response_format
-
     return ModelConfigORM(
         id=model_cfg.id,
-        name=model_cfg.name_hint,
-        model_id=model_cfg.model_name,
-        context_window=model_cfg.model_specs.context_window,
-        capabilities=model_cfg.model_specs.capabilities if model_cfg.model_specs.capabilities else None,
-        temperature=model_cfg.model_specs.temperature,
-        max_tokens=model_cfg.model_specs.max_tokens,
-        top_p=model_cfg.model_specs.top_p,
-        frequency_penalty=model_cfg.model_specs.frequency_penalty,
-        presence_penalty=model_cfg.model_specs.presence_penalty,
-        seed=model_cfg.model_specs.seed,
-        additional_params=additional_params if additional_params else None,
+        name=model_cfg.name,
+        model_id=model_cfg.model_id,
+        context_window=model_cfg.context_window,
+        capabilities=model_cfg.capabilities,
+        temperature=model_cfg.temperature,
+        max_tokens=model_cfg.max_tokens,
+        top_p=model_cfg.top_p,
+        frequency_penalty=model_cfg.frequency_penalty,
+        presence_penalty=model_cfg.presence_penalty,
+        seed=model_cfg.seed,
+        additional_params=model_cfg.additional_params,
     )
 
 

@@ -1,34 +1,20 @@
-model_id: nemotron-nano-9b-v2:free
-provider: openrouter
-context_window: 8192
+# Short name for run ID generation
+name_hint: nemotron-nano-9b-v2
 
-# Core inference parameters (all set to null - configure via CLI overrides if needed)
+# Model identifier (passed directly to provider API)
+model_id: nvidia/nemotron-nano-9b-v2:free
+
+# Model capabilities
+context_window: 8192
+capabilities: {}
+
+# Core inference parameters
 temperature: null
 max_tokens: null
 top_p: null
 frequency_penalty: null
 presence_penalty: null
 seed: null
-stop: null
 
-# Output control
-response_format: null
-
-# Advanced parameters
+# Additional provider-specific parameters (stop sequences, response_format, etc.)
 additional_params: {}
-
-# Model capabilities
-capabilities: {}
-
-# Provider-specific fields
-# HuggingFace (not used for this model)
-hf_endpoint_url: null
-hf_model_name: null
-
-# OpenRouter configuration (required for OpenRouter provider)
-openrouter_model_id: google/gemma-3n-e2b-it:free
-# Pricing information (auto-updated from OpenRouter API)
-pricing:
-  prompt_cost_per_1m_tokens: 0.0
-  completion_cost_per_1m_tokens: 0.0
-  last_updated: "2025-11-16T14:59:21.945392+00:00"

@@ -104,40 +104,38 @@ class InferenceService:
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
-        # Get Provider object from LLM provider port
-        llm_provider = self.llm_provider.get_provider()
-
         # Open writer for streaming
         with self.output_adapter.open(run_dir, run_info, normalized_dataset) as writer:
-            
+
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
 
-                # Build LLMPrompt entity 
-                llm_prompt = self.prompt_builder.build_prompt(dataset_sample)
+                # Build prompt text
+                prompt_text = self.prompt_builder.build_prompt(dataset_sample)
 
                 # Run inference
                 self.logger.info(InferLogEvent.SENDING_REQUEST)
                 raw_response_text, llm_invocation_metrics = self.llm_provider.infer(
-                    llm_prompt.prompt_text,
+                    prompt_text,
                     model_config
                 )
 
-                # Parse response
-                llm_score = self.response_parser.parse(raw_response_text)
+                # Parse response (returns tuple of score and warnings)
+                llm_score, parser_warnings = self.response_parser.parse(raw_response_text)
 
-                # Create judgement with entities we have gathered
+                # Create judgement with flat structure (no configs)
                 judgement = LLMJudgement(
-                    model_cfg=model_config,
-                    llm_provider=llm_provider,
-                    llm_prompt=llm_prompt,
+                    dataset_sample=dataset_sample,
+                    prompt_text=prompt_text,
+                    response_text=raw_response_text,
                     llm_invocation_metrics=llm_invocation_metrics,
                     llm_score=llm_score,
+                    parser_warnings=parser_warnings,
                 )
 
                 # Log each completed judgement
                 extracted_score = judgement.llm_score.label.value if judgement.llm_score and judgement.llm_score.label else "null"
-                gold_score = judgement.llm_prompt.dataset_sample.judging_sample.gold_score.value
+                gold_score = judgement.dataset_sample.judging_sample.gold_score.value
                 latency_s = judgement.llm_invocation_metrics.latency_ms / 1000
                 self.logger.info(
                     InferLogEvent.RESPONSE_PARSED,
@@ -174,8 +172,8 @@ class InferenceService:
         # Build warnings summary from all judgements
         warnings_summary: dict[str, int] = {}
         for judgement in llm_judgements:
-            # Aggregate warnings from all stages (request + response + score)
-            for warning in judgement.get_all_warnings():
+            # Aggregate parser warnings from all judgements
+            for warning in judgement.parser_warnings:
                 warning_type = warning.__class__.__name__
                 warnings_summary[warning_type] = warnings_summary.get(warning_type, 0) + 1
 

@@ -10,7 +10,6 @@ from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from llm_ensemble.infer.schemas.warnings import BaseWarning
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
@@ -20,9 +19,13 @@ class LLMScore(BaseModel):
     This represents the structured score that a ResponseParser extracts
     from raw LLM output text. All fields are optional to handle parse failures.
 
-    The parser used and the response text are not stored here - they are:
+    Parser warnings are NOT stored here - they belong on LLMJudgement since
+    they're about the judgement process (not the score result).
+
+    The parser used and the response text are also not stored here - they are:
     - parser: stored in AdapterConfig (at JudgedDataset level)
     - response_text: stored directly on LLMJudgement
+    - warnings: stored on LLMJudgement
     """
 
     id: UUID = Field(
@@ -49,9 +52,4 @@ class LLMScore(BaseModel):
     rationale: Optional[str] = Field(
         None,
         description="LLM's explanation for its relevance judgement. None if not parseable."
-    )
-
-    warnings: list[BaseWarning] = Field(
-        default_factory=list,
-        description="Parser-level warnings: parse errors, missing fields, validation issues, etc."
     )

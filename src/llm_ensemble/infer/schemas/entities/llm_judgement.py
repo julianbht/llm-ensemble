@@ -65,20 +65,12 @@ class LLMJudgement(BaseModel):
     llm_score: Optional[LLMScore] = Field(
         None,
         description=(
-            "The parsed score (label/confidence/rationale/warnings). "
+            "The parsed score (label/confidence/rationale). "
             "None if response parsing completely failed."
         )
     )
 
-    def get_all_warnings(self) -> list[BaseWarning]:
-        """Get all warnings from parsing stage.
-
-        Returns parser warnings from llm_score (if score exists).
-
-        Returns:
-            List of parser warnings from this judgement
-        """
-        if self.llm_score is not None:
-            return list(self.llm_score.warnings)
-
-        return []
+    parser_warnings: list[BaseWarning] = Field(
+        default_factory=list,
+        description="Parser-level warnings: parse errors, missing fields, validation issues, etc."
+    )

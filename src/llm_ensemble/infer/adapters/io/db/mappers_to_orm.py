@@ -4,11 +4,10 @@ This module provides conversion functions for mapping from Pydantic domain objec
 to SQLAlchemy ORM models for persistence.
 
 Design principles:
-- Domain objects are the source of truth (LLMJudgement, ModelConfig, PromptConfig)
-- Mappers convert domain → ORMs for SQL persistence (INSERT operations)
-- Mappers compute UUIDs based on ORM natural keys
+- Domain objects are the source of truth and already have UUIDs
+- Mappers are simple pass-through converters (no UUID computation)
 - Stateless pure functions
-- Used by SqlJudgementWriter for persisting inference results
+- Used by DBWriter for persisting inference results
 
 The domain layer works with Pydantic models (LLMJudgement, configs).
 The persistence layer works with SQLAlchemy ORMs.
@@ -20,27 +19,24 @@ from uuid import UUID
 
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
-from llm_ensemble.infer.schemas.entities.llm_judgement import (
-    LLMJudgement,
-)
-from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
-from llm_ensemble.infer.schemas.entities.llm_invocation_metrics import LLMInvocationMetrics
+from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
+from llm_ensemble.infer.schemas.entities.prompt_builder import PromptBuilder
+from llm_ensemble.infer.schemas.entities.parser import Parser
+from llm_ensemble.infer.schemas.entities.provider import Provider
+from llm_ensemble.infer.schemas.entities.adapter_config import AdapterConfig
 from llm_ensemble.infer.adapters.io.db.orms import (
     ProviderORM,
     ModelConfigORM,
-    PromptTemplateORM,
+    PromptBuilderORM,
     ParserORM,
+    AdapterConfigORM,
     InferRunORM,
-    LLMPromptORM,
+    LLMPromptTextORM,
     LLMResponseTextORM,
-    LLMInvocationMetricsORM,
     LLMScoreORM,
     LLMJudgementORM,
     JudgedDatasetORM,
-)
-from llm_ensemble.libs.db import (
-    compute_judged_dataset_uuid,
 )
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
@@ -49,7 +45,7 @@ from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 # Provider Mappers
 # ============================================================================
 
-def provider_to_orm(provider: "Provider") -> ProviderORM:
+def provider_to_orm(provider: Provider) -> ProviderORM:
     """Convert Provider domain object to ProviderORM.
 
     Args:
@@ -72,11 +68,9 @@ def model_config_to_orm(model_cfg: ModelConfig) -> ModelConfigORM:
     """Convert ModelConfig to ModelConfigORM.
 
     Collapses model identity, capabilities, and inference params into single ORM.
-    No separate Model entity - ModelConfig is the complete configuration.
-    Provider is tracked on JudgedDataset (runtime fact), not here (configuration).
 
     Args:
-        model_cfg: ModelConfig object
+        model_cfg: ModelConfig object (already has random UUID)
 
     Returns:
         ModelConfigORM model ready for persistence
@@ -105,34 +99,34 @@ def model_config_to_orm(model_cfg: ModelConfig) -> ModelConfigORM:
 
 
 # ============================================================================
-# PromptTemplate Mappers
+# PromptBuilder Mappers
 # ============================================================================
 
-def prompt_template_to_orm(prompt_template: "PromptTemplate") -> PromptTemplateORM:
-    """Convert PromptTemplate domain object to PromptTemplateORM.
+def prompt_builder_to_orm(prompt_builder: PromptBuilder) -> PromptBuilderORM:
+    """Convert PromptBuilder domain object to PromptBuilderORM.
 
     Args:
-        prompt_template: PromptTemplate domain object (already has random UUID)
+        prompt_builder: PromptBuilder domain object (already has UUID)
 
     Returns:
-        PromptTemplateORM model ready for persistence
+        PromptBuilderORM model ready for persistence
     """
-    return PromptTemplateORM(
-        id=prompt_template.id,
-        name=prompt_template.name,
-        template_text=prompt_template.template_text,
+    return PromptBuilderORM(
+        id=prompt_builder.id,
+        name=prompt_builder.name,
+        template_text=prompt_builder.template_text,
     )
 
 
 # ============================================================================
-# ParserSpec Mappers
+# Parser Mappers
 # ============================================================================
 
-def parser_to_orm(parser: "Parser") -> ParserORM:
+def parser_to_orm(parser: Parser) -> ParserORM:
     """Convert Parser domain object to ParserORM.
 
     Args:
-        parser: Parser domain object (already has random UUID)
+        parser: Parser domain object (already has UUID)
 
     Returns:
         ParserORM model ready for persistence
@@ -140,6 +134,27 @@ def parser_to_orm(parser: "Parser") -> ParserORM:
     return ParserORM(
         id=parser.id,
         name=parser.name,
+    )
+
+
+# ============================================================================
+# AdapterConfig Mappers
+# ============================================================================
+
+def adapter_config_to_orm(adapter_config: AdapterConfig) -> AdapterConfigORM:
+    """Convert AdapterConfig domain object to AdapterConfigORM.
+
+    Args:
+        adapter_config: AdapterConfig domain object (already has UUID)
+
+    Returns:
+        AdapterConfigORM model ready for persistence
+    """
+    return AdapterConfigORM(
+        id=adapter_config.id,
+        prompt_builder_id=adapter_config.prompt_builder.id,
+        parser_id=adapter_config.parser.id,
+        provider_id=adapter_config.provider.id,
     )
 
 
@@ -156,8 +171,8 @@ def infer_run_info_to_orm(
     """Convert InferRunInfo to InferRunORM.
 
     Args:
-        run_info: InferRunInfo context object
-        config_names: Config names dict {model_config, prompt_name, parser_name}
+        run_info: InferRunInfo context object (already has UUID)
+        config_names: Config names dict {model_config, prompt_builder, parser, provider}
         start_idx: Computed start index into NormalizedDataset.samples
         end_idx: Computed end index into NormalizedDataset.samples
 
@@ -183,38 +198,22 @@ def infer_run_info_to_orm(
 # LLMPromptText Mappers
 # ============================================================================
 
-def llm_prompt_to_orm(
-    llm_prompt: LLMPrompt,
-    prompt_template_id: UUID,
-    dataset_sample_id: UUID,
-) -> LLMPromptORM:
-    """Convert LLMPrompt domain object to LLMPromptTextORM.
-
-    UUID is computed from (prompt_template_id, dataset_sample_id, prompt_text).
+def llm_prompt_text_to_orm(
+    prompt_text: str,
+    prompt_text_id: UUID,
+) -> LLMPromptTextORM:
+    """Convert prompt text string to LLMPromptTextORM.
 
     Args:
-        llm_prompt: LLMPrompt domain object
-        prompt_template_id: PromptTemplate UUID (for foreign key)
-        dataset_sample_id: DatasetSample UUID (cross-schema reference to ingest.dataset_sample)
+        prompt_text: Rendered prompt text string
+        prompt_text_id: Pre-computed UUID for this prompt text (from deduplication logic)
 
     Returns:
         LLMPromptTextORM model ready for persistence
     """
-    import hashlib
-    prompt_hash = hashlib.sha256(llm_prompt.prompt_text.encode()).hexdigest()
-
-    # Natural key: (prompt_template_id, dataset_sample_id, prompt_text)
-    from uuid import uuid5, NAMESPACE_DNS
-    prompt_id = uuid5(
-        NAMESPACE_DNS,
-        f"{prompt_template_id}:{dataset_sample_id}:{prompt_hash}"
-    )
-
-    return LLMPromptORM(
-        id=prompt_id,
-        prompt_template_id=prompt_template_id,
-        dataset_sample_id=dataset_sample_id,
-        prompt_text=llm_prompt.prompt_text,
+    return LLMPromptTextORM(
+        id=prompt_text_id,
+        prompt_text=prompt_text,
     )
 
 
@@ -222,57 +221,22 @@ def llm_prompt_to_orm(
 # LLMResponseText Mappers
 # ============================================================================
 
-def llm_response_text_to_orm(llm_response_text: str) -> LLMResponseTextORM:
+def llm_response_text_to_orm(
+    response_text: str,
+    response_text_id: UUID,
+) -> LLMResponseTextORM:
     """Convert raw LLM response text to LLMResponseTextORM.
 
-    UUID is computed from llm_response_text content hash.
-
     Args:
-        llm_response_text: Raw LLM response text string
+        response_text: Raw LLM response text string
+        response_text_id: Pre-computed UUID for this response text (from deduplication logic)
 
     Returns:
         LLMResponseTextORM model ready for persistence
     """
-    response_id = compute_llm_response_text_uuid(llm_response_text)
     return LLMResponseTextORM(
-        id=response_id,
-        llm_response_text=llm_response_text,
-    )
-
-
-# ============================================================================
-# LLMInvocationMetrics Mappers
-# ============================================================================
-
-def llm_invocation_metrics_to_orm(metrics: LLMInvocationMetrics) -> LLMInvocationMetricsORM:
-    """Convert LLMInvocationMetrics domain object to LLMInvocationMetricsORM.
-
-    UUID is computed from all metric fields.
-
-    Args:
-        metrics: LLMInvocationMetrics domain object
-
-    Returns:
-        LLMInvocationMetricsORM model ready for persistence
-    """
-    metrics_id = compute_llm_invocation_metrics_uuid(
-        latency_ms=metrics.latency_ms,
-        retries=metrics.retries,
-        cost_estimate_usd=metrics.cost_estimate_usd,
-        generation_id=metrics.generation_id,
-        prompt_tokens=metrics.prompt_tokens,
-        completion_tokens=metrics.completion_tokens,
-        total_tokens=metrics.total_tokens,
-    )
-    return LLMInvocationMetricsORM(
-        id=metrics_id,
-        latency_ms=metrics.latency_ms,
-        retries=metrics.retries,
-        cost_estimate_usd=metrics.cost_estimate_usd,
-        generation_id=metrics.generation_id,
-        prompt_tokens=metrics.prompt_tokens,
-        completion_tokens=metrics.completion_tokens,
-        total_tokens=metrics.total_tokens,
+        id=response_text_id,
+        llm_response_text=response_text,
     )
 
 
@@ -282,23 +246,15 @@ def llm_invocation_metrics_to_orm(metrics: LLMInvocationMetrics) -> LLMInvocatio
 
 def llm_score_to_orm(
     llm_score: LLMScore,
-    parser_spec_id: UUID,
-    llm_response_text_id: UUID,
 ) -> LLMScoreORM:
     """Convert LLMScore domain object to LLMScoreORM.
 
-    UUID is computed from (parser_spec_id, llm_response_text_id).
-
     Args:
-        llm_score: LLMScore domain object
-        parser_spec_id: Parser spec UUID (for foreign key)
-        llm_response_text_id: LLM response text UUID (for foreign key)
+        llm_score: LLMScore domain object (already has UUID)
 
     Returns:
         LLMScoreORM model ready for persistence
     """
-    score_id = compute_llm_score_uuid(parser_spec_id, llm_response_text_id)
-
     # Handle case where label is None (parsing failed) - need default for non-nullable column
     label = llm_score.label if llm_score.label is not None else RelevanceScore.NOT_RELEVANT
 
@@ -306,13 +262,10 @@ def llm_score_to_orm(
     parser_warnings = [w.to_dict() for w in llm_score.warnings] if llm_score.warnings else []
 
     return LLMScoreORM(
-        id=score_id,
-        parser_spec_id=parser_spec_id,
-        llm_response_text_id=llm_response_text_id,
+        id=llm_score.id,
         label=label,
         confidence=llm_score.confidence,
         rationale=llm_score.rationale,
-        parser_warnings=parser_warnings,
     )
 
 
@@ -323,32 +276,45 @@ def llm_score_to_orm(
 def llm_judgement_to_orm(
     judgement: LLMJudgement,
     judged_dataset_id: UUID,
+    dataset_sample_id: UUID,
     llm_prompt_text_id: UUID,
-    llm_invocation_metrics_id: UUID,
+    llm_response_text_id: UUID,
     llm_score_id: UUID,
 ) -> LLMJudgementORM:
     """Convert LLMJudgement domain object to LLMJudgementORM.
 
-    UUID is computed from natural key (judged_dataset_id, llm_prompt_text_id).
+    Inlines metrics and warnings directly on the judgement ORM.
 
     Args:
-        judgement: LLMJudgement domain object
+        judgement: LLMJudgement domain object (already has UUID)
         judged_dataset_id: JudgedDataset UUID (for foreign key)
+        dataset_sample_id: DatasetSample UUID (cross-schema reference)
         llm_prompt_text_id: LLMPromptText UUID (for foreign key)
-        llm_invocation_metrics_id: LLMInvocationMetrics UUID (for foreign key)
+        llm_response_text_id: LLMResponseText UUID (for foreign key)
         llm_score_id: LLMScore UUID (for foreign key)
 
     Returns:
         LLMJudgementORM model ready for persistence
     """
-    judgement_id = compute_llm_judgement_uuid(judged_dataset_id, llm_prompt_text_id)
+    # Extract parser warnings from judgement (not from llm_score)
+    parser_warnings = [w.to_dict() for w in judgement.parser_warnings] if judgement.parser_warnings else []
 
     return LLMJudgementORM(
-        id=judgement_id,
+        id=judgement.id,
         judged_dataset_id=judged_dataset_id,
+        dataset_sample_id=dataset_sample_id,
         llm_prompt_text_id=llm_prompt_text_id,
-        llm_invocation_metrics_id=llm_invocation_metrics_id,
+        llm_response_text_id=llm_response_text_id,
         llm_score_id=llm_score_id,
+        # Inline invocation metrics (no longer separate table)
+        latency_ms=judgement.llm_invocation_metrics.latency_ms,
+        retries=judgement.llm_invocation_metrics.retries,
+        cost_estimate_usd=judgement.llm_invocation_metrics.cost_estimate_usd,
+        generation_id=judgement.llm_invocation_metrics.generation_id,
+        prompt_tokens=judgement.llm_invocation_metrics.prompt_tokens,
+        completion_tokens=judgement.llm_invocation_metrics.completion_tokens,
+        total_tokens=judgement.llm_invocation_metrics.total_tokens,
+        parser_warnings=parser_warnings,
     )
 
 
@@ -356,19 +322,26 @@ def llm_judgement_to_orm(
 # JudgedDataset Mappers
 # ============================================================================
 
-def judged_dataset_to_orm(fingerprint: str) -> JudgedDatasetORM:
+def judged_dataset_to_orm(
+    judged_dataset_id: UUID,
+    model_config_id: UUID,
+    adapter_config_id: UUID,
+    sample_fingerprint: str,
+) -> JudgedDatasetORM:
     """Create JudgedDatasetORM.
 
-    UUID is computed from fingerprint (SHA256 of sorted judgement IDs).
-
     Args:
-        fingerprint: SHA256 hash of sorted judgement IDs
+        judged_dataset_id: JudgedDataset UUID (same as InferRun.id for 1:1 relationship)
+        model_config_id: ModelConfig UUID (for foreign key)
+        adapter_config_id: AdapterConfig UUID (for foreign key)
+        sample_fingerprint: SHA256 hash of sorted dataset_sample IDs
 
     Returns:
         JudgedDatasetORM model ready for persistence
     """
-    dataset_id = compute_judged_dataset_uuid(fingerprint)
     return JudgedDatasetORM(
-        id=dataset_id,
-        fingerprint=fingerprint,
+        id=judged_dataset_id,
+        model_config_id=model_config_id,
+        adapter_config_id=adapter_config_id,
+        sample_fingerprint=sample_fingerprint,
     )

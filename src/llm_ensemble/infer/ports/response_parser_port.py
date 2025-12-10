@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 
 from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
 from llm_ensemble.infer.schemas.entities.parser import Parser
+from llm_ensemble.infer.schemas.warnings import BaseWarning
 
 
 class ResponseParserPort(ABC):
@@ -26,17 +27,19 @@ class ResponseParserPort(ABC):
     """
 
     @abstractmethod
-    def parse(self, raw_text: str) -> LLMScore:
+    def parse(self, raw_text: str) -> tuple[LLMScore, list[BaseWarning]]:
         """Parse LLM response and create LLMScore domain entity.
 
         Extracts structured data from the raw response text and constructs
-        an LLMScore domain entity with parsed fields and warnings.
+        an LLMScore domain entity with parsed fields.
 
         Args:
             raw_text: Raw text response from the LLM
 
         Returns:
-            LLMScore domain entity with parsed fields (no parser metadata).
+            Tuple of (LLMScore, warnings):
+            - LLMScore: domain entity with parsed fields (no parser metadata)
+            - warnings: List of parser warnings from the parsing process
             All parsed fields may be None if parsing failed.
             Never raises exceptions - always returns a result with warnings.
         """

@@ -2,18 +2,17 @@ from __future__ import annotations
 import typer
 
 from llm_ensemble.infer.orchestrator import run_inference
-from llm_ensemble.infer.config_loaders import load_model_config, load_retry_config
-from llm_ensemble.libs.config.logging_config_loader import load_logging_config
+from llm_ensemble.infer.config_loaders.model_config_loader import ModelConfigFactory
+from llm_ensemble.infer.config_loaders.retry_config_loader import RetryConfigFactory
+from llm_ensemble.libs.config.logging_config_loader import LoggingConfigFactory
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.runtime.tag_manager import TagManager
-from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
 
 from llm_ensemble.libs.cli.params import (
     RunName,
     LogCfg,
     Official,
     Notes,
-    Override,
     StartIdx,
     EndIdx,
     ModelCfg,
@@ -53,23 +52,16 @@ def infer(
     log_cfg: LogCfg = "observability",
     official: Official = False,
     notes: Notes = None,
-    override: Override = [],
     tag: Tag = None,
 ):
     """Run LLM inference."""
     # Resolve tag if input starts with @ (already validated by RunInputParamType)
     input_run_name = TagManager.resolve_input(input_run_name, "ingest")
 
-    # Load configurations
-    model_config = load_model_config(model_cfg)
-    retry_config = load_retry_config(retry_cfg)
-    logging_config = load_logging_config(log_cfg)
-
-    # Parse and route overrides if provided
-    if override:
-        overrides = parse_and_route_overrides(override)
-        if overrides['model']:
-            model_config = apply_overrides(model_config, overrides['model'])
+    # Load configurations using factories
+    model_config = ModelConfigFactory.load(model_cfg)
+    retry_config = RetryConfigFactory.load(retry_cfg)
+    logging_config = LoggingConfigFactory.load(log_cfg)
 
     # Run inference with registry-based adapter selection
     run_inference(

@@ -61,27 +61,20 @@ class OpenRouterAdapter(LLMProviderPort):
 
         Args:
             prompt: Pre-built prompt string (from PromptBuilder)
-            model_config: Model configuration with provider and settings
+            model_config: Model configuration with inference parameters
 
         Returns:
             Tuple of (raw_response_text, invocation_metrics)
 
         Raises:
-            ValueError: If openrouter_model_id is not configured
             APIError: If API request fails
         """
-        if not model_config.openrouter_model_id:
-            raise ValueError(
-                f"Model {model_config.model_id} is configured for OpenRouter "
-                f"but missing openrouter_model_id field"
-            )
-
-        # Build API parameters from explicit config fields
+        # Build API parameters from config
         api_params = {
-            "model": model_config.openrouter_model_id,
+            "model": model_config.model_id,
         }
 
-        # Add explicit parameters if set
+        # Add core inference parameters if set
         if model_config.temperature is not None:
             api_params["temperature"] = model_config.temperature
         if model_config.max_tokens is not None:
@@ -94,13 +87,10 @@ class OpenRouterAdapter(LLMProviderPort):
             api_params["presence_penalty"] = model_config.presence_penalty
         if model_config.seed is not None:
             api_params["seed"] = model_config.seed
-        if model_config.stop is not None:
-            api_params["stop"] = model_config.stop
-        if model_config.response_format is not None:
-            api_params["response_format"] = model_config.response_format
 
-        # Add additional parameters (advanced/provider-specific)
-        api_params.update(model_config.additional_params)
+        # Add additional parameters (stop sequences, response_format, etc.)
+        if model_config.additional_params:
+            api_params.update(model_config.additional_params)
 
         # Initialize OpenAI client configured for OpenRouter
         client = OpenAI(

@@ -156,7 +156,7 @@ def run_inference(
     # Build provider and wrap with retry logic
     base_provider = ProviderFactory.create(
         provider_name=provider_name,
-        model_config=model_config,
+        model_id=model_config.model_id,
     )
     from llm_ensemble.infer.adapters.retrying_provider import RetryingProvider
     provider_adapter = RetryingProvider(base_provider, retry_config)

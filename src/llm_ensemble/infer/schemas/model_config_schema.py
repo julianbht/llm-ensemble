@@ -1,203 +1,94 @@
-"""Model configuration schema with centralized nested structure.
+"""Model configuration schema.
 
-Complete configuration for LLM models.
-All configuration centralized here - adapters contain no metadata.
+Flat configuration for LLM models matching the database ORM structure.
 """
 
 from __future__ import annotations
-import uuid
-from typing import Optional, Literal, Any
-from uuid import UUID
-from pydantic import BaseModel, Field
+from typing import Optional, Any, Dict
+from pydantic import Field
 
 from llm_ensemble.libs.schemas.base_config import BaseConfig
 
 
-class PricingInfo(BaseModel):
-    """Pricing information for LLM model (cost per 1M tokens)."""
+class ModelConfig(BaseConfig):
+    """Complete configuration for LLM models.
 
-    prompt_cost_per_1m_tokens: float = Field(
+    Flat structure matching ModelConfigORM for clean mapping.
+
+    Example YAML:
+        name_hint: gpt-4-turbo
+        model_id: gpt-4-turbo-2024-04-09
+        context_window: 128000
+        temperature: 0.7
+        max_tokens: 4096
+        capabilities:
+            multilingual: true
+            function_calling: true
+        additional_params:
+            stop: ["END"]
+            response_format: {"type": "json_object"}
+    """
+
+    # Model identity
+    model_id: str = Field(
         ...,
-        ge=0.0,
-        description="Cost in USD per 1 million prompt tokens"
-    )
-    completion_cost_per_1m_tokens: float = Field(
-        ...,
-        ge=0.0,
-        description="Cost in USD per 1 million completion tokens"
-    )
-    last_updated: str = Field(
-        ...,
-        description="ISO 8601 timestamp of when pricing was last updated"
+        description="Model identifier (e.g., 'gpt-4', 'llama-3-70b', 'meta-llama/llama-4-maverick:free')"
     )
 
-
-class ProviderAdapterConfig(BaseModel):
-    """Nested config for provider adapter instantiation details."""
-
-    provider_module: str = Field(
-        ...,
-        description="Full Python module path to provider adapter"
-    )
-    provider_class: str = Field(
-        ...,
-        description="Provider adapter class name in UpperCamelCase"
-    )
-
-
-class ProviderSubConfig(BaseModel):
-    """Nested config for provider-specific settings."""
-
-    name_hint: str = Field(
-        ...,
-        description="Short name hint for this provider config (used for logging/naming)"
-    )
-    provider_name: Literal["hf", "ollama", "openrouter"] = Field(
-        ...,
-        description="Provider name (hf, ollama, or openrouter)"
-    )
-    provider_adapter: ProviderAdapterConfig = Field(
-        ...,
-        description="Adapter instantiation configuration for provider"
-    )
-
-    # Provider-specific fields
-    hf_endpoint_url: Optional[str] = Field(
-        None,
-        description="HF Inference Endpoint URL (HuggingFace only)"
-    )
-    hf_model_name: Optional[str] = Field(
-        None,
-        description="HF model repo name (HuggingFace only)"
-    )
-    openrouter_model_id: Optional[str] = Field(
-        None,
-        description="OpenRouter model ID (e.g., 'openai/gpt-4') (OpenRouter only)"
-    )
-
-
-class ModelSpecs(BaseModel):
-    """Nested config for model inference parameters."""
-
-    name_hint: str = Field(
-        ...,
-        description="Short name hint for this model spec (used for logging/naming)"
-    )
+    # Model capabilities
     context_window: int = Field(
         ...,
         gt=0,
         description="Maximum context window size in tokens"
     )
 
-    # Core inference parameters
+    capabilities: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Model capabilities (e.g., multilingual, function_calling, vision)"
+    )
+
+    # Inference parameters
     temperature: Optional[float] = Field(
-        None,
+        default=None,
         ge=0.0,
         le=2.0,
         description="Sampling temperature: 0.0=deterministic, 2.0=very random"
     )
+
     max_tokens: Optional[int] = Field(
-        None,
+        default=None,
         gt=0,
         description="Maximum number of tokens to generate"
     )
+
     top_p: Optional[float] = Field(
-        None,
+        default=None,
         gt=0.0,
         le=1.0,
         description="Nucleus sampling: only consider tokens with top_p cumulative probability"
     )
+
     frequency_penalty: Optional[float] = Field(
-        None,
+        default=None,
         ge=-2.0,
         le=2.0,
         description="Penalize tokens based on frequency in the text so far (-2 to 2)"
     )
+
     presence_penalty: Optional[float] = Field(
-        None,
+        default=None,
         ge=-2.0,
         le=2.0,
         description="Penalize tokens based on whether they appear in the text so far (-2 to 2)"
     )
+
     seed: Optional[int] = Field(
-        None,
+        default=None,
         description="Random seed for reproducible sampling"
     )
-    stop: Optional[list[str]] = Field(
-        None,
-        description="List of sequences where the API will stop generating further tokens"
-    )
 
-    # Output control
-    response_format: Optional[dict[str, str]] = Field(
-        None,
-        description="Force specific output format, e.g., {'type': 'json_object'}"
-    )
-
-    # Advanced/provider-specific parameters (catch-all)
-    additional_params: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Additional provider-specific parameters (e.g., top_k, transforms, etc.)"
-    )
-
-    # Capabilities metadata
-    capabilities: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Model capabilities (e.g., multilingual, function_calling, vision)"
-    )
-
-
-class ModelConfig(BaseConfig):
-    """Complete configuration for LLM models.
-
-    All config centralized here - adapters are pure implementation.
-    This config includes model identity, provider config, model specs, and pricing.
-
-    Example YAML:
-        name_hint: llama-4-maverick-free
-        model_name: llama-4-maverick:free
-        pricing_info:
-            prompt_cost_per_1m_tokens: 0.0
-            completion_cost_per_1m_tokens: 0.0
-            last_updated: "2025-01-01T00:00:00Z"
-        provider_config:
-            name_hint: openrouter
-            provider_name: openrouter
-            provider_adapter:
-                provider_module: llm_ensemble.infer.adapters.providers.openrouter_adapter
-                provider_class: OpenRouterAdapter
-            openrouter_model_id: meta-llama/llama-4-maverick:free
-        model_specs:
-            name_hint: default
-            context_window: 8192
-            temperature: null
-            max_tokens: null
-            ...
-
-    Note: name_hint is inherited from BaseConfig and used for run_name generation.
-    """
-
-    id: UUID = Field(
-        default_factory=uuid.uuid4,
-        description="Random UUID for this model config"
-    )
-
-    model_name: str = Field(
-        ...,
-        description="Model identifier (natural key for Model entity)"
-    )
-
-    pricing_info: Optional[PricingInfo] = Field(
-        None,
-        description="Cost information for this model"
-    )
-
-    provider_config: ProviderSubConfig = Field(
-        ...,
-        description="Provider configuration including adapter"
-    )
-
-    model_specs: ModelSpecs = Field(
-        ...,
-        description="Model inference parameters and capabilities"
+    # Additional parameters as catch-all (stop sequences, response_format, etc.)
+    additional_params: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Additional provider-specific parameters (e.g., stop, response_format, top_k)"
     )

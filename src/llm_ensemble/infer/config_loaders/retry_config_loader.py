@@ -1,6 +1,6 @@
-"""Retry configuration loader.
+"""Retry configuration factory.
 
-Loads YAML retry configuration files and returns RetryConfig domain objects.
+Factory for loading YAML retry configuration files and returning RetryConfig domain objects.
 """
 
 from __future__ import annotations
@@ -10,22 +10,26 @@ from llm_ensemble.libs.config import load_yaml_config
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
-def load_retry_config(retry_id: str) -> RetryConfig:
-    """Load a retry configuration from YAML file.
+class RetryConfigFactory:
+    """Factory for loading retry configurations from YAML files."""
 
-    Args:
-        retry_id: Retry configuration identifier (e.g., "standard", "aggressive")
+    @staticmethod
+    def load(retry_id: str) -> RetryConfig:
+        """Load a retry configuration from YAML file.
 
-    Returns:
-        RetryConfig object with all settings loaded from YAML
+        Args:
+            retry_id: Retry configuration identifier (e.g., "standard", "aggressive")
 
-    Raises:
-        FileNotFoundError: If config file doesn't exist
-        ValueError: If YAML is invalid or missing required fields
-    """
-    return load_yaml_config(
-        config_name=retry_id,
-        config_dir=PathManager.get_retries_dir(),
-        schema=RetryConfig,
-        config_type="retry",
-    )
+        Returns:
+            RetryConfig object with all settings loaded from YAML
+
+        Raises:
+            FileNotFoundError: If config file doesn't exist
+            ValueError: If YAML is invalid or missing required fields
+        """
+        return load_yaml_config(
+            config_name=retry_id,
+            config_dir=PathManager.get_retries_dir(),
+            schema=RetryConfig,
+            config_type="retry",
+        )

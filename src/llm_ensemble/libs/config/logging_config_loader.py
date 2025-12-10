@@ -1,48 +1,36 @@
-"""Logging configuration loader.
+"""Logging configuration factory.
 
-Loads and validates logging configuration from YAML files in configs/logging/.
+Factory for loading and validating logging configuration from YAML files in configs/logging/.
 """
 
 from __future__ import annotations
-from pathlib import Path
-import yaml
+
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
+from llm_ensemble.libs.config import load_yaml_config
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
-def load_logging_config(config_name: str) -> LoggingConfig:
-    """Load and validate logging configuration from YAML file.
+class LoggingConfigFactory:
+    """Factory for loading logging configurations from YAML files."""
 
-    Args:
-        config_name: Name of the logging config file (without .yaml extension)
-                    e.g., "standard", "json", "console-only"
+    @staticmethod
+    def load(config_name: str) -> LoggingConfig:
+        """Load and validate logging configuration from YAML file.
 
-    Returns:
-        Validated LoggingConfig instance
+        Args:
+            config_name: Name of the logging config file (without .yaml extension)
+                        e.g., "standard", "json", "console-only"
 
-    Raises:
-        FileNotFoundError: If config file doesn't exist
-        ValueError: If config validation fails
-    """
-    # Get logging configs directory
-    configs_dir = PathManager.get_configs_dir() / "logging"
-    config_path = configs_dir / f"{config_name}.yaml"
+        Returns:
+            Validated LoggingConfig instance
 
-    if not config_path.exists():
-        raise FileNotFoundError(
-            f"Logging config not found: {config_path}\n"
-            f"Available configs in {configs_dir}: "
-            f"{', '.join(p.stem for p in configs_dir.glob('*.yaml'))}"
+        Raises:
+            FileNotFoundError: If config file doesn't exist
+            ValueError: If config validation fails
+        """
+        return load_yaml_config(
+            config_name=config_name,
+            config_dir=PathManager.get_configs_dir() / "logging",
+            schema=LoggingConfig,
+            config_type="logging",
         )
-
-    # Load YAML
-    with open(config_path, "r", encoding="utf-8") as f:
-        config_dict = yaml.safe_load(f)
-
-    # Validate with Pydantic
-    try:
-        return LoggingConfig(**config_dict)
-    except Exception as e:
-        raise ValueError(
-            f"Invalid logging config in {config_path}: {e}"
-        ) from e

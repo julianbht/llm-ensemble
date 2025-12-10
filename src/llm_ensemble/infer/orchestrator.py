@@ -1,10 +1,10 @@
 """Orchestrator for the infer CLI.
 
 This module handles infrastructure concerns for the inference pipeline:
-- Loading configurations
+- Loading configurations from YAML files
 - Setting up run directories and logging
 - Building manifests with git info and execution parameters
-- Instantiating adapters from builders
+- Instantiating adapters from registries
 - Delegating business logic to domain service
 
 It is separated from the CLI entry point (infer_cli.py) for testability.
@@ -13,9 +13,9 @@ from __future__ import annotations
 from typing import Optional
 
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
-from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.libs.schemas import LoggingConfig
+from llm_ensemble.infer.config_loaders.model_config_loader import ModelConfigFactory
+from llm_ensemble.infer.config_loaders.retry_config_loader import RetryConfigFactory
+from llm_ensemble.libs.config.logging_config_loader import LoggingConfigFactory
 from llm_ensemble.infer.inference_service import InferenceService
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
@@ -31,18 +31,16 @@ from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
 
 
 def run_inference(
-    model_config: ModelConfig,
+    model_config_name: str,
     provider_name: str,
     prompt_name: str,
     parser_name: str,
-    retry_config: RetryConfig,
-    io_name: str,
-    logging_config: LoggingConfig,
-    input_run_name: str,
-    model_config_name: str,
     retry_config_name: str,
+    io_name: str,
+    logging_config_name: str,
+    input_run_name: str,
     run_name: Optional[str] = None,
-    start_idx: int = 0,
+    start_idx: Optional[int] = None,
     end_idx: Optional[int] = None,
     official: bool = False,
     notes: Optional[str] = None,
@@ -51,34 +49,37 @@ def run_inference(
     """Run LLM inference on judging examples with full provenance.
 
     Infrastructure orchestration that coordinates:
-    - Reading NormalizedDataset and computing explicit indices
+    - Loading all YAML configurations
     - Setting up run directories and logging
     - Building manifest with git info and execution parameters
     - Instantiating adapters from registries
-    - Running inference, attaching manifest metadata to each judgement, and writing output
+    - Running inference and writing output
 
     Args:
-        model_config: Model configuration
+        model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
         provider_name: Provider name for registry lookup (e.g., "openrouter", "ollama")
         prompt_name: Prompt name for registry lookup (e.g., "thomas-simple")
         parser_name: Parser name for registry lookup (e.g., "thomas-simple")
-        retry_config: Retry configuration
-        io_name: I/O format name (e.g., "db_to_json", "db_to_db")
-        logging_config: Logging configuration (controls pretty printing and log saving)
-        input_run_name: Ingest run identifier (e.g., "my_ingest_run")
-        model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
         retry_config_name: Name of the retry config file (e.g., "standard")
+        io_name: I/O format name (e.g., "db_to_json", "db_to_db")
+        logging_config_name: Name of the logging config file (e.g., "observability")
+        input_run_name: Ingest run identifier (e.g., "my_ingest_run")
         run_name: Custom run ID (auto-generates if not provided)
-        start_idx: Start index into NormalizedDataset (default: 0)
-        end_idx: End index into NormalizedDataset (None = full dataset)
+        start_idx: Start index into NormalizedDataset (None = start from beginning)
+        end_idx: End index into NormalizedDataset (None = process until end)
         official: Mark as official run (saved to official/ subdirectory for git tracking)
         notes: Notes about this run (experiment purpose, hypothesis, etc.)
         tag: Tag name for easy reference by downstream CLIs (e.g., "my-experiment")
 
     Raises:
-        FileNotFoundError: If input run doesn't exist (raised by adapter during read)
+        FileNotFoundError: If config or input run doesn't exist
         ValueError: If adapter is not recognized or config is invalid
     """
+
+    # Load all configurations from YAML files
+    model_config = ModelConfigFactory.load(model_config_name)
+    retry_config = RetryConfigFactory.load(retry_config_name)
+    logging_config = LoggingConfigFactory.load(logging_config_name)
 
     # Generate or use provided run_name
     if run_name is None:

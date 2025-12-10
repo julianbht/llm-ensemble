@@ -2,9 +2,6 @@ from __future__ import annotations
 import typer
 
 from llm_ensemble.infer.orchestrator import run_inference
-from llm_ensemble.infer.config_loaders.model_config_loader import ModelConfigFactory
-from llm_ensemble.infer.config_loaders.retry_config_loader import RetryConfigFactory
-from llm_ensemble.libs.config.logging_config_loader import LoggingConfigFactory
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 
@@ -58,23 +55,16 @@ def infer(
     # Resolve tag if input starts with @ (already validated by RunInputParamType)
     input_run_name = TagManager.resolve_input(input_run_name, "ingest")
 
-    # Load configurations using factories
-    model_config = ModelConfigFactory.load(model_cfg)
-    retry_config = RetryConfigFactory.load(retry_cfg)
-    logging_config = LoggingConfigFactory.load(log_cfg)
-
-    # Run inference with registry-based adapter selection
+    # Delegate to orchestrator (config loading happens there)
     run_inference(
-        model_config=model_config,
+        model_config_name=model_cfg,
         provider_name=provider,
         prompt_name=prompt,
         parser_name=parser,
-        retry_config=retry_config,
-        io_name=io_cfg,
-        logging_config=logging_config,
-        input_run_name=input_run_name,
-        model_config_name=model_cfg,
         retry_config_name=retry_cfg,
+        io_name=io_cfg,
+        logging_config_name=log_cfg,
+        input_run_name=input_run_name,
         run_name=run_name,
         start_idx=start_idx,
         end_idx=end_idx,

@@ -40,13 +40,13 @@ class ThomasSimpleParser(ResponseParserPort):
         """Parse JSON response and create LLMScore domain entity.
 
         Extracts the "O" field from JSON response and constructs an LLMScore
-        with parser metadata, extracted label, and any warnings.
+        with extracted label and any warnings.
 
         Args:
             raw_text: Raw text response from the LLM
 
         Returns:
-            LLMScore domain entity with parsed fields and parser metadata
+            LLMScore domain entity with parsed fields (no parser metadata or response_text)
         """
         warnings: list[ParserWarning] = []
         label: Optional[RelevanceScore] = None
@@ -59,13 +59,19 @@ class ThomasSimpleParser(ResponseParserPort):
                 label = self._validate_score(score_value, warnings)
 
         return LLMScore(
-            parser=self._parser,
-            llm_response_text=raw_text,
             label=label,
             confidence=None,
             rationale=None,
             warnings=warnings,
         )
+
+    def get_parser(self) -> Parser:
+        """Get Parser metadata for this adapter.
+
+        Returns:
+            Parser entity with id and name
+        """
+        return self._parser
 
     def _extract_json(self, raw_text: str, warnings: list[ParserWarning]) -> Optional[dict]:
         """Extract JSON object with "O" field from raw text.

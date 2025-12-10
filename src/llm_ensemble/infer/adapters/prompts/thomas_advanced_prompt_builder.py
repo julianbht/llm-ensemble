@@ -10,8 +10,7 @@ from textwrap import dedent
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.ports import PromptBuilderPort
-from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
-from llm_ensemble.infer.schemas.entities.llm_prompt import LLMPrompt
+from llm_ensemble.infer.schemas.entities.prompt_builder import PromptBuilder
 
 
 class ThomasAdvancedPromptBuilder(PromptBuilderPort):
@@ -67,34 +66,36 @@ class ThomasAdvancedPromptBuilder(PromptBuilderPort):
         reasoning. Example: {{"M": 2, "T": 1, "O": 1}}""")
 
     def __init__(self):
-        """Initialize builder and create cached template entity."""
-        self._template = PromptTemplate(
+        """Initialize builder and create cached PromptBuilder entity."""
+        self._builder = PromptBuilder(
             id=self.TEMPLATE_ID,
             name=self.TEMPLATE_NAME,
             template_text=self.TEMPLATE_TEXT
         )
 
-    def build_prompt(self, dataset_sample: DatasetSample) -> LLMPrompt:
-        """Build complete LLMPrompt entity from dataset sample.
+    def build_prompt(self, dataset_sample: DatasetSample) -> str:
+        """Render prompt text from dataset sample.
 
-        Renders the prompt text and constructs an LLMPrompt domain entity
-        with template metadata, sample context, and rendered text.
+        Renders the prompt text using the internal template.
 
         Args:
             dataset_sample: DatasetSample containing judging_sample and context
 
         Returns:
-            LLMPrompt domain entity ready for inference
+            Rendered prompt text ready for inference
 
         Raises:
             KeyError: If template variables missing from dataset
         """
-        prompt_text = self._render(dataset_sample)
-        return LLMPrompt(
-            prompt_template=self._template,
-            dataset_sample=dataset_sample,
-            prompt_text=prompt_text
-        )
+        return self._render(dataset_sample)
+
+    def get_builder(self) -> PromptBuilder:
+        """Get PromptBuilder metadata for this adapter.
+
+        Returns:
+            PromptBuilder entity with id, name, and template_text
+        """
+        return self._builder
 
     def _render(self, dataset_sample: DatasetSample) -> str:
         """Render prompt text from dataset sample.

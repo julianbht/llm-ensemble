@@ -92,16 +92,9 @@ def run_inference(
     # Get git info for reproducibility
     git_info = get_git_info()
 
-    # Create immutable run info (runtime context known before run starts)
+    # Create immutable run info (CLI parameters + metadata only)
     run_info = InferRunInfo(
         run_name=run_name,
-        model_config_name=model_config_name,
-        prompt_name=prompt_name,
-        parser_name=parser_name,
-        retry_config_name=retry_config_name,
-        io_name=io_name,
-        model_cfg=model_config,
-        retry_config=retry_config,
         input_run_name=input_run_name,
         start_idx=start_idx,
         end_idx=end_idx,

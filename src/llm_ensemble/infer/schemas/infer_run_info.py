@@ -1,9 +1,12 @@
-"""InferRunInfo schema - extends base RunInfo with infer-specific configuration.
+"""InferRunInfo schema - runtime context for infer CLI runs.
 
-This contains all inference-specific configuration that is known before the run
-starts and remains immutable throughout execution. By bundling this with the
-base RunInfo, each LLMJudgement can carry complete provenance metadata without
-waiting for the run to complete.
+Contains only CLI parameters and run metadata. Configuration objects belong on
+the JudgedDataset entity, not here.
+
+Separation of concerns:
+- InferRunInfo: CLI parameters + run metadata (what was requested)
+- JudgedDataset: Model + adapter configs (what was used to produce judgements)
+- InferRunORM: Links the two and tracks intent vs. actual result
 """
 
 from __future__ import annotations
@@ -13,24 +16,18 @@ from uuid import UUID
 from pydantic import ConfigDict, Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
-from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 
 
 class InferRunInfo(RunInfo):
     """Runtime context for infer CLI runs.
 
-    Extends the base RunInfo with infer-specific configuration metadata:
-    - Which configs were used (model, prompt, I/O)
-    - Full configuration objects for reproducibility
-    - Input parameters (file path, limit)
+    Contains:
+    1. Run metadata (inherited from RunInfo): run_name, run_type, notes, git info
+    2. CLI parameters: input source and index range
 
-    All fields in this class are immutable and known before processing begins,
-    allowing LLMJudgement objects to embed complete provenance as soon as they
-    are created, without waiting for aggregate statistics.
-
-    This is separate from InferRunSummary which contains post-run metrics like
-    judgement counts, timing statistics, and warnings summary.
+    Configuration objects (ModelConfig, AdapterConfig) belong on JudgedDataset,
+    not here. This keeps InferRunInfo focused on "what was requested" while
+    JudgedDataset tracks "what was actually used".
     """
 
     # Random UUID
@@ -45,51 +42,13 @@ class InferRunInfo(RunInfo):
         description="Name of the CLI that generated this run (always 'infer' for InferRunInfo)"
     )
 
-    # Configuration names
-    model_config_name: str = Field(
-        ...,
-        description="Name of the model config used (e.g., 'gpt-oss-20b')"
-    )
-
-    prompt_name: str = Field(
-        ...,
-        description="Name of the prompt used from registry (e.g., 'thomas-simple')"
-    )
-
-    parser_name: str = Field(
-        ...,
-        description="Name of the parser used from registry (e.g., 'thomas-simple')"
-    )
-
-    retry_config_name: str = Field(
-        ...,
-        description="Name of the retry config used (e.g., 'standard')"
-    )
-
-    io_name: str = Field(
-        ...,
-        description="Name of the I/O format used (e.g., 'db_to_json', 'db_to_db')"
-    )
-
-    # Full configuration objects (for reproducibility)
-    # Note: Cannot use 'model_config' as field name (reserved by Pydantic v2)
-    model_cfg: ModelConfig = Field(
-        ...,
-        description="Model configuration used for this run"
-    )
-
-    retry_config: RetryConfig = Field(
-        ...,
-        description="Retry configuration used for this run"
-    )
-
-    # Input parameters
+    # CLI parameters - input source
     input_run_name: str = Field(
         ...,
         description="Ingest run name to read samples from (e.g., 'my_ingest_run')"
     )
 
-    # Index range (optional, from CLI --start-idx and --end-idx flags)
+    # CLI parameters - index range (optional, from --start-idx and --end-idx flags)
     start_idx: Optional[int] = Field(
         default=None,
         description="Start index into NormalizedDataset.samples (0-indexed, inclusive, None = start from beginning)"

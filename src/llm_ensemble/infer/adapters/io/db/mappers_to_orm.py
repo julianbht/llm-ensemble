@@ -164,7 +164,6 @@ def adapter_config_to_orm(adapter_config: AdapterConfig) -> AdapterConfigORM:
 
 def infer_run_info_to_orm(
     run_info: InferRunInfo,
-    config_names: dict[str, str],
     start_idx: int,
     end_idx: int,
 ) -> InferRunORM:
@@ -172,7 +171,6 @@ def infer_run_info_to_orm(
 
     Args:
         run_info: InferRunInfo context object (already has UUID)
-        config_names: Config names dict {model_config, prompt_builder, parser, provider}
         start_idx: Computed start index into NormalizedDataset.samples
         end_idx: Computed end index into NormalizedDataset.samples
 
@@ -183,7 +181,6 @@ def infer_run_info_to_orm(
         id=run_info.id,
         run_name=run_info.run_name,
         run_type=run_info.run_type,
-        config_names=config_names,
         start_idx=start_idx,
         end_idx=end_idx,
         judged_dataset_id=None,  # Set in close() after computing actual dataset

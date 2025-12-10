@@ -101,13 +101,8 @@ class DBWriter(OutputPort):
         end_idx = run_info.end_idx if run_info.end_idx is not None else len(normalized_dataset.samples)
 
         # Create InferRun (always new)
-        config_names = {
-            "model_config": run_info.model_cfg.name_hint,
-            # prompt_name and parser_name will be added from first judgement
-        }
         infer_run_orm = infer_run_info_to_orm(
             run_info,
-            config_names,
             start_idx,
             end_idx,
         )

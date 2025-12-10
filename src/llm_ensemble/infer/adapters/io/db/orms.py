@@ -209,13 +209,6 @@ class InferRunORM(Base):
     run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType, schema="public"), nullable=False, default=RunType.TEST)
 
-    # Config names snapshot for easy viewing
-    config_names = Column(
-        JSONB,
-        nullable=False,
-        comment="Config names used: {model_config, prompt_builder, parser, provider}"
-    )
-
     # INTENT: What range of NormalizedDataset to process (set in open())
     start_idx = Column(
         Integer,

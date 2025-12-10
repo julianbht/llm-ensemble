@@ -5,8 +5,16 @@ Captures git metadata for run manifests.
 
 from __future__ import annotations
 import subprocess
-from pathlib import Path
-from typing import Optional
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class GitInfo:
+    """Git metadata for reproducibility tracking."""
+
+    git_sha: str
+    git_clean: bool
+    git_branch: str
 
 
 def get_git_sha() -> str:
@@ -47,11 +55,11 @@ def get_git_status_clean() -> bool:
         return False
 
 
-def get_git_info() -> dict:
+def get_git_info() -> GitInfo:
     """Get comprehensive git information for manifest.
 
     Returns:
-        Dict with git_sha, git_clean, and git_branch
+        GitInfo object with SHA, clean status, and branch name
     """
     sha = get_git_sha()
     clean = get_git_status_clean()
@@ -69,8 +77,8 @@ def get_git_info() -> dict:
     except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
         branch = "unknown"
 
-    return {
-        "git_sha": sha,
-        "git_clean": clean,
-        "git_branch": branch,
-    }
+    return GitInfo(
+        git_sha=sha,
+        git_clean=clean,
+        git_branch=branch,
+    )

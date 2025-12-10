@@ -101,9 +101,9 @@ def run_inference(
         end_idx=end_idx,
         run_type=RunType.OFFICIAL if official else RunType.TEST,
         notes=notes,
-        git_sha=git_info["git_sha"],
-        git_clean=git_info["git_clean"],
-        git_branch=git_info["git_branch"],
+        git_sha=git_info.git_sha,
+        git_clean=git_info.git_clean,
+        git_branch=git_info.git_branch,
     )
 
     # Get run directory from run_info and create it

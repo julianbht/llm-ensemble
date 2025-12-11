@@ -8,7 +8,6 @@ waiting for the run to complete.
 
 from __future__ import annotations
 from typing import Optional
-from uuid import UUID, uuid4
 from pydantic import ConfigDict, Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
@@ -29,15 +28,7 @@ class IngestRunInfo(RunInfo):
 
     This is separate from IngestRunSummary which contains post-run metrics like
     sample counts and timing statistics.
-
-    The id field is a random UUID (v4).
     """
-
-    # Random UUID
-    id: UUID = Field(
-        default_factory=uuid4,
-        description="Random UUID identifier"
-    )
 
     # Override cli_name from base RunInfo to automatically set it to "ingest"
     cli_name: str = Field(

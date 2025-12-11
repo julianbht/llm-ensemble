@@ -10,9 +10,7 @@ Separation of concerns:
 """
 
 from __future__ import annotations
-import uuid
 from typing import Optional
-from uuid import UUID
 from pydantic import ConfigDict, Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
@@ -22,19 +20,13 @@ class InferRunInfo(RunInfo):
     """Runtime context for infer CLI runs.
 
     Contains:
-    1. Run metadata (inherited from RunInfo): run_name, run_type, notes, git info
+    1. Run metadata (inherited from RunInfo): id, run_name, run_type, notes, git info
     2. CLI parameters: input source and index range
 
     Configuration objects (ModelConfig, AdapterConfig) belong on JudgedDataset,
     not here. This keeps InferRunInfo focused on "what was requested" while
     JudgedDataset tracks "what was actually used".
     """
-
-    # Random UUID
-    id: UUID = Field(
-        default_factory=uuid.uuid4,
-        description="Random UUID for this run"
-    )
 
     # Override cli_name from base RunInfo to automatically set it to "infer"
     cli_name: str = Field(

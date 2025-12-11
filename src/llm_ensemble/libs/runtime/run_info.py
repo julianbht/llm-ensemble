@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from enum import Enum
 from typing import Optional
+from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from llm_ensemble.libs.runtime.path_manager import PathManager
@@ -42,6 +43,11 @@ class RunInfo(BaseModel):
     service starts processing, allowing domain objects to embed full provenance
     immediately without waiting for run completion.
     """
+
+    id: UUID = Field(
+        default_factory=uuid4,
+        description="Random UUID identifier for this run"
+    )
 
     run_name: str = Field(
         ...,

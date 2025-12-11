@@ -83,14 +83,13 @@ def run_inference(
     # Generate or use provided run_name
     if run_name is None:
         run_name = generate_run_name([
-            model_config.name_hint,
+            model_config_name,
             prompt_name,
             parser_name,
             io_name,
         ])
 
-    # Create immutable run info (CLI parameters + metadata only)
-    # git_info is automatically captured via default_factory
+    # Create immutable run info
     run_info = InferRunInfo(
         run_name=run_name,
         input_run_name=input_run_name,

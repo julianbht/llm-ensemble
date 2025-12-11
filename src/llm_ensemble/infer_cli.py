@@ -34,7 +34,7 @@ app = typer.Typer(
 
 @app.command("infer")
 def infer(
-    # Required parameters with validation
+    # Required parameters
     model_cfg: ModelCfg,
     provider: Provider,
     prompt: Prompt,

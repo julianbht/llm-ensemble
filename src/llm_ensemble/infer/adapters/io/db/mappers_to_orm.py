@@ -177,9 +177,9 @@ def infer_run_info_to_orm(
         start_idx=start_idx,
         end_idx=end_idx,
         judged_dataset_id=None,  # Set in close() after computing actual dataset
-        git_sha=run_info.git_sha,
-        git_branch=run_info.git_branch,
-        git_is_dirty=not run_info.git_clean,
+        git_sha=run_info.git_info.git_sha,
+        git_branch=run_info.git_info.git_branch,
+        git_is_dirty=not run_info.git_info.git_clean,
         notes=run_info.notes,
     )
 

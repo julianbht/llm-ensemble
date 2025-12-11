@@ -81,9 +81,7 @@ def run_ingest(
         limit=limit,
         run_type=RunType.OFFICIAL if official else RunType.TEST,
         notes=notes,
-        git_sha=git_info.git_sha,
-        git_clean=git_info.git_clean,
-        git_branch=git_info.git_branch,
+        git_info=git_info,
     )
 
     # Get run directory from run_info and create it

@@ -278,7 +278,7 @@ def ingest_run_info_to_orm(
         io_config_name=run_info.io_config_name,
         input_path=run_info.input_path,
         limit=run_info.limit,
-        git_sha=run_info.git_sha,
-        git_branch=run_info.git_branch,
-        git_is_dirty="true" if not run_info.git_clean else "false",
+        git_sha=run_info.git_info.git_sha,
+        git_branch=run_info.git_info.git_branch,
+        git_is_dirty="true" if not run_info.git_info.git_clean else "false",
     )

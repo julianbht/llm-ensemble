@@ -80,9 +80,9 @@ def aggregate_run_info_to_orm(
         run_type=run_info.run_type,
         config_names=config_names,
         aggregated_dataset_id=None,  # Set in close() after dataset is created
-        git_sha=run_info.git_sha,
-        git_branch=run_info.git_branch,
-        git_is_dirty=run_info.git_clean,
+        git_sha=run_info.git_info.git_sha,
+        git_branch=run_info.git_info.git_branch,
+        git_is_dirty=run_info.git_info.git_clean,
         notes=run_info.notes,
     )
 

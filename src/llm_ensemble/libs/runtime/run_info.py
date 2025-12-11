@@ -9,10 +9,11 @@ for aggregate metrics to be computed at the end.
 from __future__ import annotations
 from pathlib import Path
 from enum import Enum
-from typing import Literal, Optional
+from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from llm_ensemble.libs.runtime.path_manager import PathManager
+from llm_ensemble.libs.runtime.git_utils import GitInfo
 
 class RunType(str, Enum):
     """Enumeration of run types for reproducibility tracking."""
@@ -30,7 +31,7 @@ class RunInfo(BaseModel):
     This captures immutable metadata that is known before the run starts:
     - Run identification (run_name, run_type, cli_name)
     - User-provided context (notes)
-    - Git metadata for reproducibility (sha, branch, clean status)
+    - Git metadata for reproducibility (git_info)
 
     This class is separate from RunSummary which contains aggregate metrics
     computed AFTER the run completes (timing, counts, statistics).
@@ -48,7 +49,7 @@ class RunInfo(BaseModel):
     )
 
     run_type: RunType = Field(
-        default="test",
+        default=RunType.TEST,
         description="Run type: 'official' for reproducible/git-tracked runs, 'test' for experiments"
     )
 
@@ -63,19 +64,9 @@ class RunInfo(BaseModel):
     )
 
     # Git metadata for reproducibility
-    git_sha: str = Field(
+    git_info: GitInfo = Field(
         ...,
-        description="Git commit SHA at time of run (auto-captured)"
-    )
-
-    git_clean: bool = Field(
-        ...,
-        description="Whether git working tree was clean (no uncommitted changes) at time of run"
-    )
-
-    git_branch: str = Field(
-        ...,
-        description="Git branch name at time of run (auto-captured)"
+        description="Git metadata (commit SHA, branch, clean status) captured at time of run"
     )
 
     model_config = ConfigDict(frozen=True)

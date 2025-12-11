@@ -13,9 +13,9 @@ from __future__ import annotations
 from typing import Optional
 
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
-from llm_ensemble.infer.config_loaders.model_config_loader import ModelConfigFactory
-from llm_ensemble.infer.config_loaders.retry_config_loader import RetryConfigFactory
-from llm_ensemble.libs.config.logging_config_loader import LoggingConfigFactory
+from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
+from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 from llm_ensemble.infer.inference_service import InferenceService
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
@@ -76,9 +76,9 @@ def run_inference(
     """
 
     # Load all configurations from YAML files
-    model_config = ModelConfigFactory.load(model_config_name)
-    retry_config = RetryConfigFactory.load(retry_config_name)
-    logging_config = LoggingConfigFactory.load(logging_config_name)
+    model_config = ModelConfig.load(model_config_name)
+    retry_config = RetryConfig.load(retry_config_name)
+    logging_config = LoggingConfig.load(logging_config_name)
 
     # Generate or use provided run_name
     if run_name is None:

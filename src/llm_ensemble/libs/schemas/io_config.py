@@ -9,10 +9,12 @@ Provides convenience methods for instantiating adapters from module paths.
 """
 
 from __future__ import annotations
+from importlib import import_module
 from typing import Any
 from pydantic import ConfigDict, Field
 
 from llm_ensemble.libs.schemas.base_config import BaseConfig
+from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
 class IOConfig(BaseConfig):
@@ -60,3 +62,47 @@ class IOConfig(BaseConfig):
             AttributeError: If the writer class doesn't exist in the module
         """
         return self._instantiate_adapter(self.writer_module, self.writer_class)
+
+    def _instantiate_adapter(self, module_path: str, class_name: str, **kwargs) -> Any:
+        """Dynamically instantiate an adapter class from module path and class name.
+
+        Args:
+            module_path: Full Python module path (e.g., 'llm_ensemble.infer.adapters.io.json_reader')
+            class_name: Class name in UpperCamelCase (e.g., 'JsonReader')
+            **kwargs: Additional arguments to pass to the class constructor
+
+        Returns:
+            Instance of the adapter class
+
+        Raises:
+            ImportError: If the module cannot be imported
+            AttributeError: If the class doesn't exist in the module
+        """
+        try:
+            module = import_module(module_path)
+            adapter_class = getattr(module, class_name)
+            return adapter_class(**kwargs) if kwargs else adapter_class()
+        except ImportError as e:
+            raise ImportError(f"Failed to import module '{module_path}': {e}") from e
+        except AttributeError as e:
+            raise AttributeError(f"Class '{class_name}' not found in module '{module_path}': {e}") from e
+
+    @classmethod
+    def load(cls, io_format: str, cli_name: str) -> "IOConfig":
+        """Load an I/O configuration from YAML file.
+
+        Args:
+            io_format: I/O format identifier (e.g., "json", "llm_judge_json")
+            cli_name: CLI name (e.g., "ingest", "infer", "aggregate", "evaluate")
+
+        Returns:
+            IOConfig object with reader and writer adapter specifications
+
+        Raises:
+            FileNotFoundError: If config file doesn't exist
+            ValueError: If YAML is invalid or missing required fields
+        """
+        return super().load(
+            config_name=io_format,
+            config_dir=PathManager.get_io_configs_dir(cli_name)
+        )

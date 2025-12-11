@@ -1,37 +1,37 @@
 """Base configuration schema.
 
-Defines the base Pydantic schema for all configuration types that participate
-in run ID generation. This ensures consistency across model, prompt, I/O, and
-ensemble configurations.
-
-Provides utility methods for dynamic adapter instantiation from module paths.
+Defines the base Pydantic schema for all configuration types.
+Provides common fields (id, name, name_hint) and a load() classmethod.
 """
 
 from __future__ import annotations
-from importlib import import_module
-from typing import Optional, Any
+from pathlib import Path
+from typing import Optional
+from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
 
 class BaseConfig(BaseModel):
-    """Base configuration class for all configs that participate in run ID generation.
+    """Base configuration class for all configs.
 
-    All configuration types (ModelConfig, PromptConfig, IOConfig, EnsembleConfig)
-    should inherit from this base class to ensure consistent metadata fields.
-
-    The name field is injected by config loaders from the filename (without extension).
-    The name_hint field allows configs to explicitly contribute to human-readable
-    run IDs, making it easy to identify what configurations were used in a run.
-
-    Also provides helper methods for dynamic adapter instantiation from module paths.
+    All configuration types (ModelConfig, RetryConfig, IOConfig, LoggingConfig)
+    inherit from this base class to get consistent fields:
+    - id: Random UUID for database identity
+    - name: Configuration name from filename (injected by load())
+    - name_hint: Optional short hint for run ID generation (from YAML)
     """
 
-    name: Optional[str] = Field(
-        None,
+    id: UUID = Field(
+        default_factory=uuid4,
+        description="Random UUID identifier for this config"
+    )
+
+    name: str = Field(
+        ...,
         description=(
             "Configuration name, derived from filename (without extension). "
-            "This field is injected by config loaders and should NOT be set in YAML files. "
-            "Used for identity/UUID generation. Example: 'gpt-oss-20b' from 'gpt-oss-20b.yaml'"
+            "This field is injected by load() and should NOT be set in YAML files. "
+            "Example: 'gpt-oss-20b' from 'gpt-oss-20b.yaml'"
         ),
     )
 
@@ -39,39 +39,31 @@ class BaseConfig(BaseModel):
         None,
         description=(
             "Short name hint for run ID generation (e.g., 'gpt20b', 'thomas', 'llmjudge'). "
-            "If not provided, this config won't contribute to the run ID. "
+            "Specified in YAML files. If not provided, this config won't contribute to the run ID. "
             "Keep it short (5-15 chars) and use only alphanumeric characters, hyphens, or underscores."
         ),
     )
 
-    def _instantiate_adapter(self, module_path: str, class_name: str, **kwargs) -> Any:
-        """Dynamically instantiate an adapter class from separate module path and class name.
-
-        This method provides a standardized way to instantiate adapter classes
-        with clear separation between module path (snake_case) and class name (UpperCamelCase).
+    @classmethod
+    def load(cls, config_name: str, config_dir: Path) -> "BaseConfig":
+        """Load configuration from YAML file and inject name field.
 
         Args:
-            module_path: Full Python module path in snake_case
-                        (e.g., 'llm_ensemble.infer.adapters.io.fully_populated_json_reader')
-            class_name: Class name in UpperCamelCase (e.g., 'FullyPopulatedJsonReader')
-            **kwargs: Additional arguments to pass to the class constructor
+            config_name: Name of config file (without .yaml extension)
+            config_dir: Directory containing the config file
 
         Returns:
-            Instance of the adapter class
+            Config instance with name injected from filename
 
         Raises:
-            ImportError: If the module cannot be imported
-            AttributeError: If the class doesn't exist in the module
+            FileNotFoundError: If config file doesn't exist
+            ValueError: If YAML is invalid or missing required fields
         """
-        try:
-            module = import_module(module_path)
-            adapter_class = getattr(module, class_name)
-            return adapter_class(**kwargs) if kwargs else adapter_class()
-        except ImportError as e:
-            raise ImportError(
-                f"Failed to import module '{module_path}': {e}"
-            ) from e
-        except AttributeError as e:
-            raise AttributeError(
-                f"Class '{class_name}' not found in module '{module_path}': {e}"
-            ) from e
+        from llm_ensemble.libs.config import load_yaml_config
+
+        return load_yaml_config(
+            config_name=config_name,
+            config_dir=config_dir,
+            schema=cls,
+            config_type=cls.__name__,
+        )

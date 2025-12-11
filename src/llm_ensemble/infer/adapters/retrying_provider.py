@@ -10,7 +10,6 @@ import time
 from openai import APIError
 
 from llm_ensemble.infer.ports import LLMProviderPort
-from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.libs.logging import get_logger
@@ -55,7 +54,6 @@ class RetryingProvider:
     def infer(
         self,
         prompt: str,
-        model_config: ModelConfig,
     ) -> tuple[str, LLMInvocationMetrics]:
         """Run inference with automatic retry logic.
 
@@ -64,7 +62,6 @@ class RetryingProvider:
 
         Args:
             prompt: Pre-built prompt string (from PromptBuilder)
-            model_config: Model configuration with provider and settings
 
         Returns:
             Tuple of (raw_response_text, invocation_metrics) with retry count set
@@ -76,8 +73,8 @@ class RetryingProvider:
         # Retry loop with exponential backoff
         for attempt in range(self.retry_config.max_retries + 1):
             try:
-                # Call wrapped provider
-                raw_response_text, metrics = self.provider.infer(prompt, model_config)
+                # Call wrapped provider (model_config was passed at initialization)
+                raw_response_text, metrics = self.provider.infer(prompt)
 
                 # Add retry count to metrics (create new instance with retry count)
                 metrics_with_retries = LLMInvocationMetrics(

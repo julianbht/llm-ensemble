@@ -13,8 +13,14 @@ from __future__ import annotations
 from typing import Optional
 
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
+from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
+from llm_ensemble.infer.schemas.infer_run_context import InferRunContext
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.infer.schemas.entities.adapter_config import AdapterConfig
+from llm_ensemble.infer.schemas.entities.prompt_builder import PromptBuilder
+from llm_ensemble.infer.schemas.entities.parser import Parser
+from llm_ensemble.infer.schemas.entities.provider import Provider
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 from llm_ensemble.infer.inference_service import InferenceService
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
@@ -78,18 +84,42 @@ def run_inference(
     retry_config = RetryConfig.load(retry_config_name)
     logging_config = LoggingConfig.load(logging_config_name)
 
-    # Create immutable run info
-    run_info = InferRunInfo.create(
-        name_hints=[
-            model_config_name,
-            prompt_name,
-            parser_name,
-            io_name,
-        ],
+    # Instantiate adapters to get their metadata (name, template_text, etc.)
+    prompt_builder_adapter = PromptAdapterFactory.create(prompt_name)
+    response_parser_adapter = ParserAdapterFactory.create(parser_name)
+
+    # Build provider (configured once with full model config)
+    base_provider = ProviderFactory.create(
+        provider_name=provider_name,
+        model_config=model_config,
+    )
+
+    # Create adapter config entity (bundles prompt builder, parser, provider metadata)
+    adapter_config = AdapterConfig(
+        prompt_builder=PromptBuilder(name=prompt_name, template_text=prompt_builder_adapter.template_text),
+        parser=Parser(name=parser_name),
+        provider=Provider(name=provider_name),
+    )
+
+    # Create run config entity (bundles model, adapter, retry configs)
+    run_config = InferRunConfig(
+        model_cfg=model_config,
+        adapter_config=adapter_config,
+        retry_config=retry_config,
+    )
+
+    # Create run context entity (CLI args for execution)
+    run_context = InferRunContext(
         input_run_name=input_run_name,
-        run_name=run_name,
+        io_name=io_name,
         start_idx=start_idx,
         end_idx=end_idx,
+    )
+
+    # Create run info entity (metadata only, uses name hints from config)
+    run_info = InferRunInfo.create(
+        name_hints=run_config.get_name_hints(),
+        run_name=run_name,
         official=official,
         notes=notes,
     )
@@ -129,17 +159,11 @@ def run_inference(
         end_idx=end_idx,
     )
 
-    # Instantiate adapters with factories
-    prompt_builder_adapter = PromptAdapterFactory.create(prompt_name)
-    response_parser_adapter = ParserAdapterFactory.create(parser_name)
+    # Instantiate I/O adapters
     input_adapter = IOAdapterFactory.create_reader(io_name)
     output_adapter = IOAdapterFactory.create_writer(io_name)
 
-    # Build provider and wrap with retry logic
-    base_provider = ProviderFactory.create(
-        provider_name=provider_name,
-        model_id=model_config.model_id,
-    )
+    # Wrap provider with retry logic
     from llm_ensemble.infer.adapters.retrying_provider import RetryingProvider
     provider_adapter = RetryingProvider(base_provider, retry_config)
 
@@ -155,9 +179,9 @@ def run_inference(
     # Run inference pipeline
     try:
         summary = service.run_inference(
-            run_name=input_run_name,
-            model_config=model_config,
             run_info=run_info,
+            run_config=run_config,
+            run_context=run_context,
             run_dir=run_dir,
         )
         judgement_count = summary.judgement_count

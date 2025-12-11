@@ -8,8 +8,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
-from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
+from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
+from llm_ensemble.infer.schemas.infer_run_context import InferRunContext
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.ports import (
     LLMProviderPort,
@@ -56,16 +57,16 @@ class InferenceService:
 
     def run_inference(
         self,
-        run_name: str,
-        model_config: ModelConfig,
         run_info: InferRunInfo,
+        run_config: InferRunConfig,
+        run_context: InferRunContext,
         run_dir: Path,
     ) -> InferRunSummary:
         """Execute the inference pipeline with streaming and immediate persistence.
 
         Coordinates:
         1. Reading DatasetSample objects via ExampleReader port
-        2. Computing actual start_idx and end_idx from run_info (defaulting to 0 and sample_count)
+        2. Computing actual start_idx and end_idx from run_context (defaulting to 0 and sample_count)
         3. Slicing samples based on computed indices
         4. For each dataset_sample in slice (streaming loop):
            a. Building prompt via PromptBuilder port → LLMPrompt (dataset_sample + prompt_text)
@@ -77,9 +78,9 @@ class InferenceService:
         5. Calculating statistics including warnings summary from all stages
 
         Args:
-            run_name: Ingest run identifier (reader resolves to file path)
-            model_config: Model configuration
-            run_info: Immutable runtime context with nullable start_idx/end_idx capturing user intent
+            run_info: Run metadata (git info, timestamps, run_type, notes)
+            run_config: Configuration bundle (model, adapters, retry)
+            run_context: Execution context (input source, sample range, I/O format)
             run_dir: Run directory where output should be written (writer determines file structure)
 
         Returns:
@@ -91,12 +92,12 @@ class InferenceService:
         summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
 
-        # Read full NormalizedDataset
-        normalized_dataset = self.input_adapter.read(run_name)
+        # Read full NormalizedDataset (using input_run_name from context)
+        normalized_dataset = self.input_adapter.read(run_context.input_run_name)
 
-        # Compute actual start_idx and end_idx from run_info
-        start_idx = run_info.start_idx if run_info.start_idx is not None else 0
-        end_idx = run_info.end_idx if run_info.end_idx is not None else len(normalized_dataset.samples)
+        # Compute actual start_idx and end_idx from run_context
+        start_idx = run_context.start_idx if run_context.start_idx is not None else 0
+        end_idx = run_context.end_idx if run_context.end_idx is not None else len(normalized_dataset.samples)
 
         # Slice samples based on computed indices
         samples_to_process = normalized_dataset.samples[start_idx:end_idx]
@@ -105,7 +106,7 @@ class InferenceService:
         llm_judgements: list[LLMJudgement] = []
 
         # Open writer for streaming
-        with self.output_adapter.open(run_dir, run_info, normalized_dataset) as writer:
+        with self.output_adapter.open(run_dir, run_info, run_config, run_context, normalized_dataset) as writer:
 
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
@@ -113,12 +114,9 @@ class InferenceService:
                 # Build prompt text
                 prompt_text = self.prompt_builder.build_prompt(dataset_sample)
 
-                # Run inference
+                # Run inference (model_config was passed at provider initialization)
                 self.logger.info(InferLogEvent.SENDING_REQUEST)
-                raw_response_text, llm_invocation_metrics = self.llm_provider.infer(
-                    prompt_text,
-                    model_config
-                )
+                raw_response_text, llm_invocation_metrics = self.llm_provider.infer(prompt_text)
 
                 # Parse response (returns tuple of score and warnings)
                 llm_score, parser_warnings = self.response_parser.parse(raw_response_text)

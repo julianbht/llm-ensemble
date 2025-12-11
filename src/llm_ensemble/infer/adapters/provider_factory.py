@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import Dict, Type
 
 from llm_ensemble.infer.ports import LLMProviderPort
+from llm_ensemble.infer.schemas import ModelConfig
 from llm_ensemble.infer.adapters.providers.openrouter_adapter import OpenRouterAdapter
 from llm_ensemble.infer.adapters.providers.ollama_adapter import OllamaAdapter
 
@@ -30,16 +31,16 @@ class ProviderFactory:
     @staticmethod
     def create(
         provider_name: str,
-        model_id: str,
+        model_config: ModelConfig,
     ) -> LLMProviderPort:
         """Build and return a provider adapter instance.
 
-        Adapters handle their own defaults (timeouts, base URLs, API keys from env).
+        Adapters are configured once with the full model configuration.
         Retry logic is handled by a separate wrapper.
 
         Args:
             provider_name: Name of the provider (e.g., 'openrouter', 'ollama')
-            model_id: Model identifier to pass to the provider
+            model_config: Complete model configuration (model_id, temperature, max_tokens, etc.)
 
         Returns:
             Instantiated provider adapter
@@ -56,10 +57,10 @@ class ProviderFactory:
 
         adapter_class = PROVIDERS[provider_name]
 
-        # Adapters own their configuration (timeouts, URLs, API keys)
+        # Pass full model config to provider (configured once at initialization)
         return adapter_class(
             provider_name=provider_name,
-            model_name=model_id,
+            model_config=model_config,
         )
 
     @staticmethod

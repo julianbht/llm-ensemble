@@ -36,16 +36,16 @@ class LLMProviderPort(ABC):
     def __init__(
         self,
         provider_name: str,
-        model_name: str,
+        model_config: ModelConfig,
     ):
-        """Initialize provider with identity from config.
+        """Initialize provider with configuration.
 
         Args:
             provider_name: Provider identifier (from config, e.g., 'openrouter')
-            model_name: Model identifier (from config, e.g., 'llama-4-maverick:free')
+            model_config: Complete model configuration (model_id, temperature, max_tokens, etc.)
         """
         self.provider_name = provider_name
-        self.model_name = model_name
+        self.model_config = model_config
         self.logger = get_logger(component=f"{provider_name}_provider")
 
     def get_provider(self) -> Provider:
@@ -61,16 +61,14 @@ class LLMProviderPort(ABC):
     def infer(
         self,
         prompt: str,
-        model_config: ModelConfig,
     ) -> tuple[str, LLMInvocationMetrics]:
         """Perform inference and return response with metrics.
 
-        Adapters implement the actual API call and return the response text
-        and invocation metrics (without retry count - that's handled by wrapper).
+        Adapters implement the actual API call using the model_config provided at initialization.
+        Returns the response text and invocation metrics (without retry count - that's handled by wrapper).
 
         Args:
             prompt: Pre-built prompt string (from PromptBuilder)
-            model_config: Model configuration with provider and settings
 
         Returns:
             Tuple of (raw_response_text, invocation_metrics)

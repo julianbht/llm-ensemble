@@ -1,12 +1,16 @@
-"""InferRunInfo schema - runtime context for infer CLI runs.
+"""InferRunInfo schema - runtime metadata for infer CLI runs.
 
-Contains only CLI parameters and run metadata. Configuration objects belong on
-the JudgedDataset entity, not here.
+Contains only run metadata (git info, timestamps, notes, run_type).
+Configuration and execution context are separated into:
+- InferRunConfig: Model/adapter/retry configuration
+- InferRunContext: CLI args (input_run_name, start_idx, end_idx, io_name)
+- InferRunOutput: Judgements and aggregate metrics produced
 
 Separation of concerns:
-- InferRunInfo: CLI parameters + run metadata (what was requested)
-- JudgedDataset: Model + adapter configs (what was used to produce judgements)
-- InferRunORM: Links the two and tracks intent vs. actual result
+- InferRunInfo: Run metadata (git SHA, timestamps, run_type, notes)
+- InferRunConfig: Configuration used to produce judgements
+- InferRunContext: Execution context (input source, sample range)
+- InferRunOutput: Actual judgements and metrics produced
 """
 
 from __future__ import annotations
@@ -18,15 +22,17 @@ from llm_ensemble.libs.runtime.run_name import generate_run_name
 
 
 class InferRunInfo(RunInfo):
-    """Runtime context for infer CLI runs.
+    """Runtime metadata for infer CLI runs.
 
-    Contains:
-    1. Run metadata (inherited from RunInfo): id, run_name, run_type, notes, git info
-    2. CLI parameters: input source and index range
+    Contains only run metadata inherited from RunInfo:
+    - Run identification (id, run_name, cli_name)
+    - Run type (official vs test)
+    - User context (notes)
+    - Git metadata (commit SHA, branch, clean status)
+    - Timestamps (start_time, end_time via RunInfo)
 
-    Configuration objects (ModelConfig, AdapterConfig) belong on JudgedDataset,
-    not here. This keeps InferRunInfo focused on "what was requested" while
-    JudgedDataset tracks "what was actually used".
+    Configuration and execution context are separated into InferRunConfig and
+    InferRunContext respectively. This keeps concerns cleanly separated.
     """
 
     # Override cli_name from base RunInfo to automatically set it to "infer"
@@ -35,44 +41,21 @@ class InferRunInfo(RunInfo):
         description="Name of the CLI that generated this run (always 'infer' for InferRunInfo)"
     )
 
-    # CLI parameters - input source
-    input_run_name: str = Field(
-        ...,
-        description="Ingest run name to read samples from (e.g., 'my_ingest_run')"
-    )
-
-    # CLI parameters - index range (optional, from --start-idx and --end-idx flags)
-    start_idx: Optional[int] = Field(
-        default=None,
-        description="Start index into NormalizedDataset.samples (0-indexed, inclusive, None = start from beginning)"
-    )
-
-    end_idx: Optional[int] = Field(
-        default=None,
-        description="End index into NormalizedDataset.samples (exclusive, None = process until end)"
-    )
-
     model_config = ConfigDict(frozen=True)
 
     @classmethod
     def create(
         cls,
-        name_hints: list[str],
-        input_run_name: str,
         run_name: Optional[str] = None,
-        start_idx: Optional[int] = None,
-        end_idx: Optional[int] = None,
+        name_hints: Optional[list[str]] = None,
         official: bool = False,
         notes: Optional[str] = None,
     ) -> "InferRunInfo":
         """Factory method to create InferRunInfo with automatic run_name generation.
 
         Args:
-            name_hints: List of name hints for run ID generation (e.g., [model_hint, prompt_hint, io_hint])
-            input_run_name: Ingest run name to read samples from
             run_name: Custom run ID (auto-generates from name_hints if not provided)
-            start_idx: Start index into NormalizedDataset (None = start from beginning)
-            end_idx: End index into NormalizedDataset (None = process until end)
+            name_hints: List of name hints for run ID generation (e.g., [model_hint, prompt_hint])
             official: Mark as official run (saved to official/ subdirectory for git tracking)
             notes: Optional user-provided notes about this run
 
@@ -80,13 +63,12 @@ class InferRunInfo(RunInfo):
             InferRunInfo instance with all fields populated (including id and git_info via defaults)
         """
         if run_name is None:
+            if name_hints is None:
+                raise ValueError("Either run_name or name_hints must be provided")
             run_name = generate_run_name(name_hints)
 
         return cls(
             run_name=run_name,
-            input_run_name=input_run_name,
-            start_idx=start_idx,
-            end_idx=end_idx,
             run_type=RunType.OFFICIAL if official else RunType.TEST,
             notes=notes,
         )

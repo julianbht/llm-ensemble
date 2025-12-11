@@ -35,7 +35,7 @@ RunName = Annotated[
 ]
 
 LogCfg = Annotated[
-    Optional[str],
+    str,
     typer.Option(
         "--log-cfg",
         click_type=LogConfigParamType(),

@@ -17,9 +17,7 @@ from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 from llm_ensemble.infer.inference_service import InferenceService
-from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
-from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
@@ -36,8 +34,8 @@ def run_inference(
     parser_name: str,
     retry_config_name: str,
     io_name: str,
-    logging_config_name: str,
     input_run_name: str,
+    logging_config_name: str = "observability",
     run_name: Optional[str] = None,
     start_idx: Optional[int] = None,
     end_idx: Optional[int] = None,
@@ -61,8 +59,8 @@ def run_inference(
         parser_name: Parser name for registry lookup (e.g., "thomas-simple")
         retry_config_name: Name of the retry config file (e.g., "standard")
         io_name: I/O format name (e.g., "db_to_json", "db_to_db")
-        logging_config_name: Name of the logging config file (e.g., "observability")
         input_run_name: Ingest run identifier (e.g., "my_ingest_run")
+        logging_config_name: Name of the logging config file (defaults to "observability")
         run_name: Custom run ID (auto-generates if not provided)
         start_idx: Start index into NormalizedDataset (None = start from beginning)
         end_idx: End index into NormalizedDataset (None = process until end)
@@ -80,22 +78,19 @@ def run_inference(
     retry_config = RetryConfig.load(retry_config_name)
     logging_config = LoggingConfig.load(logging_config_name)
 
-    # Generate or use provided run_name
-    if run_name is None:
-        run_name = generate_run_name([
+    # Create immutable run info
+    run_info = InferRunInfo.create(
+        name_hints=[
             model_config_name,
             prompt_name,
             parser_name,
             io_name,
-        ])
-
-    # Create immutable run info
-    run_info = InferRunInfo(
-        run_name=run_name,
+        ],
         input_run_name=input_run_name,
+        run_name=run_name,
         start_idx=start_idx,
         end_idx=end_idx,
-        run_type=RunType.OFFICIAL if official else RunType.TEST,
+        official=official,
         notes=notes,
     )
 

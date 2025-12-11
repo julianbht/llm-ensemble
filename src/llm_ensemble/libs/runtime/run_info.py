@@ -13,7 +13,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from llm_ensemble.libs.runtime.path_manager import PathManager
-from llm_ensemble.libs.runtime.git_utils import GitInfo
+from llm_ensemble.libs.runtime.git_utils import GitInfo, get_git_info
 
 class RunType(str, Enum):
     """Enumeration of run types for reproducibility tracking."""
@@ -65,7 +65,7 @@ class RunInfo(BaseModel):
 
     # Git metadata for reproducibility
     git_info: GitInfo = Field(
-        ...,
+        default_factory=get_git_info,
         description="Git metadata (commit SHA, branch, clean status) captured at time of run"
     )
 

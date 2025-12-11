@@ -19,7 +19,6 @@ from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.runtime.path_manager import PathManager
-from llm_ensemble.libs.runtime.git_utils import GitInfo, get_git_info
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
 
@@ -79,15 +78,12 @@ def run_aggregation(
         TagManager.register_tag(tag, "aggregate", run_name)
 
 
-    # Get git info for reproducibility
-    git_info : GitInfo = get_git_info()
-
     # Create immutable run info
+    # git_info is automatically captured via default_factory
     run_info = AggregateRunInfo(
         run_name=run_name,
         run_type=RunType.OFFICIAL if official else RunType.TEST,
         notes=notes,
-        git_info=git_info,
         aggregation_strategy_name=aggregation_strategy_name,
         io_config_name=io_config_name,
         io_config=io_config,

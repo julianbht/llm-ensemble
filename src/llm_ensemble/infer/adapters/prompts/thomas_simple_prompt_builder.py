@@ -22,7 +22,7 @@ class ThomasSimplePromptBuilder(PromptBuilderPort):
     """
 
     TEMPLATE_NAME = "thomas-simple"
-    TEMPLATE_ID = uuid.uuid5(uuid.NAMESPACE_DNS, "llm-ensemble.thomas-simple-v1")
+    TEMPLATE_ID = uuid.uuid5(uuid.NAMESPACE_DNS, "thomas-simple-prompt-builder-v1")
     TEMPLATE_TEXT = dedent("""\
         Given a query and a web page, you must
         provide a score on an integer scale of 0 to 2 with the

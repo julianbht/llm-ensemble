@@ -166,7 +166,7 @@ def run_inference(
     from llm_ensemble.infer.adapters.retrying_provider import RetryingProvider
     provider_adapter = RetryingProvider(base_provider, retry_config)
 
-    # Create domain service by injecting adapters
+    # Create domain service by injecting adapters^
     service = InferenceService(
         input_adapter=input_adapter,
         output_adapter=output_adapter,

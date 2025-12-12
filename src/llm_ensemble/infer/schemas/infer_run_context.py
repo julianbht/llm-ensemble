@@ -23,13 +23,12 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class InferRunContext(BaseModel):
+class IngestRunContext(BaseModel):
     """Execution context for an infer run.
 
     Contains CLI arguments that control execution behavior:
     - Input source: which ingest run to read samples from
     - Index range: which samples to process (start_idx, end_idx)
-    - I/O format: how to read/write data (io_name)
 
     This represents "how the run was executed" (input source, sample selection),
     separate from "what configuration was used" (InferRunConfig) and
@@ -44,11 +43,6 @@ class InferRunContext(BaseModel):
     input_run_name: str = Field(
         ...,
         description="Ingest run name to read samples from (e.g., 'my_ingest_run')"
-    )
-
-    io_name: str = Field(
-        ...,
-        description="I/O format name (e.g., 'db_to_json', 'db_to_db')"
     )
 
     start_idx: Optional[int] = Field(

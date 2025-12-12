@@ -13,7 +13,7 @@ from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
-from llm_ensemble.infer.schemas.infer_run_context import InferRunContext
+from llm_ensemble.infer.schemas.infer_run_context import IngestRunContext
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.schemas.warnings import BaseWarning, ParserWarning, ParserWarningCode
@@ -25,7 +25,7 @@ __all__ = [
     "RetryConfig",
     "InferRunInfo",
     "InferRunConfig",
-    "InferRunContext",
+    "IngestRunContext",
     "InferRunSummary",
     "WriteSummary",
     "BaseWarning",

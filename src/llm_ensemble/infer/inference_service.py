@@ -91,11 +91,11 @@ class InferenceService:
         run_dir = run_info.run_dir
 
         # Read full NormalizedDataset (using input_run_name from execution context)
-        normalized_dataset = self.input_adapter.read(run_config.execution_context.input_run_name)
+        normalized_dataset = self.input_adapter.read(run_config.ingest_run_context.input_run_name)
 
         # Compute actual start_idx and end_idx from execution context
-        start_idx = run_config.execution_context.start_idx if run_config.execution_context.start_idx is not None else 0
-        end_idx = run_config.execution_context.end_idx if run_config.execution_context.end_idx is not None else len(normalized_dataset.samples)
+        start_idx = run_config.ingest_run_context.start_idx if run_config.ingest_run_context.start_idx is not None else 0
+        end_idx = run_config.ingest_run_context.end_idx if run_config.ingest_run_context.end_idx is not None else len(normalized_dataset.samples)
 
         # Slice samples based on computed indices
         samples_to_process = normalized_dataset.samples[start_idx:end_idx]

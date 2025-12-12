@@ -14,7 +14,7 @@ from typing import Optional
 
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
-from llm_ensemble.infer.schemas.infer_run_context import InferRunContext
+from llm_ensemble.infer.schemas.infer_run_context import IngestRunContext
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.entities.adapter_config import AdapterConfig
@@ -100,7 +100,7 @@ def run_inference(
     )
 
     # Create execution context entity (CLI args for execution)
-    execution_context = InferRunContext(
+    execution_context = IngestRunContext(
         input_run_name=input_run_name,
         io_name=io_name,
         start_idx=start_idx,
@@ -112,7 +112,7 @@ def run_inference(
         model_cfg=model_config,
         adapter_config=adapter_config,
         retry_config=retry_config,
-        execution_context=execution_context,
+        ingest_run_context=execution_context,
     )
 
     # Create run info entity (metadata only, uses name hints from config)

@@ -25,7 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.entities.adapter_config import AdapterConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.infer.schemas.infer_run_context import InferRunContext
+from llm_ensemble.infer.schemas.infer_run_context import IngestRunContext
 
 
 class InferRunConfig(BaseModel):
@@ -61,9 +61,9 @@ class InferRunConfig(BaseModel):
         description="Retry configuration (backoff, max attempts)"
     )
 
-    execution_context: InferRunContext = Field(
+    ingest_run_context: IngestRunContext = Field(
         ...,
-        description="Execution context (input source, sample range, I/O format)"
+        description="Execution context of ingest run"
     )
 
     model_config = ConfigDict(frozen=True)
@@ -79,7 +79,7 @@ class InferRunConfig(BaseModel):
             ["gpt-oss-20b", "thomas-simple", "thomas-simple", "openrouter"]
         """
         return [
-            self.model_cfg.hint,
+            self.model_cfg.name_hint,
             self.adapter_config.prompt_builder.name,
             self.adapter_config.parser.name,
             self.adapter_config.provider.name,

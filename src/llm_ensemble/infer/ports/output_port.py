@@ -12,6 +12,7 @@ from typing import Optional
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
+from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 
@@ -42,25 +43,28 @@ class OutputPort(ABC):
         self,
         run_dir: Path,
         run_info: InferRunInfo,
+        run_config: InferRunConfig,
         normalized_dataset: NormalizedDataset,
     ) -> OutputPort:
-        """Initialize writer with run directory, run context, and input dataset.
+        """Initialize writer with run directory, run info, run config, and input dataset.
 
-        The run_info contains metadata about the inference run (model config,
-        git SHA, etc.) including nullable start_idx/end_idx capturing user intent.
+        The run_info contains metadata about the inference run (git SHA, timestamps, notes).
+
+        The run_config contains all configuration used for inference (model config, adapters,
+        retry config, execution context with input source and sample range).
 
         The normalized_dataset is used to link InferRun to the source ingest run for provenance.
-        The writer will compute actual start_idx and end_idx from run_info defaults.
 
         All other metadata (provider, model_config, prompt_template, parser)
-        is extracted from the judgement objects during write_one().
+        is available from run_config and can be extracted during write_one().
 
         For SQL writers, this creates the InferRun entity and prepares for streaming writes.
         JudgedDataset is created on first write_one() with metadata from the judgement.
 
         Args:
             run_dir: Run directory where output should be written (writer determines file structure)
-            run_info: Inference run context (metadata about model, git state, user-specified indices)
+            run_info: Inference run metadata (git state, timestamps, notes)
+            run_config: Configuration bundle (model, adapters, retry, execution context)
             normalized_dataset: Input dataset being processed (used for provenance linking)
 
         Returns:

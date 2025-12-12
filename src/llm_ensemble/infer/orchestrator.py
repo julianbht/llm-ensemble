@@ -84,36 +84,35 @@ def run_inference(
     retry_config = RetryConfig.load(retry_config_name)
     logging_config = LoggingConfig.load(logging_config_name)
 
-    # Instantiate adapters to get their metadata (name, template_text, etc.)
+    # Instantiate adapters that the service will use
     prompt_builder_adapter = PromptAdapterFactory.create(prompt_name)
     response_parser_adapter = ParserAdapterFactory.create(parser_name)
-
-    # Build provider (configured once with full model config)
     base_provider = ProviderFactory.create(
         provider_name=provider_name,
         model_config=model_config,
     )
 
-    # Create adapter config entity (bundles prompt builder, parser, provider metadata)
+    # Get domain entities from adapters (they already have the metadata)
     adapter_config = AdapterConfig(
-        prompt_builder=PromptBuilder(name=prompt_name, template_text=prompt_builder_adapter.template_text),
-        parser=Parser(name=parser_name),
-        provider=Provider(name=provider_name),
+        prompt_builder=prompt_builder_adapter.get_builder(),
+        parser=response_parser_adapter.get_parser(),
+        provider=base_provider.get_provider(),
     )
 
-    # Create run config entity (bundles model, adapter, retry configs)
-    run_config = InferRunConfig(
-        model_cfg=model_config,
-        adapter_config=adapter_config,
-        retry_config=retry_config,
-    )
-
-    # Create run context entity (CLI args for execution)
-    run_context = InferRunContext(
+    # Create execution context entity (CLI args for execution)
+    execution_context = InferRunContext(
         input_run_name=input_run_name,
         io_name=io_name,
         start_idx=start_idx,
         end_idx=end_idx,
+    )
+
+    # Create run config entity (bundles model, adapter, retry configs, and execution context)
+    run_config = InferRunConfig(
+        model_cfg=model_config,
+        adapter_config=adapter_config,
+        retry_config=retry_config,
+        execution_context=execution_context,
     )
 
     # Create run info entity (metadata only, uses name hints from config)
@@ -181,8 +180,6 @@ def run_inference(
         summary = service.run_inference(
             run_info=run_info,
             run_config=run_config,
-            run_context=run_context,
-            run_dir=run_dir,
         )
         judgement_count = summary.judgement_count
         logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=judgement_count)

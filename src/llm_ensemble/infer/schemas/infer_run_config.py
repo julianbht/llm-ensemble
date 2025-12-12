@@ -4,16 +4,17 @@ This entity bundles all configuration needed to execute inference:
 - Model configuration (which model to use)
 - Adapter configuration (prompt builder, parser, provider)
 - Retry configuration
+- Execution context (input source, sample range, I/O format)
 - Name hints (for run_name generation)
 
 Responsibilities:
 - Provides name hints for run_name generation
 - Bundles all configs needed for inference execution
+- Includes execution context as a nested entity
 - Immutable configuration snapshot used to produce judgements
 
 This is separate from:
 - InferRunInfo: Git info, timestamps, run metadata
-- InferRunContext: CLI args like start_idx, end_idx, input_run_name
 - InferRunOutput: The actual judgements and metrics produced
 """
 
@@ -24,6 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.entities.adapter_config import AdapterConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.infer.schemas.infer_run_context import InferRunContext
 
 
 class InferRunConfig(BaseModel):
@@ -33,9 +35,10 @@ class InferRunConfig(BaseModel):
     - Model configuration (model ID, parameters)
     - Adapter configuration (prompt builder, parser, provider)
     - Retry configuration (backoff, max attempts)
+    - Execution context (input source, sample range, I/O format)
 
-    This represents "what configuration was used" to produce judgements.
-    Separate from run metadata (InferRunInfo) and execution context (InferRunContext).
+    This represents "what configuration was used" and "how it was executed"
+    to produce judgements. Separate from run metadata (InferRunInfo).
     """
 
     id: UUID = Field(
@@ -56,6 +59,11 @@ class InferRunConfig(BaseModel):
     retry_config: RetryConfig = Field(
         ...,
         description="Retry configuration (backoff, max attempts)"
+    )
+
+    execution_context: InferRunContext = Field(
+        ...,
+        description="Execution context (input source, sample range, I/O format)"
     )
 
     model_config = ConfigDict(frozen=True)

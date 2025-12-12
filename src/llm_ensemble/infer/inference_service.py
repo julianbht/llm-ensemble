@@ -10,7 +10,6 @@ from pathlib import Path
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
-from llm_ensemble.infer.schemas.infer_run_context import InferRunContext
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.ports import (
     LLMProviderPort,
@@ -59,14 +58,12 @@ class InferenceService:
         self,
         run_info: InferRunInfo,
         run_config: InferRunConfig,
-        run_context: InferRunContext,
-        run_dir: Path,
     ) -> InferRunSummary:
         """Execute the inference pipeline with streaming and immediate persistence.
 
         Coordinates:
         1. Reading DatasetSample objects via ExampleReader port
-        2. Computing actual start_idx and end_idx from run_context (defaulting to 0 and sample_count)
+        2. Computing actual start_idx and end_idx from run_config.execution_context (defaulting to 0 and sample_count)
         3. Slicing samples based on computed indices
         4. For each dataset_sample in slice (streaming loop):
            a. Building prompt via PromptBuilder port → LLMPrompt (dataset_sample + prompt_text)
@@ -79,9 +76,7 @@ class InferenceService:
 
         Args:
             run_info: Run metadata (git info, timestamps, run_type, notes)
-            run_config: Configuration bundle (model, adapters, retry)
-            run_context: Execution context (input source, sample range, I/O format)
-            run_dir: Run directory where output should be written (writer determines file structure)
+            run_config: Configuration bundle (model, adapters, retry, execution context)
 
         Returns:
             Finalized InferRunSummary with statistics, timing, and warnings summary
@@ -92,12 +87,15 @@ class InferenceService:
         summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
 
-        # Read full NormalizedDataset (using input_run_name from context)
-        normalized_dataset = self.input_adapter.read(run_context.input_run_name)
+        # Derive run_dir from run_info
+        run_dir = run_info.run_dir
 
-        # Compute actual start_idx and end_idx from run_context
-        start_idx = run_context.start_idx if run_context.start_idx is not None else 0
-        end_idx = run_context.end_idx if run_context.end_idx is not None else len(normalized_dataset.samples)
+        # Read full NormalizedDataset (using input_run_name from execution context)
+        normalized_dataset = self.input_adapter.read(run_config.execution_context.input_run_name)
+
+        # Compute actual start_idx and end_idx from execution context
+        start_idx = run_config.execution_context.start_idx if run_config.execution_context.start_idx is not None else 0
+        end_idx = run_config.execution_context.end_idx if run_config.execution_context.end_idx is not None else len(normalized_dataset.samples)
 
         # Slice samples based on computed indices
         samples_to_process = normalized_dataset.samples[start_idx:end_idx]
@@ -106,7 +104,7 @@ class InferenceService:
         llm_judgements: list[LLMJudgement] = []
 
         # Open writer for streaming
-        with self.output_adapter.open(run_dir, run_info, run_config, run_context, normalized_dataset) as writer:
+        with self.output_adapter.open(run_dir, run_info, run_config, normalized_dataset) as writer:
 
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:

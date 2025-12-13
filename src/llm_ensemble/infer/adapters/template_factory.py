@@ -31,6 +31,47 @@ class PromptTemplateFactory:
     """
 
     @staticmethod
+    def get_metadata(template_name: str):
+        """Get PromptTemplate entity with metadata only (no adapter instantiation).
+
+        Creates metadata entities using class-level constants from template classes,
+        avoiding the need to instantiate heavy adapter objects.
+
+        Args:
+            template_name: Name of the template (e.g., 'thomas-simple')
+
+        Returns:
+            PromptTemplate entity with metadata (template_text, builder, parser)
+
+        Raises:
+            ValueError: If template not found
+        """
+        if template_name not in TEMPLATES:
+            available = ", ".join(sorted(TEMPLATES.keys()))
+            raise ValueError(
+                f"Template '{template_name}' not found. "
+                f"Available: {available}"
+            )
+
+        # Import here to avoid circular dependency
+        from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
+        from llm_ensemble.infer.schemas.entities.prompt_builder import PromptBuilder
+        from llm_ensemble.infer.schemas.entities.parser import Parser
+
+        template_class = TEMPLATES[template_name]
+
+        # Create simple metadata entities (no adapters)
+        builder_metadata = PromptBuilder(name=template_class.BUILDER_NAME)
+        parser_metadata = Parser(name=template_class.PARSER_NAME)
+
+        return PromptTemplate.create(
+            name=template_class.TEMPLATE_NAME,
+            template_text=template_class.TEMPLATE_TEXT,
+            prompt_builder=builder_metadata,
+            response_parser=parser_metadata,
+        )
+
+    @staticmethod
     def create(template_name: str) -> tuple[PromptBuilderPort, ResponseParserPort]:
         """Create and return prompt builder and parser for the template.
 

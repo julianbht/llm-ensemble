@@ -17,7 +17,6 @@ from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.infer_run_context import IngestRunContext
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 from llm_ensemble.infer.inference_service import InferenceService
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
@@ -78,15 +77,8 @@ def run_inference(
     retry_config = RetryConfig.load(retry_config_name)
     logging_config = LoggingConfig.load(logging_config_name)
 
-    # Get template adapters to extract metadata
-    prompt_builder_adapter, response_parser_adapter = PromptTemplateFactory.create(prompt_template_name)
-
-    # Create PromptTemplate entity (metadata only, not adapters)
-    prompt_template = PromptTemplate.create(
-        name=prompt_template_name,
-        prompt_builder=prompt_builder_adapter.get_builder(),
-        response_parser=response_parser_adapter.get_parser(),
-    )
+    # Create metadata-only entities (no adapter instantiation yet)
+    prompt_template = PromptTemplateFactory.get_metadata(prompt_template_name)
 
     # Get provider adapter to extract metadata
     base_provider = ProviderFactory.create(
@@ -153,7 +145,11 @@ def run_inference(
         end_idx=end_idx,
     )
 
-    # Instantiate I/O adapters
+    # Instantiate adapters from config
+    # Prompt template adapters from config
+    prompt_builder_adapter, response_parser_adapter = run_config.prompt_template.get_adapters()
+
+    # I/O adapters
     input_adapter = IOAdapterFactory.create_reader(io_name)
     output_adapter = IOAdapterFactory.create_writer(io_name)
 
@@ -161,7 +157,7 @@ def run_inference(
     from llm_ensemble.infer.adapters.retrying_provider import RetryingProvider
     provider_adapter = RetryingProvider(base_provider, retry_config)
 
-    # Create domain service by injecting adapters^
+    # Create domain service by injecting adapters
     service = InferenceService(
         input_adapter=input_adapter,
         output_adapter=output_adapter,

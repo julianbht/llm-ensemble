@@ -21,7 +21,12 @@ class ThomasAdvancedTemplate(PromptTemplatePort):
     This ensures the prompt and parser are always correctly paired.
     """
 
+    # Class-level constants for metadata access without instantiation
     TEMPLATE_NAME = "thomas-advanced"
+    TEMPLATE_TEXT = ThomasAdvancedPromptBuilder.TEMPLATE_TEXT
+    TEMPLATE_ID = ThomasAdvancedPromptBuilder.TEMPLATE_ID
+    BUILDER_NAME = ThomasAdvancedPromptBuilder.TEMPLATE_NAME
+    PARSER_NAME = ThomasAdvancedParser.PARSER_NAME
 
     def __init__(self):
         """Initialize template with builder and parser."""

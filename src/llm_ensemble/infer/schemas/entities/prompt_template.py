@@ -20,8 +20,8 @@ class PromptTemplate(BaseModel):
     designed to work together. This ensures prompts and parsers are
     always correctly paired.
 
-    The template contains metadata about both the builder (which renders
-    prompts) and the parser (which extracts scores from responses).
+    The template contains the actual template text and metadata about
+    the builder and parser that process it.
     """
 
     id: UUID = Field(
@@ -34,31 +34,38 @@ class PromptTemplate(BaseModel):
         description="Prompt template name (e.g., 'thomas-simple')"
     )
 
+    template_text: str = Field(
+        ...,
+        description="Raw template text (unrendered)"
+    )
+
     prompt_builder: PromptBuilder = Field(
         ...,
-        description="Prompt builder metadata (name, template_text)"
+        description="Prompt builder metadata (id, name)"
     )
 
     response_parser: Parser = Field(
         ...,
-        description="Response parser metadata (name)",
+        description="Response parser metadata (id, name)",
         alias="response_text_parser"
     )
 
     @classmethod
-    def create(cls, name: str, prompt_builder: PromptBuilder, response_parser: Parser) -> "PromptTemplate":
-        """Create a PromptTemplate from builder and parser entities.
+    def create(cls, name: str, template_text: str, prompt_builder: PromptBuilder, response_parser: Parser) -> "PromptTemplate":
+        """Create a PromptTemplate from template text and metadata entities.
 
         Args:
             name: Template name (e.g., 'thomas-simple')
-            prompt_builder: PromptBuilder metadata
-            response_parser: Parser metadata
+            template_text: Raw template text
+            prompt_builder: PromptBuilder metadata (id, name)
+            response_parser: Parser metadata (id, name)
 
         Returns:
             PromptTemplate entity
         """
         return cls(
             name=name,
+            template_text=template_text,
             prompt_builder=prompt_builder,
             response_text_parser=response_parser
         )

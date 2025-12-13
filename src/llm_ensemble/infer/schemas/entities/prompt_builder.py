@@ -1,7 +1,7 @@
 """PromptBuilder entity for the infer CLI.
 
-Represents a prompt builder configuration (name + template text).
-Renamed from PromptTemplate to match ORM naming (PromptBuilderORM).
+Simple metadata entity representing which prompt builder was used.
+The actual template text lives on PromptTemplate.
 """
 
 from __future__ import annotations
@@ -13,8 +13,8 @@ from pydantic import BaseModel, Field
 class PromptBuilder(BaseModel):
     """Prompt builder entity.
 
-    Represents the prompt builder configuration including template metadata.
-    Used to track which builder created prompts during inference.
+    Simple metadata tracking which prompt builder was used during inference.
+    Contains only identifier and name - template text lives on PromptTemplate.
     """
 
     id: UUID = Field(
@@ -25,9 +25,4 @@ class PromptBuilder(BaseModel):
     name: str = Field(
         ...,
         description="Prompt builder name (e.g., 'thomas-simple')"
-    )
-
-    template_text: str = Field(
-        ...,
-        description="Raw template text (unrendered, e.g., Jinja template source)"
     )

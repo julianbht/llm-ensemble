@@ -1,7 +1,10 @@
-"""Factory for prompt template adapters.
+"""Factory for prompt template entities.
 
 Simple, explicit mapping of template names to template adapter classes.
 No decorators, no hidden registration - just a clear dictionary.
+
+This factory returns PromptTemplate entities (pure metadata).
+Adapter instantiation happens in the adapter_factory layer.
 
 To add a new template:
 1. Create template adapter class that extends PromptTemplatePort
@@ -12,7 +15,7 @@ To add a new template:
 from __future__ import annotations
 from typing import Dict, Type
 
-from llm_ensemble.infer.ports import PromptTemplatePort, PromptBuilderPort, ResponseParserPort
+from llm_ensemble.infer.ports import PromptTemplatePort
 from llm_ensemble.infer.adapters.templates.thomas_simple_template import ThomasSimpleTemplate
 from llm_ensemble.infer.adapters.templates.thomas_advanced_template import ThomasAdvancedTemplate
 
@@ -24,24 +27,24 @@ TEMPLATES: Dict[str, Type[PromptTemplatePort]] = {
 
 
 class PromptTemplateFactory:
-    """Factory for creating prompt template instances.
+    """Factory for creating prompt template entities.
 
-    Each template bundles a prompt builder and response parser that are
-    designed to work together, ensuring they are always correctly paired.
+    Returns PromptTemplate entities with metadata only.
+    Does NOT instantiate adapters - that's done in adapter_factory.
     """
 
     @staticmethod
-    def get_metadata(template_name: str):
-        """Get PromptTemplate entity with metadata only (no adapter instantiation).
+    def create(template_name: str):
+        """Get PromptTemplate entity with metadata.
 
         Creates metadata entities using class-level constants from template classes,
-        avoiding the need to instantiate heavy adapter objects.
+        avoiding the need to instantiate heavy adapter objects at config time.
 
         Args:
             template_name: Name of the template (e.g., 'thomas-simple')
 
         Returns:
-            PromptTemplate entity with metadata (template_text, builder, parser)
+            PromptTemplate entity with metadata (template_text, builder, parser names)
 
         Raises:
             ValueError: If template not found
@@ -72,14 +75,16 @@ class PromptTemplateFactory:
         )
 
     @staticmethod
-    def create(template_name: str) -> tuple[PromptBuilderPort, ResponseParserPort]:
-        """Create and return prompt builder and parser for the template.
+    def get_adapter_class(template_name: str) -> Type[PromptTemplatePort]:
+        """Get template adapter class for instantiation.
+
+        Used by adapter_factory to instantiate concrete adapters.
 
         Args:
             template_name: Name of the template (e.g., 'thomas-simple')
 
         Returns:
-            Tuple of (prompt_builder, response_parser)
+            Template adapter class
 
         Raises:
             ValueError: If template not found
@@ -91,9 +96,7 @@ class PromptTemplateFactory:
                 f"Available: {available}"
             )
 
-        template_class = TEMPLATES[template_name]
-        template = template_class()
-        return template.get_builder(), template.get_parser()
+        return TEMPLATES[template_name]
 
     @staticmethod
     def list_available() -> list[str]:

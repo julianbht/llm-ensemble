@@ -27,9 +27,6 @@ from llm_ensemble.infer.schemas.infer_run_context import IngestRunContext
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.entities.provider import Provider
-from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
-from llm_ensemble.infer.schemas.entities.prompt_builder import PromptBuilder
-from llm_ensemble.infer.schemas.entities.parser import Parser
 from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
 
 
@@ -71,7 +68,7 @@ def build_infer_config(
     provider_entity = Provider(name=provider_name)
 
     # Get prompt template metadata (no adapter instantiation)
-    prompt_template_entity = PromptTemplateFactory.get_metadata(prompt_template_name)
+    prompt_template_entity = PromptTemplateFactory.create(prompt_template_name)
 
     # Create execution context entity
     execution_context = IngestRunContext(

@@ -76,9 +76,10 @@ def build_adapters(
     output_adapter = IOAdapterFactory.create_writer(io_name)
 
     # Instantiate prompt template adapters (builder + parser)
-    prompt_builder, response_parser = PromptTemplateFactory.create(
-        config.prompt_template.name
-    )
+    template_class = PromptTemplateFactory.get_adapter_class(config.prompt_template.name)
+    template_instance = template_class()
+    prompt_builder = template_instance.get_builder()
+    response_parser = template_instance.get_parser()
 
     # Instantiate base provider
     base_provider = ProviderFactory.create(

@@ -2,7 +2,8 @@
 
 This entity bundles all configuration needed to execute inference:
 - Model configuration (which model to use)
-- Adapter configuration (prompt builder, parser, provider)
+- Provider configuration (which LLM service to use)
+- Prompt template configuration (prompt builder and parser pair)
 - Retry configuration
 - Execution context (input source, sample range, I/O format)
 - Name hints (for run_name generation)
@@ -12,6 +13,7 @@ Responsibilities:
 - Bundles all configs needed for inference execution
 - Includes execution context as a nested entity
 - Immutable configuration snapshot used to produce judgements
+- Can instantiate adapters via factory methods
 
 This is separate from:
 - InferRunInfo: Git info, timestamps, run metadata
@@ -23,7 +25,8 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
-from llm_ensemble.infer.schemas.entities.adapter_config import AdapterConfig
+from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
+from llm_ensemble.infer.schemas.entities.provider import Provider
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.infer_run_context import IngestRunContext
 
@@ -33,12 +36,15 @@ class InferRunConfig(BaseModel):
 
     Contains all configuration needed to execute inference:
     - Model configuration (model ID, parameters)
-    - Adapter configuration (prompt builder, parser, provider)
+    - Provider configuration (LLM service name)
+    - Prompt template (bundles builder + parser metadata)
     - Retry configuration (backoff, max attempts)
     - Execution context (input source, sample range, I/O format)
 
     This represents "what configuration was used" and "how it was executed"
     to produce judgements. Separate from run metadata (InferRunInfo).
+
+    Adapters can be instantiated from this config using factory methods.
     """
 
     id: UUID = Field(
@@ -51,9 +57,14 @@ class InferRunConfig(BaseModel):
         description="Model configuration (model ID, parameters)"
     )
 
-    adapter_config: AdapterConfig = Field(
+    provider: Provider = Field(
         ...,
-        description="Adapter configuration (prompt builder, parser, provider)"
+        description="Provider metadata (name)"
+    )
+
+    prompt_template: PromptTemplate = Field(
+        ...,
+        description="Prompt template (bundles builder + parser metadata)"
     )
 
     retry_config: RetryConfig = Field(
@@ -73,14 +84,13 @@ class InferRunConfig(BaseModel):
 
         Returns:
             List of name components for run_name generation:
-            [model_hint, prompt_hint, parser_hint, provider_hint]
+            [model_hint, template_name, provider_name]
 
         Example:
-            ["gpt-oss-20b", "thomas-simple", "thomas-simple", "openrouter"]
+            ["gpt-oss-20b", "thomas-simple", "openrouter"]
         """
         return [
             self.model_cfg.name_hint,
-            self.adapter_config.prompt_builder.name,
-            self.adapter_config.parser.name,
-            self.adapter_config.provider.name,
+            self.prompt_template.name,
+            self.provider.name,
         ]

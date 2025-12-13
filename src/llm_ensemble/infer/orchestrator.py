@@ -17,10 +17,7 @@ from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.infer_run_context import IngestRunContext
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.infer.schemas.entities.adapter_config import AdapterConfig
-from llm_ensemble.infer.schemas.entities.prompt_builder import PromptBuilder
-from llm_ensemble.infer.schemas.entities.parser import Parser
-from llm_ensemble.infer.schemas.entities.provider import Provider
+from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 from llm_ensemble.infer.inference_service import InferenceService
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
@@ -81,32 +78,35 @@ def run_inference(
     retry_config = RetryConfig.load(retry_config_name)
     logging_config = LoggingConfig.load(logging_config_name)
 
-    # Instantiate adapters that the service will use
+    # Get template adapters to extract metadata
     prompt_builder_adapter, response_parser_adapter = PromptTemplateFactory.create(prompt_template_name)
+
+    # Create PromptTemplate entity (metadata only, not adapters)
+    prompt_template = PromptTemplate.create(
+        name=prompt_template_name,
+        prompt_builder=prompt_builder_adapter.get_builder(),
+        response_parser=response_parser_adapter.get_parser(),
+    )
+
+    # Get provider adapter to extract metadata
     base_provider = ProviderFactory.create(
         provider_name=provider_name,
         model_config=model_config,
     )
-
-    # Get domain entities from adapters (they already have the metadata)
-    adapter_config = AdapterConfig(
-        prompt_builder=prompt_builder_adapter.get_builder(),
-        parser=response_parser_adapter.get_parser(),
-        provider=base_provider.get_provider(),
-    )
+    provider_entity = base_provider.get_provider()
 
     # Create execution context entity (CLI args for execution)
     execution_context = IngestRunContext(
         input_run_name=input_run_name,
-        io_name=io_name,
         start_idx=start_idx,
         end_idx=end_idx,
     )
 
-    # Create run config entity (bundles model, adapter, retry configs, and execution context)
+    # Create run config entity (bundles model, provider, template, retry configs, and execution context)
     run_config = InferRunConfig(
         model_cfg=model_config,
-        adapter_config=adapter_config,
+        provider=provider_entity,
+        prompt_template=prompt_template,
         retry_config=retry_config,
         ingest_run_context=execution_context,
     )

@@ -1,11 +1,13 @@
 """Orchestrator for the infer CLI.
 
+Layer 3: Execution Orchestration
+
 This module handles infrastructure concerns for the inference pipeline:
-- Loading configurations from YAML files
 - Setting up run directories and logging
-- Building manifests with git info and execution parameters
-- Instantiating adapters from registries
+- Coordinating Layer 1 (config) and Layer 2 (adapters)
+- Building run metadata with git info and execution parameters
 - Delegating business logic to domain service
+- Writing manifests and summaries
 
 It is separated from the CLI entry point (infer_cli.py) for testability.
 """
@@ -13,19 +15,14 @@ from __future__ import annotations
 from typing import Optional
 
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
-from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
-from llm_ensemble.infer.schemas.infer_run_context import IngestRunContext
-from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 from llm_ensemble.infer.inference_service import InferenceService
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
-from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
-from llm_ensemble.infer.adapters.io_factory import IOAdapterFactory
-from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
+from llm_ensemble.infer.config_builder import build_infer_config
+from llm_ensemble.infer.adapter_factory import build_adapters
 
 
 def run_inference(
@@ -46,11 +43,11 @@ def run_inference(
     """Run LLM inference on judging examples with full provenance.
 
     Infrastructure orchestration that coordinates:
-    - Loading all YAML configurations
+    - Layer 1: Building configuration (pure data)
+    - Layer 2: Building adapters (concrete implementations)
     - Setting up run directories and logging
-    - Building manifest with git info and execution parameters
-    - Instantiating adapters from registries
-    - Running inference and writing output
+    - Running inference via domain service
+    - Writing manifests and summaries
 
     Args:
         model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
@@ -72,38 +69,21 @@ def run_inference(
         ValueError: If adapter is not recognized or config is invalid
     """
 
-    # Load all configurations from YAML files
-    model_config = ModelConfig.load(model_config_name)
-    retry_config = RetryConfig.load(retry_config_name)
-    logging_config = LoggingConfig.load(logging_config_name)
-
-    # Create metadata-only entities (no adapter instantiation yet)
-    prompt_template = PromptTemplateFactory.get_metadata(prompt_template_name)
-
-    # Get provider adapter to extract metadata
-    base_provider = ProviderFactory.create(
+    # Layer 1: Build configuration (pure data)
+    run_config = build_infer_config(
+        model_config_name=model_config_name,
         provider_name=provider_name,
-        model_config=model_config,
-    )
-    provider_entity = base_provider.get_provider()
-
-    # Create execution context entity (CLI args for execution)
-    execution_context = IngestRunContext(
+        prompt_template_name=prompt_template_name,
+        retry_config_name=retry_config_name,
         input_run_name=input_run_name,
         start_idx=start_idx,
         end_idx=end_idx,
     )
 
-    # Create run config entity (bundles model, provider, template, retry configs, and execution context)
-    run_config = InferRunConfig(
-        model_cfg=model_config,
-        provider=provider_entity,
-        prompt_template=prompt_template,
-        retry_config=retry_config,
-        ingest_run_context=execution_context,
-    )
+    # Load logging config
+    logging_config = LoggingConfig.load(logging_config_name)
 
-    # Create run info entity (metadata only, uses name hints from config)
+    # Create run info entity (metadata with git info, timestamps)
     run_info = InferRunInfo.create(
         name_hints=run_config.get_name_hints(),
         run_name=run_name,
@@ -111,7 +91,7 @@ def run_inference(
         notes=notes,
     )
 
-    # Get run directory from run_info and create it
+    # Create run directory
     run_dir = run_info.run_dir
     run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -119,10 +99,8 @@ def run_inference(
     if tag:
         TagManager.create_tag(run_dir, tag)
 
-    # Set up log file path if saving logs
+    # Set up logging
     log_file_path = run_dir / "run.log" if logging_config.save_logs else None
-
-    # Initialize structlog logger with config
     logger = configure_logger(
         cli_name="infer",
         run_name=run_name,
@@ -145,25 +123,16 @@ def run_inference(
         end_idx=end_idx,
     )
 
-    # Instantiate adapters from config
-    # Prompt template adapters from config
-    prompt_builder_adapter, response_parser_adapter = run_config.prompt_template.get_adapters()
-
-    # I/O adapters
-    input_adapter = IOAdapterFactory.create_reader(io_name)
-    output_adapter = IOAdapterFactory.create_writer(io_name)
-
-    # Wrap provider with retry logic
-    from llm_ensemble.infer.adapters.retrying_provider import RetryingProvider
-    provider_adapter = RetryingProvider(base_provider, retry_config)
+    # Layer 2: Build adapters (concrete implementations)
+    adapters = build_adapters(run_config, io_name)
 
     # Create domain service by injecting adapters
     service = InferenceService(
-        input_adapter=input_adapter,
-        output_adapter=output_adapter,
-        prompt_builder=prompt_builder_adapter,
-        llm_provider=provider_adapter,
-        response_parser=response_parser_adapter,
+        input_adapter=adapters.input_adapter,
+        output_adapter=adapters.output_adapter,
+        prompt_builder=adapters.prompt_builder,
+        llm_provider=adapters.llm_provider,
+        response_parser=adapters.response_parser,
     )
 
     # Run inference pipeline

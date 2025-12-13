@@ -69,15 +69,3 @@ class PromptTemplate(BaseModel):
             prompt_builder=prompt_builder,
             response_text_parser=response_parser
         )
-
-    def get_adapters(self):
-        """Get adapter instances for this template.
-
-        Returns:
-            Tuple of (PromptBuilderPort, ResponseParserPort)
-
-        Raises:
-            ValueError: If template not found in factory
-        """
-        from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
-        return PromptTemplateFactory.create(self.name)

@@ -12,8 +12,7 @@ from .shared_params import (
     ModelCfg,
     RetryCfg,
     Tag,
-    Prompt,
-    Parser,
+    PromptTemplate,
 )
 from .aggregate import AggregationStrategy, AggregateIoCfg, InferRunInput
 from .ingest import IngestIoCfg, Limit
@@ -31,8 +30,7 @@ __all__ = [
     "ModelCfg",
     "RetryCfg",
     "Tag",
-    "Prompt",
-    "Parser",
+    "PromptTemplate",
     "Provider",
     "AggregationStrategy",
     "AggregateIoCfg",

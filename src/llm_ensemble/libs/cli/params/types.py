@@ -172,33 +172,34 @@ class RetryConfigParamType(ConfigParamType):
         )
 
 
-class PromptParamType(click.ParamType):
-    """Click parameter type for prompt builder selection.
+class PromptTemplateParamType(click.ParamType):
+    """Click parameter type for prompt template selection.
 
-    Reads available prompts from PromptAdapterBuilder.
+    Reads available templates from PromptTemplateFactory.
+    Each template bundles a prompt builder and response parser together.
     """
 
-    name = "PROMPT"
+    name = "TEMPLATE"
 
     def convert(self, value, param, ctx):  # type: ignore[override]
         if value in (None, ""):
-            from llm_ensemble.infer.adapters.prompt_factory import PromptAdapterFactory
-            available = PromptAdapterFactory.list_available()
+            from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
+            available = PromptTemplateFactory.list_available()
             available_str = ", ".join(available) if available else "none"
             self.fail(
-                f"Prompt name is required. Use --prompt <name>.\n"
-                f"Available prompts: {available_str}",
+                f"Template name is required. Use --prompt-template <name>.\n"
+                f"Available templates: {available_str}",
                 param,
                 ctx,
             )
 
-        from llm_ensemble.infer.adapters.prompt_factory import PromptAdapterFactory
-        if not PromptAdapterFactory.has_prompt(value):
-            available = PromptAdapterFactory.list_available()
+        from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
+        if not PromptTemplateFactory.has_template(value):
+            available = PromptTemplateFactory.list_available()
             available_str = ", ".join(available) if available else "none"
             self.fail(
-                f"Prompt '{value}' not found.\n"
-                f"Available prompts: {available_str}",
+                f"Template '{value}' not found.\n"
+                f"Available templates: {available_str}",
                 param,
                 ctx,
             )
@@ -206,60 +207,13 @@ class PromptParamType(click.ParamType):
         return value
 
     def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
-        """Provide shell completion for available prompts."""
-        from llm_ensemble.infer.adapters.prompt_factory import PromptAdapterFactory, PROMPTS
-        available = PromptAdapterFactory.list_available()
+        """Provide shell completion for available templates."""
+        from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
+        available = PromptTemplateFactory.list_available()
         return [
-            click.shell_completion.CompletionItem(
-                prompt,
-                help=PROMPTS[prompt].description
-            )
-            for prompt in available
-            if prompt.startswith(incomplete)
-        ]
-
-
-class ParserParamType(click.ParamType):
-    """Click parameter type for response parser selection.
-
-    Reads available parsers from ParserAdapterBuilder.
-    """
-
-    name = "PARSER"
-
-    def convert(self, value, param, ctx):  # type: ignore[override]
-        if value in (None, ""):
-            from llm_ensemble.infer.adapters.parser_factory import ParserAdapterFactory
-            available = ParserAdapterFactory.list_available()
-            available_str = ", ".join(available) if available else "none"
-            self.fail(
-                f"Parser name is required. Use --parser <name>.\n"
-                f"Available parsers: {available_str}",
-                param,
-                ctx,
-            )
-
-        from llm_ensemble.infer.adapters.parser_factory import ParserAdapterFactory
-        if not ParserAdapterFactory.has_parser(value):
-            available = ParserAdapterFactory.list_available()
-            available_str = ", ".join(available) if available else "none"
-            self.fail(
-                f"Parser '{value}' not found.\n"
-                f"Available parsers: {available_str}",
-                param,
-                ctx,
-            )
-
-        return value
-
-    def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
-        """Provide shell completion for available parsers."""
-        from llm_ensemble.infer.adapters.parser_factory import ParserAdapterFactory
-        available = ParserAdapterFactory.list_available()
-        return [
-            click.shell_completion.CompletionItem(parser)
-            for parser in available
-            if parser.startswith(incomplete)
+            click.shell_completion.CompletionItem(template)
+            for template in available
+            if template.startswith(incomplete)
         ]
 
 

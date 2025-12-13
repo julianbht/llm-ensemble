@@ -13,8 +13,7 @@ from llm_ensemble.libs.cli.params import (
     StartIdx,
     EndIdx,
     ModelCfg,
-    Prompt,
-    Parser,
+    PromptTemplate,
     Provider,
     InferIoCfg,
     RetryCfg,
@@ -37,8 +36,7 @@ def infer(
     # Required parameters
     model_cfg: ModelCfg,
     provider: Provider,
-    prompt: Prompt,
-    parser: Parser,
+    prompt_template: PromptTemplate,
     io_cfg: InferIoCfg,
     input_run_name: InferIngestRunInput,
     # Optional parameters
@@ -59,8 +57,7 @@ def infer(
     run_inference(
         model_config_name=model_cfg,
         provider_name=provider,
-        prompt_name=prompt,
-        parser_name=parser,
+        prompt_template_name=prompt_template,
         retry_config_name=retry_cfg,
         io_name=io_cfg,
         logging_config_name=log_cfg,

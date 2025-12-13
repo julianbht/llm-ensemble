@@ -11,8 +11,7 @@ from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.cli.params.types import (
     LogConfigParamType,
     ModelConfigParamType,
-    PromptParamType,
-    ParserParamType,
+    PromptTemplateParamType,
     RetryConfigParamType,
     RunInputParamType,
 )
@@ -109,23 +108,13 @@ ModelCfg = Annotated[
     ),
 ]
 
-Prompt = Annotated[
+PromptTemplate = Annotated[
     str,
     typer.Option(
         ...,
-        "--prompt",
-        click_type=PromptParamType(),
-        help="Prompt builder name from builder (e.g., 'thomas-simple')",
-    ),
-]
-
-Parser = Annotated[
-    str,
-    typer.Option(
-        ...,
-        "--parser",
-        click_type=ParserParamType(),
-        help="Response parser name from builder (e.g., 'thomas-simple')",
+        "--prompt-template",
+        click_type=PromptTemplateParamType(),
+        help="Prompt template name (bundles builder and parser, e.g., 'thomas-simple')",
     ),
 ]
 

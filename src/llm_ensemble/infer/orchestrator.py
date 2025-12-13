@@ -27,8 +27,7 @@ from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summa
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
-from llm_ensemble.infer.adapters.prompt_factory import PromptAdapterFactory
-from llm_ensemble.infer.adapters.parser_factory import ParserAdapterFactory
+from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
 from llm_ensemble.infer.adapters.io_factory import IOAdapterFactory
 from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
 
@@ -36,8 +35,7 @@ from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
 def run_inference(
     model_config_name: str,
     provider_name: str,
-    prompt_name: str,
-    parser_name: str,
+    prompt_template_name: str,
     retry_config_name: str,
     io_name: str,
     input_run_name: str,
@@ -61,8 +59,7 @@ def run_inference(
     Args:
         model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
         provider_name: Provider name for registry lookup (e.g., "openrouter", "ollama")
-        prompt_name: Prompt name for registry lookup (e.g., "thomas-simple")
-        parser_name: Parser name for registry lookup (e.g., "thomas-simple")
+        prompt_template_name: Prompt template name (bundles builder and parser, e.g., "thomas-simple")
         retry_config_name: Name of the retry config file (e.g., "standard")
         io_name: I/O format name (e.g., "db_to_json", "db_to_db")
         input_run_name: Ingest run identifier (e.g., "my_ingest_run")
@@ -85,8 +82,7 @@ def run_inference(
     logging_config = LoggingConfig.load(logging_config_name)
 
     # Instantiate adapters that the service will use
-    prompt_builder_adapter = PromptAdapterFactory.create(prompt_name)
-    response_parser_adapter = ParserAdapterFactory.create(parser_name)
+    prompt_builder_adapter, response_parser_adapter = PromptTemplateFactory.create(prompt_template_name)
     base_provider = ProviderFactory.create(
         provider_name=provider_name,
         model_config=model_config,
@@ -151,8 +147,7 @@ def run_inference(
         model=model_config_name,
         provider=provider_name,
         io_format=io_name,
-        prompt=prompt_name,
-        parser=parser_name,
+        prompt_template=prompt_template_name,
         input_run_name=input_run_name,
         start_idx=start_idx,
         end_idx=end_idx,

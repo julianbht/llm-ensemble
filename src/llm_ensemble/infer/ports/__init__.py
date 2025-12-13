@@ -11,6 +11,7 @@ from llm_ensemble.infer.ports.input_port import InputPort
 from llm_ensemble.infer.ports.output_port import OutputPort
 from llm_ensemble.infer.ports.prompt_builder_port import PromptBuilderPort
 from llm_ensemble.infer.ports.response_parser_port import ResponseParserPort
+from llm_ensemble.infer.ports.prompt_template_port import PromptTemplatePort
 
 __all__ = [
     "LLMProviderPort",
@@ -18,4 +19,5 @@ __all__ = [
     "OutputPort",
     "PromptBuilderPort",
     "ResponseParserPort",
+    "PromptTemplatePort",
 ]

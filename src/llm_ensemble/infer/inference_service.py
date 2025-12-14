@@ -5,7 +5,6 @@ It depends only on port abstractions and handles its own logging.
 """
 
 from __future__ import annotations
-from pathlib import Path
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo

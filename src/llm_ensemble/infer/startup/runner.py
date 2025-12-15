@@ -1,37 +1,24 @@
-"""Adapter selection and dependency configuration for inference pipeline.
+"""Inference pipeline runner.
 
-Startup Layer - Composition Root
+Startup Layer - Infrastructure Orchestration (BlueZoneRunner equivalent)
 
-This module is responsible for:
+Main entry point for inference execution. Responsible for:
 1. Loading configurations
 2. Setting up infrastructure (run directories, logging)
-3. Selecting and instantiating adapters based on configuration
-4. Building the application (use case) with injected dependencies
-5. Executing the use case
-6. Post-processing (manifests, summaries)
+3. Creating dependency configurator
+4. Building and executing application
+5. Post-processing (summaries, manifests)
 
 This is the composition root - NOT unit tested.
 Tested via CLI integration tests.
-
-Inspired by BlueZone's DependencyConfigurator pattern.
 """
 from __future__ import annotations
 from typing import Optional
 
-from llm_ensemble.infer.application.inference_use_case import InferenceUseCase
+from llm_ensemble.infer.startup.dependency_configurator import DependencyConfigurator
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
-from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
-from llm_ensemble.infer.ports.input_port import InputPort
-from llm_ensemble.infer.ports.output_port import OutputPort
-from llm_ensemble.infer.ports.prompt_builder_port import PromptBuilderPort
-from llm_ensemble.infer.ports.response_parser_port import ResponseParserPort
-from llm_ensemble.infer.ports.llm_provider_port import LLMProviderPort
 
 from llm_ensemble.infer.application.config_builder import build_infer_config
-from llm_ensemble.infer.adapters.io_factory import IOAdapterFactory
-from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
-from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
-from llm_ensemble.infer.adapters.retrying_provider import RetryingProvider
 
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 from llm_ensemble.libs.logging import configure_logger
@@ -55,22 +42,21 @@ def run_inference(
     notes: Optional[str] = None,
     tag: Optional[str] = None,
 ) -> None:
-    """Run inference pipeline with dependency configuration.
+    """Run inference pipeline with full infrastructure setup.
 
-    Composition root that wires all infrastructure and executes the use case.
-    Similar to BlueZone's BlueZoneRunner + DependencyConfigurator pattern.
+    Main orchestration function (BlueZoneRunner.main() equivalent).
 
     Args:
-        model_config_name: Name of the model config file (e.g., "gpt-oss-20b")
-        provider_name: Provider name for registry lookup (e.g., "openrouter", "ollama")
+        model_config_name: Name of the model config file
+        provider_name: Provider name for registry lookup
         prompt_template_name: Prompt template name (bundles builder and parser)
-        retry_config_name: Name of the retry config file (e.g., "standard")
-        io_name: I/O format name (e.g., "db_to_json", "db_to_db")
-        input_run_name: Ingest run identifier (e.g., "my_ingest_run")
+        retry_config_name: Name of the retry config file
+        io_name: I/O format name
+        input_run_name: Ingest run identifier
         logging_config_name: Name of the logging config file
-        run_name: Custom run ID (auto-generates if not provided)
-        start_idx: Start index into NormalizedDataset (None = start from beginning)
-        end_idx: End index into NormalizedDataset (None = process until end)
+        run_name: Custom run ID
+        start_idx: Start index into NormalizedDataset
+        end_idx: End index into NormalizedDataset
         official: Mark as official run
         notes: Notes about this run
         tag: Tag name for easy reference
@@ -83,10 +69,10 @@ def run_inference(
     input_run_name = TagManager.resolve_input(input_run_name, "ingest")
 
     # ========================================================================
-    # LAYER 1: Configuration Loading (pure data)
+    # STEP 1: Load Configurations
     # ========================================================================
 
-    run_config: InferRunConfig = build_infer_config(
+    run_config = build_infer_config(
         model_config_name=model_config_name,
         provider_name=provider_name,
         prompt_template_name=prompt_template_name,
@@ -99,7 +85,7 @@ def run_inference(
     logging_config = LoggingConfig.load(logging_config_name)
 
     # ========================================================================
-    # LAYER 2: Infrastructure Setup
+    # STEP 2: Setup Infrastructure
     # ========================================================================
 
     # Create run info (metadata)
@@ -143,50 +129,30 @@ def run_inference(
     )
 
     # ========================================================================
-    # LAYER 3: Adapter Selection and Instantiation (driven ports)
+    # STEP 3: Create Dependency Configurator
+    # ========================================================================
+
+    dependency_configurator = DependencyConfigurator(
+        run_config=run_config,
+        io_name=io_name,
+    )
+
+    # ========================================================================
+    # STEP 4: Build Application and Execute
     # ========================================================================
 
     try:
-        # I/O adapters
-        input_port: InputPort = IOAdapterFactory.create_reader(io_name)
-        output_port: OutputPort = IOAdapterFactory.create_writer(io_name)
+        # Build application (hexagon) with injected dependencies
+        use_case = dependency_configurator.build_application()
 
-        # Prompt template adapters (bundles builder + parser)
-        template_class = PromptTemplateFactory.get_adapter_class(run_config.prompt_template.name)
-        template_instance = template_class()
-        prompt_builder: PromptBuilderPort = template_instance.get_builder()
-        response_parser: ResponseParserPort = template_instance.get_parser()
-
-        # LLM provider adapter (with retry wrapper)
-        base_provider = ProviderFactory.create(
-            provider_name=run_config.provider.name,
-            model_config=run_config.model_cfg,
-        )
-        llm_provider: LLMProviderPort = RetryingProvider(base_provider, run_config.retry_config)
-
-        # ========================================================================
-        # LAYER 4: Build Application (hexagon)
-        # ========================================================================
-
-        use_case = InferenceUseCase(
-            input_port=input_port,
-            output_port=output_port,
-            prompt_builder=prompt_builder,
-            llm_provider=llm_provider,
-            response_parser=response_parser,
-        )
-
-        # ========================================================================
-        # LAYER 5: Execute Use Case
-        # ========================================================================
-
+        # Execute use case
         summary = use_case.execute(
             run_info=run_info,
             run_config=run_config,
         )
 
         # ========================================================================
-        # LAYER 6: Post-Processing
+        # STEP 5: Post-Processing
         # ========================================================================
 
         logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=summary.judgement_count)

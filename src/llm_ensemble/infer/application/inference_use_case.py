@@ -1,7 +1,12 @@
-"""Domain service for LLM inference pipeline.
+"""Application use case for LLM inference pipeline.
 
-This module contains business logic for coordinating the inference process.
-It depends only on port abstractions and handles its own logging.
+Application Layer - Use Case
+
+This module contains the inference workflow orchestration.
+It coordinates calls to ports (infrastructure boundaries) to execute
+the inference pipeline. Depends only on port abstractions for testability.
+
+Tested via unit tests with mocked ports.
 """
 
 from __future__ import annotations
@@ -31,27 +36,27 @@ class InferenceUseCase:
 
     def __init__(
         self,
-        input_adapter: InputPort,
-        output_adapter: OutputPort,
+        input_port: InputPort,
+        output_port: OutputPort,
         prompt_builder: PromptBuilderPort,
         llm_provider: LLMProviderPort,
         response_parser: ResponseParserPort,
     ):
-        """Initialize inference service with port dependencies.
+        """Initialize inference use case with port dependencies.
 
         Args:
-            input_adapter: Port for reading input data
-            output_adapter: Port for writing output data
+            input_port: Port for reading input data
+            output_port: Port for writing output data
             prompt_builder: Port for building prompts from samples
             llm_provider: Port for LLM inference
             response_parser: Port for parsing LLM responses
         """
-        self.input_port = input_adapter
-        self.output_port = output_adapter
+        self.input_port = input_port
+        self.output_port = output_port
         self.prompt_builder = prompt_builder
         self.llm_provider = llm_provider
         self.response_parser = response_parser
-        self.logger = get_logger(component="inference_service")
+        self.logger = get_logger(component="inference_use_case")
 
     def execute(
         self,

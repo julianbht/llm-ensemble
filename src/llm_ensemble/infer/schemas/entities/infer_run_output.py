@@ -23,25 +23,30 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
 
 
 class InferRunOutput(BaseModel):
     """Output produced during an infer run.
 
     Contains:
+    - InferRunConfig: Complete configuration used to produce judgements
     - Judgements: The actual LLM judgements produced
     - Sample fingerprint: Which samples were judged (deterministic identifier)
     - Aggregate metrics: Counts, latencies, error rates, warnings
 
-    This represents "what was produced" during the run, separate from:
+    This represents "what was produced" and "what configuration was used", separate from:
     - InferRunInfo: Run metadata (git info, timestamps)
-    - InferRunConfig: Configuration used (model, adapters)
-    - InferRunContext: Execution context (input source, sample range)
     """
 
     id: UUID = Field(
         default_factory=uuid4,
         description="Random UUID for this output"
+    )
+
+    infer_run_config: InferRunConfig = Field(
+        ...,
+        description="Complete configuration used to produce these judgements"
     )
 
     llm_judgements: list[LLMJudgement] = Field(

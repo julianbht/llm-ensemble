@@ -19,24 +19,28 @@ from uuid import UUID
 
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
+from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
 from llm_ensemble.infer.schemas.entities.prompt_builder import PromptBuilder
 from llm_ensemble.infer.schemas.entities.parser import Parser
 from llm_ensemble.infer.schemas.entities.provider import Provider
-from llm_ensemble.infer.schemas.entities.adapter_config import AdapterConfig
+from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
+from llm_ensemble.infer.schemas.ingest_run_context import IngestRunContext
 from llm_ensemble.infer.adapters.io.db.orms import (
     ProviderORM,
     ModelConfigORM,
     PromptBuilderORM,
     ParserORM,
-    AdapterConfigORM,
+    PromptTemplateORM,
+    IngestRunContextORM,
+    InferRunConfigORM,
     InferRunORM,
     LLMPromptTextORM,
     LLMResponseTextORM,
     LLMScoreORM,
     LLMJudgementORM,
-    JudgedDatasetORM,
+    InferRunOutputORM,
 )
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
@@ -148,6 +152,70 @@ def adapter_config_to_orm(adapter_config: AdapterConfig) -> AdapterConfigORM:
         prompt_builder_id=adapter_config.prompt_builder.id,
         parser_id=adapter_config.parser.id,
         provider_id=adapter_config.provider.id,
+    )
+
+
+# ============================================================================
+# PromptTemplate Mappers
+# ============================================================================
+
+def prompt_template_to_orm(prompt_template: PromptTemplate) -> PromptTemplateORM:
+    """Convert PromptTemplate domain object to PromptTemplateORM.
+
+    Args:
+        prompt_template: PromptTemplate domain object (already has UUID)
+
+    Returns:
+        PromptTemplateORM model ready for persistence
+    """
+    return PromptTemplateORM(
+        id=prompt_template.id,
+        name=prompt_template.name,
+        prompt_builder_id=prompt_template.prompt_builder.id,
+        parser_id=prompt_template.response_parser.id,
+    )
+
+
+# ============================================================================
+# IngestRunContext Mappers
+# ============================================================================
+
+def ingest_run_context_to_orm(ingest_run_context: IngestRunContext) -> IngestRunContextORM:
+    """Convert IngestRunContext domain object to IngestRunContextORM.
+
+    Args:
+        ingest_run_context: IngestRunContext domain object (already has UUID)
+
+    Returns:
+        IngestRunContextORM model ready for persistence
+    """
+    return IngestRunContextORM(
+        id=ingest_run_context.id,
+        input_run_name=ingest_run_context.input_run_name,
+        start_idx=ingest_run_context.start_idx,
+        end_idx=ingest_run_context.end_idx,
+    )
+
+
+# ============================================================================
+# InferRunConfig Mappers
+# ============================================================================
+
+def infer_run_config_to_orm(infer_run_config: InferRunConfig) -> InferRunConfigORM:
+    """Convert InferRunConfig domain object to InferRunConfigORM.
+
+    Args:
+        infer_run_config: InferRunConfig domain object (already has UUID)
+
+    Returns:
+        InferRunConfigORM model ready for persistence
+    """
+    return InferRunConfigORM(
+        id=infer_run_config.id,
+        model_config_id=infer_run_config.model_cfg.id,
+        provider_id=infer_run_config.provider.id,
+        prompt_template_id=infer_run_config.prompt_template.id,
+        ingest_run_context_id=infer_run_config.ingest_run_context.id,
     )
 
 
@@ -265,7 +333,7 @@ def llm_score_to_orm(
 
 def llm_judgement_to_orm(
     judgement: LLMJudgement,
-    judged_dataset_id: UUID,
+    infer_run_output_id: UUID,
     dataset_sample_id: UUID,
     llm_prompt_text_id: UUID,
     llm_response_text_id: UUID,
@@ -277,7 +345,7 @@ def llm_judgement_to_orm(
 
     Args:
         judgement: LLMJudgement domain object (already has UUID)
-        judged_dataset_id: JudgedDataset UUID (for foreign key)
+        infer_run_output_id: InferRunOutput UUID (for foreign key)
         dataset_sample_id: DatasetSample UUID (cross-schema reference)
         llm_prompt_text_id: LLMPromptText UUID (for foreign key)
         llm_response_text_id: LLMResponseText UUID (for foreign key)
@@ -291,7 +359,7 @@ def llm_judgement_to_orm(
 
     return LLMJudgementORM(
         id=judgement.id,
-        judged_dataset_id=judged_dataset_id,
+        infer_run_output_id=infer_run_output_id,
         dataset_sample_id=dataset_sample_id,
         llm_prompt_text_id=llm_prompt_text_id,
         llm_response_text_id=llm_response_text_id,
@@ -309,29 +377,26 @@ def llm_judgement_to_orm(
 
 
 # ============================================================================
-# JudgedDataset Mappers
+# InferRunOutput Mappers
 # ============================================================================
 
-def judged_dataset_to_orm(
-    judged_dataset_id: UUID,
-    model_config_id: UUID,
-    adapter_config_id: UUID,
+def infer_run_output_to_orm(
+    infer_run_output_id: UUID,
+    infer_run_config_id: UUID,
     sample_fingerprint: str,
-) -> JudgedDatasetORM:
-    """Create JudgedDatasetORM.
+) -> InferRunOutputORM:
+    """Create InferRunOutputORM.
 
     Args:
-        judged_dataset_id: JudgedDataset UUID (same as InferRun.id for 1:1 relationship)
-        model_config_id: ModelConfig UUID (for foreign key)
-        adapter_config_id: AdapterConfig UUID (for foreign key)
+        infer_run_output_id: InferRunOutput UUID (same as InferRun.id for 1:1 relationship)
+        infer_run_config_id: InferRunConfig UUID (for foreign key)
         sample_fingerprint: SHA256 hash of sorted dataset_sample IDs
 
     Returns:
-        JudgedDatasetORM model ready for persistence
+        InferRunOutputORM model ready for persistence
     """
-    return JudgedDatasetORM(
-        id=judged_dataset_id,
-        model_config_id=model_config_id,
-        adapter_config_id=adapter_config_id,
+    return InferRunOutputORM(
+        id=infer_run_output_id,
+        infer_run_config_id=infer_run_config_id,
         sample_fingerprint=sample_fingerprint,
     )

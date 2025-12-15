@@ -1,13 +1,13 @@
-"""Database adapter for reading JudgedDatasets from infer runs.
+"""Database adapter for reading InferRunOutputs from infer runs.
 
-Reads JudgedDataset records from PostgreSQL database by infer run name(s).
-This adapter queries the infer schema and loads complete JudgedDataset domain
+Reads InferRunOutput records from PostgreSQL database by infer run name(s).
+This adapter queries the infer schema and loads complete InferRunOutput domain
 objects for use in the aggregation pipeline.
 """
 
 from __future__ import annotations
 
-from llm_ensemble.infer.schemas.entities.judged_dataset import JudgedDataset
+from llm_ensemble.infer.schemas.entities.infer_run_output import InferRunOutput
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.orms_normalized import (
     InferRunORM,
@@ -17,11 +17,11 @@ from llm_ensemble.aggregate.ports import JudgementReader
 from llm_ensemble.libs.db import get_engine, get_session
 
 
-class DbJudgedDatasetReader(JudgementReader):
-    """Read JudgedDataset records from database by infer run name(s).
+class DbInferRunOutputReader(JudgementReader):
+    """Read InferRunOutput records from database by infer run name(s).
 
-    This adapter implements the JudgementReader port by loading JudgedDatasets
-    from the infer schema. It queries via InferRun → JudgedDataset relationship
+    This adapter implements the JudgementReader port by loading InferRunOutputs
+    from the infer schema. It queries via InferRun → InferRunOutput relationship
     and reconstructs complete domain objects.
 
     Database connection:
@@ -31,26 +31,26 @@ class DbJudgedDatasetReader(JudgementReader):
 
     Query strategy:
     - For each run_name, find InferRunORM
-    - Load linked JudgedDatasetORM via FK
+    - Load linked InferRunOutputORM via FK
     - Query LLMJudgementORM records directly
     - Eager load related entities (prompt, score, metrics)
-    - Reconstruct Pydantic JudgedDataset models
+    - Reconstruct Pydantic InferRunOutput models
 
     Note: This reader does NOT validate fingerprints or completeness.
     Validation belongs in the aggregation service layer.
     """
 
-    def read(self, run_names: list[str]) -> list[JudgedDataset]:
-        """Read JudgedDataset from database by infer run name(s).
+    def read(self, run_names: list[str]) -> list[InferRunOutput]:
+        """Read InferRunOutput from database by infer run name(s).
 
-        Loads one JudgedDataset per run, each containing the sample_fingerprint
+        Loads one InferRunOutput per run, each containing the sample_fingerprint
         and all LLM judgements from that run.
 
         Args:
             run_names: List of infer run identifiers (e.g., ["run1", "run2"])
 
         Returns:
-            List of JudgedDataset objects, one per run
+            List of InferRunOutput objects, one per run
 
         Raises:
             LookupError: If any infer run doesn't exist in database
@@ -80,7 +80,7 @@ class DbJudgedDatasetReader(JudgementReader):
 
                 if not judged_dataset_orm:
                     raise LookupError(
-                        f"Infer run '{run_name}' has no linked JudgedDataset. "
+                        f"Infer run '{run_name}' has no linked InferRunOutput. "
                         f"This indicates the run did not complete successfully."
                     )
 
@@ -92,8 +92,8 @@ class DbJudgedDatasetReader(JudgementReader):
                 #   - llm_invocation_metrics
                 llm_judgements = []
 
-                # Create JudgedDataset domain object
-                judged_dataset = JudgedDataset(
+                # Create InferRunOutput domain object
+                judged_dataset = InferRunOutput(
                     id=judged_dataset_orm.id,
                     model_config_id=judged_dataset_orm.model_config_id,
                     sample_fingerprint=judged_dataset_orm.sample_fingerprint or "",

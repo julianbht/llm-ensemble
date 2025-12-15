@@ -23,7 +23,7 @@ from __future__ import annotations
 from typing import Optional
 
 from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
-from llm_ensemble.infer.schemas.infer_run_context import IngestRunContext
+from llm_ensemble.infer.schemas.ingest_run_context import IngestRunContext
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.entities.provider import Provider

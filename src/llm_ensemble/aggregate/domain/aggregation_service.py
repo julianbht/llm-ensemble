@@ -8,7 +8,7 @@ from __future__ import annotations
 from uuid import UUID
 from collections import defaultdict
 
-from llm_ensemble.infer.schemas.entities.judged_dataset import JudgedDataset
+from llm_ensemble.infer.schemas.entities.infer_run_output import InferRunOutput
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.schemas import AggregatedDataset, AggregatedVote
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
@@ -26,7 +26,7 @@ class AggregationService:
     """Domain service for coordinating ensemble aggregation pipeline.
 
     Pure business logic that orchestrates:
-    - Reading JudgedDatasets via JudgementReader port
+    - Reading InferRunOutputs via JudgementReader port
     - Validating sample_fingerprints match (same samples processed)
     - Grouping LLM judgements by dataset_sample_id across runs
     - Applying aggregation strategy to each group
@@ -55,7 +55,7 @@ class AggregationService:
         """Initialize aggregation service with port dependencies.
 
         Args:
-            judgement_reader: Port for reading JudgedDataset records
+            judgement_reader: Port for reading InferRunOutput records
             aggregated_judgement_writer: Port for writing AggregatedDataset records
             strategy: Port for aggregation strategy (e.g., MajorityVoteAdapter)
         """
@@ -65,29 +65,29 @@ class AggregationService:
         self.logger = get_logger(component="aggregation_service")
 
     def _validate_judged_datasets(
-        self, judged_datasets: list[JudgedDataset], run_names: list[str]
+        self, judged_datasets: list[InferRunOutput], run_names: list[str]
     ) -> None:
-        """Validate that all JudgedDatasets are complete and compatible for aggregation.
+        """Validate that all InferRunOutputs are complete and compatible for aggregation.
 
         Checks:
-        1. All JudgedDatasets have non-NULL sample_fingerprints (run completed successfully)
+        1. All InferRunOutputs have non-NULL sample_fingerprints (run completed successfully)
         2. All sample_fingerprints match (same samples were processed)
 
         Args:
-            judged_datasets: List of JudgedDataset objects loaded by reader
+            judged_datasets: List of InferRunOutput objects loaded by reader
             run_names: Corresponding run names (for error messages)
 
         Raises:
             ValueError: If validation fails
         """
         if not judged_datasets:
-            raise ValueError("No JudgedDatasets found. Cannot aggregate empty list.")
+            raise ValueError("No InferRunOutputs found. Cannot aggregate empty list.")
 
         # Check for NULL sample_fingerprints (incomplete runs)
         for dataset, run_name in zip(judged_datasets, run_names):
             if dataset.sample_fingerprint is None:
                 raise ValueError(
-                    f"JudgedDataset for run '{run_name}' has NULL sample_fingerprint. "
+                    f"InferRunOutput for run '{run_name}' has NULL sample_fingerprint. "
                     f"This indicates the run did not complete successfully."
                 )
 
@@ -95,7 +95,7 @@ class AggregationService:
         sample_fingerprints = {dataset.sample_fingerprint for dataset in judged_datasets}
         if len(sample_fingerprints) > 1:
             raise ValueError(
-                f"Cannot aggregate runs with different JudgedDataset sample_fingerprints. "
+                f"Cannot aggregate runs with different InferRunOutput sample_fingerprints. "
                 f"Found {len(sample_fingerprints)} distinct sample_fingerprints. "
                 f"This means the runs processed different sets of samples."
             )
@@ -109,7 +109,7 @@ class AggregationService:
         """Execute the aggregation pipeline.
 
         Pure business logic that:
-        1. Reads JudgedDatasets via reader port
+        1. Reads InferRunOutputs via reader port
         2. Validates sample_fingerprints match
         3. For each dataset_sample_id:
            - Collects all llm_judgements for that sample from all runs
@@ -132,8 +132,8 @@ class AggregationService:
         summary_builder.set_start_time()
         summary_builder.add("run_info", run_info)
 
-        # Read JudgedDatasets (one per run) via reader port
-        judged_datasets : list[JudgedDataset] = self.judgement_reader.read(run_names)
+        # Read InferRunOutputs (one per run) via reader port
+        judged_datasets : list[InferRunOutput] = self.judgement_reader.read(run_names)
 
         # Validate completion and sample_fingerprint consistency
         self._validate_judged_datasets(judged_datasets, run_names)

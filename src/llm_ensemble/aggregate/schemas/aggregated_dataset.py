@@ -1,7 +1,7 @@
 """AggregatedDataset - set of aggregated votes produced during aggregation.
 
 This is the output of the aggregate pipeline and represents the aggregated results.
-Similar to NormalizedDataset in ingest and JudgedDataset in infer.
+Similar to NormalizedDataset in ingest and InferRunOutput in infer.
 """
 
 from __future__ import annotations

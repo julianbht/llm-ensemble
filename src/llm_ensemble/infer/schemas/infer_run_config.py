@@ -28,7 +28,7 @@ from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
 from llm_ensemble.infer.schemas.entities.provider import Provider
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.infer.schemas.infer_run_context import IngestRunContext
+from llm_ensemble.infer.schemas.ingest_run_context import IngestRunContext
 
 
 class InferRunConfig(BaseModel):

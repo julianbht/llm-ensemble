@@ -1,16 +1,16 @@
 """Port interface for judgement readers.
 
-Defines the abstract contract for reading JudgedDataset from storage.
+Defines the abstract contract for reading InferRunOutput from storage.
 """
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
-from llm_ensemble.infer.schemas.entities.judged_dataset import JudgedDataset
+from llm_ensemble.infer.schemas.entities.infer_run_output import InferRunOutput
 
 
 class JudgementReader(ABC):
-    """Abstract base class for reading JudgedDataset from infer runs.
+    """Abstract base class for reading InferRunOutput from infer runs.
 
     Implementations can read from different formats (JSON, SQL, etc.)
     while providing a consistent interface.
@@ -20,10 +20,10 @@ class JudgementReader(ABC):
     """
 
     @abstractmethod
-    def read(self, run_names: list[str]) -> list[JudgedDataset]:
-        """Read JudgedDataset from one or more infer runs.
+    def read(self, run_names: list[str]) -> list[InferRunOutput]:
+        """Read InferRunOutput from one or more infer runs.
 
-        Each run produces one JudgedDataset containing:
+        Each run produces one InferRunOutput containing:
         - Fingerprint (SHA256 hash of sorted LLMCall IDs)
         - Judgements (LLM outputs for those calls)
 
@@ -37,7 +37,7 @@ class JudgementReader(ABC):
                       Readers use PathManager or DB queries to resolve data
 
         Returns:
-            List of JudgedDataset objects, one per run
+            List of InferRunOutput objects, one per run
 
         Raises:
             FileNotFoundError: If any run directory or expected files don't exist

@@ -110,7 +110,7 @@ class JudgementWriter(ABC):
 
 ## Domain Service Data Flow
 
-**Streaming loop in `InferenceService.run_inference()`:**
+**Streaming loop in `InferenceUseCase.run_inference()`:**
 
 ```
 1. Read all samples (samples are small metadata objects)

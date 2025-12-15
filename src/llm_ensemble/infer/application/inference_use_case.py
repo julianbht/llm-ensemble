@@ -20,11 +20,13 @@ from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
-class InferenceService:
-    """Domain service for coordinating LLM inference pipeline.
+class InferenceUseCase:
+    """Application use case for coordinating LLM inference pipeline.
 
-    Business logic that orchestrates reading examples, running inference,
-    and writing judgements. Handles its own logging - no callback injection needed.
+    Orchestrates the inference workflow by calling ports (infrastructure boundaries).
+    Coordinates: read → build prompt → infer → parse → write (streaming loop).
+
+    Depends only on port abstractions, enabling unit testing with mocked ports.
     """
 
     def __init__(
@@ -51,7 +53,7 @@ class InferenceService:
         self.response_parser = response_parser
         self.logger = get_logger(component="inference_service")
 
-    def run_inference(
+    def execute(
         self,
         run_info: InferRunInfo,
         run_config: InferRunConfig,
@@ -88,7 +90,7 @@ class InferenceService:
         run_dir = run_info.run_dir
 
         # Read full NormalizedDataset (using input_run_name from execution context)
-        normalized_dataset = self.input_adapter.read(run_config.ingest_run_context.input_run_name)
+        normalized_dataset = self.input_port.read(run_config.ingest_run_context.input_run_name)
 
         # Compute actual start_idx and end_idx from execution context
         start_idx = run_config.ingest_run_context.start_idx if run_config.ingest_run_context.start_idx is not None else 0
@@ -101,7 +103,7 @@ class InferenceService:
         llm_judgements: list[LLMJudgement] = []
 
         # Open writer for streaming
-        with self.output_adapter.open(run_dir, run_info, run_config, normalized_dataset) as writer:
+        with self.output_port.open(run_dir, run_info, run_config, normalized_dataset) as writer:
 
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
@@ -154,7 +156,7 @@ class InferenceService:
                 llm_judgements.append(judgement)
 
         # Retrieve aggregate write summary after context manager closes (writer logged directly)
-        write_summary = self.output_adapter.get_summary()
+        write_summary = self.output_port.get_summary()
 
         # Calculate aggregate statistics from judgements (for summary)
         count = len(llm_judgements)

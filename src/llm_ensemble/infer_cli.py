@@ -1,7 +1,16 @@
+"""Inference CLI - Driving Adapter
+
+CLI Layer - Driving Adapter (BlueZoneRunner equivalent)
+
+This is the entry point for the inference pipeline. It's a driving adapter
+that delegates to the startup layer (composition root) for execution.
+
+Pure wiring - no business logic. Tested via CLI integration tests.
+"""
 from __future__ import annotations
 import typer
 
-from llm_ensemble.infer.application.orchestrator import run_inference
+from llm_ensemble.infer.startup.adapter_selector import run_inference
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 
@@ -49,11 +58,11 @@ def infer(
     notes: Notes = None,
     tag: Tag = None,
 ):
-    """Run LLM inference."""
-    # Resolve tag if input starts with @ (already validated by RunInputParamType)
-    input_run_name = TagManager.resolve_input(input_run_name, "ingest")
+    """Run LLM inference on judging examples.
 
-    # Delegate to orchestrator (config loading happens there)
+    CLI driving adapter - delegates to startup layer (composition root).
+    """
+    # Delegate to composition root (adapter selection and execution)
     run_inference(
         model_config_name=model_cfg,
         provider_name=provider,

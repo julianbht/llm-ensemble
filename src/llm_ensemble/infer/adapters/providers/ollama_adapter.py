@@ -5,7 +5,7 @@ to LLMResponse objects. Implements the LLMProvider port.
 
 This is a PURE API client - it accepts pre-built prompts and returns raw responses.
 It does NOT build prompts (that's PromptBuilder's job) or parse responses (that's
-ResponseParser's job). The InferenceService orchestrates all port interactions.
+ResponseParser's job). The InferenceUseCase orchestrates all port interactions.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ class OllamaAdapter(LLMProviderPort):
     """Ollama implementation of the LLMProvider port.
 
     Pure API client that sends pre-built prompts to Ollama and returns raw responses.
-    Does NOT build prompts or parse responses - that's orchestrated by InferenceService.
+    Does NOT build prompts or parse responses - that's orchestrated by InferenceUseCase.
     """
 
     def __init__(

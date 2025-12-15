@@ -23,8 +23,8 @@ class LLMProviderPort(ABC):
     """Abstract interface for LLM inference providers.
 
     Providers are PURE API clients - they accept pre-built prompts and return
-    raw responses. They do NOT build prompts or parse responses. The domain
-    service (InferenceService) orchestrates all port interactions.
+    raw responses. They do NOT build prompts or parse responses. The application
+    use case (InferenceUseCase) orchestrates all port interactions.
 
     Retry logic is handled by a separate RetryingProvider wrapper to keep
     this interface clean and focused.

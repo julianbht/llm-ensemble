@@ -3,26 +3,26 @@
 Writes LLMJudgement records to a SQL database using SQLAlchemy ORM.
 Decomposes denormalized domain objects into normalized relational entities.
 
-Uses data mapper pattern: domain service works with LLMJudgement objects,
-SQL writer maps them to ORM entities. Mapper logic lives in mappers_domain_to_orm.py.
+Uses constraint-based duplicate detection via IntegrityError (same pattern as ingest CLI).
 
 Architecture:
 - Run metadata initialized once in open()
 - Per-judgement entities created in write_one() using mappers
 - Immediate commits for fault tolerance
-- JudgedDataset finalized in close()
-- Deduplication via natural key queries (not deterministic UUIDs)
+- InferRunOutput finalized in close()
+- Deduplication via database constraints + savepoints (not SELECT queries)
 """
 
 from __future__ import annotations
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
+from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports import OutputPort
 from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
@@ -36,24 +36,30 @@ from llm_ensemble.libs.db import (
 from llm_ensemble.infer.adapters.io.db.orms import (
     ProviderORM,
     ModelConfigORM,
-    PromptTemplateORM,
+    PromptBuilderORM,
     ParserORM,
+    PromptTemplateORM,
+    IngestRunContextORM,
+    InferRunConfigORM,
     InferRunORM,
-    JudgedDatasetORM,
-    LLMPromptORM,
+    InferRunOutputORM,
+    LLMPromptTextORM,
     LLMResponseTextORM,
-    LLMInvocationMetricsORM,
     LLMScoreORM,
+    LLMJudgementORM,
 )
 from llm_ensemble.infer.adapters.io.db.mappers_to_orm import (
-    provider_name_to_orm,
+    provider_to_orm,
     model_config_to_orm,
-    prompt_name_to_template_orm,
-    parser_name_to_orm,
+    prompt_builder_to_orm,
+    parser_to_orm,
+    prompt_template_to_orm,
+    ingest_run_context_to_orm,
+    infer_run_config_to_orm,
     infer_run_info_to_orm,
-    llm_prompt_to_orm,
+    infer_run_output_to_orm,
+    llm_prompt_text_to_orm,
     llm_response_text_to_orm,
-    llm_invocation_metrics_to_orm,
     llm_score_to_orm,
     llm_judgement_to_orm,
 )
@@ -64,110 +70,135 @@ class DBWriter(OutputPort):
     """Write LLMJudgement records to SQL database.
 
     Normalized schema: decomposes judgements into Provider, ModelConfig,
-    PromptTemplate, ParserSpec, InferRun, LLMPromptText, LLMResponseText,
-    LLMInvocationMetrics, LLMScore, DatasetJudgement, LLMJudgement entities.
+    PromptBuilder, Parser, PromptTemplate, IngestRunContext, InferRunConfig,
+    InferRun, InferRunOutput, LLMPromptText, LLMResponseText, LLMScore, LLMJudgement.
 
-    Deduplication via natural key queries + unique constraints.
+    Deduplication via database constraints + IntegrityError (same as ingest CLI).
     """
 
     def __init__(self):
         super().__init__()
         self._session: Optional[Session] = None
-        self._provider_id: Optional[uuid.UUID] = None
-        self._model_config_id: Optional[uuid.UUID] = None
-        self._prompt_template_id: Optional[uuid.UUID] = None
-        self._parser_spec_id: Optional[uuid.UUID] = None
         self._infer_run_id: Optional[uuid.UUID] = None
-        self._judged_dataset_id: Optional[uuid.UUID] = None
+        self._infer_run_config_id: Optional[uuid.UUID] = None
+        self._infer_run_output_id: Optional[uuid.UUID] = None
         self._dataset_sample_ids: list[uuid.UUID] = []
         self._write_summary = WriteSummary()
-        self.logger = get_logger(component="sql_judgement_writer")
+        self.logger = get_logger(component="db_writer")
 
     def open(
         self,
         run_dir: Path,
         run_info: InferRunInfo,
+        infer_run_config: InferRunConfig,
         normalized_dataset: NormalizedDataset,
     ) -> "DBWriter":
-        """Open database session and initialize run metadata."""
+        """Open database session and initialize run metadata.
+
+        Args:
+            run_dir: Run directory (not used for DB writer)
+            run_info: Run metadata (git info, timestamps)
+            infer_run_config: Complete configuration bundle
+            normalized_dataset: Input dataset for computing start/end indices
+
+        Returns:
+            Self for method chaining
+        """
         if self._session is not None:
             raise RuntimeError("Writer is already open")
 
         engine = get_engine()
         self._session = get_session(engine)
 
-        # Compute actual start_idx and end_idx from run_info
-        start_idx = run_info.start_idx if run_info.start_idx is not None else 0
-        end_idx = run_info.end_idx if run_info.end_idx is not None else len(normalized_dataset.samples)
+        # Compute actual start_idx and end_idx from infer_run_config.ingest_run_context
+        context = infer_run_config.ingest_run_context
+        start_idx = context.start_idx if context.start_idx is not None else 0
+        end_idx = context.end_idx if context.end_idx is not None else len(normalized_dataset.samples)
 
-        # Create InferRun (always new)
-        infer_run_orm = infer_run_info_to_orm(
-            run_info,
-            start_idx,
-            end_idx,
-        )
+        # Create InferRun (always new - unique run_name constraint)
+        infer_run_orm = infer_run_info_to_orm(run_info, start_idx, end_idx)
         self._session.add(infer_run_orm)
         self._infer_run_id = run_info.id
         self._write_summary.add_infer_runs(created=1, skipped=0)
         self._session.commit()
 
-        # JudgedDataset will be created on first write_one() call
-        # (needs provider_id and model_config_id from judgement)
-        self._judged_dataset_id = None
+        # Upsert InferRunConfig components and create InferRunConfig
+        # This initializes _infer_run_config_id for use in write_one()
+        self._upsert_infer_run_config(infer_run_config)
+
+        # InferRunOutput will be created in close() after all judgements written
+        self._infer_run_output_id = None
 
         return self
 
     def write_one(self, judgement: LLMJudgement) -> None:
-        """Write a single judgement to database."""
+        """Write a single judgement to database.
+
+        Uses savepoint + IntegrityError pattern for deduplication.
+        """
         if self._session is None:
             raise RuntimeError("Writer is not open")
-
-        # On first call, upsert shared metadata and create JudgedDataset
-        if self._judged_dataset_id is None:
-            self._initialize_judged_dataset(judgement)
+        if self._infer_run_config_id is None:
+            raise RuntimeError("InferRunConfig not initialized")
 
         # Track dataset_sample ID for fingerprint computation in close()
         self._dataset_sample_ids.append(judgement.llm_prompt.dataset_sample.id)
 
-        # Upsert LLMPromptText (includes prompt_template upsert)
+        # Upsert LLMPromptText
         llm_prompt_text_id = self._upsert_llm_prompt_text(judgement)
 
         # Upsert LLMResponseText
         llm_response_text_id = self._upsert_llm_response_text(judgement)
 
-        # Upsert LLMInvocationMetrics
-        llm_invocation_metrics_id = self._upsert_llm_invocation_metrics(judgement)
+        # Upsert LLMScore
+        llm_score_id = self._upsert_llm_score(judgement)
 
-        # Upsert LLMScore (if present, includes parser upsert)
-        llm_score_id = self._upsert_llm_score(judgement, llm_response_text_id) if judgement.llm_score else None
-
-        # Create LLMJudgement (directly linked to JudgedDataset)
+        # Create LLMJudgement (unique constraint on infer_run_output_id + dataset_sample_id)
+        # Note: We'll create InferRunOutput in close(), so use infer_run_id as placeholder
         llm_judgement_orm = llm_judgement_to_orm(
             judgement,
-            self._judged_dataset_id,
+            self._infer_run_id,  # Temporary - will be updated to infer_run_output_id in close()
+            judgement.llm_prompt.dataset_sample.id,
             llm_prompt_text_id,
-            llm_invocation_metrics_id,
+            llm_response_text_id,
             llm_score_id,
         )
-        self._session.add(llm_judgement_orm)
-        self._write_summary.add_llm_judgements(created=1, skipped=0)
+        try:
+            savepoint = self._session.begin_nested()
+            self._session.add(llm_judgement_orm)
+            self._session.flush()
+            self._write_summary.add_llm_judgements(created=1, skipped=0)
+        except IntegrityError:
+            savepoint.rollback()
+            self._write_summary.add_llm_judgements(created=0, skipped=1)
 
         self._session.commit()
 
     def close(self) -> WriteSummary:
-        """Close session and finalize JudgedDataset."""
+        """Close session and finalize InferRunOutput."""
         if self._session is not None:
-            # Finalize JudgedDataset sample_fingerprint and link to InferRun
-            if self._judged_dataset_id and self._dataset_sample_ids:
-                # Compute fingerprint from dataset_sample IDs (same as JudgedDataset.create())
+            # Create InferRunOutput with fingerprint
+            if self._dataset_sample_ids:
                 fingerprint = compute_judged_dataset_fingerprint(self._dataset_sample_ids)
 
-                judged_dataset = self._session.get(JudgedDatasetORM, self._judged_dataset_id)
-                judged_dataset.sample_fingerprint = fingerprint
+                infer_run_output_orm = infer_run_output_to_orm(
+                    self._infer_run_id,  # Use same ID as InferRun (1:1 relationship)
+                    self._infer_run_config_id,
+                    fingerprint,
+                )
+                try:
+                    savepoint = self._session.begin_nested()
+                    self._session.add(infer_run_output_orm)
+                    self._session.flush()
+                    self._infer_run_output_id = self._infer_run_id
+                    self._write_summary.add_infer_run_outputs(created=1, skipped=0)
+                except IntegrityError:
+                    savepoint.rollback()
+                    self._write_summary.add_infer_run_outputs(created=0, skipped=1)
 
-                # Link InferRun to JudgedDataset (enables aggregate CLI to find judgements)
+                # Link InferRun to InferRunOutput
                 infer_run = self._session.get(InferRunORM, self._infer_run_id)
-                infer_run.judged_dataset_id = self._judged_dataset_id
+                infer_run.infer_run_output_id = self._infer_run_output_id
 
                 self._session.commit()
 
@@ -185,170 +216,186 @@ class DBWriter(OutputPort):
         self._write_summary = WriteSummary()
         return summary
 
-    def _initialize_judged_dataset(self, judgement: LLMJudgement) -> None:
-        """Initialize JudgedDataset on first judgement write.
+    def _upsert_infer_run_config(self, infer_run_config: InferRunConfig) -> None:
+        """Upsert InferRunConfig and all its components.
 
-        Extracts provider and model_config from judgement and upserts them.
+        Uses savepoint + IntegrityError pattern for each entity.
+        Stores _infer_run_config_id for use in write_one().
         """
-        # Upsert Provider from judgement
-        provider_orm = provider_name_to_orm(judgement.llm_provider.name)
-        self._provider_id = self._upsert_by_name(
-            ProviderORM,
-            judgement.llm_provider.name,
-            provider_orm,
-            "providers"
-        )
+        # Upsert Provider
+        created, skipped = self._upsert_provider(infer_run_config.provider)
+        self._write_summary.add_providers(created=created, skipped=skipped)
 
-        # Upsert ModelConfig from judgement
-        model_config_orm = model_config_to_orm(judgement.model_config)
-        self._model_config_id = self._upsert_by_name(
-            ModelConfigORM,
-            judgement.model_config.name_hint,
-            model_config_orm,
-            "model_configs"
-        )
+        # Upsert ModelConfig
+        created, skipped = self._upsert_model_config(infer_run_config.model_cfg)
+        self._write_summary.add_model_configs(created=created, skipped=skipped)
 
-        # Create JudgedDataset with same ID as InferRun (1:1 relationship)
-        self._judged_dataset_id = self._infer_run_id
-        judged_dataset_orm = JudgedDatasetORM(
-            id=self._judged_dataset_id,
-            model_config_id=self._model_config_id,
-            provider_id=self._provider_id,
-            sample_fingerprint=None,  # Computed in close()
-        )
-        self._session.add(judged_dataset_orm)
-        self._session.commit()
+        # Upsert PromptBuilder (includes template_text)
+        created, skipped = self._upsert_prompt_builder(infer_run_config.prompt_template.prompt_builder)
+        self._write_summary.add_prompt_builders(created=created, skipped=skipped)
 
-        self._write_summary.add_judged_datasets(created=1, skipped=0)
-        self.logger.info(InferWriteEvent.WRITE_JUDGED_DATASETS, created=1, skipped=0)
+        # Upsert Parser
+        created, skipped = self._upsert_parser(infer_run_config.prompt_template.response_parser)
+        self._write_summary.add_parsers(created=created, skipped=skipped)
 
-    def _upsert_by_name(self, orm_class, name: str, new_entity_orm, entity_name: str) -> uuid.UUID:
-        """Upsert entity by name (natural key for simple config entities).
-        
-        Args:
-            orm_class: ORM class to query
-            name: Natural key value
-            new_entity_orm: New entity instance with random UUID
-            entity_name: Entity name for metrics tracking
-            
-        Returns:
-            UUID of existing or newly created entity
-        """
-        # Query by natural key
-        stmt = select(orm_class).where(orm_class.name == name)
-        existing = self._session.execute(stmt).scalar_one_or_none()
-        
-        if existing:
-            # Track skip
-            attr_name = f"add_{entity_name}"
-            if hasattr(self._write_summary, attr_name):
-                getattr(self._write_summary, attr_name)(created=0, skipped=1)
-            return existing.id
+        # Upsert PromptTemplate (bundles prompt_builder + parser)
+        created, skipped = self._upsert_prompt_template(infer_run_config.prompt_template)
+        self._write_summary.add_prompt_templates(created=created, skipped=skipped)
 
-        # Create new
-        self._session.add(new_entity_orm)
-        
-        # Track create
-        attr_name = f"add_{entity_name}"
-        if hasattr(self._write_summary, attr_name):
-            getattr(self._write_summary, attr_name)(created=1, skipped=0)
+        # Upsert IngestRunContext
+        created, skipped = self._upsert_ingest_run_context(infer_run_config.ingest_run_context)
+        self._write_summary.add_ingest_run_contexts(created=created, skipped=skipped)
 
-        return new_entity_orm.id
+        # Upsert InferRunConfig (bundles all components)
+        created, skipped = self._upsert_infer_run_config_entity(infer_run_config)
+        self._write_summary.add_infer_run_configs(created=created, skipped=skipped)
+        self._infer_run_config_id = infer_run_config.id
+
+    def _upsert_provider(self, provider) -> Tuple[int, int]:
+        """Upsert Provider entity."""
+        provider_orm = provider_to_orm(provider)
+        try:
+            savepoint = self._session.begin_nested()
+            self._session.add(provider_orm)
+            self._session.flush()
+            return (1, 0)
+        except IntegrityError:
+            savepoint.rollback()
+            return (0, 1)
+
+    def _upsert_model_config(self, model_cfg) -> Tuple[int, int]:
+        """Upsert ModelConfig entity."""
+        model_config_orm = model_config_to_orm(model_cfg)
+        try:
+            savepoint = self._session.begin_nested()
+            self._session.add(model_config_orm)
+            self._session.flush()
+            return (1, 0)
+        except IntegrityError:
+            savepoint.rollback()
+            return (0, 1)
+
+    def _upsert_prompt_builder(self, prompt_builder) -> Tuple[int, int]:
+        """Upsert PromptBuilder entity."""
+        prompt_builder_orm = prompt_builder_to_orm(prompt_builder)
+        try:
+            savepoint = self._session.begin_nested()
+            self._session.add(prompt_builder_orm)
+            self._session.flush()
+            return (1, 0)
+        except IntegrityError:
+            savepoint.rollback()
+            return (0, 1)
+
+    def _upsert_parser(self, parser) -> Tuple[int, int]:
+        """Upsert Parser entity."""
+        parser_orm = parser_to_orm(parser)
+        try:
+            savepoint = self._session.begin_nested()
+            self._session.add(parser_orm)
+            self._session.flush()
+            return (1, 0)
+        except IntegrityError:
+            savepoint.rollback()
+            return (0, 1)
+
+    def _upsert_prompt_template(self, prompt_template) -> Tuple[int, int]:
+        """Upsert PromptTemplate entity."""
+        prompt_template_orm = prompt_template_to_orm(prompt_template)
+        try:
+            savepoint = self._session.begin_nested()
+            self._session.add(prompt_template_orm)
+            self._session.flush()
+            return (1, 0)
+        except IntegrityError:
+            savepoint.rollback()
+            return (0, 1)
+
+    def _upsert_ingest_run_context(self, ingest_run_context) -> Tuple[int, int]:
+        """Upsert IngestRunContext entity."""
+        ingest_run_context_orm = ingest_run_context_to_orm(ingest_run_context)
+        try:
+            savepoint = self._session.begin_nested()
+            self._session.add(ingest_run_context_orm)
+            self._session.flush()
+            return (1, 0)
+        except IntegrityError:
+            savepoint.rollback()
+            return (0, 1)
+
+    def _upsert_infer_run_config_entity(self, infer_run_config) -> Tuple[int, int]:
+        """Upsert InferRunConfig entity."""
+        infer_run_config_orm = infer_run_config_to_orm(infer_run_config)
+        try:
+            savepoint = self._session.begin_nested()
+            self._session.add(infer_run_config_orm)
+            self._session.flush()
+            return (1, 0)
+        except IntegrityError:
+            savepoint.rollback()
+            return (0, 1)
 
     def _upsert_llm_prompt_text(self, judgement: LLMJudgement) -> uuid.UUID:
-        """Upsert LLMPromptText by natural key (prompt_template_id, dataset_sample_id, prompt_text)."""
-        llm_prompt_text_orm = llm_prompt_to_orm(
-            judgement.llm_prompt,
-            judgement.prompt_template_id,
-            judgement.llm_prompt.dataset_sample.id,
+        """Upsert LLMPromptText and return its ID."""
+        prompt_text_id = uuid.uuid4()
+        llm_prompt_text_orm = llm_prompt_text_to_orm(
+            judgement.llm_prompt.prompt_text,
+            prompt_text_id,
         )
-        
-        # Query by natural key
-        stmt = select(LLMPromptORM).where(
-            LLMPromptORM.prompt_template_id == judgement.prompt_template_id,
-            LLMPromptORM.dataset_sample_id == judgement.llm_prompt.dataset_sample.id,
-            LLMPromptORM.prompt_text == judgement.llm_prompt.prompt_text
-        )
-        existing = self._session.execute(stmt).scalar_one_or_none()
-        
-        if existing:
+        try:
+            savepoint = self._session.begin_nested()
+            self._session.add(llm_prompt_text_orm)
+            self._session.flush()
+            self._write_summary.add_llm_prompts(created=1, skipped=0)
+            return prompt_text_id
+        except IntegrityError:
+            savepoint.rollback()
             self._write_summary.add_llm_prompts(created=0, skipped=1)
-            self.logger.info(InferWriteEvent.WRITE_LLM_PROMPTS, created=0, skipped=1)
+            # On duplicate, query to get existing ID
+            stmt = self._session.query(LLMPromptTextORM).filter_by(
+                prompt_text=judgement.llm_prompt.prompt_text
+            )
+            existing = stmt.first()
             return existing.id
-        
-        self._session.add(llm_prompt_text_orm)
-        self._write_summary.add_llm_prompts(created=1, skipped=0)
-        self.logger.info(InferWriteEvent.WRITE_LLM_PROMPTS, created=1, skipped=0)
-        return llm_prompt_text_orm.id
 
     def _upsert_llm_response_text(self, judgement: LLMJudgement) -> uuid.UUID:
-        """Upsert LLMResponseText by natural key (llm_response_text)."""
+        """Upsert LLMResponseText and return its ID."""
         response_text = judgement.llm_score.llm_response_text if judgement.llm_score else ""
-        response_orm = llm_response_text_to_orm(response_text)
-        
-        # Query by natural key
-        stmt = select(LLMResponseTextORM).where(
-            LLMResponseTextORM.llm_response_text == response_text
-        )
-        existing = self._session.execute(stmt).scalar_one_or_none()
-        
-        if existing:
+        response_text_id = uuid.uuid4()
+        response_text_orm = llm_response_text_to_orm(response_text, response_text_id)
+        try:
+            savepoint = self._session.begin_nested()
+            self._session.add(response_text_orm)
+            self._session.flush()
+            self._write_summary.add_llm_responses(created=1, skipped=0)
+            return response_text_id
+        except IntegrityError:
+            savepoint.rollback()
             self._write_summary.add_llm_responses(created=0, skipped=1)
-            self.logger.info(InferWriteEvent.WRITE_LLM_RESPONSES, created=0, skipped=1)
+            # On duplicate, query to get existing ID
+            stmt = self._session.query(LLMResponseTextORM).filter_by(
+                llm_response_text=response_text
+            )
+            existing = stmt.first()
             return existing.id
-        
-        self._session.add(response_orm)
-        self._write_summary.add_llm_responses(created=1, skipped=0)
-        self.logger.info(InferWriteEvent.WRITE_LLM_RESPONSES, created=1, skipped=0)
-        return response_orm.id
 
-    def _upsert_llm_invocation_metrics(self, judgement: LLMJudgement) -> uuid.UUID:
-        """Upsert LLMInvocationMetrics by natural key (all metric fields)."""
-        metrics_orm = llm_invocation_metrics_to_orm(judgement.llm_invocation_metrics)
-        
-        # Query by natural key (all fields)
-        stmt = select(LLMInvocationMetricsORM).where(
-            LLMInvocationMetricsORM.latency_ms == judgement.llm_invocation_metrics.latency_ms,
-            LLMInvocationMetricsORM.retries == judgement.llm_invocation_metrics.retries,
-            LLMInvocationMetricsORM.cost_estimate_usd == judgement.llm_invocation_metrics.cost_estimate_usd,
-            LLMInvocationMetricsORM.generation_id == judgement.llm_invocation_metrics.generation_id,
-            LLMInvocationMetricsORM.prompt_tokens == judgement.llm_invocation_metrics.prompt_tokens,
-            LLMInvocationMetricsORM.completion_tokens == judgement.llm_invocation_metrics.completion_tokens,
-            LLMInvocationMetricsORM.total_tokens == judgement.llm_invocation_metrics.total_tokens
-        )
-        existing = self._session.execute(stmt).scalar_one_or_none()
-        
-        if existing:
-            self._write_summary.add_llm_invocation_metrics(created=0, skipped=1)
-            self.logger.info(InferWriteEvent.WRITE_LLM_INVOCATION_METRICS, created=0, skipped=1)
-            return existing.id
-        
-        self._session.add(metrics_orm)
-        self._write_summary.add_llm_invocation_metrics(created=1, skipped=0)
-        self.logger.info(InferWriteEvent.WRITE_LLM_INVOCATION_METRICS, created=1, skipped=0)
-        return metrics_orm.id
-
-    def _upsert_llm_score(self, judgement: LLMJudgement, llm_response_text_id: uuid.UUID, parser_spec_id: uuid.UUID) -> uuid.UUID:
-        """Upsert LLMScore by natural key (parser_spec_id, llm_response_text_id)."""
-        score_orm = llm_score_to_orm(
-            judgement.llm_score,
-            parser_spec_id,
-            llm_response_text_id,
-        )
-        
-        # Query by natural key
-        stmt = select(LLMScoreORM).where(
-            LLMScoreORM.parser_spec_id == parser_spec_id,
-            LLMScoreORM.llm_response_text_id == llm_response_text_id
-        )
-        existing = self._session.execute(stmt).scalar_one_or_none()
-        
-        if existing:
+    def _upsert_llm_score(self, judgement: LLMJudgement) -> uuid.UUID:
+        """Upsert LLMScore and return its ID."""
+        llm_score_orm = llm_score_to_orm(judgement.llm_score)
+        try:
+            savepoint = self._session.begin_nested()
+            self._session.add(llm_score_orm)
+            self._session.flush()
+            self._write_summary.add_llm_scores(created=1, skipped=0)
+            return llm_score_orm.id
+        except IntegrityError:
+            savepoint.rollback()
             self._write_summary.add_llm_scores(created=0, skipped=1)
-            self.logger.info(InferWriteEvent.WRITE_LLM_SCORES, created=0, skipped=1)
+            # On duplicate, query to get existing ID by natural key
+            stmt = self._session.query(LLMScoreORM).filter_by(
+                label=judgement.llm_score.label,
+                confidence=judgement.llm_score.confidence,
+                rationale=judgement.llm_score.rationale,
+            )
+            existing = stmt.first()
             return existing.id
-        
-        self._session.add(score_orm)
-        self._write_summary.add_llm_scores(created=1, skipped=0)
-        self.logger.info(InferWriteEvent.WRITE_LLM_SCORES, created=1, skipped=0)
-        return score_orm.id

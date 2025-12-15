@@ -17,7 +17,7 @@ These mappers handle the impedance mismatch for the write path.
 from __future__ import annotations
 from uuid import UUID
 
-from llm_ensemble.infer.domain.entities.model_config_schema import ModelConfig
+from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement

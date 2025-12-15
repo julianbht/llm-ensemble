@@ -28,7 +28,7 @@ from llm_ensemble.ingest.schemas.query import Query
 from llm_ensemble.ingest.schemas.document import Document
 from llm_ensemble.ingest.schemas.relevance import Relevance
 from llm_ensemble.infer.schemas.model_judgement_schema import ModelJudgement
-from llm_ensemble.infer.domain.entities.model_config_schema import ModelConfig
+from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.schemas.prompt_config_schema import PromptConfig
 from llm_ensemble.aggregate.schemas.ensemble_result import EnsembleResult
 from llm_ensemble.evaluate.schemas.evaluation_metrics import EvaluationMetrics

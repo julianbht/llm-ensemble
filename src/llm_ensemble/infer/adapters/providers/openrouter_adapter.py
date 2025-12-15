@@ -15,7 +15,7 @@ from typing import Optional
 from openai import OpenAI
 
 from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
-from llm_ensemble.infer.domain.entities.model_config_schema import ModelConfig
+from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.ports.llm_provider_port import LLMProviderPort
 
 

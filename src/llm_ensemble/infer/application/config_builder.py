@@ -24,7 +24,7 @@ from typing import Optional
 
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunContext
-from llm_ensemble.infer.domain.entities.model_config_schema import ModelConfig
+from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory

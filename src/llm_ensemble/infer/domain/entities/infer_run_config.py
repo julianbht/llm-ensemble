@@ -24,7 +24,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
-from llm_ensemble.infer.domain.entities.model_config_schema import ModelConfig
+from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.domain.entities.prompt_template import PromptTemplate
 from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig

@@ -5,7 +5,7 @@ Factory for loading YAML model configuration files and returning ModelConfig dom
 
 from __future__ import annotations
 
-from llm_ensemble.infer.domain.entities.model_config_schema import ModelConfig
+from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.libs.config import load_yaml_config
 from llm_ensemble.libs.runtime.path_manager import PathManager
 

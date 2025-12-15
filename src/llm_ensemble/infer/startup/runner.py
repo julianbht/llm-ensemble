@@ -3,22 +3,36 @@
 Startup Layer - Infrastructure Orchestration (BlueZoneRunner equivalent)
 
 Main entry point for inference execution. Responsible for:
-1. Loading configurations
-2. Setting up infrastructure (run directories, logging)
-3. Creating dependency configurator
-4. Building and executing application
-5. Post-processing (summaries, manifests)
+1. Receiving lightweight request configs from CLI (AdapterConfig, ExecutionParams)
+2. Loading full configurations (heavyweight config objects)
+3. Setting up infrastructure (run directories, logging)
+4. Creating dependency configurator
+5. EXPLICITLY looking up adapters (visible dependency graph!)
+6. Building InferRunConfig domain entity (separate from adapter instantiation)
+7. Building and executing application with explicit dependencies
+8. Post-processing (summaries, manifests)
 
 This is the composition root - NOT unit tested.
 Tested via CLI integration tests.
+
+Key pattern (from BlueZone):
+- CLI builds lightweight request objects (adapter selection, execution params)
+- Runner loads configs and instantiates adapters
+- Adapter lookup is EXPLICIT in runner (not hidden in configurator)
+- build_application() takes EXPLICIT port arguments (dependencies visible!)
+- InferRunConfig is a domain entity (for use case), not for adapter instantiation
 """
 from __future__ import annotations
-from typing import Optional
 
+from llm_ensemble.infer.startup.adapter_config import AdapterConfig, ExecutionParams
 from llm_ensemble.infer.startup.dependency_configurator import DependencyConfigurator
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
-
-from llm_ensemble.infer.application.config_builder import build_infer_config
+from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
+from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunContext
+from llm_ensemble.infer.domain.entities.model_config import ModelConfig
+from llm_ensemble.infer.domain.entities.provider import Provider
+from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
 
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 from llm_ensemble.libs.logging import configure_logger
@@ -28,72 +42,71 @@ from llm_ensemble.libs.runtime.tag_manager import TagManager
 
 
 def run_inference(
-    model_config_name: str,
-    provider_name: str,
-    prompt_template_name: str,
-    retry_config_name: str,
-    io_name: str,
-    input_run_name: str,
-    logging_config_name: str = "observability",
-    run_name: Optional[str] = None,
-    start_idx: Optional[int] = None,
-    end_idx: Optional[int] = None,
-    official: bool = False,
-    notes: Optional[str] = None,
-    tag: Optional[str] = None,
+    adapter_config: AdapterConfig,
+    execution_params: ExecutionParams,
 ) -> None:
     """Run inference pipeline with full infrastructure setup.
 
     Main orchestration function (BlueZoneRunner.main() equivalent).
 
+    Pattern:
+    1. Receive lightweight request configs from CLI
+    2. Load heavyweight config objects
+    3. Create DependencyConfigurator with loaded configs
+    4. EXPLICITLY lookup adapters (visible in runner!)
+    5. Build InferRunConfig domain entity (separate concern)
+    6. Build application with explicit port arguments
+    7. Execute use case
+
     Args:
-        model_config_name: Name of the model config file
-        provider_name: Provider name for registry lookup
-        prompt_template_name: Prompt template name (bundles builder and parser)
-        retry_config_name: Name of the retry config file
-        io_name: I/O format name
-        input_run_name: Ingest run identifier
-        logging_config_name: Name of the logging config file
-        run_name: Custom run ID
-        start_idx: Start index into NormalizedDataset
-        end_idx: End index into NormalizedDataset
-        official: Mark as official run
-        notes: Notes about this run
-        tag: Tag name for easy reference
+        adapter_config: Adapter selection config (which adapters to use)
+        execution_params: Execution parameters (how to execute, run metadata)
 
     Raises:
         FileNotFoundError: If config or input run doesn't exist
         ValueError: If adapter is not recognized or config is invalid
     """
     # Resolve tag if needed
-    input_run_name = TagManager.resolve_input(input_run_name, "ingest")
+    input_run_name = TagManager.resolve_input(execution_params.input_run_name, "ingest")
 
     # ========================================================================
-    # STEP 1: Load Configurations
+    # STEP 1: Load Heavyweight Configurations (Loaded Config Objects)
     # ========================================================================
 
-    run_config = build_infer_config(
-        model_config_name=model_config_name,
-        provider_name=provider_name,
-        prompt_template_name=prompt_template_name,
-        retry_config_name=retry_config_name,
-        input_run_name=input_run_name,
-        start_idx=start_idx,
-        end_idx=end_idx,
+    # Load individual config objects from YAML files
+    model_config = ModelConfig.load(adapter_config.model_config_name)
+    retry_config = RetryConfig.load(adapter_config.retry_config_name)
+    prompt_template = PromptTemplateFactory.create(adapter_config.prompt_template_name)
+    logging_config = LoggingConfig.load(adapter_config.logging_config_name)
+
+    # ========================================================================
+    # STEP 2: Build Domain Entity (InferRunConfig)
+    # ========================================================================
+    # This is separate from adapter instantiation!
+    # It's a domain entity for use case provenance.
+
+    run_config = InferRunConfig(
+        model_cfg=model_config,
+        provider=Provider(name=adapter_config.provider_name),
+        prompt_template=prompt_template,
+        retry_config=retry_config,
+        ingest_run_context=IngestRunContext(
+            input_run_name=input_run_name,
+            start_idx=execution_params.start_idx,
+            end_idx=execution_params.end_idx,
+        ),
     )
 
-    logging_config = LoggingConfig.load(logging_config_name)
-
     # ========================================================================
-    # STEP 2: Setup Infrastructure
+    # STEP 3: Setup Infrastructure
     # ========================================================================
 
     # Create run info (metadata)
     run_info = InferRunInfo.create(
         name_hints=run_config.get_name_hints(),
-        run_name=run_name,
-        official=official,
-        notes=notes,
+        run_name=execution_params.run_name,
+        official=execution_params.official,
+        notes=execution_params.notes,
     )
 
     # Setup run directory
@@ -101,14 +114,14 @@ def run_inference(
     run_dir.mkdir(parents=True, exist_ok=True)
 
     # Create tag if provided
-    if tag:
-        TagManager.create_tag(run_dir, tag)
+    if execution_params.tag:
+        TagManager.create_tag(run_dir, execution_params.tag)
 
     # Setup logger
     log_file_path = run_dir / "run.log" if logging_config.save_logs else None
     logger = configure_logger(
         cli_name="infer",
-        run_name=run_name,
+        run_name=execution_params.run_name,
         run_type=run_info.run_type,
         pretty_print=logging_config.pretty_print,
         save_logs=logging_config.save_logs,
@@ -119,40 +132,64 @@ def run_inference(
 
     logger.info(
         InferLogEvent.INFER_STARTED,
-        model=model_config_name,
-        provider=provider_name,
-        io_format=io_name,
-        prompt_template=prompt_template_name,
+        model=adapter_config.model_config_name,
+        provider=adapter_config.provider_name,
+        io_format=adapter_config.io_name,
+        prompt_template=adapter_config.prompt_template_name,
         input_run_name=input_run_name,
-        start_idx=start_idx,
-        end_idx=end_idx,
+        start_idx=execution_params.start_idx,
+        end_idx=execution_params.end_idx,
     )
 
     # ========================================================================
-    # STEP 3: Create Dependency Configurator
+    # STEP 4: Create Dependency Configurator
     # ========================================================================
 
     dependency_configurator = DependencyConfigurator(
-        run_config=run_config,
-        io_name=io_name,
+        model_config=model_config,
+        provider_name=adapter_config.provider_name,
+        prompt_template=prompt_template,
+        retry_config=retry_config,
     )
 
     # ========================================================================
-    # STEP 4: Build Application and Execute
+    # STEP 5: EXPLICITLY Lookup Adapters (BlueZone Pattern!)
     # ========================================================================
+    # This makes the dependency graph VISIBLE in the runner!
+    # You can see exactly what adapters are being used.
 
     try:
-        # Build application (hexagon) with injected dependencies
-        use_case = dependency_configurator.build_application()
+        # Lookup driven ports (explicit!)
+        input_port = dependency_configurator.lookup_input_port(adapter_config.io_name)
+        output_port = dependency_configurator.lookup_output_port(adapter_config.io_name)
+        prompt_builder = dependency_configurator.lookup_prompt_builder()
+        response_parser = dependency_configurator.lookup_response_parser()
+        llm_provider = dependency_configurator.lookup_llm_provider()
 
-        # Execute use case
+        # ========================================================================
+        # STEP 6: Build Application with EXPLICIT Dependencies
+        # ========================================================================
+        # build_application() takes explicit arguments - dependencies are VISIBLE!
+
+        use_case = dependency_configurator.build_application(
+            input_port=input_port,
+            output_port=output_port,
+            prompt_builder=prompt_builder,
+            response_parser=response_parser,
+            llm_provider=llm_provider,
+        )
+
+        # ========================================================================
+        # STEP 7: Execute Use Case
+        # ========================================================================
+
         summary = use_case.execute(
             run_info=run_info,
             run_config=run_config,
         )
 
         # ========================================================================
-        # STEP 5: Post-Processing
+        # STEP 8: Post-Processing
         # ========================================================================
 
         logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=summary.judgement_count)

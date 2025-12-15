@@ -13,7 +13,7 @@ Strategy identity comes from config, not from adapter.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
-from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
+from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.schemas.aggregated_vote import AggregatedVote
 from llm_ensemble.aggregate.schemas.aggregation_strategy import AggregationStrategy as AggregationStrategyEntity
 

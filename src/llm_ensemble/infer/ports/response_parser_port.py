@@ -7,8 +7,8 @@ Adapters translate raw LLM response text into domain LLMScore entities.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
-from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
-from llm_ensemble.infer.schemas.entities.parser import Parser
+from llm_ensemble.infer.domain.entities.llm_score import LLMScore
+from llm_ensemble.infer.domain.entities.parser import Parser
 from llm_ensemble.infer.schemas.warnings import BaseWarning
 
 

@@ -11,8 +11,8 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
-from llm_ensemble.infer.schemas.entities.llm_invocation_metrics import LLMInvocationMetrics
-from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
+from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
+from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.schemas.warnings import BaseWarning
 
 

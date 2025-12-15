@@ -25,8 +25,8 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
-from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
-from llm_ensemble.infer.schemas.entities.provider import Provider
+from llm_ensemble.infer.domain.entities.prompt_template import PromptTemplate
+from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.ingest_run_context import IngestRunContext
 

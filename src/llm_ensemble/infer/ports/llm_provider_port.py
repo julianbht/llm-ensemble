@@ -11,12 +11,12 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from llm_ensemble.infer.schemas.entities.llm_judgement import LLMInvocationMetrics
+from llm_ensemble.infer.domain.entities.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.libs.logging import get_logger
 
 if TYPE_CHECKING:
-    from llm_ensemble.infer.schemas.entities.provider import Provider
+    from llm_ensemble.infer.domain.entities.provider import Provider
 
 
 class LLMProviderPort(ABC):

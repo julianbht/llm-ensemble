@@ -9,8 +9,8 @@ import uuid
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from llm_ensemble.infer.schemas.entities.prompt_builder import PromptBuilder
-from llm_ensemble.infer.schemas.entities.parser import Parser
+from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
+from llm_ensemble.infer.domain.entities.parser import Parser
 
 
 class PromptTemplate(BaseModel):

@@ -8,7 +8,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
-from llm_ensemble.infer.schemas.entities.prompt_builder import PromptBuilder
+from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
 
 
 class PromptBuilderPort(ABC):

@@ -10,7 +10,7 @@ from textwrap import dedent
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.ports.prompt_builder_port import PromptBuilderPort
-from llm_ensemble.infer.schemas.entities.prompt_builder import PromptBuilder
+from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
 
 
 class ThomasAdvancedPromptBuilder(PromptBuilderPort):

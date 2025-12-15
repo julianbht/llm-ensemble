@@ -6,7 +6,7 @@ Defines the abstract contract for reading InferRunOutput from storage.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
-from llm_ensemble.infer.schemas.entities.infer_run_output import InferRunOutput
+from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
 
 
 class JudgementReader(ABC):

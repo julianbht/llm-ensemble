@@ -22,7 +22,7 @@ This layer does NOT know about:
 from __future__ import annotations
 from dataclasses import dataclass
 
-from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
+from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.ports.input_port import InputPort
 from llm_ensemble.infer.ports.output_port import OutputPort
 from llm_ensemble.infer.ports.prompt_builder_port import PromptBuilderPort

@@ -23,7 +23,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
+from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 
 
 class InferRunOutput(BaseModel):

@@ -22,11 +22,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
+from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.ports.output_port import OutputPort
 from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
-from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
+from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.db import (
     get_engine,

@@ -14,7 +14,7 @@ It is separated from the CLI entry point (infer_cli.py) for testability.
 from __future__ import annotations
 from typing import Optional
 
-from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
+from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 from llm_ensemble.infer.inference_service import InferenceService
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary

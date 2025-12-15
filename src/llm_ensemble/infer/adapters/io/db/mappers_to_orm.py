@@ -17,16 +17,16 @@ These mappers handle the impedance mismatch for the write path.
 from __future__ import annotations
 from uuid import UUID
 
-from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
-from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
-from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
+from llm_ensemble.infer.domain.entities.model_config_schema import ModelConfig
+from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
+from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
 from llm_ensemble.infer.domain.entities.parser import Parser
 from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.domain.entities.prompt_template import PromptTemplate
-from llm_ensemble.infer.schemas.ingest_run_context import IngestRunContext
+from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunContext
 from llm_ensemble.infer.adapters.io.db.orms import (
     ProviderORM,
     ModelConfigORM,

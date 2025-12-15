@@ -7,8 +7,8 @@ It depends only on port abstractions and handles its own logging.
 from __future__ import annotations
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
-from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
+from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
+from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.ports.llm_provider_port import LLMProviderPort
 from llm_ensemble.infer.ports.input_port import InputPort

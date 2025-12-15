@@ -46,8 +46,8 @@ class InferenceUseCase:
             llm_provider: Port for LLM inference
             response_parser: Port for parsing LLM responses
         """
-        self.input_adapter = input_adapter
-        self.output_adapter = output_adapter
+        self.input_port = input_adapter
+        self.output_port = output_adapter
         self.prompt_builder = prompt_builder
         self.llm_provider = llm_provider
         self.response_parser = response_parser

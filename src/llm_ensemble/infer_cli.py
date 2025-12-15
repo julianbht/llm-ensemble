@@ -1,7 +1,7 @@
 from __future__ import annotations
 import typer
 
-from llm_ensemble.infer.orchestrator import run_inference
+from llm_ensemble.infer.application.orchestrator import run_inference
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 

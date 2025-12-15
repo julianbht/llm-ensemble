@@ -16,13 +16,13 @@ from typing import Optional
 
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
-from llm_ensemble.infer.inference_service import InferenceService
+from llm_ensemble.infer.application.inference_service import InferenceService
 from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
-from llm_ensemble.infer.config_builder import build_infer_config
-from llm_ensemble.infer.adapter_factory import build_adapters
+from llm_ensemble.infer.application.config_builder import build_infer_config
+from llm_ensemble.infer.application.adapter_factory import build_adapters
 
 
 def run_inference(

@@ -10,13 +10,11 @@ from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
-from llm_ensemble.infer.ports import (
-    LLMProviderPort,
-    InputPort,
-    OutputPort,
-    ResponseParserPort,
-    PromptBuilderPort,
-)
+from llm_ensemble.infer.ports.llm_provider_port import LLMProviderPort
+from llm_ensemble.infer.ports.input_port import InputPort
+from llm_ensemble.infer.ports.output_port import OutputPort
+from llm_ensemble.infer.ports.response_parser_port import ResponseParserPort
+from llm_ensemble.infer.ports.prompt_builder_port import PromptBuilderPort
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 from llm_ensemble.libs.logging.log_events import InferLogEvent

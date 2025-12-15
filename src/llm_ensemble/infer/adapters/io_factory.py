@@ -16,7 +16,8 @@ To add a new IO format:
 from __future__ import annotations
 from typing import Dict, Type, NamedTuple
 
-from llm_ensemble.infer.ports import InputPort, OutputPort
+from llm_ensemble.infer.ports.input_port import InputPort
+from llm_ensemble.infer.ports.output_port import OutputPort
 from llm_ensemble.infer.adapters.io.db.db_reader import DBReader
 from llm_ensemble.infer.adapters.io.db.db_writer import DBWriter
 from llm_ensemble.infer.adapters.io.fully_populated_json_writer import FullyPopulatedJsonWriter

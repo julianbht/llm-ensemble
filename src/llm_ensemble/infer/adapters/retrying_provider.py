@@ -9,7 +9,7 @@ import random
 import time
 from openai import APIError
 
-from llm_ensemble.infer.ports import LLMProviderPort
+from llm_ensemble.infer.ports.llm_provider_port import LLMProviderPort
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.libs.logging import get_logger

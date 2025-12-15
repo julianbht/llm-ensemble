@@ -23,13 +23,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from llm_ensemble.infer.schemas.infer_run_config import InferRunConfig
-from llm_ensemble.infer.ports import (
-    InputPort,
-    OutputPort,
-    PromptBuilderPort,
-    ResponseParserPort,
-    LLMProviderPort,
-)
+from llm_ensemble.infer.ports.input_port import InputPort
+from llm_ensemble.infer.ports.output_port import OutputPort
+from llm_ensemble.infer.ports.prompt_builder_port import PromptBuilderPort
+from llm_ensemble.infer.ports.response_parser_port import ResponseParserPort
+from llm_ensemble.infer.ports.llm_provider_port import LLMProviderPort
 from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
 from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
 from llm_ensemble.infer.adapters.io_factory import IOAdapterFactory

@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMInvocationMetrics
-from llm_ensemble.infer.schemas import ModelConfig
+from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
 from llm_ensemble.libs.logging import get_logger
 
 if TYPE_CHECKING:

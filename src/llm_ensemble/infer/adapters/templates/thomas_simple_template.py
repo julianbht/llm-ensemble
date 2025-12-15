@@ -6,7 +6,9 @@ to ensure they are always correctly paired.
 
 from __future__ import annotations
 
-from llm_ensemble.infer.ports import PromptTemplatePort, PromptBuilderPort, ResponseParserPort
+from llm_ensemble.infer.ports.prompt_template_port import PromptTemplatePort
+from llm_ensemble.infer.ports.prompt_builder_port import PromptBuilderPort
+from llm_ensemble.infer.ports.response_parser_port import ResponseParserPort
 from llm_ensemble.infer.adapters.prompts.thomas_simple_prompt_builder import ThomasSimplePromptBuilder
 from llm_ensemble.infer.adapters.parsers.thomas_simple_parser import ThomasSimpleParser
 

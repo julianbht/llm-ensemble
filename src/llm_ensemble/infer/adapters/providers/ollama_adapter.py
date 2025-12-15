@@ -12,8 +12,8 @@ from __future__ import annotations
 from typing import Optional
 
 from llm_ensemble.infer.schemas.entities.llm_invocation_metrics import LLMInvocationMetrics
-from llm_ensemble.infer.schemas import ModelConfig
-from llm_ensemble.infer.ports import LLMProviderPort
+from llm_ensemble.infer.schemas.model_config_schema import ModelConfig
+from llm_ensemble.infer.ports.llm_provider_port import LLMProviderPort
 
 
 class OllamaAdapter(LLMProviderPort):

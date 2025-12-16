@@ -77,6 +77,11 @@ class InferRunConfig(BaseModel):
         description="Execution context of ingest run"
     )
 
+    io_name: str = Field(
+        ...,
+        description="I/O adapter name (e.g., 'json', 'parquet')"
+    )
+
     model_config = ConfigDict(frozen=True)
 
     def get_name_hints(self) -> list[str]:

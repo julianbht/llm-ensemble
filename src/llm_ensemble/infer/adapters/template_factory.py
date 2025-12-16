@@ -18,6 +18,9 @@ from typing import Dict, Type
 from llm_ensemble.infer.ports.prompt_template_port import PromptTemplatePort
 from llm_ensemble.infer.adapters.templates.thomas_simple_template import ThomasSimpleTemplate
 from llm_ensemble.infer.adapters.templates.thomas_advanced_template import ThomasAdvancedTemplate
+from llm_ensemble.infer.domain.entities.prompt_template import PromptTemplate
+from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
+from llm_ensemble.infer.domain.entities.parser import Parser
 
 
 TEMPLATES: Dict[str, Type[PromptTemplatePort]] = {
@@ -55,11 +58,6 @@ class PromptTemplateFactory:
                 f"Template '{template_name}' not found. "
                 f"Available: {available}"
             )
-
-        # Import here to avoid circular dependency
-        from llm_ensemble.infer.schemas.entities.prompt_template import PromptTemplate
-        from llm_ensemble.infer.schemas.entities.prompt_builder import PromptBuilder
-        from llm_ensemble.infer.schemas.entities.parser import Parser
 
         template_class = TEMPLATES[template_name]
 

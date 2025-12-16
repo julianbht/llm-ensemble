@@ -61,15 +61,11 @@ class PromptTemplateFactory:
 
         template_class = TEMPLATES[template_name]
 
-        # Create simple metadata entities (no adapters)
-        builder_metadata = PromptBuilder(name=template_class.BUILDER_NAME)
-        parser_metadata = Parser(name=template_class.PARSER_NAME)
-
-        return PromptTemplate.create(
+        return PromptTemplate(
             name=template_class.TEMPLATE_NAME,
             template_text=template_class.TEMPLATE_TEXT,
-            prompt_builder=builder_metadata,
-            response_parser=parser_metadata,
+            prompt_builder=PromptBuilder(name=template_class.BUILDER_NAME),
+            response_text_parser=Parser(name=template_class.PARSER_NAME),
         )
 
     @staticmethod

@@ -49,7 +49,7 @@ def run_inference(
     summary = use_case.execute(run_info=run_info, run_config=run_config)
     _finalize_run(summary, run_info, logger)
 
-def _build_run_config(
+def  _build_run_config(
     adapter_config: AdapterConfig,
     execution_params: ExecutionParams,
 ) -> InferRunConfig:
@@ -78,8 +78,13 @@ def _setup_infrastructure(
     """Setup run directory, logging. Returns run_info and logger."""
     logging_config = LoggingConfig.load(logging_config_name)
     
+    name_hints = [
+        run_config.model_cfg.name_hint,
+        run_config.prompt_template.name,
+        run_config.provider.name,
+    ]
     run_info = InferRunInfo.create(
-        name_hints=run_config.get_name_hints(),
+        name_hints=name_hints,
         run_name=execution_params.run_name,
         official=execution_params.official,
         notes=execution_params.notes,

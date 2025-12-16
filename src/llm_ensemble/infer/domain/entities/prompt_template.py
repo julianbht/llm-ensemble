@@ -1,7 +1,6 @@
-"""PromptTemplate entity for the infer CLI.
+"""PromptTemplate - metadata for a prompt template.
 
-Domain entity representing a prompt template that bundles together
-a prompt builder and response parser that work as a pair.
+Pure Pydantic model bundling template text with builder/parser metadata.
 """
 
 from __future__ import annotations
@@ -14,15 +13,9 @@ from llm_ensemble.infer.domain.entities.parser import Parser
 
 
 class PromptTemplate(BaseModel):
-    """Prompt template entity.
-
-    Bundles together a prompt builder and response parser that are
-    designed to work together. This ensures prompts and parsers are
-    always correctly paired.
-
-    The template contains the actual template text and metadata about
-    the builder and parser that process it.
-    """
+    """Prompt template metadata.
+    
+    Pure Pydantic model - bundles template text with builder/parser names."""
 
     id: UUID = Field(
         default_factory=uuid.uuid4,
@@ -49,23 +42,3 @@ class PromptTemplate(BaseModel):
         description="Response parser metadata (id, name)",
         alias="response_text_parser"
     )
-
-    @classmethod
-    def create(cls, name: str, template_text: str, prompt_builder: PromptBuilder, response_parser: Parser) -> "PromptTemplate":
-        """Create a PromptTemplate from template text and metadata entities.
-
-        Args:
-            name: Template name (e.g., 'thomas-simple')
-            template_text: Raw template text
-            prompt_builder: PromptBuilder metadata (id, name)
-            response_parser: Parser metadata (id, name)
-
-        Returns:
-            PromptTemplate entity
-        """
-        return cls(
-            name=name,
-            template_text=template_text,
-            prompt_builder=prompt_builder,
-            response_text_parser=response_parser
-        )

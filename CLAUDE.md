@@ -17,6 +17,31 @@ The project follows a 4-stage pipeline architecture with shared libraries and he
 
 All artifacts are managed by the **run manager** (`libs/runtime/run_manager.py`), which creates run directories, generates IDs, and writes manifests. Outputs are organized under `artifacts/runs/<cli_name>/<run_name>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
 
+### Running Individual CLIs
+
+```bash
+# Ingest - Normalize raw datasets into JudgingExamples
+# Uses config file: configs/io/llm_judge_ingest.yaml
+ingest --io llm_judge_ingest --limit 100
+
+# Override data directory if needed
+ingest --io llm_judge_ingest --override data_dir=/custom/path --limit 100
+
+# Infer - Run LLM judge inference
+infer --model gpt-oss-20b --prompt thomas-et-al-prompt --io json --input artifacts/runs/ingest/<run_name>/samples.json
+
+# Aggregate - Combine model judgements using ensemble strategies
+aggregate --ensemble weighted_majority --io json --input artifacts/runs/infer/<run_name>/judgements.json
+
+# Evaluate - Compute metrics and generate reports
+evaluate --io json --input artifacts/runs/aggregate/<run_name>/ensemble.json
+
+# Alternative: run via python module
+python3 -m llm_ensemble.ingest_cli --help
+python3 -m llm_ensemble.infer_cli --help
+python3 -m llm_ensemble.aggregate_cli --help
+python3 -m llm_ensemble.evaluate_cli --help
+
 ## Architecture: Clean Architecture / Ports & Adapters
 
 The codebase follows hexagonal architecture with clear separation of concerns. Using the **infer** CLI as the reference implementation:

@@ -9,7 +9,7 @@ import uuid
 from textwrap import dedent
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
-from llm_ensemble.infer.application.ports.prompt_builder_port import PromptBuilderPort
+from llm_ensemble.infer.application.ports.driven.prompt_builder_port import PromptBuilderPort
 from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
 
 

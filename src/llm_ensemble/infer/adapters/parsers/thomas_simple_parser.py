@@ -10,7 +10,7 @@ import re
 import uuid
 from typing import Optional
 
-from llm_ensemble.infer.application.ports.response_parser_port import ResponseParserPort
+from llm_ensemble.infer.application.ports.driven.response_parser_port import ResponseParserPort
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.parser import Parser
 from llm_ensemble.infer.schemas.warnings import ParserWarning, ParserWarningCode

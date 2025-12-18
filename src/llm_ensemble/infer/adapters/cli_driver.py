@@ -2,16 +2,16 @@
 
 Driving Adapter Layer - CLI Infrastructure
 
-This adapter wraps the inference application use case and provides CLI-specific infrastructure:
+This adapter wraps the inference application and provides CLI-specific infrastructure:
 - File-based run directory management
 - Terminal logging with structured events
 - File-based result persistence (summary.json)
 - Progress reporting to stdout
 
-Follows hexagonal architecture pattern where the driver:
-1. Receives the application's driving port (InferenceUseCase) in constructor
+Follows hexagonal architecture pattern where the driving adapter:
+1. Receives the application's driving port (ForRunningInference) in constructor
 2. Provides infrastructure specific to the CLI execution context
-3. Executes the application via its public interface
+3. Executes the application via its driving port interface (execute method)
 4. Handles results in a CLI-appropriate manner
 
 Comparable to ForParkingCarsTestDriver in BlueZone example.
@@ -19,10 +19,8 @@ Tested via CLI integration tests.
 """
 from __future__ import annotations
 from typing import Tuple
-from logging import Logger
-from pathlib import Path
 
-from llm_ensemble.infer.application.inference_use_case import InferenceUseCase
+from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.startup.adapter_config import ExecutionParams
@@ -39,12 +37,12 @@ class CLIDriver:
     """CLI driving adapter for inference pipeline.
 
     Wraps the inference application and provides CLI-specific infrastructure concerns.
-    The application exposes its driving port (InferenceUseCase.execute), which this
+    The application exposes its driving port (ForRunningInference.execute), which this
     adapter uses to execute the business logic while handling CLI-specific concerns
     like file-based logging, run directories, and terminal output.
 
     Attributes:
-        application: The inference use case (application's driving port)
+        application: The application's driving port (ForRunningInference)
         run_config: Domain configuration for the inference run
         execution_params: CLI execution parameters (run name, official flag, etc.)
         logging_config_name: Name of logging config to load
@@ -52,7 +50,7 @@ class CLIDriver:
 
     def __init__(
         self,
-        application: InferenceUseCase,
+        application: ForRunningInference,
         run_config: InferRunConfig,
         execution_params: ExecutionParams,
         logging_config_name: str,
@@ -60,7 +58,7 @@ class CLIDriver:
         """Initialize CLI driver with application and CLI-specific configuration.
 
         Args:
-            application: The inference use case (application's driving port)
+            application: The application's driving port (ForRunningInference interface)
             run_config: Domain configuration bundle
             execution_params: CLI execution parameters
             logging_config_name: Name of logging config file
@@ -90,7 +88,7 @@ class CLIDriver:
         # CLI-specific: finalize results
         self._finalize_run(summary, run_info, logger)
 
-    def _setup_infrastructure(self) -> Tuple[InferRunInfo, Logger]:
+    def _setup_infrastructure(self) -> Tuple[InferRunInfo, object]:
         """Setup CLI-specific infrastructure: run directory and file-based logging.
 
         Returns:
@@ -150,7 +148,7 @@ class CLIDriver:
         self,
         summary: InferRunSummary,
         run_info: InferRunInfo,
-        logger: Logger,
+        logger: object,
     ) -> None:
         """Finalize CLI outputs: write summary to file and log completion to terminal.
 

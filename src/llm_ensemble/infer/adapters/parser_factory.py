@@ -12,7 +12,7 @@ To add a new parser:
 from __future__ import annotations
 from typing import Dict, Type
 
-from llm_ensemble.infer.ports.response_parser_port import ResponseParserPort
+from llm_ensemble.infer.application.ports.driven.response_parser_port import ResponseParserPort
 from llm_ensemble.infer.adapters.parsers.thomas_simple_parser import (
     ThomasSimpleParser,
 )

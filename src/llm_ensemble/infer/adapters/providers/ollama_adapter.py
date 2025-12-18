@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
-from llm_ensemble.infer.application.ports.llm_provider_port import LLMProviderPort
+from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
 
 
 class OllamaAdapter(LLMProviderPort):

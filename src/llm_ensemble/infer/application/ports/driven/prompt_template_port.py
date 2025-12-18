@@ -7,8 +7,8 @@ a prompt builder and response parser together as a cohesive unit.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
-from llm_ensemble.infer.application.ports.prompt_builder_port import PromptBuilderPort
-from llm_ensemble.infer.application.ports.response_parser_port import ResponseParserPort
+from llm_ensemble.infer.application.ports.driven.prompt_builder_port import PromptBuilderPort
+from llm_ensemble.infer.application.ports.driven.response_parser_port import ResponseParserPort
 
 
 class PromptTemplatePort(ABC):

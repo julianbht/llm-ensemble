@@ -15,7 +15,7 @@ To add a new template:
 from __future__ import annotations
 from typing import Dict, Type
 
-from llm_ensemble.infer.application.ports.prompt_template_port import PromptTemplatePort
+from llm_ensemble.infer.application.ports.driven.prompt_template_port import PromptTemplatePort
 from llm_ensemble.infer.adapters.templates.thomas_simple_template import ThomasSimpleTemplate
 from llm_ensemble.infer.adapters.templates.thomas_advanced_template import ThomasAdvancedTemplate
 from llm_ensemble.infer.domain.entities.prompt_template import PromptTemplate

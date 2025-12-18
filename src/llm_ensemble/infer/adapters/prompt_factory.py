@@ -12,7 +12,7 @@ To add a new prompt:
 from __future__ import annotations
 from typing import Dict, Type
 
-from llm_ensemble.infer.ports.prompt_builder_port import PromptBuilderPort
+from llm_ensemble.infer.application.ports.driven.prompt_builder_port import PromptBuilderPort
 from llm_ensemble.infer.adapters.prompts.thomas_simple_prompt_builder import (
     ThomasSimplePromptBuilder,
 )

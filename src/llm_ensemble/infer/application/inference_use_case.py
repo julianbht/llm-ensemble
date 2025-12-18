@@ -3,9 +3,10 @@
 Application Layer - Use Case
 
 This module contains the inference workflow orchestration.
-It coordinates calls to ports (infrastructure boundaries) to execute
-the inference pipeline. Depends only on port abstractions for testability.
+It implements the driving port (ForRunningInference) and coordinates calls
+to driven ports (infrastructure boundaries) to execute the inference pipeline.
 
+Depends only on port abstractions for testability.
 Tested via unit tests with mocked ports.
 """
 
@@ -15,23 +16,32 @@ from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
-from llm_ensemble.infer.application.ports.llm_provider_port import LLMProviderPort
-from llm_ensemble.infer.application.ports.input_port import InputPort
-from llm_ensemble.infer.application.ports.output_port import OutputPort
-from llm_ensemble.infer.application.ports.response_parser_port import ResponseParserPort
-from llm_ensemble.infer.application.ports.prompt_builder_port import PromptBuilderPort
+
+# Driving port (application implements this)
+from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
+
+# Driven ports (application depends on these)
+from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
+from llm_ensemble.infer.application.ports.driven.input_port import InputPort
+from llm_ensemble.infer.application.ports.driven.output_port import OutputPort
+from llm_ensemble.infer.application.ports.driven.response_parser_port import ResponseParserPort
+from llm_ensemble.infer.application.ports.driven.prompt_builder_port import PromptBuilderPort
+
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
-class InferenceUseCase:
+class InferenceUseCase(ForRunningInference):
     """Application use case for coordinating LLM inference pipeline.
 
-    Orchestrates the inference workflow by calling ports (infrastructure boundaries).
+    Implements the driving port ForRunningInference - this IS the application's API.
+    Driving adapters (CLIDriver, WebAPIDriver, etc.) call the execute() method.
+
+    Orchestrates the inference workflow by calling driven ports (infrastructure boundaries).
     Coordinates: read → build prompt → infer → parse → write (streaming loop).
 
-    Depends only on port abstractions, enabling unit testing with mocked ports.
+    Depends only on driven port abstractions, enabling unit testing with mocked ports.
     """
 
     def __init__(

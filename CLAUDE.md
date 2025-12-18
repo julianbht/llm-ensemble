@@ -21,37 +21,6 @@ All artifacts are managed by the **run manager** (`libs/runtime/run_manager.py`)
 
 The codebase follows hexagonal architecture with clear separation of concerns. Using the **infer** CLI as the reference implementation:
 
-### Layers
-
-1. **CLI Layer** (e.g., `infer_cli.py`)
-   - Typer-based entrypoints that parse arguments and delegate to orchestrators
-   - No business logic - pure wiring
-
-2. **Orchestrator Layer** (e.g., `infer/orchestrator.py`)
-   - Infrastructure concerns: run management, logging, manifests
-   - Loads configurations, instantiates adapters dynamically from config
-   - Delegates business logic to domain services
-
-3. **Domain Layer** (e.g., `infer/domain/inference_service.py`)
-   - Pure business logic with no I/O dependencies
-   - Depends only on port abstractions (ABCs)
-   - Coordinates the core workflow (read → process → write)
-
-4. **Ports Layer** (e.g., `infer/ports/`)
-   - Abstract base classes defining contracts for infrastructure
-   - Examples: `LLMProvider`, `ExampleReader`, `JudgementWriter`, `PromptBuilder`, `ResponseParser`
-
-5. **Adapters Layer** (e.g., `infer/adapters/`)
-   - Concrete implementations of ports
-   - Handle I/O, APIs, file formats, retries, HTTP clients
-   - Organized by concern: `io/`, `providers/`, `prompts/`, `parsers/`
-   - Instantiated dynamically via config-driven methods (e.g., `model_config.get_provider()`)
-
-### Dynamic Adapter Instantiation
-
-Adapters are instantiated dynamically from configuration, not via separate factory modules. Config files specify module paths and class names, and config objects provide methods to instantiate adapters.
-
-
 ## Design Principles
 
 ### Explicit Configuration Over Implicit Defaults
@@ -80,34 +49,8 @@ make install-dev
 
 # Or manually:
 pip install -e ".[dev]"
+
 ```
-
-### Running Individual CLIs
-
-```bash
-# Ingest - Normalize raw datasets into JudgingExamples
-# Uses config file: configs/io/llm_judge_ingest.yaml
-ingest --io llm_judge_ingest --limit 100
-
-# Override data directory if needed
-ingest --io llm_judge_ingest --override data_dir=/custom/path --limit 100
-
-# Infer - Run LLM judge inference
-infer --model gpt-oss-20b --prompt thomas-et-al-prompt --io json --input artifacts/runs/ingest/<run_name>/samples.json
-
-# Aggregate - Combine model judgements using ensemble strategies
-aggregate --ensemble weighted_majority --io json --input artifacts/runs/infer/<run_name>/judgements.json
-
-# Evaluate - Compute metrics and generate reports
-evaluate --io json --input artifacts/runs/aggregate/<run_name>/ensemble.json
-
-# Alternative: run via python module
-python3 -m llm_ensemble.ingest_cli --help
-python3 -m llm_ensemble.infer_cli --help
-python3 -m llm_ensemble.aggregate_cli --help
-python3 -m llm_ensemble.evaluate_cli --help
-```
-
 ### Testing
 
 The project uses pytest for testing. Tests are organized in the `tests/` directory, mirroring the CLI structure.
@@ -163,66 +106,6 @@ The project uses `python-dotenv` to automatically load `.env` files. Never commi
 ## Data Contracts
 
 The pipeline uses Pydantic models to enforce schemas at CLI boundaries, ensuring type safety and validation across the entire workflow.
-
-### JudgingExample (ingest → infer)
-
-Normalized query-document pairs with ground truth labels. Created by `ingest` CLI, consumed by `infer` CLI.
-
-**Schema:** `ingest/schemas/judging_example.py` → `JudgingExample`
-**Key fields:** `dataset`, `query_id`, `query_text`, `docid`, `doc`, `gold_relevance`
-**Purpose:** Standardize diverse IR datasets into a single format for downstream processing
-
-### ModelJudgement (infer → aggregate)
-
-LLM-generated relevance assessments with observability metadata. Created by `infer` CLI, consumed by `aggregate` CLI.
-
-**Schema:** `infer/schemas/model_judgement_schema.py` → `ModelJudgement`
-**Key fields:**
-- **Identity:** `model_id`, `provider`, `version`
-- **Judgement:** `label` (0/1/2 or null), `score`, `confidence`
-- **Explainability:** `rationale`, `raw_text`
-- **Observability:** `latency_ms`, `retries`, `cost_estimate`, `warnings`
-
-**Purpose:** Track both judgements and metadata for analysis, debugging, and cost estimation
-
-### EnsembleOutput (aggregate → evaluate)
-
-Aggregated decisions from multiple models with voting metadata.
-
-**Schema:** TBD in `aggregate/schemas/` (planned)
-**Expected fields:** `final_label`, `final_confidence`, `per_model_votes`, `aggregation_strategy`, `warnings`
-**Purpose:** Combine multiple model judgements into consensus decisions
-
-## Configuration
-
-All system behavior is controlled via YAML configuration files in `configs/`. CLI flags reference config names (not paths), promoting a "config-first" design.
-
-## Project Structure
-
-```
-src/llm_ensemble/
-├── ingest_cli.py    # CLI 1: Dataset normalization entrypoint
-├── infer_cli.py     # CLI 2: Model inference entrypoint
-├── aggregate_cli.py # CLI 3: Ensemble aggregation entrypoint
-├── evaluate_cli.py  # CLI 4: Metrics & reports entrypoint
-├── ingest/          # Ingest logic
-│   ├── domain/      # Pure logic: models, validation
-│   ├── adapters/    # I/O: TSV/JSONL/HF loaders
-├── infer/           # Infer logic
-│   ├── domain/      # Pure logic: inference service
-│   ├── ports/       # Abstract interfaces (ABCs)
-│   ├── adapters/    # Concrete implementations
-│   │   ├── io/      # JSON reader/writer
-│   │   └── providers/ # OpenRouter, Ollama, HF
-├── aggregate/       # Aggregate logic
-├── evaluate/        # Evaluate logic
-└── libs/            # Shared utilities
-    ├── config/      # Config loaders (dataset, model, etc.)
-    ├── io/          # Parquet readers/writers
-    ├── logging/     # JSON logger
-    ├── runtime/     # Environment config
-    └── utils/       # Chunking, etc.
-```
 
 ## Important Notes
 

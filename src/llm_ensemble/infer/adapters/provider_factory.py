@@ -12,7 +12,7 @@ To add a new provider:
 from __future__ import annotations
 from typing import Dict, Type
 
-from llm_ensemble.infer.ports.llm_provider_port import LLMProviderPort
+from llm_ensemble.infer.application.ports.llm_provider_port import LLMProviderPort
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.adapters.providers.openrouter_adapter import OpenRouterAdapter
 from llm_ensemble.infer.adapters.providers.ollama_adapter import OllamaAdapter

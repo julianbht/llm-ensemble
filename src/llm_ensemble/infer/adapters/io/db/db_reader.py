@@ -36,7 +36,7 @@ from llm_ensemble.ingest.adapters.io.mappers import (
     dataset_sample_from_orm,
     normalized_dataset_from_orm,
 )
-from llm_ensemble.infer.ports.input_port import InputPort
+from llm_ensemble.infer.application.ports.input_port import InputPort
 from llm_ensemble.libs.db import get_engine, get_session
 
 

@@ -9,21 +9,21 @@ import random
 import time
 from openai import APIError
 
-from llm_ensemble.infer.ports.llm_provider_port import LLMProviderPort
+from llm_ensemble.infer.application.ports.llm_provider_port import LLMProviderPort
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
-class RetryingProvider:
+class RetryingProvider(LLMProviderPort):
     """Wrapper that adds retry logic to any LLM provider.
 
     Implements exponential backoff with jitter for retryable errors.
     Delegates actual inference to the wrapped provider.
 
-    This uses composition instead of inheritance to separate retry concerns
-    from provider implementation.
+    This uses composition (wrapping) to separate retry concerns from provider
+    implementation, while still implementing the LLMProviderPort interface.
     """
 
     def __init__(self, provider: LLMProviderPort, retry_config: RetryConfig):

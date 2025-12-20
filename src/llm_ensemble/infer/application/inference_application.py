@@ -20,12 +20,17 @@ import structlog
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
+from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
+from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunContext
+from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
 
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.run_info import RunType
 from pathlib import Path
 from llm_ensemble.libs.runtime.run_name import generate_run_name
+
+from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
 
 # Driving port (application implements this)
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
@@ -268,7 +273,7 @@ class InferenceApplication(ForRunningInference):
         start_idx: int,
         end_idx: int,
     ) -> InferRunConfig:
-        """Build run config for manifest by querying adapter config names.
+        """Build run config for manifest by querying adapter config.
 
         Args:
             input_run_name: Resolved ingest run name
@@ -278,12 +283,7 @@ class InferenceApplication(ForRunningInference):
         Returns:
             InferRunConfig for manifest persistence
         """
-        from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
-        from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunContext
-        from llm_ensemble.infer.domain.entities.provider import Provider
-        from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
-
-        # Query config names from adapters
+        # Query config from adapters
         model_config = self.llm_provider.model_config
         provider_name = self.llm_provider.provider_name
         retry_config = self.llm_provider.retry_config
@@ -393,22 +393,17 @@ class InferenceApplication(ForRunningInference):
 
         Args:
             run_name: Run name
-            run_dir: Run directory path
             official: Whether this is an official run
             notes: Optional notes about this run
 
         Returns:
             InferRunInfo entity
         """
-        # Build InferRunInfo (git SHA, timestamps already captured by entity)
-        run_info = InferRunInfo.create(
-            name_hints=None,  # Already have run_name
+        return InferRunInfo(
             run_name=run_name,
-            official=official,
+            run_type=RunType.OFFICIAL if official else RunType.TEST,
             notes=notes,
         )
-
-        return run_info
 
     def _finalize_run(
         self,

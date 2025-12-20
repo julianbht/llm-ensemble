@@ -34,6 +34,16 @@ class OutputPort(ABC):
     being embedded in every judgement, keeping the domain model clean.
     """
 
+    @property
+    @abstractmethod
+    def io_name(self) -> str:
+        """Get I/O adapter name for this output port.
+        
+        Returns:
+            I/O adapter name (e.g., 'json', 'parquet')
+        """
+        pass
+
     @abstractmethod
     def open(
         self,

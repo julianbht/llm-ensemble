@@ -34,7 +34,7 @@ class RetryingProvider(LLMProviderPort):
             retry_config: Retry configuration for exponential backoff
         """
         self.provider = provider
-        self.retry_config = retry_config
+        self._retry_config = retry_config
         self.logger = get_logger(component=f"{provider.provider_name}_retry")
 
     def get_provider(self):
@@ -47,9 +47,14 @@ class RetryingProvider(LLMProviderPort):
         return self.provider.provider_name
 
     @property
-    def model_name(self) -> str:
+    def model_config(self):
         """Delegate to wrapped provider."""
-        return self.provider.model_name
+        return self.provider.model_config
+
+    @property
+    def retry_config(self):
+        """Get retry configuration."""
+        return self._retry_config
 
     def infer(
         self,
@@ -71,7 +76,7 @@ class RetryingProvider(LLMProviderPort):
             Exception: If provider API fails after all retries exhausted
         """
         # Retry loop with exponential backoff
-        for attempt in range(self.retry_config.max_retries + 1):
+        for attempt in range(self._retry_config.max_retries + 1):
             try:
                 # Call wrapped provider (model_config was passed at initialization)
                 raw_response_text, metrics = self.provider.infer(prompt)
@@ -93,10 +98,10 @@ class RetryingProvider(LLMProviderPort):
                 # Check if we should retry
                 is_retryable = False
                 if hasattr(e, 'status_code'):
-                    is_retryable = e.status_code in self.retry_config.retryable_status_codes
+                    is_retryable = e.status_code in self._retry_config.retryable_status_codes
 
                 # If not retryable or out of retries, raise
-                if not is_retryable or attempt >= self.retry_config.max_retries:
+                if not is_retryable or attempt >= self._retry_config.max_retries:
                     # Log the final failure
                     self.logger.warning(
                         InferLogEvent.RETRY_EXHAUSTED,
@@ -108,8 +113,8 @@ class RetryingProvider(LLMProviderPort):
 
                 # Calculate exponential backoff with jitter
                 delay = min(
-                    self.retry_config.base_delay_seconds * (2 ** attempt),
-                    self.retry_config.max_delay_seconds
+                    self._retry_config.base_delay_seconds * (2 ** attempt),
+                    self._retry_config.max_delay_seconds
                 )
                 jitter = random.uniform(0, delay * 0.1)  # 10% jitter
                 total_delay = delay + jitter
@@ -118,7 +123,7 @@ class RetryingProvider(LLMProviderPort):
                 self.logger.info(
                     InferLogEvent.RETRY_ATTEMPT,
                     attempt=attempt + 1,
-                    max_retries=self.retry_config.max_retries + 1,
+                    max_retries=self._retry_config.max_retries + 1,
                     backoff_seconds=round(total_delay, 2),
                     error_type=type(e).__name__,
                     status_code=getattr(e, 'status_code', None),

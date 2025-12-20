@@ -48,12 +48,17 @@ class FullyPopulatedJsonWriter(OutputPort):
         Args:
             io_name: Name of the IO format (e.g., 'db_to_json')
         """
-        self.io_name = io_name
+        self._io_name = io_name
         self._write_summary: Optional[WriteSummary] = None
         self.output_path: Optional[Path] = None
         self.manifest_path: Optional[Path] = None
         self.judgements: list[LLMJudgement] = []
         self.logger = get_logger(component="json_writer")
+
+    @property
+    def io_name(self) -> str:
+        """Get I/O adapter name."""
+        return self._io_name
 
     def open(
         self,

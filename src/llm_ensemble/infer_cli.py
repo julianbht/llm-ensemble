@@ -66,7 +66,7 @@ def infer(
     Thin CLI driving adapter that builds the application and executes it.
     All backend logic (infrastructure, logging, inference) handled by application.
     """
-    # Build application with adapter selection
+    # Build application by selecting adapters
     application = build_application(
         provider_name=provider,
         io_name=io_cfg,
@@ -75,8 +75,7 @@ def infer(
         retry_config_name=retry_cfg,
     )
 
-    # Execute application (handles infrastructure, logging, inference, finalization)
-    # All logs appear in terminal automatically
+    # Execute application
     application.execute(
         input_run_name=input_run_name,
         start_idx=start_idx,

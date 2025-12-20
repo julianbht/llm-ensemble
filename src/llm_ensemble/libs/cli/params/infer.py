@@ -15,7 +15,7 @@ InferIoCfg = Annotated[
         ...,
         "--io-cfg",
         click_type=IOConfigParamType("infer"),
-        help=f"I/O config name. Configs in {(PathManager.get_configs_dir() / 'io' / 'infer').relative_to(PathManager.get_project_root())}",
+        help=f"I/O config name - bundles reader and writer",
     ),
 ]
 

@@ -37,7 +37,7 @@ from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 
 
-class InferenceUseCase(ForRunningInference):
+class InferenceApplication(ForRunningInference):
     """Application use case for coordinating LLM inference pipeline.
 
     Implements the driving port ForRunningInference - this IS the application's API.

@@ -17,7 +17,7 @@ then uses the returned ForRunningInference interface to execute business logic.
 """
 from __future__ import annotations
 
-from llm_ensemble.infer.application.inference_use_case import InferenceUseCase
+from llm_ensemble.infer.application.inference_application import InferenceApplication
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
@@ -76,7 +76,7 @@ def _build_application_hexagon(
     prompt_template_name: str,
     model_cfg: ModelConfig,
     retry_cfg: RetryConfig,
-) -> InferenceUseCase:
+) -> InferenceApplication:
     """Build application hexagon by instantiating driven adapters and use case.
 
     This is the core of hexagonal architecture: assembling the application
@@ -119,7 +119,7 @@ def _build_application_hexagon(
     llm_provider = RetryingProvider(base_provider, retry_cfg)
 
     # Assemble application hexagon (use case with driven ports)
-    return InferenceUseCase(
+    return InferenceApplication(
         input_port=input_port,
         output_port=output_port,
         prompt_builder=prompt_builder,

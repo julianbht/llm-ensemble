@@ -31,7 +31,7 @@ class ForRunningInference(ABC):
     """
 
     @abstractmethod
-    def execute(
+    def run_inference(
         self,
         run_info: InferRunInfo,
         run_config: InferRunConfig,

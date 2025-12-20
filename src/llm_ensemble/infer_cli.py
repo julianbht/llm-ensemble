@@ -191,7 +191,6 @@ def infer(
     4. Executes application business logic
     5. Finalizes CLI outputs
     """
-    # Build adapter selection config (WHICH adapters to use)
     adapter_config = AdapterConfig(
         model_config_name=model_cfg,
         provider_name=provider,
@@ -201,7 +200,6 @@ def infer(
         logging_config_name=log_cfg,
     )
 
-    # Build execution parameters (HOW to execute)
     execution_params = ExecutionParams(
         input_run_name=input_run_name,
         start_idx=start_idx,
@@ -226,7 +224,7 @@ def infer(
     )
 
     # Execute application (pure business logic via ForRunningInference interface)
-    summary = application.execute(
+    summary = application.run_inference(
         run_info=run_info,
         run_config=run_config,
     )

@@ -68,7 +68,7 @@ class InferenceUseCase(ForRunningInference):
         self.response_parser = response_parser
         self.logger = get_logger(component="inference_use_case")
 
-    def execute(
+    def run_inference(
         self,
         run_info: InferRunInfo,
         run_config: InferRunConfig,

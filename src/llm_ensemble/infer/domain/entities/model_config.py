@@ -16,7 +16,7 @@ class ModelConfig(BaseConfig):
     Flat structure matching ModelConfigORM for clean mapping.
 
     Example YAML:
-        name_hint: gpt-4-turbo
+        name_hint: gpt4-turbo
         model_id: gpt-4-turbo-2024-04-09
         context_window: 128000
         temperature: 0.7
@@ -28,6 +28,16 @@ class ModelConfig(BaseConfig):
             stop: ["END"]
             response_format: {"type": "json_object"}
     """
+
+    # Name hint for run ID generation (specific to ModelConfig)
+    name_hint: str = Field(
+        ...,
+        description=(
+            "Short name hint for run ID generation (e.g., 'gpt4', 'llama70b'). "
+            "Required for model configs since they contribute to run names. "
+            "Keep it short (5-15 chars) and use only alphanumeric characters, hyphens, or underscores."
+        ),
+    )
 
     # Model identity
     model_id: str = Field(

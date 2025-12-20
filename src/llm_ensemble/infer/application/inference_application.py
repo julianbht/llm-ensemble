@@ -95,7 +95,7 @@ class InferenceApplication(ForRunningInference):
         self.llm_provider = llm_provider
         self.response_parser = response_parser
 
-    def execute(
+    def run_inference(
         self,
         input_run_name: str,
         start_idx: Optional[int],
@@ -173,7 +173,7 @@ class InferenceApplication(ForRunningInference):
 
         # Build run_config and run_info for manifest/persistence
         run_config = self._build_run_config(resolved_input_run_name, actual_start_idx, actual_end_idx)
-        run_info = self._build_run_info(run_name, run_dir, official, notes)
+        run_info = self._build_run_info(run_name, official, notes)
 
         # Open writer for streaming
         with self.output_port.open(run_dir, run_info, run_config, normalized_dataset) as writer:

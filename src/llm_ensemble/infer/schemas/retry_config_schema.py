@@ -52,22 +52,3 @@ class RetryConfig(BaseConfig):
         default=[429, 503, 504],
         description="HTTP status codes that should trigger retries (e.g., rate limits, server errors)"
     )
-
-    @classmethod
-    def load(cls, retry_id: str) -> "RetryConfig":
-        """Load a retry configuration from YAML file.
-
-        Args:
-            retry_id: Retry configuration identifier (e.g., "standard", "aggressive")
-
-        Returns:
-            RetryConfig object with all settings loaded from YAML
-
-        Raises:
-            FileNotFoundError: If config file doesn't exist
-            ValueError: If YAML is invalid or missing required fields
-        """
-        return super().load(
-            config_name=retry_id,
-            config_dir=PathManager.get_retries_dir()
-        )

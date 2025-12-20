@@ -8,7 +8,6 @@ from typing import Optional, Any, Dict
 from pydantic import Field
 
 from llm_ensemble.libs.schemas.base_config import BaseConfig
-from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
 class ModelConfig(BaseConfig):
@@ -93,22 +92,3 @@ class ModelConfig(BaseConfig):
         default=None,
         description="Additional provider-specific parameters (e.g., stop, response_format, top_k)"
     )
-
-    @classmethod
-    def load(cls, model_id: str) -> "ModelConfig":
-        """Load a model configuration from YAML file.
-
-        Args:
-            model_id: Model identifier (e.g., "phi3-mini", "gpt-oss-20b")
-
-        Returns:
-            ModelConfig object with all settings loaded from YAML
-
-        Raises:
-            FileNotFoundError: If config file doesn't exist
-            ValueError: If YAML is invalid or missing required fields
-        """
-        return super().load(
-            config_name=model_id,
-            config_dir=PathManager.get_model_configs_dir()
-        )

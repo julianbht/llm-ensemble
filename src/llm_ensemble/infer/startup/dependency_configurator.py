@@ -26,6 +26,8 @@ from llm_ensemble.infer.adapters.io_factory import IOAdapterFactory
 from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
 from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
 
+from llm_ensemble.infer.startup.config_loader import load_model_config, load_retry_config
+
 
 def build_application(
     provider_name: str,
@@ -56,8 +58,8 @@ def build_application(
         Application implementing ForRunningInference interface
     """
     # Load configuration from YAML files
-    model_cfg = ModelConfig.load(model_config_name)
-    retry_cfg = RetryConfig.load(retry_config_name)
+    model_cfg = load_model_config(model_config_name)
+    retry_cfg = load_retry_config(retry_config_name)
 
     # Build application hexagon with loaded configs
     return _build_application_hexagon(

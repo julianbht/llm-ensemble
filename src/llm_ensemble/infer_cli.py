@@ -71,8 +71,8 @@ def infer(
         retry_config_name=retry_cfg,
     )
 
-    # Execute application
-    application.execute(
+    # Run application
+    application.run_inference(
         input_run_name=input_run_name,
         start_idx=start_idx,
         end_idx=end_idx,

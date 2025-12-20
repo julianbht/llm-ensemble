@@ -17,7 +17,6 @@ from __future__ import annotations
 import typer
 
 from llm_ensemble.infer.startup.dependency_configurator import build_application
-from llm_ensemble.libs.runtime.env import load_runtime_config
 
 from llm_ensemble.libs.cli.params import (
     RunName,
@@ -33,9 +32,6 @@ from llm_ensemble.libs.cli.params import (
     Tag,
     InferIngestRunInput,
 )
-
-# Load runtime configuration early
-load_runtime_config()
 
 app = typer.Typer(
     add_completion=True,

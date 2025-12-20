@@ -1,6 +1,6 @@
-"""Application use case for LLM inference pipeline.
+"""Application for LLM inference pipeline.
 
-Application Layer - Use Case
+Application Layer - Hexagonal Architecture
 
 This module contains the complete inference backend orchestration.
 It implements the driving port (ForRunningInference) and handles:
@@ -14,6 +14,7 @@ Depends only on port abstractions for testability.
 
 from __future__ import annotations
 
+import os
 from typing import Optional
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
@@ -35,6 +36,10 @@ from llm_ensemble.libs.logging.log_events import InferLogEvent
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder, write_standalone_summary
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
+
+# Load runtime configuration (.env file)
+from llm_ensemble.libs.runtime.env import load_runtime_config
+load_runtime_config()
 
 
 class InferenceApplication(ForRunningInference):
@@ -310,8 +315,9 @@ class InferenceApplication(ForRunningInference):
         Returns:
             Tuple of (run_info, logger)
         """
-        # Load logging config from environment or use default
-        logging_config = LoggingConfig.load("observability")
+        # Load logging config from environment variable or use default
+        logging_config_name = os.getenv("LOGGING_CONFIG", "observability")
+        logging_config = LoggingConfig.load(logging_config_name)
 
         # Generate run name and create run metadata (query config names from adapters)
         model_name_hint = self.llm_provider.model_config.name_hint

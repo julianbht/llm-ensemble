@@ -9,15 +9,11 @@ Pure interface - retry logic is handled by a separate wrapper.
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.logging import get_logger
-
-if TYPE_CHECKING:
-    from llm_ensemble.infer.domain.entities.provider import Provider
 
 
 class LLMProviderPort(ABC):

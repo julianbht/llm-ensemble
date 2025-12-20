@@ -25,13 +25,7 @@ from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunConte
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
-
-from llm_ensemble.libs.runtime.path_manager import PathManager
-from llm_ensemble.libs.runtime.run_info import RunType
-from pathlib import Path
-from llm_ensemble.libs.runtime.run_name import generate_run_name
-
-from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
+from llm_ensemble.infer.domain.factories.infer_run_config_factory import InferRunConfigFactory
 
 # Driving port (application implements this)
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
@@ -283,26 +277,14 @@ class InferenceApplication(ForRunningInference):
         Returns:
             InferRunConfig for manifest persistence
         """
-        # Query config from adapters
-        model_config = self.llm_provider.model_config
-        retry_config = self.llm_provider.retry_config
-        provider = self.llm_provider.get_provider()
-        prompt_builder = self.prompt_builder.get_builder()
-        response_parser = self.response_parser.get_parser()
-        io_name = self.output_port.io_name
-
-        # Build config entity
-        return InferRunConfig(
-            model_cfg=model_config,
-            retry_config=retry_config,
-            prompt_template=PromptTemplateFactory.create(prompt_builder.name),
-            provider=provider,
-            io_name=io_name,
-            ingest_run_context=IngestRunContext(
-                input_run_name=input_run_name,
-                start_idx=start_idx,
-                end_idx=end_idx,
-            ),
+        return InferRunConfigFactory.create(
+            llm_provider=self.llm_provider,
+            prompt_builder=self.prompt_builder,
+            response_parser=self.response_parser,
+            output_port=self.output_port,
+            input_run_name=input_run_name,
+            start_idx=start_idx,
+            end_idx=end_idx,
         )
 
     def _generate_run_name(self, run_name: Optional[str]) -> str:

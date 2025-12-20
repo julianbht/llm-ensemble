@@ -145,7 +145,6 @@ class InferenceApplication(ForRunningInference):
             model=self.llm_provider.model_config.name_hint,
             provider=self.llm_provider.provider_name,
             io_format=self.output_port.io_name,
-            prompt_template=self.prompt_builder.get_builder().name,
             input_run_name=input_run_name,
             start_idx=start_idx,
             end_idx=end_idx,

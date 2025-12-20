@@ -36,7 +36,7 @@ from llm_ensemble.libs.cli.params import (
 app = typer.Typer(
     add_completion=True,
     help="LLM Ensemble – inference CLI",
-    pretty_exceptions_enable=False,  # Disable Rich verbose tracebacks
+    pretty_exceptions_enable=False,  # Disable verbose tracebacks
 )
 
 

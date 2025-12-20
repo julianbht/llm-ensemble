@@ -104,18 +104,10 @@ def _build_application_hexagon(
     Returns:
         InferenceUseCase - the application's driving port interface
     """
-    # Driven port: Input (reading samples)
     input_port = IOAdapterFactory.create_reader(io_name)
-
-    # Driven port: Output (writing judgements)
     output_port = IOAdapterFactory.create_writer(io_name)
-
-    # Driven ports: Prompt building and parsing
-    template_adapter = PromptTemplateFactory.get_adapter_class(prompt_template_name)()
-    prompt_builder = template_adapter.get_builder()
-    response_parser = template_adapter.get_parser()
-
-    # Driven port: LLM provider
+    prompt_builder = PromptTemplateFactory.create_builder(prompt_template_name)
+    response_parser = PromptTemplateFactory.create_parser(prompt_template_name)
     llm_provider = ProviderFactory.create(provider_name, model_cfg, retry_cfg)
 
     # Assemble application hexagon (use case with driven ports)

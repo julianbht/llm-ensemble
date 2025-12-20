@@ -25,7 +25,7 @@ from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunConte
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
-from llm_ensemble.infer.domain.factories.infer_run_config_factory import InferRunConfigFactory
+from llm_ensemble.infer.application.infer_run_config_factory import InferRunConfigFactory
 
 # Driving port (application implements this)
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference

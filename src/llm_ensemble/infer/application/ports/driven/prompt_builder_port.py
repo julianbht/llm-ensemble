@@ -47,6 +47,15 @@ class PromptBuilderPort(ABC):
         """Get PromptBuilder metadata for this adapter.
 
         Returns:
-            PromptBuilder entity with id, name, and template_text
+            PromptBuilder entity with id, name, and version
+        """
+        pass
+
+    @abstractmethod
+    def get_template_text(self) -> str:
+        """Get the raw template text for this builder.
+
+        Returns:
+            Raw template string (unrendered)
         """
         pass

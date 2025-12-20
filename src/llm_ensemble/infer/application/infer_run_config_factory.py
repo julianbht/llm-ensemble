@@ -1,9 +1,12 @@
 """Factory for creating InferRunConfig entities.
 
-Domain Layer - Factory Pattern
+Application Layer - Factory Pattern
 
 Creates InferRunConfig from adapter instances, extracting metadata and
 assembling the complete configuration bundle for manifest persistence.
+
+This factory belongs in the application layer because it knows about ports
+and orchestrates the assembly of domain entities from adapter metadata.
 """
 
 from __future__ import annotations
@@ -11,9 +14,6 @@ from __future__ import annotations
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunContext
 from llm_ensemble.infer.domain.entities.prompt_template import PromptTemplate
-from llm_ensemble.infer.domain.entities.model_config import ModelConfig
-from llm_ensemble.infer.domain.entities.provider import Provider
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
 from llm_ensemble.infer.application.ports.driven.prompt_builder_port import PromptBuilderPort
 from llm_ensemble.infer.application.ports.driven.response_parser_port import ResponseParserPort
@@ -21,7 +21,9 @@ from llm_ensemble.infer.application.ports.driven.output_port import OutputPort
 
 
 class InferRunConfigFactory:
-    """Factory for creating InferRunConfig entities from adapters."""
+    """Factory for creating InferRunConfig entities from adapters.
+    
+    Application layer factory - knows about ports and orchestrates domain entity creation."""
 
     @staticmethod
     def create(
@@ -33,23 +35,7 @@ class InferRunConfigFactory:
         start_idx: int,
         end_idx: int,
     ) -> InferRunConfig:
-        """Create InferRunConfig from adapter instances.
-
-        Extracts metadata from adapters and assembles the complete
-        configuration bundle for manifest persistence.
-
-        Args:
-            llm_provider: LLM provider adapter instance
-            prompt_builder: Prompt builder adapter instance
-            response_parser: Response parser adapter instance
-            output_port: Output port adapter instance
-            input_run_name: Resolved ingest run name
-            start_idx: Actual start index used
-            end_idx: Actual end index used
-
-        Returns:
-            InferRunConfig with all metadata extracted from adapters
-        """
+        """Create InferRunConfig from adapter instances."""
         # Extract metadata from adapters
         provider = llm_provider.get_provider()
         model_config = llm_provider.model_config
@@ -63,7 +49,7 @@ class InferRunConfigFactory:
         # Build PromptTemplate entity (bundles template text + metadata)
         prompt_template = PromptTemplate(
             name=builder_entity.name,
-            template_text=_extract_template_text(prompt_builder),
+            template_text=prompt_builder.get_template_text(),
             prompt_builder=builder_entity,
             response_text_parser=parser_entity,
         )
@@ -84,20 +70,5 @@ class InferRunConfigFactory:
 
 
 def _extract_template_text(prompt_builder: PromptBuilderPort) -> str:
-    """Extract template text from prompt builder adapter.
-
-    Looks for TEMPLATE_TEXT class constant on the builder's class.
-
-    Args:
-        prompt_builder: Prompt builder adapter instance
-
-    Returns:
-        Raw template text string
-    """
-    # Get the template text from the class constant
-    builder_class = prompt_builder.__class__
-    if hasattr(builder_class, 'TEMPLATE_TEXT'):
-        return builder_class.TEMPLATE_TEXT
-    
-    # Fallback to empty string if not found
-    return ""
+    """Extract template text from prompt builder adapter."""
+    return prompt_builder.get_template_text()

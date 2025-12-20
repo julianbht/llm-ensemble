@@ -80,9 +80,17 @@ class ThomasSimplePromptBuilder(PromptBuilderPort):
         """Get PromptBuilder metadata for this adapter.
 
         Returns:
-            PromptBuilder entity with id and name
+            PromptBuilder entity with id, name, and version
         """
         return self._builder
+
+    def get_template_text(self) -> str:
+        """Get the raw template text for this builder.
+
+        Returns:
+            Raw template string (unrendered)
+        """
+        return self.TEMPLATE_TEXT
 
     def _render(self, dataset_sample: DatasetSample) -> str:
         """Render prompt text from dataset sample.
@@ -108,3 +116,11 @@ class ThomasSimplePromptBuilder(PromptBuilderPort):
             query=query_text,
             document=document_text
         )
+
+    def get_template_text(self) -> str:
+        """Get the raw template text for this builder.
+
+        Returns:
+            Raw template string (unrendered)
+        """
+        return self.TEMPLATE_TEXT

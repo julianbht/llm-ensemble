@@ -14,11 +14,11 @@ Depends only on port abstractions for testability.
 
 from __future__ import annotations
 
+from typing import Optional
+
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
-from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
-from llm_ensemble.infer.startup.adapter_config import ExecutionParams
 
 # Driving port (application implements this)
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
@@ -30,7 +30,7 @@ from llm_ensemble.infer.application.ports.driven.output_port import OutputPort
 from llm_ensemble.infer.application.ports.driven.response_parser_port import ResponseParserPort
 from llm_ensemble.infer.application.ports.driven.prompt_builder_port import PromptBuilderPort
 
-from llm_ensemble.libs.logging import get_logger, configure_logger
+from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder, write_standalone_summary
 from llm_ensemble.libs.runtime.tag_manager import TagManager
@@ -81,8 +81,13 @@ class InferenceUseCase(ForRunningInference):
 
     def execute(
         self,
-        run_config: InferRunConfig,
-        execution_params: ExecutionParams,
+        input_run_name: str,
+        start_idx: Optional[int],
+        end_idx: Optional[int],
+        run_name: Optional[str],
+        official: bool,
+        notes: Optional[str],
+        tag: Optional[str],
     ) -> InferRunSummary:
         """Execute the complete inference backend with infrastructure setup and finalization.
 
@@ -99,8 +104,13 @@ class InferenceUseCase(ForRunningInference):
         (terminal for CLI, CloudWatch for web API, etc.).
 
         Args:
-            run_config: Configuration bundle (model, provider, adapters, execution context)
-            execution_params: Execution parameters (run name, official flag, notes, tag)
+            input_run_name: Ingest run identifier to read samples from
+            start_idx: Start index into NormalizedDataset (None = from beginning)
+            end_idx: End index into NormalizedDataset (None = until end)
+            run_name: Custom run name (auto-generates if not provided)
+            official: Mark as official run
+            notes: Notes about this run (experiment purpose, hypothesis, etc.)
+            tag: Tag name for easy reference by downstream CLIs
 
         Returns:
             InferRunSummary with statistics, timing, and warnings
@@ -109,7 +119,13 @@ class InferenceUseCase(ForRunningInference):
             Exception: If any step in the pipeline fails
         """
         # Setup infrastructure (run directories, logging, git metadata)
-        run_info, logger = self._setup_infrastructure(run_config, execution_params)
+        run_info, logger = self._setup_infrastructure(
+            input_run_name=input_run_name,
+            run_name=run_name,
+            official=official,
+            notes=notes,
+            tag=tag,
+        )
 
         # Execute inference pipeline
         summary_builder = RunSummaryBuilder()
@@ -118,18 +134,24 @@ class InferenceUseCase(ForRunningInference):
         # Derive run_dir from run_info
         run_dir = run_info.run_dir
 
-        # Read full NormalizedDataset (using input_run_name from execution context)
-        normalized_dataset = self.input_port.read(run_config.ingest_run_context.input_run_name)
+        # Resolve input run name (handles tags)
+        resolved_input_run_name = TagManager.resolve_input(input_run_name, "ingest")
 
-        # Compute actual start_idx and end_idx from execution context
-        start_idx = run_config.ingest_run_context.start_idx if run_config.ingest_run_context.start_idx is not None else 0
-        end_idx = run_config.ingest_run_context.end_idx if run_config.ingest_run_context.end_idx is not None else len(normalized_dataset.samples)
+        # Read full NormalizedDataset
+        normalized_dataset = self.input_port.read(resolved_input_run_name)
+
+        # Compute actual start_idx and end_idx
+        actual_start_idx = start_idx if start_idx is not None else 0
+        actual_end_idx = end_idx if end_idx is not None else len(normalized_dataset.samples)
 
         # Slice samples based on computed indices
-        samples_to_process = normalized_dataset.samples[start_idx:end_idx]
+        samples_to_process = normalized_dataset.samples[actual_start_idx:actual_end_idx]
 
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
+
+        # Build run_config for manifest/persistence (query config names from adapters)
+        run_config = self._build_run_config(resolved_input_run_name, actual_start_idx, actual_end_idx)
 
         # Open writer for streaming
         with self.output_port.open(run_dir, run_info, run_config, normalized_dataset) as writer:
@@ -223,10 +245,55 @@ class InferenceUseCase(ForRunningInference):
         # Return finalized summary
         return summary
 
+    def _build_run_config(
+        self,
+        input_run_name: str,
+        start_idx: int,
+        end_idx: int,
+    ) -> InferRunConfig:
+        """Build run config for manifest by querying adapter config names.
+
+        Args:
+            input_run_name: Resolved ingest run name
+            start_idx: Actual start index used
+            end_idx: Actual end index used
+
+        Returns:
+            InferRunConfig for manifest persistence
+        """
+        from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
+        from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunContext
+        from llm_ensemble.infer.domain.entities.provider import Provider
+        from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
+
+        # Query config names from adapters
+        model_config = self.llm_provider.model_config
+        provider_name = self.llm_provider.provider_name
+        retry_config = self.llm_provider.retry_config
+        prompt_template_name = self.prompt_builder.get_builder().name
+        io_name = self.output_port.io_name
+
+        # Build config entity
+        return InferRunConfig(
+            model_cfg=model_config,
+            retry_config=retry_config,
+            prompt_template=PromptTemplateFactory.create(prompt_template_name),
+            provider=Provider(name=provider_name),
+            io_name=io_name,
+            ingest_run_context=IngestRunContext(
+                input_run_name=input_run_name,
+                start_idx=start_idx,
+                end_idx=end_idx,
+            ),
+        )
+
     def _setup_infrastructure(
         self,
-        run_config: InferRunConfig,
-        execution_params: ExecutionParams,
+        input_run_name: str,
+        run_name: Optional[str],
+        official: bool,
+        notes: Optional[str],
+        tag: Optional[str],
     ) -> tuple[InferRunInfo, object]:
         """Setup backend infrastructure: run directories, logging, git metadata.
 
@@ -234,8 +301,11 @@ class InferenceUseCase(ForRunningInference):
         configures logging for this run, and logs startup information.
 
         Args:
-            run_config: Domain configuration bundle
-            execution_params: Execution parameters
+            input_run_name: Ingest run identifier
+            run_name: Custom run name (auto-generates if not provided)
+            official: Mark as official run
+            notes: Notes about this run
+            tag: Tag name for easy reference
 
         Returns:
             Tuple of (run_info, logger)
@@ -243,17 +313,17 @@ class InferenceUseCase(ForRunningInference):
         # Load logging config from environment or use default
         logging_config = LoggingConfig.load("observability")
 
-        # Generate run name and create run metadata
-        name_hints = [
-            run_config.model_cfg.name_hint,
-            run_config.prompt_template.name,
-            run_config.provider.name,
-        ]
+        # Generate run name and create run metadata (query config names from adapters)
+        model_name_hint = self.llm_provider.model_config.name_hint
+        prompt_template_name = self.prompt_builder.get_builder().name
+        provider_name = self.llm_provider.provider_name
+
+        name_hints = [model_name_hint, prompt_template_name, provider_name]
         run_info = InferRunInfo.create(
             name_hints=name_hints,
-            run_name=execution_params.run_name,
-            official=execution_params.official,
-            notes=execution_params.notes,
+            run_name=run_name,
+            official=official,
+            notes=notes,
         )
 
         # Create run directory
@@ -261,14 +331,14 @@ class InferenceUseCase(ForRunningInference):
         run_dir.mkdir(parents=True, exist_ok=True)
 
         # Create tag symlink if requested
-        if execution_params.tag:
-            TagManager.create_tag(run_dir, execution_params.tag)
+        if tag:
+            TagManager.create_tag(run_dir, tag)
 
         # Setup logging (configured output appears in driving adapter: terminal for CLI, CloudWatch for web, etc.)
         log_file = run_dir / "run.log" if logging_config.save_logs else None
         logger = configure_logger(
             cli_name="infer",
-            run_name=execution_params.run_name,
+            run_name=run_name,
             run_type=run_info.run_type,
             pretty_print=logging_config.pretty_print,
             save_logs=logging_config.save_logs,
@@ -277,16 +347,16 @@ class InferenceUseCase(ForRunningInference):
             file_level=logging_config.file_level,
         )
 
-        # Log startup information
+        # Log startup information (query config names from adapters)
         logger.info(
             InferLogEvent.INFER_STARTED,
-            model=run_config.model_cfg.name_hint,
-            provider=run_config.provider.name,
-            io_format=run_config.io_name,
-            prompt_template=run_config.prompt_template.name,
-            input_run_name=run_config.ingest_run_context.input_run_name,
-            start_idx=run_config.ingest_run_context.start_idx,
-            end_idx=run_config.ingest_run_context.end_idx,
+            model=model_name_hint,
+            provider=provider_name,
+            io_format=self.output_port.io_name,
+            prompt_template=prompt_template_name,
+            input_run_name=input_run_name,
+            start_idx=None,  # Will be logged after dataset is read
+            end_idx=None,
         )
 
         return run_info, logger

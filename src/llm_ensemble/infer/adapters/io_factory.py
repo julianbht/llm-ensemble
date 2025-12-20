@@ -69,7 +69,7 @@ class IOAdapterFactory:
             )
 
         config = IO_FORMATS[io_name]
-        return config.reader_class()
+        return config.reader_class(io_name=io_name)
 
     @staticmethod
     def create_writer(io_name: str) -> OutputPort:
@@ -92,7 +92,7 @@ class IOAdapterFactory:
             )
 
         config = IO_FORMATS[io_name]
-        return config.writer_class()
+        return config.writer_class(io_name=io_name)
 
     @staticmethod
     def list_available() -> list[str]:

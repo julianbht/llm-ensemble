@@ -34,10 +34,6 @@ class OutputPort(ABC):
     being embedded in every judgement, keeping the domain model clean.
     """
 
-    def __init__(self):
-        """Initialize writer."""
-        self._write_summary: Optional[WriteSummary] = None
-
     @abstractmethod
     def open(
         self,

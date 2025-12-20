@@ -63,6 +63,14 @@ class DBReader(InputPort):
     - Reconstruct Pydantic domain models from ORM entities
     """
 
+    def __init__(self, io_name: str):
+        """Initialize reader with IO format name.
+
+        Args:
+            io_name: Name of the IO format (e.g., 'db_to_json')
+        """
+        self.io_name = io_name
+
     def read(
         self,
         run_name: str,

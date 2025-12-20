@@ -17,7 +17,6 @@ from __future__ import annotations
 import typer
 
 from llm_ensemble.infer.startup.dependency_configurator import build_application
-from llm_ensemble.infer.startup.adapter_config import AdapterConfig, ExecutionParams
 from llm_ensemble.libs.runtime.env import load_runtime_config
 
 from llm_ensemble.libs.cli.params import (
@@ -67,17 +66,18 @@ def infer(
     Thin CLI driving adapter that builds the application and executes it.
     All backend logic (infrastructure, logging, inference) handled by application.
     """
-    # Build adapter selection config
-    adapter_config = AdapterConfig(
-        model_config_name=model_cfg,
+    # Build application with adapter selection
+    application = build_application(
         provider_name=provider,
-        prompt_template_name=prompt_template,
-        retry_config_name=retry_cfg,
         io_name=io_cfg,
+        prompt_template_name=prompt_template,
+        model_config_name=model_cfg,
+        retry_config_name=retry_cfg,
     )
 
-    # Build execution parameters
-    execution_params = ExecutionParams(
+    # Execute application (handles infrastructure, logging, inference, finalization)
+    # All logs appear in terminal automatically
+    application.execute(
         input_run_name=input_run_name,
         start_idx=start_idx,
         end_idx=end_idx,
@@ -85,19 +85,6 @@ def infer(
         official=official,
         notes=notes,
         tag=tag,
-    )
-
-    # Build application via dependency configurator
-    application, run_config = build_application(
-        adapter_config=adapter_config,
-        execution_params=execution_params,
-    )
-
-    # Execute application (handles infrastructure, logging, inference, finalization)
-    # All logs appear in terminal automatically
-    application.execute(
-        run_config=run_config,
-        execution_params=execution_params,
     )
 
 

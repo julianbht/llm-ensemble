@@ -42,9 +42,14 @@ class FullyPopulatedJsonWriter(OutputPort):
     For very large datasets, consider streaming approaches or batch processing.
     """
 
-    def __init__(self):
-        """Initialize the JSON writer."""
-        super().__init__()
+    def __init__(self, io_name: str):
+        """Initialize the JSON writer with IO format name.
+
+        Args:
+            io_name: Name of the IO format (e.g., 'db_to_json')
+        """
+        self.io_name = io_name
+        self._write_summary: Optional[WriteSummary] = None
         self.output_path: Optional[Path] = None
         self.manifest_path: Optional[Path] = None
         self.judgements: list[LLMJudgement] = []

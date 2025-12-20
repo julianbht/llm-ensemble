@@ -14,9 +14,8 @@ toward the driving adapters.
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from typing import Optional
 
-from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
-from llm_ensemble.infer.startup.adapter_config import ExecutionParams
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
 
 
@@ -37,8 +36,13 @@ class ForRunningInference(ABC):
     @abstractmethod
     def execute(
         self,
-        run_config: InferRunConfig,
-        execution_params: ExecutionParams,
+        input_run_name: str,
+        start_idx: Optional[int],
+        end_idx: Optional[int],
+        run_name: Optional[str],
+        official: bool,
+        notes: Optional[str],
+        tag: Optional[str],
     ) -> InferRunSummary:
         """Execute the inference pipeline with full backend infrastructure.
 
@@ -53,8 +57,13 @@ class ForRunningInference(ABC):
         5. Return summary statistics
 
         Args:
-            run_config: Configuration bundle (model, provider, adapters, execution context)
-            execution_params: Execution parameters (run name, official flag, notes, tag, etc.)
+            input_run_name: Ingest run identifier to read samples from
+            start_idx: Start index into NormalizedDataset (None = from beginning)
+            end_idx: End index into NormalizedDataset (None = until end)
+            run_name: Custom run name (auto-generates if not provided)
+            official: Mark as official run
+            notes: Notes about this run (experiment purpose, hypothesis, etc.)
+            tag: Tag name for easy reference by downstream CLIs
 
         Returns:
             InferRunSummary with statistics, timing, and warnings

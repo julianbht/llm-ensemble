@@ -4,7 +4,7 @@ Startup Layer - Composition Root (Dependency Configurator)
 
 Hexagonal Architecture - Composition Root Pattern:
 Builds and wires together the application hexagon by:
-1. Loading domain configuration from YAML files
+1. Loading configuration from YAML files
 2. Instantiating driven adapters (ports implementations)
 3. Assembling the use case with its dependencies
 4. Returning the application's driving port interface
@@ -17,13 +17,9 @@ then uses the returned ForRunningInference interface to execute business logic.
 """
 from __future__ import annotations
 
-from llm_ensemble.infer.startup.adapter_config import AdapterConfig, ExecutionParams
 from llm_ensemble.infer.application.inference_use_case import InferenceUseCase
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
-from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
-from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunContext
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
-from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 
 from llm_ensemble.infer.adapters.io_factory import IOAdapterFactory
@@ -31,76 +27,56 @@ from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
 from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
 from llm_ensemble.infer.adapters.retrying_provider import RetryingProvider
 
-from llm_ensemble.libs.runtime.tag_manager import TagManager
-
 
 def build_application(
-    adapter_config: AdapterConfig,
-    execution_params: ExecutionParams,
-) -> tuple[ForRunningInference, InferRunConfig]:
+    provider_name: str,
+    io_name: str,
+    prompt_template_name: str,
+    model_config_name: str,
+    retry_config_name: str,
+) -> ForRunningInference:
     """Build and wire the inference application hexagon.
 
     Composition root that:
-    1. Loads domain configuration from YAML files
-    2. Instantiates all driven adapters
-    3. Assembles the use case with dependencies
+    1. Loads configuration from YAML files
+    2. Instantiates all driven adapters with loaded configurations
+    3. Assembles the use case with its dependencies
     4. Returns the application's driving port interface
 
-    The driving adapter (CLI) is responsible for:
-    - Calling this function to get the application
-    - Setting up infrastructure (run directories, logging)
-    - Executing the application via ForRunningInference.execute()
-    - Finalizing results (writing summaries, logging completion)
+    The driving adapter (CLI) calls this function to build the application,
+    then executes it via ForRunningInference.execute().
 
     Args:
-        adapter_config: Specifies which adapters to instantiate
-        execution_params: Execution parameters for the run
+        provider_name: Provider name (e.g., 'openrouter', 'ollama')
+        io_name: I/O adapter name (e.g., 'json', 'parquet')
+        prompt_template_name: Prompt template name (e.g., 'thomas-et-al')
+        model_config_name: Model config name (e.g., 'gpt-oss-20b')
+        retry_config_name: Retry config name (e.g., 'standard')
 
     Returns:
-        Tuple of (application implementing ForRunningInference, run configuration)
+        Application implementing ForRunningInference interface
     """
-    # Phase 1: Build domain configuration
-    run_config = _build_run_config(adapter_config, execution_params)
+    # Load configuration from YAML files
+    model_cfg = ModelConfig.load(model_config_name)
+    retry_cfg = RetryConfig.load(retry_config_name)
 
-    # Phase 2: Build application hexagon (driven ports + use case)
-    application = _build_application_hexagon(run_config)
-
-    return application, run_config
-
-
-def _build_run_config(
-    adapter_config: AdapterConfig,
-    execution_params: ExecutionParams,
-) -> InferRunConfig:
-    """Build domain configuration by loading YAML configs and instantiating config objects.
-
-    This phase loads all configuration files and creates the domain config entity
-    (InferRunConfig) which will be used to build the application.
-
-    Args:
-        adapter_config: Specifies which configs to load (by name)
-        execution_params: Execution parameters for the run
-
-    Returns:
-        InferRunConfig domain entity with all loaded configurations
-    """
-    input_run_name = TagManager.resolve_input(execution_params.input_run_name, "ingest")
-
-    return InferRunConfig(
-        model_cfg=ModelConfig.load(adapter_config.model_config_name),
-        retry_config=RetryConfig.load(adapter_config.retry_config_name),
-        prompt_template=PromptTemplateFactory.create(adapter_config.prompt_template_name),
-        provider=Provider(name=adapter_config.provider_name),
-        io_name=adapter_config.io_name,
-        ingest_run_context=IngestRunContext(
-            input_run_name=input_run_name,
-            start_idx=execution_params.start_idx,
-            end_idx=execution_params.end_idx,
-        ),
+    # Build application hexagon with loaded configs
+    return _build_application_hexagon(
+        provider_name=provider_name,
+        io_name=io_name,
+        prompt_template_name=prompt_template_name,
+        model_cfg=model_cfg,
+        retry_cfg=retry_cfg,
     )
 
 
-def _build_application_hexagon(run_config: InferRunConfig) -> InferenceUseCase:
+def _build_application_hexagon(
+    provider_name: str,
+    io_name: str,
+    prompt_template_name: str,
+    model_cfg: ModelConfig,
+    retry_cfg: RetryConfig,
+) -> InferenceUseCase:
     """Build application hexagon by instantiating driven adapters and use case.
 
     This is the core of hexagonal architecture: assembling the application
@@ -118,25 +94,29 @@ def _build_application_hexagon(run_config: InferRunConfig) -> InferenceUseCase:
     - Swapping implementations via configuration
 
     Args:
-        run_config: Domain configuration with loaded configs
+        provider_name: Provider name for factory
+        io_name: I/O adapter name for factory
+        prompt_template_name: Prompt template name for factory
+        model_cfg: Loaded model configuration
+        retry_cfg: Loaded retry configuration
 
     Returns:
         InferenceUseCase - the application's driving port interface
     """
     # Driven port: Input (reading samples)
-    input_port = IOAdapterFactory.create_reader(run_config.io_name)
+    input_port = IOAdapterFactory.create_reader(io_name)
 
     # Driven port: Output (writing judgements)
-    output_port = IOAdapterFactory.create_writer(run_config.io_name)
+    output_port = IOAdapterFactory.create_writer(io_name)
 
     # Driven ports: Prompt building and parsing
-    template_adapter = PromptTemplateFactory.get_adapter_class(run_config.prompt_template.name)()
+    template_adapter = PromptTemplateFactory.get_adapter_class(prompt_template_name)()
     prompt_builder = template_adapter.get_builder()
     response_parser = template_adapter.get_parser()
 
     # Driven port: LLM provider (with retry wrapper)
-    base_provider = ProviderFactory.create(run_config.provider.name, run_config.model_cfg)
-    llm_provider = RetryingProvider(base_provider, run_config.retry_config)
+    base_provider = ProviderFactory.create(provider_name, model_cfg)
+    llm_provider = RetryingProvider(base_provider, retry_cfg)
 
     # Assemble application hexagon (use case with driven ports)
     return InferenceUseCase(

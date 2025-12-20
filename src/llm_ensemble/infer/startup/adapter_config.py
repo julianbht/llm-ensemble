@@ -21,10 +21,10 @@ class AdapterConfig(BaseModel):
     """Adapter selection configuration.
 
     Lightweight config specifying WHICH adapters to use (by name).
-    Built by the CLI, passed to runner.
+    Built by the CLI, passed to dependency configurator.
 
     Contains only config names (strings), not loaded config objects.
-    The runner uses these names to load configs and instantiate adapters.
+    The configurator uses these names to load configs and instantiate adapters.
     """
 
     model_config_name: str = Field(
@@ -50,11 +50,6 @@ class AdapterConfig(BaseModel):
     io_name: str = Field(
         ...,
         description="I/O adapter name (e.g., 'db_to_json', 'db_to_db')"
-    )
-
-    logging_config_name: str = Field(
-        default="observability",
-        description="Logging config name"
     )
 
 

@@ -60,7 +60,7 @@ class LoggingConfig(BaseConfig):
     model_config = ConfigDict(extra="forbid")
 
     @classmethod
-    def load(cls, config_name: str) -> "LoggingConfig":
+    def load(cls, config_name: str) -> LoggingConfig:
         """Load and validate logging configuration from YAML file.
 
         Args:

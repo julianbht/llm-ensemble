@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 from typing import Optional
+import structlog
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
@@ -123,21 +124,30 @@ class InferenceApplication(ForRunningInference):
         Raises:
             Exception: If any step in the pipeline fails
         """
-        # Setup infrastructure (run directories, logging, git metadata)
-        run_info, logger = self._setup_infrastructure(
+        # Generate run name
+        run_name = self._generate_run_name(run_name)
+
+        # Create run directory
+        run_dir = self._create_run_directory(run_name, official, tag)
+
+        # Setup logging
+        logger = self._setup_logging(run_name, run_dir)
+
+        # Log startup
+        logger.info(
+            InferLogEvent.INFER_STARTED,
+            model=self.llm_provider.model_config.name_hint,
+            provider=self.llm_provider.provider_name,
+            io_format=self.output_port.io_name,
+            prompt_template=self.prompt_builder.get_builder().name,
             input_run_name=input_run_name,
-            run_name=run_name,
-            official=official,
-            notes=notes,
-            tag=tag,
+            start_idx=start_idx,
+            end_idx=end_idx,
         )
 
         # Execute inference pipeline
         summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
-
-        # Derive run_dir from run_info
-        run_dir = run_info.run_dir
 
         # Resolve input run name (handles tags)
         resolved_input_run_name = TagManager.resolve_input(input_run_name, "ingest")
@@ -155,8 +165,9 @@ class InferenceApplication(ForRunningInference):
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
-        # Build run_config for manifest/persistence (query config names from adapters)
+        # Build run_config and run_info for manifest/persistence
         run_config = self._build_run_config(resolved_input_run_name, actual_start_idx, actual_end_idx)
+        run_info = self._build_run_info(run_name, run_dir, official, notes)
 
         # Open writer for streaming
         with self.output_port.open(run_dir, run_info, run_config, normalized_dataset) as writer:
@@ -245,7 +256,7 @@ class InferenceApplication(ForRunningInference):
         summary: InferRunSummary = summary_builder.finalize(InferRunSummary)
 
         # Finalize outputs (write summary, log completion)
-        self._finalize_run(summary, run_info, logger)
+        self._finalize_run(summary, run_dir, logger)
 
         # Return finalized summary
         return summary
@@ -292,60 +303,81 @@ class InferenceApplication(ForRunningInference):
             ),
         )
 
-    def _setup_infrastructure(
-        self,
-        input_run_name: str,
-        run_name: Optional[str],
-        official: bool,
-        notes: Optional[str],
-        tag: Optional[str],
-    ) -> tuple[InferRunInfo, object]:
-        """Setup backend infrastructure: run directories, logging, git metadata.
-
-        Loads logging config from environment or defaults, creates run directories,
-        configures logging for this run, and logs startup information.
+    def _generate_run_name(self, run_name: Optional[str]) -> str:
+        """Generate run name from adapter configs if not provided.
 
         Args:
-            input_run_name: Ingest run identifier
-            run_name: Custom run name (auto-generates if not provided)
-            official: Mark as official run
-            notes: Notes about this run
-            tag: Tag name for easy reference
+            run_name: Custom run name or None to auto-generate
 
         Returns:
-            Tuple of (run_info, logger)
+            Run name (either custom or auto-generated)
         """
-        # Load logging config from environment variable or use default
-        logging_config_name = os.getenv("LOGGING_CONFIG", "observability")
-        logging_config = LoggingConfig.load(logging_config_name)
+        if run_name is not None:
+            return run_name
 
-        # Generate run name and create run metadata (query config names from adapters)
-        model_name_hint = self.llm_provider.model_config.name_hint
-        prompt_template_name = self.prompt_builder.get_builder().name
-        provider_name = self.llm_provider.provider_name
+        # Generate from adapter configs
+        from llm_ensemble.libs.runtime.run_name import generate_run_name
+        name_hints = [
+            self.llm_provider.model_config.name_hint,
+            self.prompt_builder.get_builder().name,
+            self.llm_provider.provider_name,
+        ]
+        return generate_run_name(name_hints)
 
-        name_hints = [model_name_hint, prompt_template_name, provider_name]
-        run_info = InferRunInfo.create(
-            name_hints=name_hints,
-            run_name=run_name,
-            official=official,
-            notes=notes,
-        )
+    def _create_run_directory(
+        self,
+        run_name: str,
+        official: bool,
+        tag: Optional[str],
+    ) -> "Path":
+        """Create run directory and optional tag symlink.
 
-        # Create run directory
-        run_dir = run_info.run_dir
+        Args:
+            run_name: Run name for directory
+            official: Whether this is an official run
+            tag: Optional tag name for symlink
+
+        Returns:
+            Path to run directory
+        """
+        from llm_ensemble.libs.runtime.path_manager import PathManager
+        from llm_ensemble.libs.runtime.run_info import RunType
+        from pathlib import Path
+
+        run_type = RunType.OFFICIAL if official else RunType.TEST
+        run_dir = PathManager.get_run_dir("infer", run_name, run_type.value)
         run_dir.mkdir(parents=True, exist_ok=True)
 
         # Create tag symlink if requested
         if tag:
             TagManager.create_tag(run_dir, tag)
 
+        return run_dir
+
+    def _setup_logging(
+        self,
+        run_name: str,
+        run_dir: "Path",
+    ) -> structlog.stdlib.BoundLogger:
+        """Configure logging for this inference run.
+
+        Args:
+            run_name: Run name for logger context
+            run_dir: Run directory for log file
+
+        Returns:
+            Configured structlog logger instance
+        """
+        # Load logging config from environment variable or use default
+        logging_config_name = os.getenv("LOGGING_CONFIG", "observability")
+        logging_config = LoggingConfig.load(logging_config_name)
+
         # Setup logging (configured output appears in driving adapter: terminal for CLI, CloudWatch for web, etc.)
         log_file = run_dir / "run.log" if logging_config.save_logs else None
         logger = configure_logger(
             cli_name="infer",
             run_name=run_name,
-            run_type=run_info.run_type,
+            run_type="test",  # Default, will be in run_info for manifest
             pretty_print=logging_config.pretty_print,
             save_logs=logging_config.save_logs,
             log_file_path=log_file,
@@ -353,39 +385,55 @@ class InferenceApplication(ForRunningInference):
             file_level=logging_config.file_level,
         )
 
-        # Log startup information (query config names from adapters)
-        logger.info(
-            InferLogEvent.INFER_STARTED,
-            model=model_name_hint,
-            provider=provider_name,
-            io_format=self.output_port.io_name,
-            prompt_template=prompt_template_name,
-            input_run_name=input_run_name,
-            start_idx=None,  # Will be logged after dataset is read
-            end_idx=None,
+        return logger
+
+    def _build_run_info(
+        self,
+        run_name: str,
+        run_dir: "Path",
+        official: bool,
+        notes: Optional[str],
+    ) -> InferRunInfo:
+        """Build InferRunInfo entity for manifest persistence.
+
+        Args:
+            run_name: Run name
+            run_dir: Run directory path
+            official: Whether this is an official run
+            notes: Optional notes about this run
+
+        Returns:
+            InferRunInfo entity
+        """
+        # Build InferRunInfo (git SHA, timestamps already captured by entity)
+        run_info = InferRunInfo.create(
+            name_hints=None,  # Already have run_name
+            run_name=run_name,
+            official=official,
+            notes=notes,
         )
 
-        return run_info, logger
+        return run_info
 
     def _finalize_run(
         self,
         summary: InferRunSummary,
-        run_info: InferRunInfo,
-        logger: object,
+        run_dir: "Path",
+        logger: structlog.stdlib.BoundLogger,
     ) -> None:
         """Finalize backend outputs: write summary to disk and log completion.
 
         Args:
             summary: Inference run summary from pipeline execution
-            run_info: Run metadata
+            run_dir: Run directory path
             logger: Configured logger instance
         """
         # Log completion
         logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=summary.judgement_count)
 
         # Write summary to disk
-        write_standalone_summary(summary, run_info.run_dir)
-        logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(run_info.run_dir / "summary.json"))
+        write_standalone_summary(summary, run_dir)
+        logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(run_dir / "summary.json"))
 
         # Log final statistics
         logger.info(
@@ -405,6 +453,6 @@ class InferenceApplication(ForRunningInference):
             )
 
         # Log file location
-        log_file = run_info.run_dir / "run.log"
+        log_file = run_dir / "run.log"
         if log_file.exists():
             logger.info(InferLogEvent.LOGS_SAVED, path=str(log_file))

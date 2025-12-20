@@ -14,7 +14,6 @@ from __future__ import annotations
 from pydantic import Field
 
 from llm_ensemble.libs.schemas.base_config import BaseConfig
-from llm_ensemble.libs.runtime.path_manager import PathManager
 
 
 class RetryConfig(BaseConfig):

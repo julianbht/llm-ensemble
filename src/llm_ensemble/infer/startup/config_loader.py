@@ -12,7 +12,7 @@ from pathlib import Path
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.runtime.path_manager import PathManager
-from llm_ensemble.libs.config import load_yaml_config
+from llm_ensemble.libs.config.yaml_config_loader import load_yaml_config
 
 
 def load_model_config(model_id: str) -> ModelConfig:

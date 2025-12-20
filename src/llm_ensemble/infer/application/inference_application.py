@@ -22,6 +22,11 @@ from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
 
+from llm_ensemble.libs.runtime.path_manager import PathManager
+from llm_ensemble.libs.runtime.run_info import RunType
+from pathlib import Path
+from llm_ensemble.libs.runtime.run_name import generate_run_name
+
 # Driving port (application implements this)
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
 
@@ -124,13 +129,9 @@ class InferenceApplication(ForRunningInference):
         Raises:
             Exception: If any step in the pipeline fails
         """
-        # Generate run name
+        # Setup
         run_name = self._generate_run_name(run_name)
-
-        # Create run directory
         run_dir = self._create_run_directory(run_name, official, tag)
-
-        # Setup logging
         logger = self._setup_logging(run_name, run_dir)
 
         # Log startup
@@ -316,7 +317,6 @@ class InferenceApplication(ForRunningInference):
             return run_name
 
         # Generate from adapter configs
-        from llm_ensemble.libs.runtime.run_name import generate_run_name
         name_hints = [
             self.llm_provider.model_config.name_hint,
             self.prompt_builder.get_builder().name,
@@ -329,7 +329,7 @@ class InferenceApplication(ForRunningInference):
         run_name: str,
         official: bool,
         tag: Optional[str],
-    ) -> "Path":
+    ) -> Path:
         """Create run directory and optional tag symlink.
 
         Args:
@@ -340,10 +340,6 @@ class InferenceApplication(ForRunningInference):
         Returns:
             Path to run directory
         """
-        from llm_ensemble.libs.runtime.path_manager import PathManager
-        from llm_ensemble.libs.runtime.run_info import RunType
-        from pathlib import Path
-
         run_type = RunType.OFFICIAL if official else RunType.TEST
         run_dir = PathManager.get_run_dir("infer", run_name, run_type.value)
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -390,7 +386,6 @@ class InferenceApplication(ForRunningInference):
     def _build_run_info(
         self,
         run_name: str,
-        run_dir: "Path",
         official: bool,
         notes: Optional[str],
     ) -> InferRunInfo:

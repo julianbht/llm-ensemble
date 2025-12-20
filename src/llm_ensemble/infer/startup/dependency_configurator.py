@@ -1,26 +1,25 @@
-"""Inference pipeline runner.
+"""Dependency configuration for inference pipeline.
 
-Startup Layer - Composition Root (BlueZoneRunner equivalent)
+Startup Layer - Composition Root (Dependency Configurator)
 
 Hexagonal Architecture - Composition Root Pattern:
-1. Build domain configuration (InferRunConfig)
-2. Build application hexagon (assemble ports and use case)
-3. Build driving adapter (CLI driver)
-4. Execute via driving adapter
+Builds and wires together the application hexagon by:
+1. Loading domain configuration from YAML files
+2. Instantiating driven adapters (ports implementations)
+3. Assembling the use case with its dependencies
+4. Returning the application's driving port interface
 
 This is the composition root where all dependency wiring happens.
 NOT unit tested - tested via CLI integration tests.
 
-Comparable to BlueZoneRunner in the hex-arch-example, which:
-- Selects and instantiates adapters (driven side)
-- Builds the application hexagon
-- Instantiates drivers (driving side)
-- Runs the drivers
+The driving adapter (CLI) calls this configurator to build the application,
+then uses the returned ForRunningInference interface to execute business logic.
 """
 from __future__ import annotations
 
 from llm_ensemble.infer.startup.adapter_config import AdapterConfig, ExecutionParams
 from llm_ensemble.infer.application.inference_use_case import InferenceUseCase
+from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunContext
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
@@ -31,46 +30,43 @@ from llm_ensemble.infer.adapters.io_factory import IOAdapterFactory
 from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
 from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
 from llm_ensemble.infer.adapters.retrying_provider import RetryingProvider
-from llm_ensemble.infer.adapters.cli_driver import CLIDriver
 
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 
 
-def run_inference(
+def build_application(
     adapter_config: AdapterConfig,
     execution_params: ExecutionParams,
-) -> None:
-    """Run inference pipeline via CLI driver (composition root).
+) -> tuple[ForRunningInference, InferRunConfig]:
+    """Build and wire the inference application hexagon.
 
-    Hexagonal Architecture composition root pattern:
-    1. Build domain configuration
-    2. Build application hexagon (driven ports + use case)
-    3. Build CLI driving adapter
-    4. Execute via driver
+    Composition root that:
+    1. Loads domain configuration from YAML files
+    2. Instantiates all driven adapters
+    3. Assembles the use case with dependencies
+    4. Returns the application's driving port interface
 
-    Comparable to BlueZoneRunner.main() which builds adapters,
-    application, and drivers, then calls driver.run().
+    The driving adapter (CLI) is responsible for:
+    - Calling this function to get the application
+    - Setting up infrastructure (run directories, logging)
+    - Executing the application via ForRunningInference.execute()
+    - Finalizing results (writing summaries, logging completion)
 
     Args:
         adapter_config: Specifies which adapters to instantiate
         execution_params: Execution parameters for the run
+
+    Returns:
+        Tuple of (application implementing ForRunningInference, run configuration)
     """
     # Phase 1: Build domain configuration
     run_config = _build_run_config(adapter_config, execution_params)
 
     # Phase 2: Build application hexagon (driven ports + use case)
-    application = _build_application(run_config)
+    application = _build_application_hexagon(run_config)
 
-    # Phase 3: Build CLI driving adapter
-    cli_driver = CLIDriver(
-        application=application,
-        run_config=run_config,
-        execution_params=execution_params,
-        logging_config_name=adapter_config.logging_config_name,
-    )
+    return application, run_config
 
-    # Phase 4: Execute via driver
-    cli_driver.run()
 
 def _build_run_config(
     adapter_config: AdapterConfig,
@@ -104,7 +100,7 @@ def _build_run_config(
     )
 
 
-def _build_application(run_config: InferRunConfig) -> InferenceUseCase:
+def _build_application_hexagon(run_config: InferRunConfig) -> InferenceUseCase:
     """Build application hexagon by instantiating driven adapters and use case.
 
     This is the core of hexagonal architecture: assembling the application

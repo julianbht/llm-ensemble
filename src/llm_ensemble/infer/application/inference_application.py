@@ -315,12 +315,13 @@ class InferenceApplication(ForRunningInference):
         if run_name is not None:
             return run_name
 
-        # Generate from adapter configs
-        name_hints = [
+        # Generate from adapter configs (filter out None values)
+        name_hints_raw = [
             self.llm_provider.model_config.name_hint,
             self.prompt_builder.get_builder().name,
             self.llm_provider.provider_name,
         ]
+        name_hints: list[str] = [hint for hint in name_hints_raw if hint is not None]
         return generate_run_name(name_hints)
 
     def _create_run_directory(

@@ -48,7 +48,7 @@ class FullyPopulatedJsonWriter(OutputPort):
         Args:
             io_name: Name of the IO format (e.g., 'db_to_json')
         """
-        self._io_name = io_name
+        self._io_name: str = io_name
         self._write_summary: Optional[WriteSummary] = None
         self.output_path: Optional[Path] = None
         self.manifest_path: Optional[Path] = None

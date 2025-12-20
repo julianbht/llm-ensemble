@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
+from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.libs.logging import get_logger
 
 if TYPE_CHECKING:
@@ -40,19 +41,10 @@ class LLMProviderPort(ABC):
             model_config: Complete model configuration (model_id, temperature, max_tokens, etc.)
             retry_config: Retry configuration for exponential backoff
         """
-        self.provider_name = provider_name
-        self.model_config = model_config
-        self.retry_config = retry_config
+        self.provider_name: str = provider_name
+        self.model_config: ModelConfig = model_config
+        self.retry_config: RetryConfig = retry_config
         self.logger = get_logger(component=f"{provider_name}_provider")
-
-    def get_provider(self) -> Provider:
-        """Get Provider domain object for this provider.
-
-        Returns:
-            Provider entity with random UUID and provider name
-        """
-        from llm_ensemble.infer.schemas.entities.provider import Provider
-        return Provider(name=self.provider_name)
 
     @abstractmethod
     def infer(

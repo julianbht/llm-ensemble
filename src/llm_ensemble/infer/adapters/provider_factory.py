@@ -14,6 +14,7 @@ from typing import Dict, Type
 
 from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
+from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.adapters.providers.openrouter_adapter import OpenRouterAdapter
 from llm_ensemble.infer.adapters.providers.ollama_adapter import OllamaAdapter
 
@@ -32,15 +33,14 @@ class ProviderFactory:
     def create(
         provider_name: str,
         model_config: ModelConfig,
+        retry_config: RetryConfig,
     ) -> LLMProviderPort:
         """Build and return a provider adapter instance.
-
-        Adapters are configured once with the full model configuration.
-        Retry logic is handled by a separate wrapper.
 
         Args:
             provider_name: Name of the provider (e.g., 'openrouter', 'ollama')
             model_config: Complete model configuration (model_id, temperature, max_tokens, etc.)
+            retry_config: Retry configuration for exponential backoff
 
         Returns:
             Instantiated provider adapter
@@ -57,10 +57,10 @@ class ProviderFactory:
 
         adapter_class = PROVIDERS[provider_name]
 
-        # Pass full model config to provider (configured once at initialization)
         return adapter_class(
             provider_name=provider_name,
             model_config=model_config,
+            retry_config=retry_config,
         )
 
     @staticmethod

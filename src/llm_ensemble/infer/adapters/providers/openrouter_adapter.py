@@ -2,46 +2,43 @@
 
 Handles HTTP communication with OpenRouter API and converts responses
 to LLMResponse objects. Implements the LLMProvider port.
-
-This is a PURE API client - it accepts pre-built prompts and returns raw responses.
-It does NOT build prompts (that's PromptBuilder's job) or parse responses (that's
-ResponseParser's job). The InferenceUseCase orchestrates all port interactions.
 """
 
 from __future__ import annotations
 import os
 import time
+import random
 from typing import Optional
-from openai import OpenAI
+from openai import OpenAI, APIError
 
 from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
+from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
+from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
 class OpenRouterAdapter(LLMProviderPort):
-    """OpenRouter implementation of the LLMProvider port.
-
-    Pure API client that sends pre-built prompts to OpenRouter and returns raw responses.
-    Does NOT build prompts or parse responses - that's orchestrated by InferenceUseCase.
-    """
+    """OpenRouter implementation of the LLMProvider port."""
 
     def __init__(
         self,
         provider_name: str,
-        model_name: str,
+        model_config: ModelConfig,
+        retry_config: RetryConfig,
         api_key: Optional[str] = None,
         timeout: int = 30,
     ):
-        """Initialize OpenRouter adapter with identity from config.
+        """Initialize OpenRouter adapter.
 
         Args:
             provider_name: Provider identifier (from config, e.g., 'openrouter')
-            model_name: Model identifier (from config, e.g., 'llama-4-maverick:free')
+            model_config: Complete model configuration
+            retry_config: Retry configuration for exponential backoff
             api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
             timeout: Request timeout in seconds (default: 30)
         """
-        super().__init__(provider_name, model_name)
+        super().__init__(provider_name, model_config, retry_config)
 
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         self.timeout = timeout
@@ -55,42 +52,96 @@ class OpenRouterAdapter(LLMProviderPort):
     def infer(
         self,
         prompt: str,
-        model_config: ModelConfig,
     ) -> tuple[str, LLMInvocationMetrics]:
-        """Perform OpenRouter API call and return response.
+        """Perform OpenRouter API call with retry logic.
 
         Args:
-            prompt: Pre-built prompt string (from PromptBuilder)
-            model_config: Model configuration with inference parameters
+            prompt: Pre-built prompt string
 
         Returns:
             Tuple of (raw_response_text, invocation_metrics)
 
         Raises:
-            APIError: If API request fails
+            APIError: If API request fails after all retries
+        """
+        # Retry loop with exponential backoff
+        for attempt in range(self.retry_config.max_retries + 1):
+            try:
+                return self._make_api_call(prompt, attempt)
+            except APIError as e:
+                # Check if we should retry
+                is_retryable = False
+                if hasattr(e, 'status_code'):
+                    is_retryable = e.status_code in self.retry_config.retryable_status_codes
+
+                # If not retryable or out of retries, raise
+                if not is_retryable or attempt >= self.retry_config.max_retries:
+                    self.logger.warning(
+                        InferLogEvent.RETRY_EXHAUSTED,
+                        retry_count=attempt,
+                        error_type=type(e).__name__,
+                        status_code=getattr(e, 'status_code', None),
+                    )
+                    raise
+
+                # Calculate exponential backoff with jitter
+                delay = min(
+                    self.retry_config.base_delay_seconds * (2 ** attempt),
+                    self.retry_config.max_delay_seconds
+                )
+                jitter = random.uniform(0, delay * 0.1)
+                total_delay = delay + jitter
+
+                # Log retry attempt
+                self.logger.info(
+                    InferLogEvent.RETRY_ATTEMPT,
+                    attempt=attempt + 1,
+                    max_retries=self.retry_config.max_retries + 1,
+                    backoff_seconds=round(total_delay, 2),
+                    error_type=type(e).__name__,
+                    status_code=getattr(e, 'status_code', None),
+                )
+
+                time.sleep(total_delay)
+
+        raise RuntimeError("Retry loop exited unexpectedly")
+
+    def _make_api_call(
+        self,
+        prompt: str,
+        retry_attempt: int,
+    ) -> tuple[str, LLMInvocationMetrics]:
+        """Make actual API call to OpenRouter.
+
+        Args:
+            prompt: Pre-built prompt string
+            retry_attempt: Current retry attempt number
+
+        Returns:
+            Tuple of (raw_response_text, invocation_metrics)
         """
         # Build API parameters from config
         api_params = {
-            "model": model_config.model_id,
+            "model": self.model_config.model_id,
         }
 
         # Add core inference parameters if set
-        if model_config.temperature is not None:
-            api_params["temperature"] = model_config.temperature
-        if model_config.max_tokens is not None:
-            api_params["max_tokens"] = model_config.max_tokens
-        if model_config.top_p is not None:
-            api_params["top_p"] = model_config.top_p
-        if model_config.frequency_penalty is not None:
-            api_params["frequency_penalty"] = model_config.frequency_penalty
-        if model_config.presence_penalty is not None:
-            api_params["presence_penalty"] = model_config.presence_penalty
-        if model_config.seed is not None:
-            api_params["seed"] = model_config.seed
+        if self.model_config.temperature is not None:
+            api_params["temperature"] = self.model_config.temperature
+        if self.model_config.max_tokens is not None:
+            api_params["max_tokens"] = self.model_config.max_tokens
+        if self.model_config.top_p is not None:
+            api_params["top_p"] = self.model_config.top_p
+        if self.model_config.frequency_penalty is not None:
+            api_params["frequency_penalty"] = self.model_config.frequency_penalty
+        if self.model_config.presence_penalty is not None:
+            api_params["presence_penalty"] = self.model_config.presence_penalty
+        if self.model_config.seed is not None:
+            api_params["seed"] = self.model_config.seed
 
-        # Add additional parameters (stop sequences, response_format, etc.)
-        if model_config.additional_params:
-            api_params.update(model_config.additional_params)
+        # Add additional parameters
+        if self.model_config.additional_params:
+            api_params.update(self.model_config.additional_params)
 
         # Initialize OpenAI client configured for OpenRouter
         client = OpenAI(
@@ -102,7 +153,7 @@ class OpenRouterAdapter(LLMProviderPort):
         # Track timing
         start_time = time.time()
 
-        # Send request with all configured parameters
+        # Send request
         response = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             **api_params
@@ -113,10 +164,8 @@ class OpenRouterAdapter(LLMProviderPort):
         # Extract response text
         raw_response_text = response.choices[0].message.content
 
-        # Extract generation ID for async cost queries
+        # Extract metadata
         generation_id = getattr(response, "id", None)
-
-        # Extract token usage
         prompt_tokens = None
         completion_tokens = None
         total_tokens = None
@@ -125,17 +174,17 @@ class OpenRouterAdapter(LLMProviderPort):
             completion_tokens = getattr(response.usage, "completion_tokens", None)
             total_tokens = getattr(response.usage, "total_tokens", None)
 
-        # Calculate cost estimate from token usage and pricing config
+        # Calculate cost estimate
         cost_estimate_usd = None
-        if model_config.pricing and prompt_tokens is not None and completion_tokens is not None:
-            prompt_cost = (prompt_tokens / 1_000_000) * model_config.pricing.prompt_cost_per_1m_tokens
-            completion_cost = (completion_tokens / 1_000_000) * model_config.pricing.completion_cost_per_1m_tokens
+        if self.model_config.pricing and prompt_tokens is not None and completion_tokens is not None:
+            prompt_cost = (prompt_tokens / 1_000_000) * self.model_config.pricing.prompt_cost_per_1m_tokens
+            completion_cost = (completion_tokens / 1_000_000) * self.model_config.pricing.completion_cost_per_1m_tokens
             cost_estimate_usd = prompt_cost + completion_cost
 
-        # Create metrics (retry count will be added by wrapper)
+        # Create metrics
         metrics = LLMInvocationMetrics(
             latency_ms=latency_ms,
-            retries=0,  # Will be set by RetryingProvider wrapper
+            retries=retry_attempt,
             cost_estimate_usd=cost_estimate_usd,
             generation_id=generation_id,
             prompt_tokens=prompt_tokens,

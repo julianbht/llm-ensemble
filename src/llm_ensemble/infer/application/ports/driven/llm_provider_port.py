@@ -22,30 +22,27 @@ if TYPE_CHECKING:
 class LLMProviderPort(ABC):
     """Abstract interface for LLM inference providers.
 
-    Providers are PURE API clients - they accept pre-built prompts and return
-    raw responses. They do NOT build prompts or parse responses. The application
-    use case (InferenceUseCase) orchestrates all port interactions.
-
-    Retry logic is handled by a separate RetryingProvider wrapper to keep
-    this interface clean and focused.
-
-    Providers handle single inference requests. If a provider's API supports
-    batching, the adapter can implement internal buffering transparently.
+    Providers accept pre-built prompts and return raw responses.
+    They do NOT build prompts or parse responses. The application
+    use case (InferenceApplication) orchestrates all port interactions.
     """
 
     def __init__(
         self,
         provider_name: str,
         model_config: ModelConfig,
+        retry_config: RetryConfig,
     ):
         """Initialize provider with configuration.
 
         Args:
             provider_name: Provider identifier (from config, e.g., 'openrouter')
             model_config: Complete model configuration (model_id, temperature, max_tokens, etc.)
+            retry_config: Retry configuration for exponential backoff
         """
         self.provider_name = provider_name
         self.model_config = model_config
+        self.retry_config = retry_config
         self.logger = get_logger(component=f"{provider_name}_provider")
 
     def get_provider(self) -> Provider:
@@ -64,8 +61,8 @@ class LLMProviderPort(ABC):
     ) -> tuple[str, LLMInvocationMetrics]:
         """Perform inference and return response with metrics.
 
-        Adapters implement the actual API call using the model_config provided at initialization.
-        Returns the response text and invocation metrics (without retry count - that's handled by wrapper).
+        Adapters implement the actual API call using the model_config and retry_config.
+        Returns the response text and invocation metrics (including retry count).
 
         Args:
             prompt: Pre-built prompt string (from PromptBuilder)
@@ -74,7 +71,7 @@ class LLMProviderPort(ABC):
             Tuple of (raw_response_text, invocation_metrics)
 
         Raises:
-            APIError: If API call fails
+            APIError: If API call fails after all retries
             ValueError: If configuration is invalid
         """
         pass

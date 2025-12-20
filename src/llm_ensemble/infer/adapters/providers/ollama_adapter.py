@@ -1,31 +1,21 @@
-"""Ollama adapter for LLM inference.
-
-Handles communication with local Ollama server and converts responses
-to LLMResponse objects. Implements the LLMProvider port.
-
-This is a PURE API client - it accepts pre-built prompts and returns raw responses.
-It does NOT build prompts (that's PromptBuilder's job) or parse responses (that's
-ResponseParser's job). The InferenceUseCase orchestrates all port interactions.
-"""
+"""Ollama adapter for LLM inference."""
 
 from __future__ import annotations
 
 from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
+from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
 
 
 class OllamaAdapter(LLMProviderPort):
-    """Ollama implementation of the LLMProvider port.
-
-    Pure API client that sends pre-built prompts to Ollama and returns raw responses.
-    Does NOT build prompts or parse responses - that's orchestrated by InferenceUseCase.
-    """
+    """Ollama implementation of the LLMProvider port."""
 
     def __init__(
         self,
         provider_name: str,
-        model_name: str,
+        model_config: ModelConfig,
+        retry_config: RetryConfig,
         base_url: str = "http://localhost:11434",
         timeout: int = 60,
     ):
@@ -33,11 +23,12 @@ class OllamaAdapter(LLMProviderPort):
 
         Args:
             provider_name: Provider identifier (from config, e.g., 'ollama')
-            model_name: Model identifier (from config, e.g., 'llama2')
+            model_config: Complete model configuration
+            retry_config: Retry configuration for exponential backoff
             base_url: Ollama server URL (default: http://localhost:11434)
             timeout: Request timeout in seconds (default: 60)
         """
-        super().__init__(provider_name, model_name)
+        super().__init__(provider_name, model_config, retry_config)
 
         self.base_url = base_url
         self.timeout = timeout
@@ -45,19 +36,16 @@ class OllamaAdapter(LLMProviderPort):
     def infer(
         self,
         prompt: str,
-        model_config: ModelConfig,
     ) -> tuple[str, LLMInvocationMetrics]:
-        """Perform Ollama API call and return response.
+        """Perform Ollama API call.
 
         Args:
-            prompt: Pre-built prompt string (from PromptBuilder)
-            model_config: Model configuration with provider and settings
+            prompt: Pre-built prompt string
 
         Returns:
             Tuple of (raw_response_text, invocation_metrics)
 
         Raises:
             NotImplementedError: Ollama adapter not yet implemented
-            APIError: If API request fails
         """
         raise NotImplementedError("Ollama adapter not yet implemented")

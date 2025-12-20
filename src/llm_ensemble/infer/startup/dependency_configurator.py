@@ -25,7 +25,6 @@ from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.adapters.io_factory import IOAdapterFactory
 from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
 from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
-from llm_ensemble.infer.adapters.retrying_provider import RetryingProvider
 
 
 def build_application(
@@ -114,9 +113,8 @@ def _build_application_hexagon(
     prompt_builder = template_adapter.get_builder()
     response_parser = template_adapter.get_parser()
 
-    # Driven port: LLM provider (with retry wrapper)
-    base_provider = ProviderFactory.create(provider_name, model_cfg)
-    llm_provider = RetryingProvider(base_provider, retry_cfg)
+    # Driven port: LLM provider
+    llm_provider = ProviderFactory.create(provider_name, model_cfg, retry_cfg)
 
     # Assemble application hexagon (use case with driven ports)
     return InferenceApplication(

@@ -36,23 +36,29 @@ class InferRunConfigFactory:
         end_idx: int,
     ) -> InferRunConfig:
         """Create InferRunConfig from adapter instances."""
+
         # Extract metadata from adapters
         provider = llm_provider.get_provider()
         model_config = llm_provider.model_config
         retry_config = llm_provider.retry_config
-        
         builder_entity = prompt_builder.get_builder()
         parser_entity = response_parser.get_parser()
-        
         io_name = output_port.io_name
 
-        # Build PromptTemplate entity (bundles template text + metadata)
+        # Build PromptTemplate entity 
         prompt_template = PromptTemplate(
             name=builder_entity.name,
             template_text=prompt_builder.get_template_text(),
             prompt_builder=builder_entity,
             response_text_parser=parser_entity,
         )
+
+        # Build IngestRunContext entity
+        ingest_run_context=IngestRunContext(
+                input_run_name=input_run_name,
+                start_idx=start_idx,
+                end_idx=end_idx,
+            )
 
         # Assemble complete config
         return InferRunConfig(
@@ -61,9 +67,5 @@ class InferRunConfigFactory:
             prompt_template=prompt_template,
             provider=provider,
             io_name=io_name,
-            ingest_run_context=IngestRunContext(
-                input_run_name=input_run_name,
-                start_idx=start_idx,
-                end_idx=end_idx,
-            ),
+            ingest_run_context=ingest_run_context,
         )

@@ -67,8 +67,3 @@ class InferRunConfigFactory:
                 end_idx=end_idx,
             ),
         )
-
-
-def _extract_template_text(prompt_builder: PromptBuilderPort) -> str:
-    """Extract template text from prompt builder adapter."""
-    return prompt_builder.get_template_text()

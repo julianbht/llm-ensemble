@@ -11,6 +11,8 @@ from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMPro
 class OllamaAdapter(LLMProviderPort):
     """Ollama implementation of the LLMProvider port."""
 
+    VERSION = "1.0"
+
     def __init__(
         self,
         provider_name: str,

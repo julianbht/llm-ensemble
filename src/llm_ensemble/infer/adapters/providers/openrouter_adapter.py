@@ -21,6 +21,8 @@ from llm_ensemble.libs.logging.log_events import InferLogEvent
 class OpenRouterAdapter(LLMProviderPort):
     """OpenRouter implementation of the LLMProvider port."""
 
+    VERSION = "1.0"
+
     def __init__(
         self,
         provider_name: str,

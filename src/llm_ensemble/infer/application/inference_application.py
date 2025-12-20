@@ -285,17 +285,18 @@ class InferenceApplication(ForRunningInference):
         """
         # Query config from adapters
         model_config = self.llm_provider.model_config
-        provider_name = self.llm_provider.provider_name
         retry_config = self.llm_provider.retry_config
-        prompt_template_name = self.prompt_builder.get_builder().name
+        provider = self.llm_provider.get_provider()
+        prompt_builder = self.prompt_builder.get_builder()
+        response_parser = self.response_parser.get_parser()
         io_name = self.output_port.io_name
 
         # Build config entity
         return InferRunConfig(
             model_cfg=model_config,
             retry_config=retry_config,
-            prompt_template=PromptTemplateFactory.create(prompt_template_name),
-            provider=Provider(name=provider_name),
+            prompt_template=PromptTemplateFactory.create(prompt_builder.name),
+            provider=provider,
             io_name=io_name,
             ingest_run_context=IngestRunContext(
                 input_run_name=input_run_name,
@@ -320,7 +321,7 @@ class InferenceApplication(ForRunningInference):
         name_hints: list[str] = [
             self.llm_provider.model_config.name_hint,
             self.prompt_builder.get_builder().name,
-            self.llm_provider.provider_name,
+            self.llm_provider.get_provider().name,
         ]
         return generate_run_name(name_hints)
 

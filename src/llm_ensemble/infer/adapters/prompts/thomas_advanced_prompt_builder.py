@@ -69,7 +69,8 @@ class ThomasAdvancedPromptBuilder(PromptBuilderPort):
         """Initialize builder and create cached PromptBuilder entity."""
         self._builder = PromptBuilder(
             id=self.TEMPLATE_ID,
-            name=self.TEMPLATE_NAME
+            name=self.TEMPLATE_NAME,
+            version="1.0"
         )
 
     def build_prompt(self, dataset_sample: DatasetSample) -> str:

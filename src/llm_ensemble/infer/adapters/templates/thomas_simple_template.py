@@ -25,6 +25,7 @@ class ThomasSimpleTemplate(PromptTemplatePort):
 
     # Class-level constants for metadata access without instantiation
     TEMPLATE_NAME = "thomas-simple"
+    TEMPLATE_VERSION = "1.0"
     TEMPLATE_TEXT = ThomasSimplePromptBuilder.TEMPLATE_TEXT
     TEMPLATE_ID = ThomasSimplePromptBuilder.TEMPLATE_ID
     BUILDER_NAME = ThomasSimplePromptBuilder.TEMPLATE_NAME

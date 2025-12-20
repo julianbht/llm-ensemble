@@ -25,3 +25,8 @@ class Provider(BaseModel):
         ...,
         description="Provider name (e.g., 'openrouter', 'ollama', 'hf')"
     )
+
+    version: str = Field(
+        ...,
+        description="Provider adapter version (e.g., '1.0', '2.1')"
+    )

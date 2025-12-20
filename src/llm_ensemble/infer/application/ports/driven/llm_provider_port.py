@@ -42,6 +42,15 @@ class LLMProviderPort(ABC):
         self.retry_config: RetryConfig = retry_config
         self.logger = get_logger(component=f"{provider_name}_provider")
 
+    def get_provider(self):
+        """Get Provider metadata for this adapter.
+
+        Returns:
+            Provider entity with name and version
+        """
+        from llm_ensemble.infer.domain.entities.provider import Provider
+        return Provider(name=self.provider_name, version=self.VERSION)
+
     @abstractmethod
     def infer(
         self,

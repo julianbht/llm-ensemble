@@ -33,6 +33,7 @@ class ThomasSimpleParser(ResponseParserPort):
         self._parser = Parser(
             id=self.PARSER_ID,
             name=self.PARSER_NAME,
+            version="1.0"
         )
         self.logger = get_logger(component="thomas_simple_parser")
 

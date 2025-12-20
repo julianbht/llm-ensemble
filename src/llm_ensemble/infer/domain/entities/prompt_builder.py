@@ -26,3 +26,8 @@ class PromptBuilder(BaseModel):
         ...,
         description="Prompt builder name (e.g., 'thomas-simple')"
     )
+
+    version: str = Field(
+        ...,
+        description="Prompt builder version (e.g., '1.0', '2.1')"
+    )

@@ -24,3 +24,8 @@ class Parser(BaseModel):
         ...,
         description="Parser name (e.g., 'thomas-simple')"
     )
+
+    version: str = Field(
+        ...,
+        description="Parser version (e.g., '1.0', '2.1')"
+    )

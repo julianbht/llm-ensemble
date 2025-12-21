@@ -23,7 +23,12 @@ from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.llm_judgement_builder import LLMJudgementBuilder
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
-from llm_ensemble.infer.domain.metrics import calculate_agreement
+from llm_ensemble.infer.domain.metrics import (
+    calculate_agreement,
+    calculate_latency_seconds,
+    get_extracted_score,
+    get_gold_score,
+)
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.application.infer_run_config_factory import InferRunConfigFactory
 
@@ -190,23 +195,12 @@ class InferenceApplication(ForRunningInference):
                 # Build complete judgement
                 judgement = builder.build()
 
-                # Log each completed judgement
-                extracted_score = judgement.llm_score.label.value if judgement.llm_score and judgement.llm_score.label else "null"
-                gold_score = judgement.dataset_sample.judging_sample.gold_score.value
-                latency_s = judgement.llm_invocation_metrics.latency_ms / 1000
                 logger.info(
                     InferLogEvent.RESPONSE_PARSED,
-                    extracted_score=extracted_score,
-                    gold_score=gold_score,
-                    latency_s=f"{latency_s:.1f}",
-                )
-
-                # Log agreement metric (domain calculation)
-                agreement = calculate_agreement(judgement)
-                logger.info(
-                    InferLogEvent.JUDGEMENT_METRICS,
-                    agreement=agreement,
-                    latency_s=latency_s,
+                    extracted_score=get_extracted_score(judgement),
+                    gold_score=judgement.dataset_sample.judging_sample.gold_score.value,
+                    agreement=calculate_agreement(judgement),
+                    latency_s=calculate_latency_seconds(judgement),
                 )
 
                 # Write judgement immediately to disk (fault tolerance!)

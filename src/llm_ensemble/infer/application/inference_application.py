@@ -17,6 +17,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Optional
+from datetime import datetime
 import structlog
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
@@ -25,9 +26,9 @@ from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.domain.metrics import (
     calculate_agreement,
+    calculate_aggregate_statistics,
     calculate_latency_seconds,
     get_extracted_score,
-    get_gold_score,
 )
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.application.infer_run_config_factory import InferRunConfigFactory
@@ -47,7 +48,6 @@ from llm_ensemble.libs.logging.log_events import InferLogEvent
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_name import generate_run_name
-from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder, write_standalone_summary
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 
@@ -147,9 +147,8 @@ class InferenceApplication(ForRunningInference):
             run_name = run_name
         )
 
-        # Execute inference pipeline
-        summary_builder = RunSummaryBuilder()
-        summary_builder.set_start_time()
+        # Track start time for summary
+        start_time = datetime.now()
 
         # Resolve input run name (handles tags)
         resolved_input_run_name = TagManager.resolve_input(input_run_name, "ingest")
@@ -209,38 +208,19 @@ class InferenceApplication(ForRunningInference):
                 # Collect for summary statistics
                 llm_judgements.append(judgement)
 
-        # Retrieve aggregate write summary after context manager closes (writer logged directly)
+        # Construct summary with all computed data
         write_summary = self.output_port.get_summary()
-
-        # Calculate aggregate statistics from judgements (for summary)
-        count = len(llm_judgements)
-        error_count = sum(1 for j in llm_judgements if j.llm_score is None or j.llm_score.label is None)
-        total_latency_ms = sum(j.llm_invocation_metrics.latency_ms for j in llm_judgements)
-        avg_latency = total_latency_ms / count if count > 0 else 0.0
-
-        # Build warnings summary from all judgements
-        warnings_summary: dict[str, int] = {}
-        for judgement in llm_judgements:
-            # Aggregate parser warnings from all judgements
-            for warning in judgement.parser_warnings:
-                warning_type = warning.__class__.__name__
-                warnings_summary[warning_type] = warnings_summary.get(warning_type, 0) + 1
-
-        # Add write summary to builder for inclusion in final summary
-        summary_builder.add("write_summary", write_summary)
-
-        # Add statistics to summary builder
-        summary_builder.add("judgement_count", count)
-        summary_builder.add("error_count", error_count)
-        summary_builder.add("total_latency_ms", total_latency_ms)
-        summary_builder.add("avg_latency_ms", avg_latency)
-
-        # Add warnings summary to builder
-        if warnings_summary:
-            summary_builder.add("warnings_summary", warnings_summary)
-
-        # Finalize summary (sets end_time and creates immutable Pydantic object)
-        summary: InferRunSummary = summary_builder.finalize(InferRunSummary)
+        stats = calculate_aggregate_statistics(llm_judgements)
+        summary = InferRunSummary(
+            start_time=start_time,
+            end_time=datetime.now(),
+            write_summary=write_summary,
+            judgement_count=stats["judgement_count"],
+            error_count=stats["error_count"],
+            total_latency_ms=stats["total_latency_ms"],
+            avg_latency_ms=stats["avg_latency_ms"],
+            warnings_summary=stats["warnings_summary"],
+        )
 
         # Finalize outputs (write summary, log completion)
         self._finalize_run(summary, run_dir, logger)
@@ -374,6 +354,37 @@ class InferenceApplication(ForRunningInference):
             notes=notes,
         )
 
+    def _build_summary(
+        self,
+        start_time: datetime,
+        llm_judgements: list[LLMJudgement],
+        write_summary: "WriteSummary",
+    ) -> InferRunSummary:
+        """Build run summary from execution results.
+
+        Args:
+            start_time: Time when inference pipeline started
+            llm_judgements: List of all judgements produced
+            write_summary: Write operation summary from output port
+
+        Returns:
+            Complete InferRunSummary with all statistics
+        """
+        # Calculate aggregate statistics from judgements (domain logic)
+        stats = calculate_aggregate_statistics(llm_judgements)
+
+        # Construct summary with all computed data
+        return InferRunSummary(
+            start_time=start_time,
+            end_time=datetime.now(),
+            write_summary=write_summary,
+            judgement_count=stats["judgement_count"],
+            error_count=stats["error_count"],
+            total_latency_ms=stats["total_latency_ms"],
+            avg_latency_ms=stats["avg_latency_ms"],
+            warnings_summary=stats["warnings_summary"],
+        )
+
     def _finalize_run(
         self,
         summary: InferRunSummary,
@@ -391,8 +402,9 @@ class InferenceApplication(ForRunningInference):
         logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=summary.judgement_count)
 
         # Write summary to disk
-        write_standalone_summary(summary, run_dir)
-        logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(run_dir / "summary.json"))
+        summary_path = run_dir / "summary.json"
+        summary_path.write_text(summary.model_dump_json(indent=2), encoding="utf-8")
+        logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(summary_path))
 
         # Log final statistics
         logger.info(

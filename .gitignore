@@ -21,3 +21,5 @@ artifacts/runs/*/test/
 # Ignore other artifact directories
 artifacts/cache/
 artifacts/tmp/
+# temporary repository
+bluezone/

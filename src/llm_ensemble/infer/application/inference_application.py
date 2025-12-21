@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Optional
 import structlog
 
-from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
+from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement, LLMJudgementBuilder
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
@@ -170,25 +170,24 @@ class InferenceApplication(ForRunningInference):
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
 
-                # Build prompt text
-                prompt_text = self.prompt_builder.build_prompt(dataset_sample)
+                # Initialize builder for this sample
+                builder = LLMJudgementBuilder(dataset_sample)
 
-                # Run inference (model_config was passed at provider initialization)
+                # Step 1: Build prompt
+                prompt_text = self.prompt_builder.build_prompt(dataset_sample)
+                builder.with_prompt(prompt_text)
+
+                # Step 2: Run inference (model_config was passed at provider initialization)
                 logger.info(InferLogEvent.SENDING_REQUEST)
                 raw_response_text, llm_invocation_metrics = self.llm_provider.infer(prompt_text)
+                builder.with_llm_response(raw_response_text, llm_invocation_metrics)
 
-                # Parse response (returns tuple of score and warnings)
+                # Step 3: Parse response (returns tuple of score and warnings)
                 llm_score, parser_warnings = self.response_parser.parse(raw_response_text)
+                builder.with_parsed_score(llm_score, parser_warnings)
 
-                # Create judgement with flat structure (no configs)
-                judgement = LLMJudgement(
-                    dataset_sample=dataset_sample,
-                    prompt_text=prompt_text,
-                    response_text=raw_response_text,
-                    llm_invocation_metrics=llm_invocation_metrics,
-                    llm_score=llm_score,
-                    parser_warnings=parser_warnings,
-                )
+                # Build complete judgement
+                judgement = builder.build()
 
                 # Log each completed judgement
                 extracted_score = judgement.llm_score.label.value if judgement.llm_score and judgement.llm_score.label else "null"

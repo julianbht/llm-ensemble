@@ -46,9 +46,9 @@ from llm_ensemble.infer.application.ports.driven.prompt_builder_port import Prom
 
 from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
-from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_name import generate_run_name
+from llm_ensemble.libs.runtime.run_manager import create_run_directory, write_summary
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 
@@ -279,8 +279,7 @@ class InferenceApplication(ForRunningInference):
         Returns:
             Path to run directory
         """
-        run_dir = PathManager.get_run_dir("infer", run_name, official)
-        run_dir.mkdir(parents=True, exist_ok=True)
+        run_dir = create_run_directory("infer", run_name, official)
 
         # Create tag symlink if requested
         if tag:
@@ -394,8 +393,7 @@ class InferenceApplication(ForRunningInference):
             logger: Configured logger instance
         """
         # Write summary to disk
-        summary_path = run_dir / "summary.json"
-        summary_path.write_text(summary.model_dump_json(indent=2), encoding="utf-8")
+        summary_path = write_summary(summary, run_dir)
         logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(summary_path))
 
         # Log file location

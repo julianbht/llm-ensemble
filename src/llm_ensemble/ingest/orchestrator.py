@@ -17,7 +17,7 @@ from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.logging.log_events import IngestLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
-from llm_ensemble.libs.runtime.run_summary_builder import write_standalone_summary
+from llm_ensemble.libs.runtime.run_manager import create_run_directory, write_summary
 from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.logging import configure_logger
@@ -80,9 +80,8 @@ def run_ingest(
         notes=notes,
     )
 
-    # Get run directory from run_info and create it
-    run_dir = run_info.run_dir
-    run_dir.mkdir(parents=True, exist_ok=True)
+    # Create run directory
+    run_dir = create_run_directory("ingest", run_name, official)
 
     # Create tag file if tag provided
     if tag:
@@ -129,9 +128,9 @@ def run_ingest(
             limit=limit,
         )
 
-        # Write standalone summary.json for convenience (not source of truth)
-        write_standalone_summary(summary, run_dir)
-        logger.info(IngestLogEvent.INGEST_SUMMARY_WRITTEN, path=str(run_dir / "summary.json"))
+        # Write summary.json
+        summary_path = write_summary(summary, run_dir)
+        logger.info(IngestLogEvent.INGEST_SUMMARY_WRITTEN, path=str(summary_path))
 
     except Exception as e:
         logger.error(IngestLogEvent.INGEST_FAILED, error=str(e))

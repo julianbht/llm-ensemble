@@ -150,7 +150,7 @@ class DBWriter(OutputPort):
             raise RuntimeError("InferRunConfig not initialized")
 
         # Track dataset_sample ID for fingerprint computation in close()
-        self._dataset_sample_ids.append(judgement.llm_prompt.dataset_sample.id)
+        self._dataset_sample_ids.append(judgement.dataset_sample.id)
 
         # Upsert LLMPromptText
         llm_prompt_text_id = self._upsert_llm_prompt_text(judgement)
@@ -166,7 +166,7 @@ class DBWriter(OutputPort):
         llm_judgement_orm = llm_judgement_to_orm(
             judgement,
             self._infer_run_id,  # Temporary - will be updated to infer_run_output_id in close()
-            judgement.llm_prompt.dataset_sample.id,
+            judgement.dataset_sample.id,
             llm_prompt_text_id,
             llm_response_text_id,
             llm_score_id,
@@ -347,7 +347,7 @@ class DBWriter(OutputPort):
         """Upsert LLMPromptText and return its ID."""
         prompt_text_id = uuid.uuid4()
         llm_prompt_text_orm = llm_prompt_text_to_orm(
-            judgement.llm_prompt.prompt_text,
+            judgement.prompt_text,
             prompt_text_id,
         )
         try:
@@ -361,14 +361,14 @@ class DBWriter(OutputPort):
             self._write_summary.add_llm_prompts(created=0, skipped=1)
             # On duplicate, query to get existing ID
             stmt = self._session.query(LLMPromptTextORM).filter_by(
-                prompt_text=judgement.llm_prompt.prompt_text
+                prompt_text=judgement.prompt_text
             )
             existing = stmt.first()
             return existing.id
 
     def _upsert_llm_response_text(self, judgement: LLMJudgement) -> uuid.UUID:
         """Upsert LLMResponseText and return its ID."""
-        response_text = judgement.llm_score.llm_response_text if judgement.llm_score else ""
+        response_text = judgement.response_text
         response_text_id = uuid.uuid4()
         response_text_orm = llm_response_text_to_orm(response_text, response_text_id)
         try:

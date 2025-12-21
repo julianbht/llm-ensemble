@@ -12,8 +12,8 @@ To add a new parser:
 from __future__ import annotations
 
 from llm_ensemble.infer.application.ports.driven.response_parser_port import ResponseParserPort
-from llm_ensemble.infer.adapters.parsers.thomas_simple_parser import ThomasSimpleParser
-from llm_ensemble.infer.adapters.parsers.thomas_advanced_parser import ThomasAdvancedParser
+from llm_ensemble.infer.adapters.driven.parsers.thomas_simple_parser import ThomasSimpleParser
+from llm_ensemble.infer.adapters.driven.parsers.thomas_advanced_parser import ThomasAdvancedParser
 
 
 class ParserAdapterFactory:

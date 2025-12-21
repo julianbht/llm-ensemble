@@ -22,10 +22,10 @@ from llm_ensemble.infer.application.ports.driving.for_running_inference import F
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 
-from llm_ensemble.infer.adapters.io_factory import IOAdapterFactory
-from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
-from llm_ensemble.infer.adapters.prompt_factory import PromptAdapterFactory
-from llm_ensemble.infer.adapters.parser_factory import ParserAdapterFactory
+from llm_ensemble.infer.adapters.driven.io_factory import IOAdapterFactory
+from llm_ensemble.infer.adapters.driven.provider_factory import ProviderFactory
+from llm_ensemble.infer.adapters.driven.prompt_factory import PromptAdapterFactory
+from llm_ensemble.infer.adapters.driven.parser_factory import ParserAdapterFactory
 
 from llm_ensemble.infer.startup.config_loader import load_model_config, load_retry_config
 

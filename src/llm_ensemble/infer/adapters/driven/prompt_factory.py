@@ -12,8 +12,8 @@ To add a new prompt:
 from __future__ import annotations
 
 from llm_ensemble.infer.application.ports.driven.prompt_builder_port import PromptBuilderPort
-from llm_ensemble.infer.adapters.prompts.thomas_simple_prompt_builder import ThomasSimplePromptBuilder
-from llm_ensemble.infer.adapters.prompts.thomas_advanced_prompt_builder import ThomasAdvancedPromptBuilder
+from llm_ensemble.infer.adapters.driven.prompts.thomas_simple_prompt_builder import ThomasSimplePromptBuilder
+from llm_ensemble.infer.adapters.driven.prompts.thomas_advanced_prompt_builder import ThomasAdvancedPromptBuilder
 
 
 class PromptAdapterFactory:

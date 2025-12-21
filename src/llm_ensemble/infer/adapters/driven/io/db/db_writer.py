@@ -33,7 +33,7 @@ from llm_ensemble.libs.db import (
     get_session,
     compute_judged_dataset_fingerprint,
 )
-from llm_ensemble.infer.adapters.io.db.orms import (
+from llm_ensemble.infer.adapters.driven.io.db.orms import (
     ProviderORM,
     ModelConfigORM,
     PromptBuilderORM,
@@ -48,7 +48,7 @@ from llm_ensemble.infer.adapters.io.db.orms import (
     LLMScoreORM,
     LLMJudgementORM,
 )
-from llm_ensemble.infer.adapters.io.db.mappers_to_orm import (
+from llm_ensemble.infer.adapters.driven.io.db.mappers_to_orm import (
     provider_to_orm,
     model_config_to_orm,
     prompt_builder_to_orm,

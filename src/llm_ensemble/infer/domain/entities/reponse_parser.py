@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
-class Parser(BaseModel):
+class ResponseParser(BaseModel):
     """Response parser entity.
 
     Represents which parser was used to extract structured scores from LLM responses.

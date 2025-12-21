@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
-from llm_ensemble.infer.domain.entities.parser import Parser
+from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
 
 
 class PromptTemplate(BaseModel):
@@ -37,7 +37,7 @@ class PromptTemplate(BaseModel):
         description="Prompt builder metadata (id, name)"
     )
 
-    response_parser: Parser = Field(
+    response_parser: ResponseParser = Field(
         ...,
         description="Response parser metadata (id, name)",
         alias="response_text_parser"

@@ -16,7 +16,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
+from llm_ensemble.infer.domain.entities.infer_run_summary import InferRunSummary
 
 
 class ForRunningInference(ABC):

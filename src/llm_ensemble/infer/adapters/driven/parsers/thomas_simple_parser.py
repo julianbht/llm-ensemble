@@ -12,7 +12,7 @@ from typing import Optional
 
 from llm_ensemble.infer.application.ports.driven.response_parser_port import ResponseParserPort
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
-from llm_ensemble.infer.domain.entities.parser import Parser
+from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
 from llm_ensemble.infer.schemas.warnings import ParserWarning, ParserWarningCode
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.schemas import RelevanceScore
@@ -30,7 +30,7 @@ class ThomasSimpleParser(ResponseParserPort):
 
     def __init__(self):
         """Initialize parser and create cached parser entity."""
-        self._parser = Parser(
+        self._parser = ResponseParser(
             id=self.PARSER_ID,
             name=self.PARSER_NAME,
             version="1.0"
@@ -69,7 +69,7 @@ class ThomasSimpleParser(ResponseParserPort):
 
         return score, warnings
 
-    def get_parser(self) -> Parser:
+    def get_parser(self) -> ResponseParser:
         """Get Parser metadata for this adapter.
 
         Returns:

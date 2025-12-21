@@ -8,7 +8,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
-from llm_ensemble.infer.domain.entities.parser import Parser
+from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
 from llm_ensemble.infer.schemas.warnings import BaseWarning
 
 
@@ -46,7 +46,7 @@ class ResponseParserPort(ABC):
         pass
 
     @abstractmethod
-    def get_parser(self) -> Parser:
+    def get_parser(self) -> ResponseParser:
         """Get Parser metadata for this adapter.
 
         Returns:

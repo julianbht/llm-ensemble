@@ -23,7 +23,7 @@ from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
-from llm_ensemble.infer.domain.entities.parser import Parser
+from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
 from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.domain.entities.prompt_template import PromptTemplate
 from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunContext
@@ -119,7 +119,7 @@ def prompt_builder_to_orm(prompt_builder: PromptBuilder) -> PromptBuilderORM:
 # Parser Mappers
 # ============================================================================
 
-def parser_to_orm(parser: Parser) -> ParserORM:
+def parser_to_orm(parser: ResponseParser) -> ParserORM:
     """Convert Parser domain object to ParserORM.
 
     Args:

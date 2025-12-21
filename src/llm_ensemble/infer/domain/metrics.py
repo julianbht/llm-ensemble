@@ -1,16 +1,7 @@
 """Domain logic for inference metrics calculation."""
 
-from typing import Optional, TypedDict
+from typing import Optional
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-
-
-class AggregateStatistics(TypedDict):
-    """Aggregate statistics calculated from a collection of judgements."""
-    judgement_count: int
-    error_count: int
-    total_latency_ms: float
-    avg_latency_ms: float
-    warnings_summary: Optional[dict[str, int]]
 
 
 def get_extracted_score(judgement: LLMJudgement) -> Optional[int]:
@@ -56,7 +47,7 @@ def calculate_agreement(judgement: LLMJudgement) -> int:
                  judgement.llm_score.label.value == judgement.dataset_sample.judging_sample.gold_score.value) else 0
 
 
-def calculate_aggregate_statistics(judgements: list[LLMJudgement]) -> AggregateStatistics:
+def calculate_aggregate_statistics(judgements: list[LLMJudgement]) -> tuple[int, int, float, float, dict[str, int] | None]:
     """Calculate aggregate statistics from collection of judgements.
     
     Business rules:
@@ -65,10 +56,10 @@ def calculate_aggregate_statistics(judgements: list[LLMJudgement]) -> AggregateS
     - Warnings aggregated by type
     
     Args:
-        judgements: List of LLM judgements to aggregate
+        judgements: List of all LLM judgements produced
         
     Returns:
-        AggregateStatistics with counts, latencies, and warnings summary
+        Tuple of (judgement_count, error_count, total_latency_ms, avg_latency_ms, warnings_summary)
     """
     count = len(judgements)
     error_count = sum(1 for j in judgements if j.llm_score is None or j.llm_score.label is None)
@@ -82,10 +73,10 @@ def calculate_aggregate_statistics(judgements: list[LLMJudgement]) -> AggregateS
             warning_type = warning.__class__.__name__
             warnings_summary[warning_type] = warnings_summary.get(warning_type, 0) + 1
     
-    return {
-        "judgement_count": count,
-        "error_count": error_count,
-        "total_latency_ms": total_latency_ms,
-        "avg_latency_ms": avg_latency_ms,
-        "warnings_summary": warnings_summary if warnings_summary else None,
-    }
+    return (
+        count,
+        error_count,
+        total_latency_ms,
+        avg_latency_ms,
+        warnings_summary if warnings_summary else None,
+    )

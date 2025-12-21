@@ -26,7 +26,7 @@ from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.domain.metrics import (
     calculate_agreement,
-    build_infer_run_summary,
+    calculate_aggregate_statistics,
     calculate_latency_seconds,
     get_extracted_score,
 )
@@ -361,25 +361,31 @@ class InferenceApplication(ForRunningInference):
         Returns:
             Complete InferRunSummary with all statistics
         """
-        # Calculate aggregate statistics from judgements (domain logic)
-        stats = calculate_aggregate_statistics(llm_judgements)
-
-        # Construct summary with all computed data
+        # Calculate domain statistics
+        (
+            judgement_count,
+            error_count,
+            total_latency_ms,
+            avg_latency_ms,
+            warnings_summary,
+        ) = calculate_aggregate_statistics(llm_judgements)
+        
+        # Construct Pydantic summary (application responsibility)
         return InferRunSummary(
             start_time=start_time,
             end_time=datetime.now(),
             write_summary=write_summary,
-            judgement_count=stats["judgement_count"],
-            error_count=stats["error_count"],
-            total_latency_ms=stats["total_latency_ms"],
-            avg_latency_ms=stats["avg_latency_ms"],
-            warnings_summary=stats["warnings_summary"],
+            judgement_count=judgement_count,
+            error_count=error_count,
+            total_latency_ms=total_latency_ms,
+            avg_latency_ms=avg_latency_ms,
+            warnings_summary=warnings_summary,
         )
 
     def _finalize_run(
         self,
         summary: InferRunSummary,
-        run_dir: "Path",
+        run_dir: Path,
         logger: structlog.stdlib.BoundLogger,
     ) -> None:
         """Finalize backend outputs: write summary to disk and log completion.

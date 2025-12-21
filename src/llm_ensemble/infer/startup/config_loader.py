@@ -7,7 +7,6 @@ domain entities. This keeps the domain models pure (no load methods on schemas).
 """
 
 from __future__ import annotations
-from pathlib import Path
 
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.domain.entities.retry_config_schema import RetryConfig

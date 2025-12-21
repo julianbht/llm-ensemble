@@ -303,7 +303,7 @@ class InferenceApplication(ForRunningInference):
         Returns:
             Configured structlog logger instance
         """
-        # Setup logging using injected config (configured output appears in driving adapter: terminal for CLI, CloudWatch for web, etc.)
+        # Setup logging using injected config
         log_file = run_dir / "run.log" if self.logging_config.save_logs else None
         logger = configure_logger(
             cli_name="infer",

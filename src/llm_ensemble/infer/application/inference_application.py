@@ -196,7 +196,7 @@ class InferenceApplication(ForRunningInference):
                 judgement = builder.build()
 
                 logger.info(
-                    InferLogEvent.RESPONSE_PARSED,
+                    InferLogEvent.JUDGEMENT_PROCESSED,
                     extracted_score=get_extracted_score(judgement),
                     gold_score=judgement.dataset_sample.judging_sample.gold_score.value,
                     agreement=calculate_agreement(judgement),

@@ -4,7 +4,8 @@ Defines the abstract contract that all LLM provider adapters must implement.
 This allows the orchestrator to depend on an abstraction rather than concrete
 provider implementations (OpenRouter, Ollama, HuggingFace, etc.).
 
-Pure interface - retry logic is handled by a separate wrapper.
+Pure interface - no constructor, only abstract methods.
+Each adapter defines its own constructor with whatever it needs.
 """
 
 from __future__ import annotations
@@ -12,44 +13,48 @@ from abc import ABC, abstractmethod
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
+from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
-from llm_ensemble.libs.logging import get_logger
 
 
 class LLMProviderPort(ABC):
     """Abstract interface for LLM inference providers.
+
+    Pure interface - adapters define their own constructors.
 
     Providers accept pre-built prompts and return raw responses.
     They do NOT build prompts or parse responses. The application
     use case (InferenceApplication) orchestrates all port interactions.
     """
 
-    def __init__(
-        self,
-        provider_name: str,
-        model_config: ModelConfig,
-        retry_config: RetryConfig,
-    ):
-        """Initialize provider with configuration.
-
-        Args:
-            provider_name: Provider identifier (from config, e.g., 'openrouter')
-            model_config: Complete model configuration (model_id, temperature, max_tokens, etc.)
-            retry_config: Retry configuration for exponential backoff
-        """
-        self.provider_name: str = provider_name
-        self.model_config: ModelConfig = model_config
-        self.retry_config: RetryConfig = retry_config
-        self.logger = get_logger(component=f"{provider_name}_provider")
-
-    def get_provider(self):
+    @abstractmethod
+    def get_provider(self) -> Provider:
         """Get Provider metadata for this adapter.
+
+        Adapter knows its own identity and version.
 
         Returns:
             Provider entity with name and version
         """
-        from llm_ensemble.infer.domain.entities.provider import Provider
-        return Provider(name=self.provider_name, version=self.VERSION)
+        pass
+
+    @abstractmethod
+    def get_model_config(self) -> ModelConfig:
+        """Get model configuration for this provider.
+
+        Returns:
+            ModelConfig entity used for inference
+        """
+        pass
+
+    @abstractmethod
+    def get_retry_config(self) -> RetryConfig:
+        """Get retry configuration for this provider.
+
+        Returns:
+            RetryConfig entity used for exponential backoff
+        """
+        pass
 
     @abstractmethod
     def infer(
@@ -58,7 +63,7 @@ class LLMProviderPort(ABC):
     ) -> tuple[str, LLMInvocationMetrics]:
         """Perform inference and return response with metrics.
 
-        Adapters implement the actual API call using the model_config and retry_config.
+        Adapters implement the actual API call using their model_config and retry_config.
         Returns the response text and invocation metrics (including retry count).
 
         Args:

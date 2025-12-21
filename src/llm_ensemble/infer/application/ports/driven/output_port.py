@@ -8,7 +8,6 @@ to work with any output format without coupling to a specific implementation.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo

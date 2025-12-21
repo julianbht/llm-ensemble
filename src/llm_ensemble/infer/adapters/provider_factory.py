@@ -1,29 +1,21 @@
 """Builder for provider adapters.
 
-Simple, explicit mapping of provider names to adapter classes.
-No decorators, no hidden registration - just a clear dictionary.
+Explicit instantiation of provider adapters with provider-specific constructors.
+Each provider adapter defines its own constructor signature and configuration needs.
 
 To add a new provider:
 1. Create adapter class that extends LLMProvider port
 2. Import it here
-3. Add to PROVIDERS dict
+3. Add explicit instantiation case in create() method
 """
 
 from __future__ import annotations
-from typing import Dict, Type
 
 from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.adapters.providers.openrouter_adapter import OpenRouterAdapter
 from llm_ensemble.infer.adapters.providers.ollama_adapter import OllamaAdapter
-
-
-# Explicit mapping of provider names to adapter classes
-PROVIDERS: Dict[str, Type[LLMProviderPort]] = {
-    "openrouter": OpenRouterAdapter,
-    "ollama": OllamaAdapter,
-}
 
 
 class ProviderFactory:
@@ -37,6 +29,9 @@ class ProviderFactory:
     ) -> LLMProviderPort:
         """Build and return a provider adapter instance.
 
+        Uses explicit instantiation per provider to allow provider-specific
+        constructor signatures and configuration.
+
         Args:
             provider_name: Name of the provider (e.g., 'openrouter', 'ollama')
             model_config: Complete model configuration (model_id, temperature, max_tokens, etc.)
@@ -48,20 +43,22 @@ class ProviderFactory:
         Raises:
             ValueError: If provider not found
         """
-        if provider_name not in PROVIDERS:
-            available = ", ".join(sorted(PROVIDERS.keys()))
+        if provider_name == "openrouter":
+            return OpenRouterAdapter(
+                model_config=model_config,
+                retry_config=retry_config,
+            )
+        elif provider_name == "ollama":
+            return OllamaAdapter(
+                model_config=model_config,
+                retry_config=retry_config,
+            )
+        else:
+            available = ", ".join(sorted(["openrouter", "ollama"]))
             raise ValueError(
                 f"Provider '{provider_name}' not found. "
                 f"Available: {available}"
             )
-
-        adapter_class = PROVIDERS[provider_name]
-
-        return adapter_class(
-            provider_name=provider_name,
-            model_config=model_config,
-            retry_config=retry_config,
-        )
 
     @staticmethod
     def list_available() -> list[str]:
@@ -70,7 +67,7 @@ class ProviderFactory:
         Returns:
             Sorted list of provider names
         """
-        return sorted(PROVIDERS.keys())
+        return sorted(["openrouter", "ollama"])
 
     @staticmethod
     def has_provider(provider_name: str) -> bool:
@@ -82,4 +79,4 @@ class ProviderFactory:
         Returns:
             True if provider exists
         """
-        return provider_name in PROVIDERS
+        return provider_name in ["openrouter", "ollama"]

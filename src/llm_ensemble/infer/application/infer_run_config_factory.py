@@ -37,15 +37,15 @@ class InferRunConfigFactory:
     ) -> InferRunConfig:
         """Create InferRunConfig from adapter instances."""
 
-        # Extract metadata from adapters
+        # Extract metadata from adapters using getter methods
         provider = llm_provider.get_provider()
-        model_config = llm_provider.model_config
-        retry_config = llm_provider.retry_config
+        model_config = llm_provider.get_model_config()
+        retry_config = llm_provider.get_retry_config()
         builder_entity = prompt_builder.get_builder()
         parser_entity = response_parser.get_parser()
         io_name = output_port.io_name
 
-        # Build PromptTemplate entity 
+        # Build PromptTemplate entity
         prompt_template = PromptTemplate(
             name=builder_entity.name,
             template_text=prompt_builder.get_template_text(),

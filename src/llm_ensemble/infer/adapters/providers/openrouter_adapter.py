@@ -15,6 +15,7 @@ from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocat
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
+from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 
 
@@ -22,10 +23,10 @@ class OpenRouterAdapter(LLMProviderPort):
     """OpenRouter implementation of the LLMProvider port."""
 
     VERSION = "1.0"
+    PROVIDER_NAME = "openrouter"
 
     def __init__(
         self,
-        provider_name: str,
         model_config: ModelConfig,
         retry_config: RetryConfig,
         api_key: Optional[str] = None,
@@ -34,22 +35,47 @@ class OpenRouterAdapter(LLMProviderPort):
         """Initialize OpenRouter adapter.
 
         Args:
-            provider_name: Provider identifier (from config, e.g., 'openrouter')
             model_config: Complete model configuration
             retry_config: Retry configuration for exponential backoff
             api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
             timeout: Request timeout in seconds (default: 30)
         """
-        super().__init__(provider_name, model_config, retry_config)
-
+        self.model_config = model_config
+        self.retry_config = retry_config
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         self.timeout = timeout
+        self.logger = get_logger(component=f"{self.PROVIDER_NAME}_provider")
 
         if not self.api_key:
             raise ValueError(
                 "OpenRouter API key required. Set OPENROUTER_API_KEY env var "
                 "or pass api_key parameter."
             )
+
+    def get_provider(self):
+        """Get Provider metadata for this adapter.
+
+        Returns:
+            Provider entity with name and version
+        """
+        from llm_ensemble.infer.domain.entities.provider import Provider
+        return Provider(name=self.PROVIDER_NAME, version=self.VERSION)
+
+    def get_model_config(self) -> ModelConfig:
+        """Get model configuration for this provider.
+
+        Returns:
+            ModelConfig entity used for inference
+        """
+        return self.model_config
+
+    def get_retry_config(self) -> RetryConfig:
+        """Get retry configuration for this provider.
+
+        Returns:
+            RetryConfig entity used for exponential backoff
+        """
+        return self.retry_config
 
     def infer(
         self,

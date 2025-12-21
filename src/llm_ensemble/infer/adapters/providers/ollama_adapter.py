@@ -6,16 +6,17 @@ from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocat
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
+from llm_ensemble.libs.logging import get_logger
 
 
 class OllamaAdapter(LLMProviderPort):
     """Ollama implementation of the LLMProvider port."""
 
     VERSION = "1.0"
+    PROVIDER_NAME = "ollama"
 
     def __init__(
         self,
-        provider_name: str,
         model_config: ModelConfig,
         retry_config: RetryConfig,
         base_url: str = "http://localhost:11434",
@@ -24,16 +25,41 @@ class OllamaAdapter(LLMProviderPort):
         """Initialize Ollama adapter.
 
         Args:
-            provider_name: Provider identifier (from config, e.g., 'ollama')
             model_config: Complete model configuration
             retry_config: Retry configuration for exponential backoff
             base_url: Ollama server URL (default: http://localhost:11434)
             timeout: Request timeout in seconds (default: 60)
         """
-        super().__init__(provider_name, model_config, retry_config)
-
+        self.model_config = model_config
+        self.retry_config = retry_config
         self.base_url = base_url
         self.timeout = timeout
+        self.logger = get_logger(component=f"{self.PROVIDER_NAME}_provider")
+
+    def get_provider(self):
+        """Get Provider metadata for this adapter.
+
+        Returns:
+            Provider entity with name and version
+        """
+        from llm_ensemble.infer.domain.entities.provider import Provider
+        return Provider(name=self.PROVIDER_NAME, version=self.VERSION)
+
+    def get_model_config(self) -> ModelConfig:
+        """Get model configuration for this provider.
+
+        Returns:
+            ModelConfig entity used for inference
+        """
+        return self.model_config
+
+    def get_retry_config(self) -> RetryConfig:
+        """Get retry configuration for this provider.
+
+        Returns:
+            RetryConfig entity used for exponential backoff
+        """
+        return self.retry_config
 
     def infer(
         self,

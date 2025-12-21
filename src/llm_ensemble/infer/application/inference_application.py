@@ -19,7 +19,8 @@ from pathlib import Path
 from typing import Optional
 import structlog
 
-from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement, LLMJudgementBuilder
+from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
+from llm_ensemble.infer.domain.llm_judgement_builder import LLMJudgementBuilder
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
@@ -178,7 +179,6 @@ class InferenceApplication(ForRunningInference):
                 builder.with_prompt(prompt_text)
 
                 # Step 2: Run inference (model_config was passed at provider initialization)
-                logger.info(InferLogEvent.SENDING_REQUEST)
                 raw_response_text, llm_invocation_metrics = self.llm_provider.infer(prompt_text)
                 builder.with_llm_response(raw_response_text, llm_invocation_metrics)
 

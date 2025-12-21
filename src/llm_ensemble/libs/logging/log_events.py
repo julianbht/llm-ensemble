@@ -40,7 +40,6 @@ class InferLogEvent(str, Enum):
     """Log events for infer orchestrator."""
 
     INFER_STARTED = "inference_started"
-    SENDING_REQUEST = "sending_request"
     RESPONSE_PARSED = "response_parsed"
     JUDGEMENT_METRICS = "judgement_metrics"
     RETRY_ATTEMPT = "retry_attempt"

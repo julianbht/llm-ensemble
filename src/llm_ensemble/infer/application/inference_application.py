@@ -14,7 +14,6 @@ Depends only on port abstractions for testability.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
@@ -83,6 +82,7 @@ class InferenceApplication(ForRunningInference):
         prompt_builder: PromptBuilderPort,
         llm_provider: LLMProviderPort,
         response_parser: ResponseParserPort,
+        logging_config: LoggingConfig,
     ):
         """Initialize inference use case with port dependencies.
 
@@ -92,12 +92,14 @@ class InferenceApplication(ForRunningInference):
             prompt_builder: Port for building prompts from samples
             llm_provider: Port for LLM inference
             response_parser: Port for parsing LLM responses
+            logging_config: Logging configuration (injected by composition root)
         """
         self.input_port = input_port
         self.output_port = output_port
         self.prompt_builder = prompt_builder
         self.llm_provider = llm_provider
         self.response_parser = response_parser
+        self.logging_config = logging_config
 
     def run_inference(
         self,
@@ -301,21 +303,17 @@ class InferenceApplication(ForRunningInference):
         Returns:
             Configured structlog logger instance
         """
-        # Load logging config from environment variable or use default
-        logging_config_name = os.getenv("LOGGING_CONFIG", "observability")
-        logging_config = LoggingConfig.load(logging_config_name)
-
-        # Setup logging (configured output appears in driving adapter: terminal for CLI, CloudWatch for web, etc.)
-        log_file = run_dir / "run.log" if logging_config.save_logs else None
+        # Setup logging using injected config (configured output appears in driving adapter: terminal for CLI, CloudWatch for web, etc.)
+        log_file = run_dir / "run.log" if self.logging_config.save_logs else None
         logger = configure_logger(
             cli_name="infer",
             run_name=run_name,
             run_type="test",  # Default, will be in run_info for manifest
-            pretty_print=logging_config.pretty_print,
-            save_logs=logging_config.save_logs,
+            pretty_print=self.logging_config.pretty_print,
+            save_logs=self.logging_config.save_logs,
             log_file_path=log_file,
-            console_level=logging_config.console_level,
-            file_level=logging_config.file_level,
+            console_level=self.logging_config.console_level,
+            file_level=self.logging_config.file_level,
         )
 
         return logger

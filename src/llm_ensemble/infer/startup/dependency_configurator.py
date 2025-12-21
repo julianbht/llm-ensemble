@@ -17,17 +17,20 @@ then uses the returned ForRunningInference interface to execute business logic.
 """
 from __future__ import annotations
 
+from typing import Optional
+
 from llm_ensemble.infer.application.inference_application import InferenceApplication
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 
 from llm_ensemble.infer.adapters.driven.io_factory import IOAdapterFactory
 from llm_ensemble.infer.adapters.driven.provider_factory import ProviderFactory
 from llm_ensemble.infer.adapters.driven.prompt_factory import PromptAdapterFactory
 from llm_ensemble.infer.adapters.driven.parser_factory import ParserAdapterFactory
 
-from llm_ensemble.infer.startup.config_loader import load_model_config, load_retry_config
+from llm_ensemble.infer.startup.config_loader import load_model_config, load_retry_config, load_logging_config
 
 
 def build_application(
@@ -36,6 +39,7 @@ def build_application(
     prompt_template_name: str,
     model_config_name: str,
     retry_config_name: str,
+    logging_config: Optional[LoggingConfig] = None,
 ) -> ForRunningInference:
     """Build and wire the inference application hexagon.
 
@@ -54,6 +58,8 @@ def build_application(
         prompt_template_name: Prompt template name (e.g., 'thomas-et-al')
         model_config_name: Model config name (e.g., 'gpt-oss-20b')
         retry_config_name: Retry config name (e.g., 'standard')
+        logging_config: Optional logging config (loads 'standard' if not provided).
+                       Tests can pass custom config to override.
 
     Returns:
         Application implementing ForRunningInference interface
@@ -62,6 +68,10 @@ def build_application(
     model_cfg = load_model_config(model_config_name)
     retry_cfg = load_retry_config(retry_config_name)
 
+    # Load logging config if not provided
+    if logging_config is None:
+        logging_config = load_logging_config("observability")
+
     # Build application hexagon with loaded configs
     return _build_application_hexagon(
         provider_name=provider_name,
@@ -69,6 +79,7 @@ def build_application(
         prompt_template_name=prompt_template_name,
         model_cfg=model_cfg,
         retry_cfg=retry_cfg,
+        logging_cfg=logging_config,
     )
 
 
@@ -78,6 +89,7 @@ def _build_application_hexagon(
     prompt_template_name: str,
     model_cfg: ModelConfig,
     retry_cfg: RetryConfig,
+    logging_cfg: LoggingConfig,
 ) -> InferenceApplication:
     """Build application hexagon by instantiating driven adapters and use case.
 
@@ -101,6 +113,7 @@ def _build_application_hexagon(
         prompt_template_name: Prompt template name for factory
         model_cfg: Loaded model configuration
         retry_cfg: Loaded retry configuration
+        logging_cfg: Loaded logging configuration
 
     Returns:
         InferenceUseCase - the application's driving port interface
@@ -118,4 +131,5 @@ def _build_application_hexagon(
         prompt_builder=prompt_builder,
         llm_provider=llm_provider,
         response_parser=response_parser,
+        logging_config=logging_cfg,
     )

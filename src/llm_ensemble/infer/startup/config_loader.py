@@ -11,6 +11,7 @@ from pathlib import Path
 
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.config.yaml_config_loader import load_yaml_config
 
@@ -28,7 +29,7 @@ def load_model_config(model_id: str) -> ModelConfig:
         FileNotFoundError: If config file doesn't exist
         ValueError: If YAML is invalid
     """
-    config_dir = PathManager.get_config_dir() / "models"
+    config_dir = PathManager.get_configs_dir() / "models"
     return load_yaml_config(
         config_name=model_id,
         config_dir=config_dir,
@@ -50,10 +51,32 @@ def load_retry_config(retry_id: str) -> RetryConfig:
         FileNotFoundError: If config file doesn't exist
         ValueError: If YAML is invalid
     """
-    config_dir = PathManager.get_config_dir() / "retry"
+    config_dir = PathManager.get_configs_dir() / "retry"
     return load_yaml_config(
         config_name=retry_id,
         config_dir=config_dir,
         schema=RetryConfig,
         config_type="RetryConfig",
+    )
+
+
+def load_logging_config(logging_id: str) -> LoggingConfig:
+    """Load logging configuration from YAML file.
+
+    Args:
+        logging_id: Logging configuration identifier (e.g., "standard", "observability")
+
+    Returns:
+        LoggingConfig with all settings loaded from YAML
+
+    Raises:
+        FileNotFoundError: If config file doesn't exist
+        ValueError: If YAML is invalid
+    """
+    config_dir = PathManager.get_configs_dir() / "logging"
+    return load_yaml_config(
+        config_name=logging_id,
+        config_dir=config_dir,
+        schema=LoggingConfig,
+        config_type="LoggingConfig",
     )

@@ -41,6 +41,7 @@ class InferLogEvent(str, Enum):
 
     INFER_STARTED = "inference_started"
     RESPONSE_PARSED = "response_parsed"
+    COST_CALCULATED = "cost_calculated"
     JUDGEMENT_METRICS = "judgement_metrics"
     RETRY_ATTEMPT = "retry_attempt"
     RETRY_EXHAUSTED = "retry_exhausted"

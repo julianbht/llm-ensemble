@@ -23,6 +23,7 @@ from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.llm_judgement_builder import LLMJudgementBuilder
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
+from llm_ensemble.infer.domain.metrics import calculate_agreement
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.application.infer_run_config_factory import InferRunConfigFactory
 
@@ -200,12 +201,10 @@ class InferenceApplication(ForRunningInference):
                     latency_s=f"{latency_s:.1f}",
                 )
 
-                # Log metrics for observability dashboard (cost, agreement, latency)
-                cost_usd = judgement.llm_invocation_metrics.cost_estimate_usd or 0.0
-                agreement = 1 if extracted_score == gold_score else 0
+                # Log agreement metric (domain calculation)
+                agreement = calculate_agreement(judgement)
                 logger.info(
                     InferLogEvent.JUDGEMENT_METRICS,
-                    cost_estimate_usd=cost_usd,
                     agreement=agreement,
                     latency_s=latency_s,
                 )

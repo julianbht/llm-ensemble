@@ -107,7 +107,7 @@ class OutputPort(ABC):
         """
         pass
 
-    def __enter__(self) -> "OutputPort":
+    def __enter__(self) -> OutputPort:
         """Enter context manager.
 
         Returns:

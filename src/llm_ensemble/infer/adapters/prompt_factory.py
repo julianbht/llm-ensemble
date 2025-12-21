@@ -1,32 +1,19 @@
 """Builder for prompt adapters.
 
-Simple, explicit mapping of prompt names to adapter classes.
-No decorators, no hidden registration - just a clear dictionary.
+Explicit instantiation of prompt adapters with prompt-specific constructors.
+Each prompt adapter defines its own constructor signature and configuration needs.
 
 To add a new prompt:
 1. Create adapter class that extends PromptBuilder port
 2. Import it here
-3. Add to PROMPTS dict
+3. Add explicit instantiation case in create() method
 """
 
 from __future__ import annotations
-from typing import Dict, Type
 
 from llm_ensemble.infer.application.ports.driven.prompt_builder_port import PromptBuilderPort
-from llm_ensemble.infer.adapters.prompts.thomas_simple_prompt_builder import (
-    ThomasSimplePromptBuilder,
-)
-from llm_ensemble.infer.adapters.prompts.thomas_advanced_prompt_builder import (
-    ThomasAdvancedPromptBuilder,
-)
-
-
-# Explicit mapping of prompt names to adapter classes
-# Each adapter owns its template as a class constant
-PROMPTS: Dict[str, Type[PromptBuilderPort]] = {
-    "thomas-simple": ThomasSimplePromptBuilder,
-    "thomas-advanced": ThomasAdvancedPromptBuilder,
-}
+from llm_ensemble.infer.adapters.prompts.thomas_simple_prompt_builder import ThomasSimplePromptBuilder
+from llm_ensemble.infer.adapters.prompts.thomas_advanced_prompt_builder import ThomasAdvancedPromptBuilder
 
 
 class PromptAdapterFactory:
@@ -36,8 +23,11 @@ class PromptAdapterFactory:
     def create(prompt_name: str) -> PromptBuilderPort:
         """Build and return a prompt adapter instance.
 
+        Uses explicit instantiation per prompt to allow prompt-specific
+        constructor signatures and configuration.
+
         Args:
-            prompt_name: Name of the prompt (e.g., 'thomas-simple')
+            prompt_name: Name of the prompt (e.g., 'thomas-simple', 'thomas-advanced')
 
         Returns:
             Instantiated prompt adapter
@@ -45,15 +35,16 @@ class PromptAdapterFactory:
         Raises:
             ValueError: If prompt not found
         """
-        if prompt_name not in PROMPTS:
-            available = ", ".join(sorted(PROMPTS.keys()))
+        if prompt_name == "thomas-simple":
+            return ThomasSimplePromptBuilder()
+        elif prompt_name == "thomas-advanced":
+            return ThomasAdvancedPromptBuilder()
+        else:
+            available = ", ".join(sorted(["thomas-simple", "thomas-advanced"]))
             raise ValueError(
                 f"Prompt '{prompt_name}' not found. "
                 f"Available: {available}"
             )
-
-        adapter_class = PROMPTS[prompt_name]
-        return adapter_class()
 
     @staticmethod
     def list_available() -> list[str]:
@@ -62,7 +53,7 @@ class PromptAdapterFactory:
         Returns:
             Sorted list of prompt names
         """
-        return sorted(PROMPTS.keys())
+        return sorted(["thomas-simple", "thomas-advanced"])
 
     @staticmethod
     def has_prompt(prompt_name: str) -> bool:
@@ -74,7 +65,7 @@ class PromptAdapterFactory:
         Returns:
             True if prompt exists
         """
-        return prompt_name in PROMPTS
+        return prompt_name in ["thomas-simple", "thomas-advanced"]
 
     @staticmethod
     def get_description(prompt_name: str) -> str:
@@ -89,12 +80,18 @@ class PromptAdapterFactory:
         Raises:
             ValueError: If prompt not found
         """
-        if prompt_name not in PROMPTS:
-            available = ", ".join(sorted(PROMPTS.keys()))
+        # Map prompt names to adapter classes for descriptions
+        prompt_classes = {
+            "thomas-simple": ThomasSimplePromptBuilder,
+            "thomas-advanced": ThomasAdvancedPromptBuilder,
+        }
+
+        if prompt_name not in prompt_classes:
+            available = ", ".join(sorted(["thomas-simple", "thomas-advanced"]))
             raise ValueError(
                 f"Prompt '{prompt_name}' not found. "
                 f"Available: {available}"
             )
 
-        adapter_class = PROMPTS[prompt_name]
+        adapter_class = prompt_classes[prompt_name]
         return adapter_class.__doc__.strip().split('\n')[0] if adapter_class.__doc__ else prompt_name

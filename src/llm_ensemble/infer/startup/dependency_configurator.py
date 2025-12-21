@@ -24,7 +24,8 @@ from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
 
 from llm_ensemble.infer.adapters.io_factory import IOAdapterFactory
 from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
-from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
+from llm_ensemble.infer.adapters.prompt_factory import PromptAdapterFactory
+from llm_ensemble.infer.adapters.parser_factory import ParserAdapterFactory
 
 from llm_ensemble.infer.startup.config_loader import load_model_config, load_retry_config
 
@@ -106,8 +107,8 @@ def _build_application_hexagon(
     """
     input_port = IOAdapterFactory.create_reader(io_name)
     output_port = IOAdapterFactory.create_writer(io_name)
-    prompt_builder = PromptTemplateFactory.create_builder(prompt_template_name)
-    response_parser = PromptTemplateFactory.create_parser(prompt_template_name)
+    prompt_builder = PromptAdapterFactory.create(prompt_template_name)
+    response_parser = ParserAdapterFactory.create(prompt_template_name)
     llm_provider = ProviderFactory.create(provider_name, model_cfg, retry_cfg)
 
     # Assemble application hexagon (use case with driven ports)

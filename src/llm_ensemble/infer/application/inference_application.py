@@ -26,11 +26,12 @@ from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.domain.metrics import (
     calculate_agreement,
-    calculate_aggregate_statistics,
+    build_infer_run_summary,
     calculate_latency_seconds,
     get_extracted_score,
 )
 from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
+from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.application.infer_run_config_factory import InferRunConfigFactory
 
 # Driving port (application implements this)
@@ -208,21 +209,11 @@ class InferenceApplication(ForRunningInference):
                 # Collect for summary statistics
                 llm_judgements.append(judgement)
 
-        # Construct summary with all computed data
+        # Retrieve aggregate write summary after context manager closes (writer logged directly)
         write_summary = self.output_port.get_summary()
-        stats = calculate_aggregate_statistics(llm_judgements)
-        summary = InferRunSummary(
-            start_time=start_time,
-            end_time=datetime.now(),
-            write_summary=write_summary,
-            judgement_count=stats["judgement_count"],
-            error_count=stats["error_count"],
-            total_latency_ms=stats["total_latency_ms"],
-            avg_latency_ms=stats["avg_latency_ms"],
-            warnings_summary=stats["warnings_summary"],
-        )
 
-        # Finalize outputs (write summary, log completion)
+        # Build and finalize summary
+        summary = self._build_summary(start_time, llm_judgements, write_summary)
         self._finalize_run(summary, run_dir, logger)
 
         # Return finalized summary
@@ -358,7 +349,7 @@ class InferenceApplication(ForRunningInference):
         self,
         start_time: datetime,
         llm_judgements: list[LLMJudgement],
-        write_summary: "WriteSummary",
+        write_summary: WriteSummary,
     ) -> InferRunSummary:
         """Build run summary from execution results.
 

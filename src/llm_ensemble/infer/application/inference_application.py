@@ -32,6 +32,7 @@ from llm_ensemble.infer.domain.metrics import (
 from llm_ensemble.infer.domain.entities.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.application.write_summary import WriteSummary
 from llm_ensemble.infer.domain.infer_run_config_factory import InferRunConfigFactory
+from llm_ensemble.infer.domain.dataset_utils import slice_dataset, resolve_slice_indices
 
 # Driving port (application implements this)
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
@@ -157,9 +158,8 @@ class InferenceApplication(ForRunningInference):
         resolved_input_run_name = TagManager.resolve_input(input_run_name, "ingest")
         normalized_dataset = self.input_port.read(resolved_input_run_name)
 
-        # Compute slice that we are trying to judge
-        actual_start_idx = start_idx if start_idx is not None else 0
-        actual_end_idx = end_idx if end_idx is not None else len(normalized_dataset.samples)
+        # Slice to get samples that we want to judge
+        actual_start_idx, actual_end_idx = resolve_slice_indices(normalized_dataset, start_idx, end_idx)
         samples_to_process = normalized_dataset.samples[actual_start_idx:actual_end_idx]
 
         # Collect judgements for summary statistics
@@ -238,7 +238,7 @@ class InferenceApplication(ForRunningInference):
         Returns:
             InferRunConfig for manifest persistence
         """
-        # Extract domain entities from adapters (application responsibility)
+        # Extract domain entities from adapters
         provider = self.llm_provider.get_provider()
         model_config = self.llm_provider.get_model_config()
         retry_config = self.llm_provider.get_retry_config()
@@ -247,7 +247,7 @@ class InferenceApplication(ForRunningInference):
         template_text = self.prompt_builder.get_template_text()
         io_name = self.output_port.io_name
 
-        # Delegate to domain factory for assembly (domain responsibility)
+        # Delegate to domain factory for assembly
         return InferRunConfigFactory.create(
             provider=provider,
             model_config=model_config,
@@ -278,6 +278,7 @@ class InferenceApplication(ForRunningInference):
             self.llm_provider.get_model_config().name_hint,
             self.prompt_builder.get_builder().name,
             self.llm_provider.get_provider().name,
+            self.output_port.io_name,
         ]
         return generate_run_name(name_hints)
 
@@ -324,7 +325,7 @@ class InferenceApplication(ForRunningInference):
         logger = configure_logger(
             cli_name="infer",
             run_name=run_name,
-            run_type="test",  # Default, will be in run_info for manifest
+            run_type="test",
             pretty_print=self.logging_config.pretty_print,
             save_logs=self.logging_config.save_logs,
             log_file_path=log_file,

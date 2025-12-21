@@ -13,7 +13,7 @@ from typing import Optional
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
-from llm_ensemble.infer.schemas.write_summary import WriteSummary
+from llm_ensemble.infer.application.write_summary import WriteSummary
 from llm_ensemble.infer.application.ports.driven.output_port import OutputPort
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.utils.entity_filenames import get_entity_filename

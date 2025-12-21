@@ -166,7 +166,7 @@ class InferenceApplication(ForRunningInference):
         run_info = self._build_run_info(run_name, official, notes)
 
         # Open writer for streaming
-        with self.output_port.open(run_dir, run_info, run_config, normalized_dataset) as writer:
+        with self.output_port.open(run_dir, run_info, run_config) as writer:
 
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:

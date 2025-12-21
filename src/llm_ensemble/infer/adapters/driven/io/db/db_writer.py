@@ -25,7 +25,6 @@ from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
 from llm_ensemble.infer.application.ports.driven.output_port import OutputPort
-from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.db import (
@@ -102,15 +101,13 @@ class DBWriter(OutputPort):
         run_dir: Path,
         run_info: InferRunInfo,
         infer_run_config: InferRunConfig,
-        normalized_dataset: NormalizedDataset,
     ) -> "DBWriter":
         """Open database session and initialize run metadata.
 
         Args:
             run_dir: Run directory (not used for DB writer)
             run_info: Run metadata (git info, timestamps)
-            infer_run_config: Complete configuration bundle
-            normalized_dataset: Input dataset for computing start/end indices
+            infer_run_config: Complete configuration bundle with resolved indices
 
         Returns:
             Self for method chaining
@@ -121,10 +118,10 @@ class DBWriter(OutputPort):
         engine = get_engine()
         self._session = get_session(engine)
 
-        # Compute actual start_idx and end_idx from infer_run_config.ingest_run_context
+        # Get resolved indices from infer_run_config
         context = infer_run_config.ingest_run_context
-        start_idx = context.start_idx if context.start_idx is not None else 0
-        end_idx = context.end_idx if context.end_idx is not None else len(normalized_dataset.samples)
+        start_idx = context.start_idx
+        end_idx = context.end_idx
 
         # Create InferRun (always new - unique run_name constraint)
         infer_run_orm = infer_run_info_to_orm(run_info, start_idx, end_idx)

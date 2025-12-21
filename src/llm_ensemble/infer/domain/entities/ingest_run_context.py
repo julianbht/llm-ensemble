@@ -18,7 +18,6 @@ Responsibilities:
 """
 
 from __future__ import annotations
-from typing import Optional
 from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -29,6 +28,8 @@ class IngestRunContext(BaseModel):
     Contains CLI arguments that control execution behavior:
     - Input source: which ingest run to read samples from
     - Index range: which samples to process (start_idx, end_idx)
+
+    All values are resolved (no Optional/None) - indices default to 0 and dataset length.
 
     This represents "how the run was executed" (input source, sample selection),
     separate from "what configuration was used" (InferRunConfig) and
@@ -45,14 +46,14 @@ class IngestRunContext(BaseModel):
         description="Ingest run name to read samples from (e.g., 'my_ingest_run')"
     )
 
-    start_idx: Optional[int] = Field(
-        default=None,
-        description="Start index into NormalizedDataset.samples (0-indexed, inclusive, None = start from beginning)"
+    start_idx: int = Field(
+        ...,
+        description="Start index into NormalizedDataset.samples (0-indexed, inclusive, resolved from CLI arg or 0)"
     )
 
-    end_idx: Optional[int] = Field(
-        default=None,
-        description="End index into NormalizedDataset.samples (exclusive, None = process until end)"
+    end_idx: int = Field(
+        ...,
+        description="End index into NormalizedDataset.samples (exclusive, resolved from CLI arg or dataset length)"
     )
 
     model_config = ConfigDict(frozen=True)

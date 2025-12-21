@@ -13,7 +13,6 @@ from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.schemas.write_summary import WriteSummary
-from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 
 
 class OutputPort(ABC):
@@ -49,28 +48,23 @@ class OutputPort(ABC):
         run_dir: Path,
         run_info: InferRunInfo,
         run_config: InferRunConfig,
-        normalized_dataset: NormalizedDataset,
     ) -> OutputPort:
-        """Initialize writer with run directory, run info, run config, and input dataset.
+        """Initialize writer with run directory, run info, and run config.
 
         The run_info contains metadata about the inference run (git SHA, timestamps, notes).
 
         The run_config contains all configuration used for inference (model config, adapters,
-        retry config, execution context with input source and sample range).
+        retry config, execution context with input source and resolved sample range).
 
-        The normalized_dataset is used to link InferRun to the source ingest run for provenance.
-
-        All other metadata (provider, model_config, prompt_template, parser)
-        is available from run_config and can be extracted during write_one().
+        All metadata (provider, model_config, prompt_template, parser, indices)
+        is available from run_config and can be extracted during open() or write_one().
 
         For SQL writers, this creates the InferRun entity and prepares for streaming writes.
-        JudgedDataset is created on first write_one() with metadata from the judgement.
 
         Args:
             run_dir: Run directory where output should be written (writer determines file structure)
             run_info: Inference run metadata (git state, timestamps, notes)
-            run_config: Configuration bundle (model, adapters, retry, execution context)
-            normalized_dataset: Input dataset being processed (used for provenance linking)
+            run_config: Configuration bundle (model, adapters, retry, execution context with resolved indices)
 
         Returns:
             Self, to enable context manager usage

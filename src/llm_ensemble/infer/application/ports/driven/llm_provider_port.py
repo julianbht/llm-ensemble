@@ -14,7 +14,7 @@ from abc import ABC, abstractmethod
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.domain.entities.provider import Provider
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.infer.domain.entities.retry_config_schema import RetryConfig
 
 
 class LLMProviderPort(ABC):

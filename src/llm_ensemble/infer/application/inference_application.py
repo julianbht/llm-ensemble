@@ -29,7 +29,7 @@ from llm_ensemble.infer.domain.metrics import (
     calculate_latency_seconds,
     get_extracted_score,
 )
-from llm_ensemble.infer.schemas.infer_run_summary import InferRunSummary
+from llm_ensemble.infer.domain.entities.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.application.write_summary import WriteSummary
 from llm_ensemble.infer.application.infer_run_config_factory import InferRunConfigFactory
 

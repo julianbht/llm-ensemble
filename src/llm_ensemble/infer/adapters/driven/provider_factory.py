@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.infer.domain.entities.retry_config_schema import RetryConfig
 from llm_ensemble.infer.adapters.driven.providers.openrouter_adapter import OpenRouterAdapter
 from llm_ensemble.infer.adapters.driven.providers.ollama_adapter import OllamaAdapter
 

@@ -20,7 +20,7 @@ from __future__ import annotations
 from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.schemas.entities.llm_score import LLMScore
 from llm_ensemble.infer.adapters.io.db.orms import LLMCallORM
-from llm_ensemble.infer.schemas.warnings import BaseWarning
+from llm_ensemble.infer.domain.entities.warnings import BaseWarning
 from llm_ensemble.ingest.adapters.io.mappers import judging_sample_from_orm
 
 

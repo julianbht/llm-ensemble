@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
-from llm_ensemble.infer.schemas.warnings import BaseWarning
+from llm_ensemble.infer.domain.entities.warnings import BaseWarning
 
 
 class ResponseParserPort(ABC):

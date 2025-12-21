@@ -13,7 +13,7 @@ from openai import OpenAI, APIError
 
 from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.infer.domain.entities.retry_config_schema import RetryConfig
 from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent

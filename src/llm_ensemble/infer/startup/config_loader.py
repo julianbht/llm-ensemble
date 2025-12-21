@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.infer.domain.entities.retry_config_schema import RetryConfig
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.config.yaml_config_loader import load_yaml_config

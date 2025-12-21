@@ -22,7 +22,7 @@ from typing import Optional
 from llm_ensemble.infer.application.inference_application import InferenceApplication
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
-from llm_ensemble.infer.schemas.retry_config_schema import RetryConfig
+from llm_ensemble.infer.domain.entities.retry_config_schema import RetryConfig
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 
 from llm_ensemble.infer.adapters.driven.io_factory import IOAdapterFactory

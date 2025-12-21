@@ -58,23 +58,3 @@ class LoggingConfig(BaseConfig):
     )
 
     model_config = ConfigDict(extra="forbid")
-
-    @classmethod
-    def load(cls, config_name: str) -> LoggingConfig:
-        """Load and validate logging configuration from YAML file.
-
-        Args:
-            config_name: Name of the logging config file (without .yaml extension)
-                        e.g., "standard", "json", "console-only"
-
-        Returns:
-            Validated LoggingConfig instance
-
-        Raises:
-            FileNotFoundError: If config file doesn't exist
-            ValueError: If config validation fails
-        """
-        return super().load(
-            config_name=config_name,
-            config_dir=PathManager.get_configs_dir() / "logging"
-        )

@@ -138,6 +138,9 @@ class InferenceApplication(ForRunningInference):
         Raises:
             Exception: If any step in the pipeline fails
         """
+        # Track start time for summary
+        start_time = datetime.now()
+
         # Setup
         run_name = self._generate_run_name(run_name)
         run_dir = self._create_run_directory(run_name, official, tag)
@@ -148,20 +151,13 @@ class InferenceApplication(ForRunningInference):
             run_name = run_name
         )
 
-        # Track start time for summary
-        start_time = datetime.now()
-
-        # Resolve input run name (handles tags)
-        resolved_input_run_name = TagManager.resolve_input(input_run_name, "ingest")
-
         # Read full NormalizedDataset
+        resolved_input_run_name = TagManager.resolve_input(input_run_name, "ingest")
         normalized_dataset = self.input_port.read(resolved_input_run_name)
 
-        # Compute actual start_idx and end_idx
+        # Compute slice that we are trying to judge
         actual_start_idx = start_idx if start_idx is not None else 0
         actual_end_idx = end_idx if end_idx is not None else len(normalized_dataset.samples)
-
-        # Slice samples based on computed indices
         samples_to_process = normalized_dataset.samples[actual_start_idx:actual_end_idx]
 
         # Collect judgements for summary statistics
@@ -208,6 +204,8 @@ class InferenceApplication(ForRunningInference):
 
                 # Collect for summary statistics
                 llm_judgements.append(judgement)
+
+        logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=llm_judgements.count)
 
         # Retrieve aggregate write summary after context manager closes (writer logged directly)
         write_summary = self.output_port.get_summary()
@@ -395,30 +393,10 @@ class InferenceApplication(ForRunningInference):
             run_dir: Run directory path
             logger: Configured logger instance
         """
-        # Log completion
-        logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=summary.judgement_count)
-
         # Write summary to disk
         summary_path = run_dir / "summary.json"
         summary_path.write_text(summary.model_dump_json(indent=2), encoding="utf-8")
         logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(summary_path))
-
-        # Log final statistics
-        logger.info(
-            InferLogEvent.INFER_COMPLETE,
-            total_judgements=summary.judgement_count,
-            parsing_failures=summary.error_count,
-            avg_latency_ms=f"{summary.avg_latency_ms:.1f}",
-        )
-
-        # Log warnings if any
-        if summary.warnings_summary and sum(summary.warnings_summary.values()) > 0:
-            total_warnings = sum(summary.warnings_summary.values())
-            logger.info(
-                InferLogEvent.WARNINGS_COLLECTED,
-                total_warnings=total_warnings,
-                **summary.warnings_summary
-            )
 
         # Log file location
         log_file = run_dir / "run.log"

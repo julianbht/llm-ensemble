@@ -44,7 +44,7 @@ from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder, wri
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 
-# Load runtime configuration (.env file)
+# Load runtime env configuration
 from llm_ensemble.libs.runtime.env import load_runtime_config
 load_runtime_config()
 
@@ -135,15 +135,9 @@ class InferenceApplication(ForRunningInference):
         run_dir = self._create_run_directory(run_name, official, tag)
         logger = self._setup_logging(run_name, run_dir)
 
-        # Log startup
         logger.info(
             InferLogEvent.INFER_STARTED,
-            model=self.llm_provider.model_config.name_hint,
-            provider=self.llm_provider.provider_name,
-            io_format=self.output_port.io_name,
-            input_run_name=input_run_name,
-            start_idx=start_idx,
-            end_idx=end_idx,
+            run_name = run_name
         )
 
         # Execute inference pipeline
@@ -302,7 +296,7 @@ class InferenceApplication(ForRunningInference):
 
         # Generate from adapter configs
         name_hints: list[str] = [
-            self.llm_provider.model_config.name_hint,
+            self.llm_provider.get_model_config().name_hint,
             self.prompt_builder.get_builder().name,
             self.llm_provider.get_provider().name,
         ]

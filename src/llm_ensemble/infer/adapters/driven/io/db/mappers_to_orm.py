@@ -61,6 +61,7 @@ def provider_to_orm(provider: Provider) -> ProviderORM:
     return ProviderORM(
         id=provider.id,
         name=provider.name,
+        version=provider.version,
     )
 
 
@@ -82,6 +83,7 @@ def model_config_to_orm(model_cfg: ModelConfig) -> ModelConfigORM:
     return ModelConfigORM(
         id=model_cfg.id,
         name=model_cfg.name,
+        name_hint=model_cfg.name_hint,
         model_id=model_cfg.model_id,
         context_window=model_cfg.context_window,
         capabilities=model_cfg.capabilities,
@@ -111,7 +113,7 @@ def prompt_builder_to_orm(prompt_builder: PromptBuilder) -> PromptBuilderORM:
     return PromptBuilderORM(
         id=prompt_builder.id,
         name=prompt_builder.name,
-        template_text=prompt_builder.template_text,
+        version=prompt_builder.version,
     )
 
 
@@ -131,27 +133,7 @@ def parser_to_orm(parser: ResponseParser) -> ParserORM:
     return ParserORM(
         id=parser.id,
         name=parser.name,
-    )
-
-
-# ============================================================================
-# AdapterConfig Mappers
-# ============================================================================
-
-def adapter_config_to_orm(adapter_config: AdapterConfig) -> AdapterConfigORM:
-    """Convert AdapterConfig domain object to AdapterConfigORM.
-
-    Args:
-        adapter_config: AdapterConfig domain object (already has UUID)
-
-    Returns:
-        AdapterConfigORM model ready for persistence
-    """
-    return AdapterConfigORM(
-        id=adapter_config.id,
-        prompt_builder_id=adapter_config.prompt_builder.id,
-        parser_id=adapter_config.parser.id,
-        provider_id=adapter_config.provider.id,
+        version=parser.version,
     )
 
 
@@ -171,6 +153,7 @@ def prompt_template_to_orm(prompt_template: PromptTemplate) -> PromptTemplateORM
     return PromptTemplateORM(
         id=prompt_template.id,
         name=prompt_template.name,
+        template_text=prompt_template.template_text,
         prompt_builder_id=prompt_template.prompt_builder.id,
         parser_id=prompt_template.response_parser.id,
     )
@@ -216,6 +199,7 @@ def infer_run_config_to_orm(infer_run_config: InferRunConfig) -> InferRunConfigO
         provider_id=infer_run_config.provider.id,
         prompt_template_id=infer_run_config.prompt_template.id,
         ingest_run_context_id=infer_run_config.ingest_run_context.id,
+        io_name=infer_run_config.io_name,
     )
 
 

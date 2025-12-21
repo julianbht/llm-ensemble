@@ -28,11 +28,15 @@ from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 class ProviderORM(Base):
     __tablename__ = "providers"
-    __table_args__ = {"schema": "infer"}
-    __natural_key__ = "name"
+    __table_args__ = (
+        UniqueConstraint("name", "version", name="uq_provider_name_version"),
+        {"schema": "infer"},
+    )
+    __natural_key__ = ("name", "version")
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    name = Column(String(255), nullable=False, unique=True)
+    name = Column(String(255), nullable=False, comment="Provider name (e.g., 'openrouter', 'ollama', 'hf')")
+    version = Column(String(50), nullable=False, comment="Provider adapter version (e.g., '1.0', '2.1')")
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     # Relationships
@@ -46,16 +50,19 @@ class ParserORM(Base):
     Name comes from registry (e.g., 'thomas-simple').
     """
     __tablename__ = "parsers"
-    __natural_key__ = "name"
-    __table_args__ = {"schema": "infer"}
+    __table_args__ = (
+        UniqueConstraint("name", "version", name="uq_parser_name_version"),
+        {"schema": "infer"},
+    )
+    __natural_key__ = ("name", "version")
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(
         String(255),
         nullable=False,
-        unique=True,
-        comment="Natural key from registry (e.g., 'thomas-simple')"
+        comment="Parser name from registry (e.g., 'thomas-simple')"
     )
+    version = Column(String(50), nullable=False, comment="Parser version (e.g., '1.0', '2.1')")
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
@@ -63,17 +70,21 @@ class ParserORM(Base):
 
 
 class PromptBuilderORM(Base):
-    """Prompt builder with inlined template text.
+    """Prompt builder metadata.
 
-    Contains both the prompt template and the builder configuration.
+    Tracks which prompt builder was used during inference.
+    Template text lives on PromptTemplateORM.
     """
     __tablename__ = "prompt_builders"
-    __table_args__ = {"schema": "infer"}
-    __natural_key__ = "name"
+    __table_args__ = (
+        UniqueConstraint("name", "version", name="uq_prompt_builder_name_version"),
+        {"schema": "infer"},
+    )
+    __natural_key__ = ("name", "version")
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    name = Column(String(255), nullable=False, unique=True)
-    template_text = Column(Text, nullable=False)
+    name = Column(String(255), nullable=False, comment="Prompt builder name (e.g., 'thomas-simple')")
+    version = Column(String(50), nullable=False, comment="Prompt builder version (e.g., '1.0', '2.1')")
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
@@ -84,7 +95,7 @@ class PromptTemplateORM(Base):
     """Prompt template that bundles prompt builder and parser.
 
     Represents a complete prompt template with both builder and parser metadata.
-    The template_text is stored on PromptBuilderORM to avoid duplication.
+    The template_text is stored here (moved from PromptBuilderORM).
     """
     __tablename__ = "prompt_templates"
     __table_args__ = (
@@ -98,6 +109,7 @@ class PromptTemplateORM(Base):
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     name = Column(String(255), nullable=False, unique=True, comment="Template name (e.g., 'thomas-simple')")
+    template_text = Column(Text, nullable=False, comment="Raw template text (unrendered)")
 
     prompt_builder_id = Column(
         PG_UUID(as_uuid=True),
@@ -156,7 +168,8 @@ class ModelConfigORM(Base):
     __table_args__ = {"schema": "infer"}
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    name = Column(String(255), nullable=False, unique=True)
+    name = Column(String(255), nullable=False, unique=True, comment="Config name from filename (e.g., 'gpt-oss-20b')")
+    name_hint = Column(String(255), nullable=False, comment="Short name for run ID generation (e.g., 'gpt4', 'llama70b')")
 
     # Model identity
     model_id = Column(String(255), nullable=False, comment="Model identifier (e.g., 'gpt-4', 'llama-3-70b')")
@@ -190,6 +203,7 @@ class InferRunConfigORM(Base):
     - Provider configuration
     - Prompt template (builder + parser)
     - Execution context (input source, sample range)
+    - I/O adapter name
 
     Note: retry_config is not persisted (transient execution detail).
     """
@@ -200,11 +214,12 @@ class InferRunConfigORM(Base):
             "provider_id",
             "prompt_template_id",
             "ingest_run_context_id",
+            "io_name",
             name="uq_infer_run_config",
         ),
         {"schema": "infer"},
     )
-    __natural_key__ = ("model_config_id", "provider_id", "prompt_template_id", "ingest_run_context_id")
+    __natural_key__ = ("model_config_id", "provider_id", "prompt_template_id", "ingest_run_context_id", "io_name")
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
@@ -227,6 +242,11 @@ class InferRunConfigORM(Base):
         PG_UUID(as_uuid=True),
         ForeignKey("infer.ingest_run_contexts.id"),
         nullable=False,
+    )
+    io_name = Column(
+        String(255),
+        nullable=False,
+        comment="I/O adapter name (e.g., 'json', 'parquet', 'db')"
     )
 
     created_at = Column(DateTime, nullable=False, default=utcnow)

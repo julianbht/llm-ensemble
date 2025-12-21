@@ -18,10 +18,10 @@ from llm_ensemble.libs.runtime.git_utils import GitInfo, get_git_info
 
 class RunType(str, Enum):
     """Enumeration of run types for reproducibility tracking."""
-    
+
     OFFICIAL = "official"
     """Official run: git-tracked, reproducible, for research results."""
-    
+
     TEST = "test"
     """Test run: experimental, may have uncommitted changes."""
 

@@ -318,8 +318,7 @@ class InferenceApplication(ForRunningInference):
         Returns:
             Path to run directory
         """
-        run_type = RunType.OFFICIAL if official else RunType.TEST
-        run_dir = PathManager.get_run_dir("infer", run_name, run_type.value)
+        run_dir = PathManager.get_run_dir("infer", run_name, official)
         run_dir.mkdir(parents=True, exist_ok=True)
 
         # Create tag symlink if requested

@@ -31,7 +31,7 @@ from llm_ensemble.infer.domain.metrics import (
 )
 from llm_ensemble.infer.domain.entities.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.application.write_summary import WriteSummary
-from llm_ensemble.infer.application.infer_run_config_factory import InferRunConfigFactory
+from llm_ensemble.infer.domain.infer_run_config_factory import InferRunConfigFactory
 
 # Driving port (application implements this)
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
@@ -225,7 +225,10 @@ class InferenceApplication(ForRunningInference):
         start_idx: int,
         end_idx: int,
     ) -> InferRunConfig:
-        """Build run config for manifest by querying adapter config.
+        """Build run config for manifest by extracting entities from adapters.
+
+        Application layer responsibility: extract domain entities from ports,
+        then delegate to domain factory for assembly.
 
         Args:
             input_run_name: Resolved ingest run name
@@ -235,11 +238,24 @@ class InferenceApplication(ForRunningInference):
         Returns:
             InferRunConfig for manifest persistence
         """
+        # Extract domain entities from adapters (application responsibility)
+        provider = self.llm_provider.get_provider()
+        model_config = self.llm_provider.get_model_config()
+        retry_config = self.llm_provider.get_retry_config()
+        prompt_builder_entity = self.prompt_builder.get_builder()
+        response_parser_entity = self.response_parser.get_parser()
+        template_text = self.prompt_builder.get_template_text()
+        io_name = self.output_port.io_name
+
+        # Delegate to domain factory for assembly (domain responsibility)
         return InferRunConfigFactory.create(
-            llm_provider=self.llm_provider,
-            prompt_builder=self.prompt_builder,
-            response_parser=self.response_parser,
-            output_port=self.output_port,
+            provider=provider,
+            model_config=model_config,
+            retry_config=retry_config,
+            prompt_builder=prompt_builder_entity,
+            response_parser=response_parser_entity,
+            template_text=template_text,
+            io_name=io_name,
             input_run_name=input_run_name,
             start_idx=start_idx,
             end_idx=end_idx,

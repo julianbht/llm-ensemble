@@ -1,8 +1,0 @@
-# Logging configuration optimized for observability stack
-# Uses compact JSON for efficient Loki ingestion
-
-pretty_print: false  # Compact JSON (one line per log entry)
-save_logs: true
-console_level: INFO
-file_level: DEBUG
-name_hint: observability

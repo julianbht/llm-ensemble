@@ -4,13 +4,14 @@ Startup Layer - Configuration Management
 
 Responsible for loading configuration from YAML files and constructing
 domain entities. This keeps the domain models pure (no load methods on schemas).
+
+Logging configuration is read from environment variables during application execution.
 """
 
 from __future__ import annotations
 
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.domain.entities.retry_config_schema import RetryConfig
-from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.config.yaml_config_loader import load_yaml_config
 
@@ -56,26 +57,4 @@ def load_retry_config(retry_id: str) -> RetryConfig:
         config_dir=config_dir,
         schema=RetryConfig,
         config_type="RetryConfig",
-    )
-
-
-def load_logging_config(logging_id: str) -> LoggingConfig:
-    """Load logging configuration from YAML file.
-
-    Args:
-        logging_id: Logging configuration identifier (e.g., "standard", "observability")
-
-    Returns:
-        LoggingConfig with all settings loaded from YAML
-
-    Raises:
-        FileNotFoundError: If config file doesn't exist
-        ValueError: If YAML is invalid
-    """
-    config_dir = PathManager.get_configs_dir() / "logging"
-    return load_yaml_config(
-        config_name=logging_id,
-        config_dir=config_dir,
-        schema=LoggingConfig,
-        config_type="LoggingConfig",
     )

@@ -1,10 +1,11 @@
 """Structlog-based logging for LLM Ensemble CLIs.
 
 This module provides a structlog-based logger that supports both human-readable
-pretty printing and structured JSON output, configured via LoggingConfig.
+pretty printing and structured JSON output, configured via environment variables.
 """
 
 from __future__ import annotations
+import os
 import sys
 import logging
 from enum import Enum
@@ -86,39 +87,68 @@ class CustomConsoleRenderer:
         return " ".join(parts)
 
 
+def _get_logging_config_from_env() -> dict[str, Any]:
+    """Read logging configuration from environment variables.
+
+    Environment variables:
+        LOG_PRETTY_PRINT: Use human-readable console output (true/false, default: false)
+        LOG_SAVE_LOGS: Save logs to file (true/false, default: true)
+        LOG_CONSOLE_LEVEL: Console log level (DEBUG/INFO/WARNING/ERROR, default: INFO)
+        LOG_FILE_LEVEL: File log level (DEBUG/INFO/WARNING/ERROR, default: DEBUG)
+
+    Returns:
+        Dictionary with logging configuration values
+    """
+    def parse_bool(value: str, default: bool) -> bool:
+        """Parse boolean from string with default."""
+        if not value:
+            return default
+        return value.lower() in ("true", "1", "yes")
+
+    return {
+        "pretty_print": parse_bool(os.getenv("LOG_PRETTY_PRINT", ""), default=False),
+        "save_logs": parse_bool(os.getenv("LOG_SAVE_LOGS", ""), default=True),
+        "console_level": os.getenv("LOG_CONSOLE_LEVEL", "INFO").upper(),
+        "file_level": os.getenv("LOG_FILE_LEVEL", "DEBUG").upper(),
+    }
+
 
 def configure_logger(
     cli_name: str,
     run_name: Optional[str] = None,
     run_type: Optional[str] = None,
-    pretty_print: bool = True,
-    save_logs: bool = False,
     log_file_path: Optional[Path] = None,
-    console_level: str = "INFO",
-    file_level: str = "DEBUG",
 ) -> structlog.stdlib.BoundLogger:
-    """Configure structlog for a CLI run with flexible formatting options.
+    """Configure structlog for a CLI run using environment variables.
+
+    Configuration is read from environment variables:
+        LOG_PRETTY_PRINT: Use human-readable console output (true/false, default: false)
+        LOG_SAVE_LOGS: Save logs to file (true/false, default: true)
+        LOG_CONSOLE_LEVEL: Console log level (DEBUG/INFO/WARNING/ERROR, default: INFO)
+        LOG_FILE_LEVEL: File log level (DEBUG/INFO/WARNING/ERROR, default: DEBUG)
 
     Args:
         cli_name: Name of the CLI (e.g., "ingest", "infer", "aggregate", "evaluate")
         run_name: Optional run ID for context
         run_type: Optional run type ("test" or "official")
-        pretty_print: If True, use human-readable console output with colors.
-                     If False, use structured JSON output.
-        save_logs: If True, save logs to file (requires log_file_path)
-        log_file_path: Optional path to write logs to (required if save_logs=True)
-        console_level: Minimum log level for console output (DEBUG, INFO, WARNING, ERROR)
-        file_level: Minimum log level for file output (DEBUG, INFO, WARNING, ERROR)
+        log_file_path: Optional path to write logs to (required if LOG_SAVE_LOGS=true)
 
     Returns:
         Configured structlog logger with bound context
 
     Raises:
-        ValueError: If save_logs=True but log_file_path is None
+        ValueError: If LOG_SAVE_LOGS=true but log_file_path is None
     """
+    # Read logging configuration from environment
+    config = _get_logging_config_from_env()
+    pretty_print = config["pretty_print"]
+    save_logs = config["save_logs"]
+    console_level = config["console_level"]
+    file_level = config["file_level"]
+
     # Validate log file path if save_logs is True
     if save_logs and log_file_path is None:
-        raise ValueError("log_file_path must be provided when save_logs=True")
+        raise ValueError("log_file_path must be provided when LOG_SAVE_LOGS=true")
 
     # Suppress noisy third-party library logging
     logging.getLogger("httpx").setLevel(logging.WARNING)

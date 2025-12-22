@@ -50,7 +50,6 @@ from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.runtime.run_manager import create_run_directory, write_summary
 from llm_ensemble.libs.runtime.tag_manager import TagManager
-from llm_ensemble.libs.schemas.logging_config import LoggingConfig
 
 # Load runtime env configuration
 from llm_ensemble.libs.runtime.env import load_runtime_config
@@ -83,7 +82,6 @@ class InferenceApplication(ForRunningInference):
         prompt_builder: PromptBuilderPort,
         llm_provider: LLMProviderPort,
         response_parser: ResponseParserPort,
-        logging_config: LoggingConfig,
     ):
         """Initialize inference use case with port dependencies.
 
@@ -93,14 +91,12 @@ class InferenceApplication(ForRunningInference):
             prompt_builder: Port for building prompts from samples
             llm_provider: Port for LLM inference
             response_parser: Port for parsing LLM responses
-            logging_config: Logging configuration (injected by composition root)
         """
         self.input_port = input_port
         self.output_port = output_port
         self.prompt_builder = prompt_builder
         self.llm_provider = llm_provider
         self.response_parser = response_parser
-        self.logging_config = logging_config
 
     def run_inference(
         self,
@@ -313,6 +309,12 @@ class InferenceApplication(ForRunningInference):
     ) -> structlog.stdlib.BoundLogger:
         """Configure logging for this inference run.
 
+        Logging configuration is read from environment variables:
+            LOG_PRETTY_PRINT: Use human-readable console output (true/false, default: false)
+            LOG_SAVE_LOGS: Save logs to file (true/false, default: true)
+            LOG_CONSOLE_LEVEL: Console log level (DEBUG/INFO/WARNING/ERROR, default: INFO)
+            LOG_FILE_LEVEL: File log level (DEBUG/INFO/WARNING/ERROR, default: DEBUG)
+
         Args:
             run_name: Run name for logger context
             run_dir: Run directory for log file
@@ -320,17 +322,12 @@ class InferenceApplication(ForRunningInference):
         Returns:
             Configured structlog logger instance
         """
-        # Setup logging using injected config
-        log_file = run_dir / "run.log" if self.logging_config.save_logs else None
+        # Setup logging from environment variables
         logger = configure_logger(
             cli_name="infer",
             run_name=run_name,
             run_type="test",
-            pretty_print=self.logging_config.pretty_print,
-            save_logs=self.logging_config.save_logs,
-            log_file_path=log_file,
-            console_level=self.logging_config.console_level,
-            file_level=self.logging_config.file_level,
+            log_file_path=run_dir / "run.log",
         )
 
         return logger

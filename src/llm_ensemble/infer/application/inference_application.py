@@ -47,8 +47,7 @@ from llm_ensemble.infer.application.ports.driven.prompt_builder_port import Prom
 from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
-from llm_ensemble.libs.runtime.run_name import generate_run_name
-from llm_ensemble.libs.runtime.run_manager import create_run_directory, write_summary
+from llm_ensemble.libs.runtime.run_manager import write_summary
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 
 # Load runtime env configuration
@@ -63,9 +62,12 @@ class InferenceApplication(ForRunningInference):
     Driving adapters (CLI, Web API, etc.) call the execute() method.
 
     This is the backend application that handles:
-    - Infrastructure setup (run directories, logging configuration)
+    - Logging configuration
     - Inference execution (read → prompt → infer → parse → write loop)
     - Result persistence and finalization
+
+    Infrastructure setup (run directories, run naming) is handled by the
+    composition root before application instantiation.
 
     Driving adapters are thin wrappers that:
     - Parse input (CLI args, HTTP requests)
@@ -82,6 +84,8 @@ class InferenceApplication(ForRunningInference):
         prompt_builder: PromptBuilderPort,
         llm_provider: LLMProviderPort,
         response_parser: ResponseParserPort,
+        run_dir: Path,
+        run_name: str,
     ):
         """Initialize inference use case with port dependencies.
 
@@ -91,33 +95,38 @@ class InferenceApplication(ForRunningInference):
             prompt_builder: Port for building prompts from samples
             llm_provider: Port for LLM inference
             response_parser: Port for parsing LLM responses
+            run_dir: Run directory (created by composition root)
+            run_name: Run name (resolved by composition root)
         """
         self.input_port = input_port
         self.output_port = output_port
         self.prompt_builder = prompt_builder
         self.llm_provider = llm_provider
         self.response_parser = response_parser
+        self.run_dir = run_dir
+        self.run_name = run_name
 
     def run_inference(
         self,
         input_run_name: str,
         start_idx: Optional[int],
         end_idx: Optional[int],
-        run_name: Optional[str],
         official: bool,
         notes: Optional[str],
-        tag: Optional[str],
     ) -> InferRunSummary:
         """Execute the complete inference backend with infrastructure setup and finalization.
 
         This is the main application entry point called by driving adapters (CLI, Web API).
 
         Backend workflow:
-        - Setup infrastructure (run directories, logging, metadata)
+        - Setup logging
         - Read dataset samples via InputPort
         - For each sample: build prompt → infer → parse → write (streaming loop)
         - Write summary and finalize outputs
         - Return summary statistics
+
+        Run directory and run name are provided at construction time by the
+        composition root.
 
         All logging configured here appears in the driving adapter's output
         (terminal for CLI, CloudWatch for web API, etc.).
@@ -126,10 +135,8 @@ class InferenceApplication(ForRunningInference):
             input_run_name: Ingest run identifier to read samples from
             start_idx: Start index into NormalizedDataset (None = from beginning)
             end_idx: End index into NormalizedDataset (None = until end)
-            run_name: Custom run name (auto-generates if not provided)
             official: Mark as official run
             notes: Notes about this run (experiment purpose, hypothesis, etc.)
-            tag: Tag name for easy reference by downstream CLIs
 
         Returns:
             InferRunSummary with statistics, timing, and warnings
@@ -140,14 +147,12 @@ class InferenceApplication(ForRunningInference):
         # Track start time for summary
         start_time = datetime.now()
 
-        # Setup
-        run_name = self._generate_run_name(run_name)
-        run_dir = self._create_run_directory(run_name, official, tag)
-        logger = self._setup_logging(run_name, run_dir)
+        # Setup logging (run_dir and run_name provided by composition root)
+        logger = self._setup_logging(self.run_name, self.run_dir)
 
         logger.info(
             InferLogEvent.INFER_STARTED,
-            run_name = run_name
+            run_name=self.run_name
         )
 
         # Read full NormalizedDataset
@@ -163,10 +168,10 @@ class InferenceApplication(ForRunningInference):
 
         # Build run_config and run_info for manifest/persistence
         run_config = self._build_run_config(resolved_input_run_name, actual_start_idx, actual_end_idx)
-        run_info = self._build_run_info(run_name, official, notes)
+        run_info = self._build_run_info(self.run_name, official, notes)
 
-        # Open writer for streaming
-        with self.output_port.open(run_dir, run_info, run_config) as writer:
+        # Open writer for streaming (run_dir already provided at construction)
+        with self.output_port.open(run_info, run_config) as writer:
 
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
@@ -210,7 +215,7 @@ class InferenceApplication(ForRunningInference):
 
         # Build and finalize summary
         summary = self._build_summary(start_time, llm_judgements, write_summary)
-        self._finalize_run(summary, run_dir, logger)
+        self._finalize_run(summary, self.run_dir, logger)
 
         # Return finalized summary
         return summary
@@ -256,51 +261,6 @@ class InferenceApplication(ForRunningInference):
             start_idx=start_idx,
             end_idx=end_idx,
         )
-
-    def _generate_run_name(self, run_name: Optional[str]) -> str:
-        """Generate run name from adapter configs if not provided.
-
-        Args:
-            run_name: Custom run name or None to auto-generate
-
-        Returns:
-            Run name (either custom or auto-generated)
-        """
-        if run_name is not None:
-            return run_name
-
-        # Generate from adapter configs
-        name_hints: list[str] = [
-            self.llm_provider.get_model_config().name_hint,
-            self.prompt_builder.get_builder().name,
-            self.llm_provider.get_provider().name,
-            self.output_port.io_name,
-        ]
-        return generate_run_name(name_hints)
-
-    def _create_run_directory(
-        self,
-        run_name: str,
-        official: bool,
-        tag: Optional[str],
-    ) -> Path:
-        """Create run directory and optional tag symlink.
-
-        Args:
-            run_name: Run name for directory
-            official: Whether this is an official run
-            tag: Optional tag name for symlink
-
-        Returns:
-            Path to run directory
-        """
-        run_dir = create_run_directory("infer", run_name, official)
-
-        # Create tag symlink if requested
-        if tag:
-            TagManager.create_tag(run_dir, tag)
-
-        return run_dir
 
     def _setup_logging(
         self,

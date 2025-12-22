@@ -10,6 +10,10 @@ Called BY driving adapters (CLI, Web API, etc.).
 
 In hexagonal architecture, this represents the hexagon's edge facing outward
 toward the driving adapters.
+
+Note: Run directory and run name are provided at construction time via the
+composition root, not through this interface. This keeps infrastructure
+concerns separate from business logic.
 """
 
 from __future__ import annotations
@@ -27,10 +31,13 @@ class ForRunningInference(ABC):
     this interface, and driving adapters (CLI, Web API) call it.
 
     The application handles all backend concerns:
-    - Infrastructure setup (run directories, logging)
+    - Logging configuration
     - Inference execution
     - Result persistence
     - Summary generation
+
+    Infrastructure setup (run directories, run naming, tags) is handled
+    by the composition root before the application is instantiated.
     """
 
     @abstractmethod
@@ -39,18 +46,16 @@ class ForRunningInference(ABC):
         input_run_name: str,
         start_idx: Optional[int],
         end_idx: Optional[int],
-        run_name: Optional[str],
         official: bool,
         notes: Optional[str],
-        tag: Optional[str],
     ) -> InferRunSummary:
-        """Execute the inference pipeline with full backend infrastructure.
+        """Execute the inference pipeline.
 
-        Sets up infrastructure, runs inference, and returns results.
+        Runs inference and returns results.
         All logging appears in the configured output (terminal for CLI, CloudWatch for web, etc.).
 
         Workflow:
-        1. Setup infrastructure (run directories, logging, git metadata)
+        1. Setup logging
         2. Read dataset samples via InputPort
         3. For each sample: build prompt, call LLM, parse response, write result
         4. Write summary and finalize outputs
@@ -60,10 +65,8 @@ class ForRunningInference(ABC):
             input_run_name: Ingest run identifier to read samples from
             start_idx: Start index into NormalizedDataset (None = from beginning)
             end_idx: End index into NormalizedDataset (None = until end)
-            run_name: Custom run name (auto-generates if not provided)
             official: Mark as official run
             notes: Notes about this run (experiment purpose, hypothesis, etc.)
-            tag: Tag name for easy reference by downstream CLIs
 
         Returns:
             InferRunSummary with statistics, timing, and warnings

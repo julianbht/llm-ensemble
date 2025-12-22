@@ -98,14 +98,12 @@ class DBWriter(OutputPort):
 
     def open(
         self,
-        run_dir: Path,
         run_info: InferRunInfo,
         infer_run_config: InferRunConfig,
-    ) -> "DBWriter":
+    ) -> DBWriter:
         """Open database session and initialize run metadata.
 
         Args:
-            run_dir: Run directory (not used for DB writer)
             run_info: Run metadata (git info, timestamps)
             infer_run_config: Complete configuration bundle with resolved indices
 

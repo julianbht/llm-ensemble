@@ -42,13 +42,15 @@ class FullyPopulatedJsonWriter(OutputPort):
     For very large datasets, consider streaming approaches or batch processing.
     """
 
-    def __init__(self, io_name: str):
-        """Initialize the JSON writer with IO format name.
+    def __init__(self, io_name: str, run_dir: Path):
+        """Initialize the JSON writer with IO format name and output directory.
 
         Args:
             io_name: Name of the IO format (e.g., 'db_to_json')
+            run_dir: Directory where output files will be written
         """
         self._io_name: str = io_name
+        self._run_dir: Path = run_dir
         self._write_summary: Optional[WriteSummary] = None
         self.output_path: Optional[Path] = None
         self.manifest_path: Optional[Path] = None
@@ -62,14 +64,12 @@ class FullyPopulatedJsonWriter(OutputPort):
 
     def open(
         self,
-        run_dir: Path,
         run_info: InferRunInfo,
         run_config: InferRunConfig,
-    ) -> "FullyPopulatedJsonWriter":
+    ) -> FullyPopulatedJsonWriter:
         """Initialize writer, write manifest, and prepare for streaming.
 
         Args:
-            run_dir: Run directory where output should be written
             run_info: Inference run metadata (written to separate manifest file)
             run_config: Configuration bundle (not used by JSON writer, but required by port)
 
@@ -83,8 +83,8 @@ class FullyPopulatedJsonWriter(OutputPort):
             raise RuntimeError("Writer is already open")
 
         # Derive filenames from entity class names (DRY principle)
-        self.output_path = run_dir / get_entity_filename(LLMJudgement, "json")
-        self.manifest_path = run_dir / get_entity_filename(InferRunInfo, "json", plural=False)
+        self.output_path = self._run_dir / get_entity_filename(LLMJudgement, "json")
+        self.manifest_path = self._run_dir / get_entity_filename(InferRunInfo, "json", plural=False)
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         self.judgements = []
 

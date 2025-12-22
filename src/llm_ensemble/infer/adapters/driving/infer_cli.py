@@ -62,13 +62,17 @@ def infer(
     Thin CLI driving adapter that builds the application and executes it.
     All backend logic (infrastructure, logging, inference) handled by application.
     """
-    # Build application by selecting adapters
+    # Build application with run configuration
+    # Run directory and run name are created here in the composition root
     application = build_application(
         provider_name=provider,
         io_name=io_cfg,
         prompt_template_name=prompt_template,
         model_config_name=model_cfg,
         retry_config_name=retry_cfg,
+        run_name=run_name,
+        official=official,
+        tag=tag,
     )
 
     # Run application
@@ -76,10 +80,8 @@ def infer(
         input_run_name=input_run_name,
         start_idx=start_idx,
         end_idx=end_idx,
-        run_name=run_name,
         official=official,
         notes=notes,
-        tag=tag,
     )
 
 

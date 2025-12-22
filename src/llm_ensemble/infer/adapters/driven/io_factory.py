@@ -14,7 +14,8 @@ To add a new IO format:
 """
 
 from __future__ import annotations
-from typing import Dict, Type, NamedTuple
+from pathlib import Path
+from typing import Dict, Type, NamedTuple, Optional
 
 from llm_ensemble.infer.application.ports.driven.input_port import InputPort
 from llm_ensemble.infer.application.ports.driven.output_port import OutputPort
@@ -28,6 +29,7 @@ class IOConfig(NamedTuple):
     reader_class: Type[InputPort]
     writer_class: Type[OutputPort]
     description: str
+    writer_needs_run_dir: bool = False
 
 
 # Explicit mapping of IO format names to adapter configurations
@@ -35,12 +37,14 @@ IO_FORMATS: Dict[str, IOConfig] = {
     "db_to_db": IOConfig(
         reader_class=DBReader,
         writer_class=DBWriter,
-        description="Read from PostgreSQL, write to PostgreSQL"
+        description="Read from PostgreSQL, write to PostgreSQL",
+        writer_needs_run_dir=False,
     ),
     "db_to_json": IOConfig(
-        reader_class=DBWriter,
+        reader_class=DBReader,
         writer_class=FullyPopulatedJsonWriter,
-        description="Read from PostgreSQL, write JSON array"
+        description="Read from PostgreSQL, write JSON array",
+        writer_needs_run_dir=True,
     ),
 }
 
@@ -72,17 +76,18 @@ class IOAdapterFactory:
         return config.reader_class(io_name=io_name)
 
     @staticmethod
-    def create_writer(io_name: str) -> OutputPort:
+    def create_writer(io_name: str, run_dir: Optional[Path] = None) -> OutputPort:
         """Build and return a writer adapter instance.
 
         Args:
             io_name: Name of the IO format (e.g., 'db_to_json')
+            run_dir: Run directory for file-based writers (required for some formats)
 
         Returns:
             Instantiated writer adapter
 
         Raises:
-            ValueError: If IO format not found
+            ValueError: If IO format not found or run_dir missing for file-based writer
         """
         if io_name not in IO_FORMATS:
             available = ", ".join(sorted(IO_FORMATS.keys()))
@@ -92,6 +97,14 @@ class IOAdapterFactory:
             )
 
         config = IO_FORMATS[io_name]
+
+        if config.writer_needs_run_dir:
+            if run_dir is None:
+                raise ValueError(
+                    f"IO format '{io_name}' requires run_dir for file-based output"
+                )
+            return config.writer_class(io_name=io_name, run_dir=run_dir)
+
         return config.writer_class(io_name=io_name)
 
     @staticmethod

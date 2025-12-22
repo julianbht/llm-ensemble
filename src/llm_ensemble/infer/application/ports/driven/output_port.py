@@ -3,11 +3,14 @@
 Defines the abstract contract for writing judgements to various sinks
 (JSON files, Parquet, databases, etc.). This allows the orchestrator
 to work with any output format without coupling to a specific implementation.
+
+Note: File-based adapters receive their output destination (run_dir) at
+construction time via the factory, not through this interface. This keeps
+the port interface clean and infrastructure-agnostic.
 """
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from pathlib import Path
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
@@ -30,13 +33,16 @@ class OutputPort(ABC):
 
     Run context (InferRunInfo) is provided once during open() rather than
     being embedded in every judgement, keeping the domain model clean.
+
+    Note: Output destination (e.g., run_dir for file-based adapters) is
+    provided at construction time, not through this interface.
     """
 
     @property
     @abstractmethod
     def io_name(self) -> str:
         """Get I/O adapter name for this output port.
-        
+
         Returns:
             I/O adapter name (e.g., 'json', 'parquet')
         """
@@ -45,11 +51,10 @@ class OutputPort(ABC):
     @abstractmethod
     def open(
         self,
-        run_dir: Path,
         run_info: InferRunInfo,
         run_config: InferRunConfig,
-    ) -> OutputPort:
-        """Initialize writer with run directory, run info, and run config.
+    ) -> "OutputPort":
+        """Initialize writer with run info and run config.
 
         The run_info contains metadata about the inference run (git SHA, timestamps, notes).
 
@@ -62,7 +67,6 @@ class OutputPort(ABC):
         For SQL writers, this creates the InferRun entity and prepares for streaming writes.
 
         Args:
-            run_dir: Run directory where output should be written (writer determines file structure)
             run_info: Inference run metadata (git state, timestamps, notes)
             run_config: Configuration bundle (model, adapters, retry, execution context with resolved indices)
 

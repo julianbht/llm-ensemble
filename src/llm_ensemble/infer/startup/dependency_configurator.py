@@ -88,7 +88,7 @@ def build_application(
         ]
         run_name = generate_run_name(name_hints)
 
-    # Create run directory (infrastructure concern handled in composition root)
+    # Create run directory
     run_dir = create_run_directory("infer", run_name, official)
 
     # Create tag symlink if requested

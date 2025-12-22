@@ -32,7 +32,7 @@ from llm_ensemble.infer.domain.metrics import (
 from llm_ensemble.infer.domain.entities.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.application.write_summary import WriteSummary
 from llm_ensemble.infer.domain.infer_run_config_factory import InferRunConfigFactory
-from llm_ensemble.infer.domain.dataset_utils import slice_dataset, resolve_slice_indices
+from llm_ensemble.infer.domain.dataset_utils import resolve_slice_indices
 
 # Driving port (application implements this)
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference

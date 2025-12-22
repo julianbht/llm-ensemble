@@ -1,21 +1,20 @@
 """Builder for IO adapters.
 
-Simple, explicit mapping of IO format names to reader/writer adapter classes.
-No decorators, no hidden registration - just a clear dictionary.
+Explicit instantiation of IO adapters with format-specific constructors.
+Each adapter defines its own constructor signature and configuration needs.
 
 IO formats use explicit read→write naming to show the full pipeline:
 - db_to_db: Read from PostgreSQL, write to PostgreSQL
 - db_to_json: Read from PostgreSQL, write JSON array
 
 To add a new IO format:
-1. Create adapter classes that extend ExampleReader and JudgementWriter ports
+1. Create adapter classes that extend InputPort/OutputPort
 2. Import them here
-3. Add to IO_FORMATS dict with descriptive read→write name
+3. Add explicit instantiation case in create_reader/create_writer methods
 """
 
 from __future__ import annotations
 from pathlib import Path
-from typing import Dict, Type, NamedTuple, Optional
 
 from llm_ensemble.infer.application.ports.driven.input_port import InputPort
 from llm_ensemble.infer.application.ports.driven.output_port import OutputPort
@@ -24,29 +23,7 @@ from llm_ensemble.infer.adapters.driven.io.db.db_writer import DBWriter
 from llm_ensemble.infer.adapters.driven.io.fully_populated_json_writer import FullyPopulatedJsonWriter
 
 
-class IOConfig(NamedTuple):
-    """Configuration for an IO format."""
-    reader_class: Type[InputPort]
-    writer_class: Type[OutputPort]
-    description: str
-    writer_needs_run_dir: bool = False
-
-
-# Explicit mapping of IO format names to adapter configurations
-IO_FORMATS: Dict[str, IOConfig] = {
-    "db_to_db": IOConfig(
-        reader_class=DBReader,
-        writer_class=DBWriter,
-        description="Read from PostgreSQL, write to PostgreSQL",
-        writer_needs_run_dir=False,
-    ),
-    "db_to_json": IOConfig(
-        reader_class=DBReader,
-        writer_class=FullyPopulatedJsonWriter,
-        description="Read from PostgreSQL, write JSON array",
-        writer_needs_run_dir=True,
-    ),
-}
+AVAILABLE_FORMATS = ["db_to_db", "db_to_json"]
 
 
 class IOAdapterFactory:
@@ -65,87 +42,48 @@ class IOAdapterFactory:
         Raises:
             ValueError: If IO format not found
         """
-        if io_name not in IO_FORMATS:
-            available = ", ".join(sorted(IO_FORMATS.keys()))
+        if io_name == "db_to_db":
+            return DBReader(io_name=io_name)
+        elif io_name == "db_to_json":
+            return DBReader(io_name=io_name)
+        else:
+            available = ", ".join(sorted(AVAILABLE_FORMATS))
             raise ValueError(
                 f"IO format '{io_name}' not found. "
                 f"Available: {available}"
             )
 
-        config = IO_FORMATS[io_name]
-        return config.reader_class(io_name=io_name)
-
     @staticmethod
-    def create_writer(io_name: str, run_dir: Optional[Path] = None) -> OutputPort:
+    def create_writer(io_name: str, run_dir: Path) -> OutputPort:
         """Build and return a writer adapter instance.
 
         Args:
             io_name: Name of the IO format (e.g., 'db_to_json')
-            run_dir: Run directory for file-based writers (required for some formats)
+            run_dir: Run directory for file-based writers
 
         Returns:
             Instantiated writer adapter
 
         Raises:
-            ValueError: If IO format not found or run_dir missing for file-based writer
+            ValueError: If IO format not found
         """
-        if io_name not in IO_FORMATS:
-            available = ", ".join(sorted(IO_FORMATS.keys()))
+        if io_name == "db_to_db":
+            return DBWriter(io_name=io_name)
+        elif io_name == "db_to_json":
+            return FullyPopulatedJsonWriter(io_name=io_name, run_dir=run_dir)
+        else:
+            available = ", ".join(sorted(AVAILABLE_FORMATS))
             raise ValueError(
                 f"IO format '{io_name}' not found. "
                 f"Available: {available}"
             )
-
-        config = IO_FORMATS[io_name]
-
-        if config.writer_needs_run_dir:
-            if run_dir is None:
-                raise ValueError(
-                    f"IO format '{io_name}' requires run_dir for file-based output"
-                )
-            return config.writer_class(io_name=io_name, run_dir=run_dir)
-
-        return config.writer_class(io_name=io_name)
 
     @staticmethod
     def list_available() -> list[str]:
-        """List all available IO format names.
-
-        Returns:
-            Sorted list of IO format names
-        """
-        return sorted(IO_FORMATS.keys())
+        """List all available IO format names."""
+        return sorted(AVAILABLE_FORMATS)
 
     @staticmethod
     def has_format(io_name: str) -> bool:
-        """Check if IO format is available.
-
-        Args:
-            io_name: Name of the IO format
-
-        Returns:
-            True if IO format exists
-        """
-        return io_name in IO_FORMATS
-
-    @staticmethod
-    def get_description(io_name: str) -> str:
-        """Get description for an IO format.
-
-        Args:
-            io_name: Name of the IO format
-
-        Returns:
-            Description string
-
-        Raises:
-            ValueError: If IO format not found
-        """
-        if io_name not in IO_FORMATS:
-            available = ", ".join(sorted(IO_FORMATS.keys()))
-            raise ValueError(
-                f"IO format '{io_name}' not found. "
-                f"Available: {available}"
-            )
-
-        return IO_FORMATS[io_name].description
+        """Check if IO format is available."""
+        return io_name in AVAILABLE_FORMATS

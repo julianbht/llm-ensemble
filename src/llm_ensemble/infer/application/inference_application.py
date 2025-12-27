@@ -47,7 +47,7 @@ from llm_ensemble.infer.application.ports.driven.prompt_builder_port import Prom
 from llm_ensemble.libs.logging import configure_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
-from llm_ensemble.libs.runtime.run_manager import write_summary
+from llm_ensemble.libs.runtime.run_manager import RunManager, write_summary
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 
 # Load runtime env configuration
@@ -84,8 +84,7 @@ class InferenceApplication(ForRunningInference):
         prompt_builder: PromptBuilderPort,
         llm_provider: LLMProviderPort,
         response_parser: ResponseParserPort,
-        run_dir: Path,
-        run_name: str,
+        run_manager: RunManager,
     ):
         """Initialize inference use case with port dependencies.
 
@@ -95,16 +94,14 @@ class InferenceApplication(ForRunningInference):
             prompt_builder: Port for building prompts from samples
             llm_provider: Port for LLM inference
             response_parser: Port for parsing LLM responses
-            run_dir: Run directory (created by composition root)
-            run_name: Run name (resolved by composition root)
+            run_manager: Run manager providing run_dir and run_name
         """
         self.input_port = input_port
         self.output_port = output_port
         self.prompt_builder = prompt_builder
         self.llm_provider = llm_provider
         self.response_parser = response_parser
-        self.run_dir = run_dir
-        self.run_name = run_name
+        self.run_manager = run_manager
 
     def run_inference(
         self,
@@ -147,12 +144,12 @@ class InferenceApplication(ForRunningInference):
         # Track start time for summary
         start_time = datetime.now()
 
-        # Setup logging (run_dir and run_name provided by composition root)
-        logger = self._setup_logging(self.run_name, self.run_dir)
+        # Setup logging
+        logger = self._setup_logging(self.run_manager.run_name, self.run_manager.run_dir)
 
         logger.info(
             InferLogEvent.INFER_STARTED,
-            run_name=self.run_name
+            run_name=self.run_manager.run_name
         )
 
         # Read full NormalizedDataset
@@ -168,7 +165,7 @@ class InferenceApplication(ForRunningInference):
 
         # Build run_config and run_info for manifest/persistence
         run_config = self._build_run_config(resolved_input_run_name, actual_start_idx, actual_end_idx)
-        run_info = self._build_run_info(self.run_name, official, notes)
+        run_info = self._build_run_info(self.run_manager.run_name, official, notes)
 
         # Open writer for streaming (run_dir already provided at construction)
         with self.output_port.open(run_info, run_config) as writer:
@@ -215,7 +212,7 @@ class InferenceApplication(ForRunningInference):
 
         # Build and finalize summary
         summary = self._build_summary(start_time, llm_judgements, write_summary)
-        self._finalize_run(summary, self.run_dir, logger)
+        self._finalize_run(summary, self.run_manager.run_dir, logger)
 
         # Return finalized summary
         return summary

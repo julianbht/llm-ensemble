@@ -18,7 +18,6 @@ then uses the returned ForRunningInference interface to execute business logic.
 """
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.infer.application.inference_application import InferenceApplication
@@ -32,8 +31,7 @@ from llm_ensemble.infer.adapters.driven.prompt_factory import PromptAdapterFacto
 from llm_ensemble.infer.adapters.driven.parser_factory import ParserAdapterFactory
 
 from llm_ensemble.infer.startup.config_loader import load_model_config, load_retry_config
-from llm_ensemble.libs.runtime.run_name import generate_run_name
-from llm_ensemble.libs.runtime.run_manager import create_run_directory
+from llm_ensemble.libs.runtime.run_manager import RunManager, ProductionRunManager
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 
 
@@ -43,6 +41,8 @@ def build_application(
     prompt_template_name: str,
     model_config_name: str,
     retry_config_name: str,
+    name_hints: Optional[list[str]] = None,
+    run_manager: Optional[RunManager] = None,
     run_name: Optional[str] = None,
     official: bool = False,
     tag: Optional[str] = None,
@@ -51,7 +51,7 @@ def build_application(
 
     Composition root that:
     1. Loads configuration from YAML files
-    2. Generates run name and creates run directory
+    2. Creates run manager if not provided (allows test injection)
     3. Instantiates all driven adapters with loaded configurations
     4. Assembles the use case with its dependencies
     5. Returns the application's driving port interface
@@ -67,8 +67,10 @@ def build_application(
         prompt_template_name: Prompt template name (e.g., 'thomas-et-al')
         model_config_name: Model config name (e.g., 'gpt-oss-20b')
         retry_config_name: Retry config name (e.g., 'standard')
-        run_name: Custom run name (auto-generates if not provided)
-        official: Mark as official run (saved to official/ subdirectory)
+        name_hints: Optional hints for run name generation (provided by CLI)
+        run_manager: Optional run manager (creates ProductionRunManager if not provided)
+        run_name: Custom run name (used if run_manager not provided)
+        official: Mark as official run (used if run_manager not provided)
         tag: Tag name for easy reference by downstream CLIs
 
     Returns:
@@ -78,32 +80,27 @@ def build_application(
     model_cfg = load_model_config(model_config_name)
     retry_cfg = load_retry_config(retry_config_name)
 
-    # Generate run name from config hints if not provided
-    if run_name is None:
-        name_hints = [
-            model_cfg.name_hint,
-            prompt_template_name,
-            provider_name,
-            io_name,
-        ]
-        run_name = generate_run_name(name_hints)
-
-    # Create run directory
-    run_dir = create_run_directory("infer", run_name, official)
+    # Create run manager if not provided (allows test injection)
+    if run_manager is None:
+        run_manager = ProductionRunManager(
+            cli_name="infer",
+            name_hints=name_hints,
+            custom_run_name=run_name,
+            official=official,
+        )
 
     # Create tag symlink if requested
     if tag:
-        TagManager.create_tag(run_dir, tag)
+        TagManager.create_tag(run_manager.run_dir, tag)
 
-    # Build application hexagon with loaded configs and run_dir
+    # Build application hexagon with loaded configs and run_manager
     return _build_application_hexagon(
         provider_name=provider_name,
         io_name=io_name,
         prompt_template_name=prompt_template_name,
         model_cfg=model_cfg,
         retry_cfg=retry_cfg,
-        run_dir=run_dir,
-        run_name=run_name,
+        run_manager=run_manager,
     )
 
 
@@ -113,8 +110,7 @@ def _build_application_hexagon(
     prompt_template_name: str,
     model_cfg: ModelConfig,
     retry_cfg: RetryConfig,
-    run_dir: Path,
-    run_name: str,
+    run_manager: RunManager,
 ) -> InferenceApplication:
     """Build application hexagon by instantiating driven adapters and use case.
 
@@ -127,6 +123,7 @@ def _build_application_hexagon(
     - PromptBuilderPort: Building prompts from samples
     - LLMProviderPort: Calling LLM APIs
     - ResponseParserPort: Parsing LLM responses
+    - RunManager: Run directory and name management
 
     The use case depends only on port abstractions (ABCs), enabling:
     - Unit testing with mocked ports
@@ -140,14 +137,13 @@ def _build_application_hexagon(
         prompt_template_name: Prompt template name for factory
         model_cfg: Loaded model configuration
         retry_cfg: Loaded retry configuration
-        run_dir: Run directory for file-based output and logging
-        run_name: Resolved run name
+        run_manager: Run manager providing run_dir and run_name
 
     Returns:
         InferenceApplication - the application's driving port interface
     """
     input_port = IOAdapterFactory.create_reader(io_name)
-    output_port = IOAdapterFactory.create_writer(io_name, run_dir=run_dir)
+    output_port = IOAdapterFactory.create_writer(io_name, run_dir=run_manager.run_dir)
     prompt_builder = PromptAdapterFactory.create(prompt_template_name)
     response_parser = ParserAdapterFactory.create(prompt_template_name)
     llm_provider = ProviderFactory.create(provider_name, model_cfg, retry_cfg)
@@ -159,6 +155,5 @@ def _build_application_hexagon(
         prompt_builder=prompt_builder,
         llm_provider=llm_provider,
         response_parser=response_parser,
-        run_dir=run_dir,
-        run_name=run_name,
+        run_manager=run_manager,
     )

@@ -17,6 +17,7 @@ from __future__ import annotations
 import typer
 
 from llm_ensemble.infer.startup.dependency_configurator import build_application
+from llm_ensemble.infer.startup.config_loader import build_run_name_hints
 
 from llm_ensemble.libs.cli.params import (
     RunName,
@@ -62,14 +63,22 @@ def infer(
     Thin CLI driving adapter that builds the application and executes it.
     All backend logic (infrastructure, logging, inference) handled by application.
     """
+    # Build name hints from config names (application logic)
+    name_hints = build_run_name_hints(
+        model_config_name=model_cfg,
+        prompt_template_name=prompt_template,
+        provider_name=provider,
+        io_name=io_cfg,
+    )
+
     # Build application with run configuration
-    # Run directory and run name are created here in the composition root
     application = build_application(
         provider_name=provider,
         io_name=io_cfg,
         prompt_template_name=prompt_template,
         model_config_name=model_cfg,
         retry_config_name=retry_cfg,
+        name_hints=name_hints,
         run_name=run_name,
         official=official,
         tag=tag,

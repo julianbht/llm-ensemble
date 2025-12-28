@@ -39,13 +39,15 @@ from llm_ensemble.ingest.schemas.orms import (
 )
 
 # Infer CLI ORMs
-from llm_ensemble.infer.adapters.io.db.orms import (
+from llm_ensemble.infer.adapters.driven.io.db.orms import (
     ProviderORM,
     ParserORM,
     PromptBuilderORM,
-    AdapterConfigORM,
+    PromptTemplateORM,
+    IngestRunContextORM,
     ModelConfigORM,
-    JudgedDatasetORM,
+    InferRunConfigORM,
+    InferRunOutputORM,
     InferRunORM,
     LLMPromptTextORM,
     LLMResponseTextORM,

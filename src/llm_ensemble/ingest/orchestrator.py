@@ -13,19 +13,18 @@ from typing import Optional
 
 from llm_ensemble.ingest.domain import IngestionService
 from llm_ensemble.libs.schemas import IOConfig
-from llm_ensemble.libs.schemas import LoggingConfig
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.logging.log_events import IngestLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
-from llm_ensemble.libs.runtime.run_manager import create_run_directory, write_summary
+from llm_ensemble.libs.runtime.run_manager import write_summary
 from llm_ensemble.libs.runtime.run_name import generate_run_name
+from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.tag_manager import TagManager
-from llm_ensemble.libs.logging import configure_logger
+from llm_ensemble.libs.logging import configure_logger, get_logger
 
 
 def run_ingest(
     io_config: IOConfig,
-    logging_config: LoggingConfig,
     io_config_name: str,
     input_path: Path,
     run_name: Optional[str] = None,
@@ -46,7 +45,6 @@ def run_ingest(
 
     Args:
         io_config: Ingest-specific I/O configuration (already loaded and validated with overrides applied)
-        logging_config: Logging configuration (controls pretty printing and log saving)
         io_config_name: Name of the I/O config file (e.g., "llm_judge_challenge_json")
         input_path: Path to input directory containing raw dataset files
         run_name: Custom run ID (auto-generates if not provided)
@@ -81,26 +79,24 @@ def run_ingest(
     )
 
     # Create run directory
-    run_dir = create_run_directory("ingest", run_name, official)
+    run_dir = PathManager.get_run_dir("ingest", run_name, official)
+    run_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create tag file if tag provided
+    # Configure logging infrastructure (reads from env variables)
+    run_type = RunType.OFFICIAL if official else RunType.TEST
+    configure_logger(
+        cli_name="ingest",
+        run_name=run_name,
+        run_type=run_type.value,
+        log_file_path=run_dir / "run.log",
+    )
+
+    # Create tag symlink if requested
     if tag:
         TagManager.create_tag(run_dir, tag)
 
-    # Set up log file path if saving logs
-    log_file_path = run_dir / "run.log" if logging_config.save_logs else None
-
-    # Initialize structlog logger with config
-    logger = configure_logger(
-        cli_name="ingest",
-        run_name=run_name,
-        run_type=run_info.run_type,
-        pretty_print=logging_config.pretty_print,
-        save_logs=logging_config.save_logs,
-        log_file_path=log_file_path,
-        console_level=logging_config.console_level,
-        file_level=logging_config.file_level,
-    )
+    # Get logger instance
+    logger = get_logger()
 
     logger.info(
         IngestLogEvent.INGEST_STARTED,
@@ -137,7 +133,3 @@ def run_ingest(
         raise
 
     logger.info(IngestLogEvent.INGEST_COMPLETE)
-
-    # Log where logs were saved if enabled
-    if logging_config.save_logs:
-        logger.info(IngestLogEvent.LOGS_SAVED, path=str(run_dir / "run.log"))

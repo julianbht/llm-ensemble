@@ -26,8 +26,8 @@ from llm_ensemble.ingest.domain.entities.ingest_run_summary import IngestRunSumm
 from llm_ensemble.ingest.application.ports.driving.for_running_ingest import ForRunningIngest
 
 # Driven ports (application depends on these)
-from llm_ensemble.ingest.application.ports.driven.dataset_reader import DatasetReader
-from llm_ensemble.ingest.application.ports.driven.dataset_writer import DatasetWriter
+from llm_ensemble.ingest.application.ports.driven.for_input import ForInput
+from llm_ensemble.ingest.application.ports.driven.for_output import ForOutput
 
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import IngestLogEvent
@@ -64,8 +64,8 @@ class IngestApplication(ForRunningIngest):
 
     def __init__(
         self,
-        dataset_reader: DatasetReader,
-        dataset_writer: DatasetWriter,
+        dataset_reader: ForInput,
+        dataset_writer: ForOutput,
         run_dir: Path,
         run_name: str,
         io_config_name: str,

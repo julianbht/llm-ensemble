@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 from llm_ensemble.ingest.domain.entities import Query, Document, JudgingSample, NormalizedDataset
-from llm_ensemble.ingest.application.ports.driven.dataset_reader import DatasetReader
+from llm_ensemble.ingest.application.ports.driven.for_input import ForInput
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
@@ -38,7 +38,7 @@ class LlmJudgePaths:
         return self.base_dir / "llm4eval_test_qrel_2024.txt"
 
 
-class LLMJudgeDatasetReader(DatasetReader):
+class LLMJudgeDatasetReader(ForInput):
     """Reader for LLM Judge Challenge 2024 dataset.
 
     Reads queries (TSV), documents (JSONL), and relevance judgements (TSV)

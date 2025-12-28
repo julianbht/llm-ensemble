@@ -31,7 +31,7 @@ from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     NormalizedDatasetORM,
     DatasetSampleORM,
 )
-from llm_ensemble.ingest.application.ports.driven.dataset_writer import DatasetWriter
+from llm_ensemble.ingest.application.ports.driven.for_output import ForOutput
 from llm_ensemble.ingest.adapters.driven.io.db.mappers import (
     query_to_orm,
     document_to_orm,
@@ -47,7 +47,7 @@ from llm_ensemble.libs.db import (
 from llm_ensemble.libs.logging.log_events import IngestWriteEvent
 
 
-class SqlWriter(DatasetWriter):
+class SqlWriter(ForOutput):
     """SQL writer adapter for judging samples - handles ORM mapping.
 
     Writes judging samples to SQL database using pure SQLAlchemy ORM.

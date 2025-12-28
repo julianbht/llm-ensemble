@@ -11,7 +11,7 @@ from typing import Optional
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 
 
-class DatasetReader(ABC):
+class ForInput(ABC):
     """Abstract base class for reading and normalizing IR datasets.
 
     Implementations read dataset-specific formats (TSV + JSONL, Parquet, etc.)

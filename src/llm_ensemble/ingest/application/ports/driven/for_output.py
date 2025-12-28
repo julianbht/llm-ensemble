@@ -12,7 +12,7 @@ from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
 from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
 
 
-class DatasetWriter(ABC):
+class ForOutput(ABC):
     """Abstract base class for writing judging samples.
 
     Writers are responsible for determining output file structure within the run directory.

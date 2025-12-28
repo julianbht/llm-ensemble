@@ -58,34 +58,3 @@ def load_retry_config(retry_id: str) -> RetryConfig:
         schema=RetryConfig,
         config_type="RetryConfig",
     )
-
-
-def build_run_name_hints(
-    model_config_name: str,
-    prompt_template_name: str,
-    provider_name: str,
-    io_name: str,
-) -> list[str]:
-    """Build run name hints from configuration names.
-
-    Application logic for determining what makes a meaningful run name.
-    Loads minimal config data needed for name hint extraction.
-
-    Args:
-        model_config_name: Model config identifier
-        prompt_template_name: Prompt template name
-        provider_name: Provider name
-        io_name: I/O adapter name
-
-    Returns:
-        List of name hints for run name generation
-    """
-    # Load model config to extract name hint
-    model_cfg = load_model_config(model_config_name)
-
-    return [
-        model_cfg.name_hint,
-        prompt_template_name,
-        provider_name,
-        io_name,
-    ]

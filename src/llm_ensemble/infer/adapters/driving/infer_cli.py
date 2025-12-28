@@ -14,6 +14,7 @@ and all logging appears in the terminal automatically.
 Tested via CLI integration tests.
 """
 from __future__ import annotations
+from typing import List
 import typer
 
 from llm_ensemble.infer.startup.composition_root import build_application
@@ -66,12 +67,12 @@ def infer(
     """
     # Generate run name if not given
     if run_name is None:
-        name_hints = build_run_name_hints(
-            model_config_name=model_cfg,
-            prompt_template_name=prompt_template,
-            provider_name=provider,
-            io_name=io_cfg,
-        )
+        name_hints = [
+            model_cfg,
+            prompt_template,
+            provider,
+            io_cfg,
+        ]
         run_name = generate_run_name(name_hints)
 
     # Build application

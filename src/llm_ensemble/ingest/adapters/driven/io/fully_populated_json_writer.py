@@ -7,9 +7,12 @@ Handles its own logging.
 from __future__ import annotations
 import json
 
-from llm_ensemble.ingest.schemas import JudgingSample, WriteSummary, NormalizedDataset
-from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
-from llm_ensemble.ingest.ports import DatasetWriter
+from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
+from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
+from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
+from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
+from llm_ensemble.ingest.application.ports.driven.dataset_writer import DatasetWriter
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.utils.entity_filenames import get_entity_filename
 from llm_ensemble.libs.logging.log_events import IngestWriteEvent
@@ -23,8 +26,9 @@ class FullyPopulatedJsonWriter(DatasetWriter):
     Logs write operations directly.
 
     Outputs:
-    - run_dir / "ingest_run_info.json" - IngestRunInfo (written once as separate manifest)
-    - run_dir / "judging_samples.json" - Samples array (pure domain entities without run_info)
+    - run_dir / "ingest_run_info.json" - IngestRunInfo (runtime metadata)
+    - run_dir / "ingest_run_config.json" - IngestRunConfig (configuration)
+    - run_dir / "judging_samples.json" - Samples array (pure domain entities)
 
     Example output:
         [
@@ -32,8 +36,8 @@ class FullyPopulatedJsonWriter(DatasetWriter):
             {"id": "...", "query": {...}, "document": {...}, "gold_score": 1}
         ]
 
-    Note: run_info is kept separate to maintain clean domain entities and avoid
-    duplication. Downstream CLIs can read samples without parsing run_info on each record.
+    Note: run_info and run_config are kept separate to maintain clean domain entities
+    and avoid duplication. Downstream CLIs can read samples without parsing metadata on each record.
     """
 
     def __init__(self):
@@ -44,12 +48,14 @@ class FullyPopulatedJsonWriter(DatasetWriter):
         self,
         normalized_dataset: NormalizedDataset,
         run_info: IngestRunInfo,
+        run_config: IngestRunConfig,
     ) -> WriteSummary:
         """Write fully populated judging samples to JSON with direct logging.
 
         Args:
             normalized_dataset: Complete normalized dataset with samples and metadata
-            run_info: Immutable runtime context (written to separate manifest, contains run_dir)
+            run_info: Immutable runtime metadata (git SHA, timestamps, notes)
+            run_config: Immutable run configuration (I/O config, input path, limit)
 
         Returns:
             WriteSummary as pure data (metadata for run summary)
@@ -64,12 +70,17 @@ class FullyPopulatedJsonWriter(DatasetWriter):
         run_dir = run_info.run_dir
 
         # Derive filenames from entity class names (DRY principle, following INFER pattern)
-        manifest_file = run_dir / get_entity_filename(IngestRunInfo, "json", plural=False)
+        run_info_file = run_dir / get_entity_filename(IngestRunInfo, "json", plural=False)
+        run_config_file = run_dir / get_entity_filename(IngestRunConfig, "json", plural=False)
         samples_file = run_dir / get_entity_filename(JudgingSample, "json")
 
-        # Write run_info manifest (separate from samples)
-        with manifest_file.open("w", encoding="utf-8") as f:
+        # Write run_info manifest (runtime metadata)
+        with run_info_file.open("w", encoding="utf-8") as f:
             json.dump(run_info.model_dump(mode="json"), f, indent=2)
+
+        # Write run_config manifest (configuration)
+        with run_config_file.open("w", encoding="utf-8") as f:
+            json.dump(run_config.model_dump(mode="json"), f, indent=2)
 
         # Write samples file (pure domain entities without run_info)
         samples_file.parent.mkdir(parents=True, exist_ok=True)

@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
 
 
 class DatasetWriter(ABC):
@@ -20,9 +21,10 @@ class DatasetWriter(ABC):
     Writers return WriteSummary objects to provide transparency into write operations
     without handling their own logging (separation of concerns).
 
-    Writers receive run_info separately from normalized dataset to maintain clean domain entities.
-    This follows the separation of concerns where run context is passed to persistence
-    adapters but not embedded in domain entities.
+    Writers receive run_info and run_config separately from normalized dataset to maintain
+    clean domain entities. This follows separation of concerns:
+    - run_info: Runtime metadata (git SHA, timestamps, notes)
+    - run_config: Configuration used for this run (I/O config, input path, limit)
 
     Unlike INFER CLI which uses streaming writes (write_one in a loop), INGEST uses
     batch writes (write all samples at once), so no context manager pattern is needed.
@@ -33,6 +35,7 @@ class DatasetWriter(ABC):
         self,
         normalized_dataset: NormalizedDataset,
         run_info: IngestRunInfo,
+        run_config: IngestRunConfig,
     ) -> WriteSummary:
         """Write judging samples to storage.
 
@@ -45,7 +48,8 @@ class DatasetWriter(ABC):
 
         Args:
             normalized_dataset: Complete normalized dataset with samples and metadata
-            run_info: Immutable runtime context (contains run_dir property for path derivation)
+            run_info: Immutable runtime metadata (git SHA, timestamps, notes)
+            run_config: Immutable run configuration (I/O config, input path, limit)
 
         Returns:
             WriteSummary tracking what was created vs. skipped

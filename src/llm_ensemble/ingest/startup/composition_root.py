@@ -127,6 +127,5 @@ def _build_application_hexagon(
         dataset_writer=dataset_writer,
         run_dir=run_dir,
         run_name=run_name,
-        io_config=io_config,
         io_config_name=io_config_name,
     )

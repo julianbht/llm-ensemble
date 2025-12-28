@@ -47,7 +47,7 @@ from llm_ensemble.libs.db import (
 from llm_ensemble.libs.logging.log_events import IngestWriteEvent
 
 
-class SqlWriter(ForOutput):
+class DbWriter(ForOutput):
     """SQL writer adapter for judging samples - handles ORM mapping.
 
     Writes judging samples to SQL database using pure SQLAlchemy ORM.

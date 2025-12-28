@@ -94,7 +94,7 @@ class IngestApplication(ForRunningIngest):
     ) -> IngestRunSummary:
         """Execute the complete ingestion backend with infrastructure setup and finalization.
 
-        This is the main application entry point called by driving adapters (CLI, Web API).
+        This is the main application entry point called by driving adapters.
 
         Backend workflow:
         - Setup logging
@@ -127,20 +127,23 @@ class IngestApplication(ForRunningIngest):
         """
         # Get logger
         logger = get_logger()
+        logger.info(IngestLogEvent.INGEST_STARTED)
 
-        # Verify input directory exists
-        if not input_path.exists():
-            raise FileNotFoundError(f"Input directory does not exist: {input_path}")
+        # Create run summary builder (for timing and collection of metrics)
+        summary_builder = RunSummaryBuilder()
+        summary_builder.set_start_time()
 
-        logger.info(
-            IngestLogEvent.INGEST_STARTED,
-            io_format=self.io_config_name,
-            input_path=str(input_path),
-            limit=limit,
+        # Read and normalize dataset
+        normalized_dataset: NormalizedDataset = self.dataset_reader.read(
+            input_path,
+            limit=limit
         )
-        logger.info(IngestLogEvent.RUN_DIRECTORY_CREATED, path=str(self.run_dir))
+        logger.info(
+            IngestLogEvent.DATASET_READ_COMPLETE,
+            sample_count=normalized_dataset.sample_count,
+        )
 
-        # Build run_config and run_info for manifest persistence
+        # Write output
         run_config = self._build_run_config(
             io_config_name=self.io_config_name,
             input_path=input_path,
@@ -151,51 +154,26 @@ class IngestApplication(ForRunningIngest):
             official=official,
             notes=notes,
         )
+        write_summary = self.dataset_writer.write(
+            normalized_dataset,
+            run_info,
+            run_config
+        )
 
-        # Create run summary builder (for timing and collection of metrics)
-        summary_builder = RunSummaryBuilder()
-        summary_builder.set_start_time()
+        # Add to write summary to builder for inclusion in final summary
+        summary_builder.add("write_summary", write_summary)
+        summary_builder.add("sample_count", normalized_dataset.sample_count)
 
-        # Execute ingestion pipeline
-        try:
-            # Read and normalize dataset
-            normalized_dataset: NormalizedDataset = self.dataset_reader.read(
-                input_path,
-                limit=limit
-            )
+        # Finalize summary (sets end_time and creates immutable Pydantic object)
+        summary: IngestRunSummary = summary_builder.finalize(IngestRunSummary)
 
-            # Log read completion
-            logger.info(
-                IngestLogEvent.DATASET_READ_COMPLETE,
-                sample_count=normalized_dataset.sample_count,
-            )
+        # Write summary.json
+        summary_path = write_summary(summary, self.run_dir)
+        logger.info(IngestLogEvent.INGEST_SUMMARY_WRITTEN, path=str(summary_path))
+        
+        # Return finalized summary
+        return summary
 
-            # Write normalized dataset (writer logs directly)
-            write_summary = self.dataset_writer.write(
-                normalized_dataset,
-                run_info,
-                run_config
-            )
-
-            # Add to write summary to builder for inclusion in final summary
-            summary_builder.add("write_summary", write_summary)
-            summary_builder.add("sample_count", normalized_dataset.sample_count)
-
-            # Finalize summary (sets end_time and creates immutable Pydantic object)
-            summary: IngestRunSummary = summary_builder.finalize(IngestRunSummary)
-
-            # Write summary.json
-            summary_path = write_summary(summary, self.run_dir)
-            logger.info(IngestLogEvent.INGEST_SUMMARY_WRITTEN, path=str(summary_path))
-
-            logger.info(IngestLogEvent.INGEST_COMPLETE)
-
-            # Return finalized summary
-            return summary
-
-        except Exception as e:
-            logger.error(IngestLogEvent.INGEST_FAILED, error=str(e))
-            raise
 
     def _build_run_config(
         self,

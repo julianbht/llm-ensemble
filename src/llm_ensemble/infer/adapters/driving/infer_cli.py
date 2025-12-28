@@ -64,7 +64,7 @@ def infer(
     Thin CLI driving adapter that builds the application and executes it.
     All backend logic (infrastructure, logging, inference) handled by application.
     """
-    # Generate run name from config metadata
+    # Generate run name if not given
     if run_name is None:
         name_hints = build_run_name_hints(
             model_config_name=model_cfg,
@@ -74,7 +74,7 @@ def infer(
         )
         run_name = generate_run_name(name_hints)
 
-    # Build application with run configuration
+    # Build application
     application = build_application(
         provider_name=provider,
         io_name=io_cfg,

@@ -18,6 +18,7 @@ then uses the returned ForRunningInference interface to execute business logic.
 """
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.infer.application.inference_application import InferenceApplication
@@ -75,7 +76,7 @@ def build_application(
     retry_cfg = load_retry_config(retry_config_name)
 
     # Create run directory
-    run_dir = PathManager.get_run_dir("infer", run_name, official)
+    run_dir : Path = PathManager.get_run_dir("infer", run_name, official)
     run_dir.mkdir(parents=True, exist_ok=True)
 
     # Create tag symlink if requested

@@ -120,25 +120,51 @@ class ConfigParamType(click.ParamType):
         ]
 
 
-class IOConfigParamType(ConfigParamType):
-    """Click parameter type that validates CLI-specific I/O configs."""
+class IOConfigParamType(click.ParamType):
+    """Click parameter type for IO format selection.
+
+    Uses factory-based approach (IOAdapterFactory) to list available formats.
+    """
+
+    name = "IO_FORMAT"
 
     def __init__(self, cli_name: str) -> None:
-        super().__init__(
-            param_name="--io-cfg",
-            config_type_label=f"{cli_name} I/O",
-            config_dir_provider=lambda: PathManager.get_io_configs_dir(cli_name),
-            example_fallback="json",
-            missing_factory=lambda config_dir, available, example: format_missing_io_config_error(
-                cli_name, config_dir=config_dir, available=available
-            ),
-            invalid_factory=lambda invalid_value, config_dir, available, example: format_invalid_io_config_error(
-                cli_name=cli_name,
-                invalid_value=invalid_value,
-                config_dir=config_dir,
-                available=available,
-            ),
-        )
+        self.cli_name = cli_name
+
+    def convert(self, value, param, ctx):  # type: ignore[override]
+        if value in (None, ""):
+            from llm_ensemble.infer.adapters.driven.io_factory import IOAdapterFactory
+            available = IOAdapterFactory.list_available()
+            available_str = ", ".join(available) if available else "none"
+            self.fail(
+                f"IO format is required. Use --io-cfg <format>.\n"
+                f"Available formats: {available_str}",
+                param,
+                ctx,
+            )
+
+        from llm_ensemble.infer.adapters.driven.io_factory import IOAdapterFactory
+        if not IOAdapterFactory.has_format(value):
+            available = IOAdapterFactory.list_available()
+            available_str = ", ".join(available) if available else "none"
+            self.fail(
+                f"IO format '{value}' not found.\n"
+                f"Available formats: {available_str}",
+                param,
+                ctx,
+            )
+
+        return value
+
+    def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
+        """Provide shell completion for available IO formats."""
+        from llm_ensemble.infer.adapters.driven.io_factory import IOAdapterFactory
+        available = IOAdapterFactory.list_available()
+        return [
+            click.shell_completion.CompletionItem(fmt)
+            for fmt in available
+            if fmt.startswith(incomplete)
+        ]
 
 
 class ModelConfigParamType(ConfigParamType):
@@ -183,8 +209,8 @@ class PromptTemplateParamType(click.ParamType):
 
     def convert(self, value, param, ctx):  # type: ignore[override]
         if value in (None, ""):
-            from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
-            available = PromptTemplateFactory.list_available()
+            from llm_ensemble.infer.adapters.driven.prompt_factory import PromptAdapterFactory
+            available = PromptAdapterFactory.list_available()
             available_str = ", ".join(available) if available else "none"
             self.fail(
                 f"Template name is required. Use --prompt-template <name>.\n"
@@ -193,9 +219,9 @@ class PromptTemplateParamType(click.ParamType):
                 ctx,
             )
 
-        from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
-        if not PromptTemplateFactory.has_template(value):
-            available = PromptTemplateFactory.list_available()
+        from llm_ensemble.infer.adapters.driven.prompt_factory import PromptAdapterFactory
+        if not PromptAdapterFactory.has_prompt(value):
+            available = PromptAdapterFactory.list_available()
             available_str = ", ".join(available) if available else "none"
             self.fail(
                 f"Template '{value}' not found.\n"
@@ -208,8 +234,8 @@ class PromptTemplateParamType(click.ParamType):
 
     def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
         """Provide shell completion for available templates."""
-        from llm_ensemble.infer.adapters.template_factory import PromptTemplateFactory
-        available = PromptTemplateFactory.list_available()
+        from llm_ensemble.infer.adapters.driven.prompt_factory import PromptAdapterFactory
+        available = PromptAdapterFactory.list_available()
         return [
             click.shell_completion.CompletionItem(template)
             for template in available
@@ -227,7 +253,7 @@ class ProviderParamType(click.ParamType):
 
     def convert(self, value, param, ctx):  # type: ignore[override]
         if value in (None, ""):
-            from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
+            from llm_ensemble.infer.adapters.driven.provider_factory import ProviderFactory
             available = ProviderFactory.list_available()
             available_str = ", ".join(available) if available else "none"
             self.fail(
@@ -237,7 +263,7 @@ class ProviderParamType(click.ParamType):
                 ctx,
             )
 
-        from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
+        from llm_ensemble.infer.adapters.driven.provider_factory import ProviderFactory
         if not ProviderFactory.has_provider(value):
             available = ProviderFactory.list_available()
             available_str = ", ".join(available) if available else "none"
@@ -252,7 +278,7 @@ class ProviderParamType(click.ParamType):
 
     def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
         """Provide shell completion for available providers."""
-        from llm_ensemble.infer.adapters.provider_factory import ProviderFactory
+        from llm_ensemble.infer.adapters.driven.provider_factory import ProviderFactory
         available = ProviderFactory.list_available()
         return [
             click.shell_completion.CompletionItem(provider)

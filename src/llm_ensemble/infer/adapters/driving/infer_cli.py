@@ -14,11 +14,9 @@ and all logging appears in the terminal automatically.
 Tested via CLI integration tests.
 """
 from __future__ import annotations
-from typing import List
 import typer
 
 from llm_ensemble.infer.startup.composition_root import build_application
-from llm_ensemble.infer.startup.config_loader import build_run_name_hints
 from llm_ensemble.libs.runtime.run_name import generate_run_name
 
 from llm_ensemble.libs.cli.params import (

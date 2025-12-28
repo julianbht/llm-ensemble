@@ -1,6 +1,6 @@
 """Dependency configuration for inference pipeline.
 
-Startup Layer - Composition Root (Dependency Configurator)
+Startup Layer - Composition Root
 
 Hexagonal Architecture - Composition Root Pattern:
 Builds and wires together the application hexagon by:
@@ -34,6 +34,8 @@ from llm_ensemble.infer.adapters.driven.parser_factory import ParserAdapterFacto
 from llm_ensemble.infer.startup.config_loader import load_model_config, load_retry_config
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.tag_manager import TagManager
+from llm_ensemble.libs.runtime.run_info import RunType
+from llm_ensemble.libs.logging import configure_logger
 
 
 def build_application(
@@ -78,6 +80,15 @@ def build_application(
     # Create run directory
     run_dir : Path = PathManager.get_run_dir("infer", run_name, official)
     run_dir.mkdir(parents=True, exist_ok=True)
+
+    # Configure logging infrastructure
+    run_type = RunType.OFFICIAL if official else RunType.TEST
+    configure_logger(
+        cli_name="infer",
+        run_name=run_name,
+        run_type=run_type.value,
+        log_file_path=run_dir / "run.log",
+    )
 
     # Create tag symlink if requested
     if tag:

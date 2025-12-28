@@ -44,7 +44,7 @@ from llm_ensemble.infer.application.ports.driven.output_port import OutputPort
 from llm_ensemble.infer.application.ports.driven.response_parser_port import ResponseParserPort
 from llm_ensemble.infer.application.ports.driven.prompt_builder_port import PromptBuilderPort
 
-from llm_ensemble.libs.logging import configure_logger
+from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_manager import write_summary
@@ -147,8 +147,8 @@ class InferenceApplication(ForRunningInference):
         # Track start time for summary
         start_time = datetime.now()
 
-        # Setup logging
-        logger = self._setup_logging(self.run_name, self.run_dir)
+        # Get logger (already configured by composition root)
+        logger = get_logger()
 
         logger.info(
             InferLogEvent.INFER_STARTED,
@@ -261,36 +261,6 @@ class InferenceApplication(ForRunningInference):
             start_idx=start_idx,
             end_idx=end_idx,
         )
-
-    def _setup_logging(
-        self,
-        run_name: str,
-        run_dir: "Path",
-    ) -> structlog.stdlib.BoundLogger:
-        """Configure logging for this inference run.
-
-        Logging configuration is read from environment variables:
-            LOG_PRETTY_PRINT: Use human-readable console output (true/false, default: false)
-            LOG_SAVE_LOGS: Save logs to file (true/false, default: true)
-            LOG_CONSOLE_LEVEL: Console log level (DEBUG/INFO/WARNING/ERROR, default: INFO)
-            LOG_FILE_LEVEL: File log level (DEBUG/INFO/WARNING/ERROR, default: DEBUG)
-
-        Args:
-            run_name: Run name for logger context
-            run_dir: Run directory for log file
-
-        Returns:
-            Configured structlog logger instance
-        """
-        # Setup logging from environment variables
-        logger = configure_logger(
-            cli_name="infer",
-            run_name=run_name,
-            run_type="test",
-            log_file_path=run_dir / "run.log",
-        )
-
-        return logger
 
     def _build_run_info(
         self,

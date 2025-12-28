@@ -130,18 +130,9 @@ class IngestApplication(ForRunningIngest):
         """
         # Get logger
         logger = get_logger()
-
-        # Verify input directory exists
-        if not input_path.exists():
-            raise FileNotFoundError(f"Input directory does not exist: {input_path}")
-
         logger.info(
             IngestLogEvent.INGEST_STARTED,
-            io_format=self.io_config_name,
-            input_path=str(input_path),
-            limit=limit,
         )
-        logger.info(IngestLogEvent.RUN_DIRECTORY_CREATED, path=str(self.run_dir))
 
         # Build run_info for manifest
         run_info = self._build_run_info(

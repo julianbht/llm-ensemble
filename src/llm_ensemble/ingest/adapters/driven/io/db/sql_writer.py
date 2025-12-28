@@ -14,16 +14,16 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from llm_ensemble.ingest.schemas import (
+from llm_ensemble.ingest.domain.entities import (
     JudgingSample,
     Query,
     Document,
     WriteSummary,
     NormalizedDataset,
 )
-from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
-from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
-from llm_ensemble.ingest.adapters.io.db.orms import (
+from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     QueryORM,
     DocumentORM,
     IngestRunORM,
@@ -31,8 +31,8 @@ from llm_ensemble.ingest.adapters.io.db.orms import (
     NormalizedDatasetORM,
     DatasetSampleORM,
 )
-from llm_ensemble.ingest.ports import DatasetWriter
-from llm_ensemble.ingest.adapters.io.mappers import (
+from llm_ensemble.ingest.application.ports.driven.dataset_writer import DatasetWriter
+from llm_ensemble.ingest.adapters.driven.io.db.mappers import (
     query_to_orm,
     document_to_orm,
     judging_sample_to_orm,

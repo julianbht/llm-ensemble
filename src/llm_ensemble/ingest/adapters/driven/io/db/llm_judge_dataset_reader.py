@@ -10,8 +10,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
 
-from llm_ensemble.ingest.schemas import Query, Document, RelevanceScore, JudgingSample, NormalizedDataset
-from llm_ensemble.ingest.ports import DatasetReader
+from llm_ensemble.ingest.domain.entities import Query, Document, JudgingSample, NormalizedDataset
+from llm_ensemble.ingest.application.ports.driven.dataset_reader import DatasetReader
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 @dataclass(frozen=True)

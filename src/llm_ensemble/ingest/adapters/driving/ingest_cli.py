@@ -1,9 +1,24 @@
+"""Ingest CLI - Driving Adapter
+
+CLI Layer - Driving Adapter
+
+This is a thin driving adapter that:
+1. Parses CLI arguments
+2. Calls the dependency configurator to build the application
+3. Executes the application via its driving port (ForRunningIngest)
+
+The application handles all backend concerns (infrastructure setup, logging,
+normalization execution, result persistence). This adapter simply triggers it
+and all logging appears in the terminal automatically.
+
+Tested via CLI integration tests.
+"""
 from __future__ import annotations
 import typer
 
-from llm_ensemble.ingest.application.orchestrator import run_ingest
+from llm_ensemble.ingest.startup.composition_root import build_application
 from llm_ensemble.libs.config.io_config_loader import IOConfigFactory
-from llm_ensemble.libs.runtime.env import load_runtime_config
+from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.cli.params import (
     InputPath,
     RunName,
@@ -14,41 +29,53 @@ from llm_ensemble.libs.cli.params import (
     Tag,
 )
 
-# Load runtime configuration early
-load_runtime_config()
-
 app = typer.Typer(
     add_completion=True,
     help="LLM Ensemble – data ingest CLI",
-    pretty_exceptions_enable=False,  # Disable Rich verbose tracebacks
+    pretty_exceptions_enable=False,  # Disable verbose tracebacks
 )
 
 
 @app.command("ingest")
 def ingest(
+    # Required parameters
     input_path: InputPath,
     io_cfg: IngestIoCfg,
+    # Optional parameters
     limit: Limit = None,
     run_name: RunName = None,
     official: Official = False,
     notes: Notes = None,
     tag: Tag = None,
 ):
-    """Normalize raw IR datasets into JudgingSample records."""
+    """Normalize raw IR datasets into JudgingSample records.
 
+    Thin CLI driving adapter that builds the application and executes it.
+    All backend logic (infrastructure, logging, normalization) handled by application.
+    """
     # Load I/O configuration
     io_config = IOConfigFactory.load(io_cfg, cli_name="ingest")
 
-    # Run ingest
-    run_ingest(
+    # Generate run name if not given
+    if run_name is None:
+        name_hints = [io_config.name_hint]
+        run_name = generate_run_name(name_hints)
+
+    # Build application
+    application = build_application(
         io_config=io_config,
         io_config_name=io_cfg,
-        input_path=input_path,
         run_name=run_name,
+        official=official,
+        tag=tag,
+    )
+
+    # Run application
+    application.run_ingest(
+        input_path=input_path,
         limit=limit,
         official=official,
         notes=notes,
-        tag=tag,
     )
 
 

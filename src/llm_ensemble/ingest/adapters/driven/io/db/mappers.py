@@ -22,7 +22,9 @@ Design:
 from __future__ import annotations
 from uuid import UUID
 
-from llm_ensemble.ingest.domain.entities.judging_sample import Query, Document, JudgingSample
+from llm_ensemble.ingest.domain.entities.query import Query
+from llm_ensemble.ingest.domain.entities.document import Document
+from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo

@@ -1,22 +1,17 @@
-"""Bidirectional mappers between domain objects and ORM models.
+"""Domain to ORM mappers for INGEST CLI (writing direction).
 
-This module provides symmetric conversion functions for mapping between
-pure Pydantic domain objects and SQLAlchemy ORM models.
+This module provides conversion functions for mapping from Pydantic domain objects
+to SQLAlchemy ORM models for persistence.
 
 Design principles:
-- Bidirectional: Each entity has to_orm() and from_orm() functions
-- Symmetric: Conversion logic lives in one place for both read and write
-- Stateless: Pure functions with no side effects
-- Explicit: Clear parameter names for foreign keys that aren't in domain objects
+- Domain objects are the source of truth and already have UUIDs
+- Mappers are simple pass-through converters
+- Stateless pure functions
+- Used by DBWriter for persisting ingestion results
 
-The domain layer works with pure Pydantic objects (Query, Document, JudgingSample).
-The persistence layer works with SQLAlchemy ORMs (QueryORM, DocumentORM, etc.).
-These mappers handle the impedance mismatch.
-
-Design:
-- Queries and Documents are global entities with content-based hashing
-- No Dataset entity - context is tracked at NormalizedDataset level
-- Content hashes are computed by domain models, not mappers
+The domain layer works with Pydantic models (Query, Document, JudgingSample, etc.).
+The persistence layer works with SQLAlchemy ORMs.
+These mappers handle the impedance mismatch for the write path.
 """
 
 from __future__ import annotations
@@ -47,8 +42,6 @@ from llm_ensemble.ingest.adapters.driven.io.db.orms import (
 def query_to_orm(query: Query) -> QueryORM:
     """Convert Query domain object to QueryORM.
 
-    Simply maps fields - content_hash is already computed by domain model.
-
     Args:
         query: Query domain object
 
@@ -62,30 +55,12 @@ def query_to_orm(query: Query) -> QueryORM:
     )
 
 
-def query_from_orm(query_orm: QueryORM) -> Query:
-    """Convert QueryORM to Query domain object.
-
-    Args:
-        query_orm: QueryORM model from database
-
-    Returns:
-        Query domain object
-    """
-    return Query(
-        id=query_orm.id,
-        content_hash=query_orm.content_hash,
-        query_text=query_orm.query_text,
-    )
-
-
 # ============================================================================
 # Document Mappers
 # ============================================================================
 
 def document_to_orm(document: Document) -> DocumentORM:
     """Convert Document domain object to DocumentORM.
-
-    Simply maps fields - content_hash is already computed by domain model.
 
     Args:
         document: Document domain object
@@ -100,31 +75,12 @@ def document_to_orm(document: Document) -> DocumentORM:
     )
 
 
-def document_from_orm(document_orm: DocumentORM) -> Document:
-    """Convert DocumentORM to Document domain object.
-
-    Args:
-        document_orm: DocumentORM model from database
-
-    Returns:
-        Document domain object
-    """
-    return Document(
-        id=document_orm.id,
-        content_hash=document_orm.content_hash,
-        doc_text=document_orm.doc_text,
-    )
-
-
 # ============================================================================
 # JudgingSample Mappers
 # ============================================================================
 
 def judging_sample_to_orm(sample: JudgingSample) -> JudgingSampleORM:
     """Convert JudgingSample domain object to JudgingSampleORM.
-
-    The relationship to IngestRun is now handled via the junction table,
-    so ingest_run_id is no longer a field on JudgingSampleORM.
 
     Args:
         sample: JudgingSample domain object
@@ -137,35 +93,6 @@ def judging_sample_to_orm(sample: JudgingSample) -> JudgingSampleORM:
         query_id=sample.query.id,
         document_id=sample.document.id,
         gold_score=sample.gold_score,
-    )
-
-
-def judging_sample_from_orm(
-    sample_orm: JudgingSampleORM,
-    query: Query,
-    document: Document,
-) -> JudgingSample:
-    """Convert JudgingSampleORM to JudgingSample domain object.
-
-    Note: Query and Document domain objects must be provided separately as the
-    JudgingSample domain object embeds them directly (not as foreign keys).
-
-    This function expects the caller to have already loaded and converted the
-    related Query and Document entities.
-
-    Args:
-        sample_orm: JudgingSampleORM model from database
-        query: Query domain object (already converted from QueryORM)
-        document: Document domain object (already converted from DocumentORM)
-
-    Returns:
-        JudgingSample domain object with embedded query and document
-    """
-    return JudgingSample(
-        id=sample_orm.id,
-        query=query,
-        document=document,
-        gold_score=sample_orm.gold_score,
     )
 
 
@@ -187,27 +114,6 @@ def dataset_sample_to_orm(dataset_sample: DatasetSample) -> DatasetSampleORM:
         normalized_dataset_id=dataset_sample.normalized_dataset_id,
         judging_sample_id=dataset_sample.judging_sample.id,
         sequence_number=dataset_sample.sequence_number,
-    )
-
-
-def dataset_sample_from_orm(
-    dataset_sample_orm: DatasetSampleORM,
-    judging_sample: JudgingSample,
-) -> DatasetSample:
-    """Convert DatasetSampleORM to DatasetSample domain object.
-
-    Args:
-        dataset_sample_orm: DatasetSampleORM model from database
-        judging_sample: JudgingSample domain object (already converted from ORM)
-
-    Returns:
-        DatasetSample domain object with embedded judging_sample
-    """
-    return DatasetSample(
-        id=dataset_sample_orm.id,
-        normalized_dataset_id=dataset_sample_orm.normalized_dataset_id,
-        judging_sample=judging_sample,
-        sequence_number=dataset_sample_orm.sequence_number,
     )
 
 
@@ -234,27 +140,6 @@ def normalized_dataset_to_orm(normalized_dataset: NormalizedDataset) -> Normaliz
     )
 
 
-def normalized_dataset_from_orm(
-    normalized_dataset_orm: NormalizedDatasetORM,
-    dataset_samples: list[DatasetSample],
-) -> NormalizedDataset:
-    """Convert NormalizedDatasetORM to NormalizedDataset domain object.
-
-    Args:
-        normalized_dataset_orm: NormalizedDatasetORM model from database
-        dataset_samples: List of DatasetSample domain objects (already converted from ORM)
-
-    Returns:
-        NormalizedDataset domain object with embedded dataset samples
-    """
-    return NormalizedDataset(
-        id=normalized_dataset_orm.id,
-        fingerprint=normalized_dataset_orm.fingerprint,
-        external_dataset_name=normalized_dataset_orm.external_dataset_name,
-        samples=dataset_samples,
-    )
-
-
 # ============================================================================
 # IngestRunConfig Mappers
 # ============================================================================
@@ -273,23 +158,6 @@ def ingest_run_config_to_orm(run_config: IngestRunConfig) -> IngestRunConfigORM:
         io_config_name=run_config.io_config_name,
         input_path=run_config.input_path,
         limit=run_config.limit,
-    )
-
-
-def ingest_run_config_from_orm(run_config_orm: IngestRunConfigORM) -> IngestRunConfig:
-    """Convert IngestRunConfigORM to IngestRunConfig domain object.
-
-    Args:
-        run_config_orm: IngestRunConfigORM model from database
-
-    Returns:
-        IngestRunConfig domain object
-    """
-    return IngestRunConfig(
-        id=run_config_orm.id,
-        io_config_name=run_config_orm.io_config_name,
-        input_path=run_config_orm.input_path,
-        limit=run_config_orm.limit,
     )
 
 
@@ -322,28 +190,4 @@ def ingest_run_info_to_orm(
         git_branch=run_info.git_info.git_branch,
         git_is_dirty="true" if not run_info.git_info.git_clean else "false",
         notes=run_info.notes,
-    )
-
-
-def ingest_run_info_from_orm(run_info_orm: IngestRunInfoORM) -> IngestRunInfo:
-    """Convert IngestRunInfoORM to IngestRunInfo domain object.
-
-    Args:
-        run_info_orm: IngestRunInfoORM model from database
-
-    Returns:
-        IngestRunInfo domain object
-    """
-    from llm_ensemble.libs.runtime.git_utils import GitInfo
-
-    return IngestRunInfo(
-        id=run_info_orm.id,
-        run_name=run_info_orm.run_name,
-        run_type=run_info_orm.run_type,
-        git_info=GitInfo(
-            git_sha=run_info_orm.git_sha,
-            git_branch=run_info_orm.git_branch,
-            git_clean=run_info_orm.git_is_dirty != "true",
-        ),
-        notes=run_info_orm.notes,
     )

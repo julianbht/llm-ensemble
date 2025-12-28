@@ -124,11 +124,13 @@ def dataset_sample_to_orm(dataset_sample: DatasetSample) -> DatasetSampleORM:
 def normalized_dataset_to_orm(normalized_dataset: NormalizedDataset) -> NormalizedDatasetORM:
     """Convert NormalizedDataset domain object to NormalizedDatasetORM.
 
+    Extracts the ingest_run_config_id from the embedded run_config.
+
     Note: This only creates the NormalizedDatasetORM entity itself.
     The junction table records (linking to samples) must be created separately.
 
     Args:
-        normalized_dataset: NormalizedDataset domain object
+        normalized_dataset: NormalizedDataset domain object with embedded run_config
 
     Returns:
         NormalizedDatasetORM model ready for persistence
@@ -137,6 +139,7 @@ def normalized_dataset_to_orm(normalized_dataset: NormalizedDataset) -> Normaliz
         id=normalized_dataset.id,
         fingerprint=normalized_dataset.fingerprint,
         external_dataset_name=normalized_dataset.external_dataset_name,
+        ingest_run_config_id=normalized_dataset.run_config.id,
     )
 
 
@@ -165,17 +168,15 @@ def ingest_run_config_to_orm(run_config: IngestRunConfig) -> IngestRunConfigORM:
 # IngestRunInfo Mappers
 # ============================================================================
 
-def ingest_run_info_to_orm(
-    run_info: IngestRunInfo,
-    ingest_run_config_id: UUID,
-    normalized_dataset_id: UUID,
-) -> IngestRunInfoORM:
-    """Convert IngestRunInfo to IngestRunInfoORM.
+def ingest_run_info_to_orm(run_info: IngestRunInfo) -> IngestRunInfoORM:
+    """Convert IngestRunInfo aggregate to IngestRunInfoORM.
+
+    Extracts IDs from embedded objects within the aggregate:
+    - normalized_dataset.id from run_info.normalized_dataset
+    - run_config.id from run_info.normalized_dataset.run_config
 
     Args:
-        run_info: IngestRunInfo domain object (runtime metadata only)
-        ingest_run_config_id: UUID of the IngestRunConfig used for this run
-        normalized_dataset_id: UUID of the NormalizedDataset produced by this run
+        run_info: IngestRunInfo aggregate root containing embedded normalized_dataset
 
     Returns:
         IngestRunInfoORM model ready for persistence
@@ -184,8 +185,7 @@ def ingest_run_info_to_orm(
         id=run_info.id,
         run_name=run_info.run_name,
         run_type=run_info.run_type,
-        ingest_run_config_id=ingest_run_config_id,
-        normalized_dataset_id=normalized_dataset_id,
+        normalized_dataset_id=run_info.normalized_dataset.id,
         git_sha=run_info.git_info.git_sha,
         git_branch=run_info.git_info.git_branch,
         git_is_dirty="true" if not run_info.git_info.git_clean else "false",

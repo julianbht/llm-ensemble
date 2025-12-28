@@ -6,6 +6,7 @@ to NormalizedDataset objects containing both metadata and samples.
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Optional
 
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
@@ -17,33 +18,35 @@ class ForInput(ABC):
     Implementations read dataset-specific formats (TSV + JSONL, Parquet, etc.)
     and return a complete NormalizedDataset with metadata and samples.
 
-    The reader extracts dataset information from the data itself (not from config),
-    ensuring dataset metadata travels with the data.
+    The reader is instantiated with its io_name (format identifier) and reads
+    external raw datasets at runtime. Runtime parameters (input_path, limit)
+    are passed to the read() method.
 
     The reader handles complete normalization:
     - Dataset metadata extraction
     - Creating Query and Document entities with UUIDs
     - Creating complete JudgingSample objects
+    - Creating IngestRunConfig and embedding it in NormalizedDataset
     - Packaging everything as NormalizedDataset
-    
+
     Note: DatasetReader is for raw dataset ingestion, not reading from runs.
-    It still accepts paths since it reads from external data sources.
+    It accepts paths to external data sources at runtime.
     """
 
     @abstractmethod
     def read(
         self,
-        input_path: str,
+        input_path: Path,
         limit: Optional[int] = None,
     ) -> NormalizedDataset:
         """Read and normalize raw dataset.
 
         Args:
-            input_path: Path to input dataset (file or directory, as string)
+            input_path: Path to input dataset (file or directory)
             limit: Optional maximum number of samples to read
 
         Returns:
-            NormalizedDataset containing metadata and complete samples
+            NormalizedDataset containing metadata, samples, and embedded IngestRunConfig
 
         Raises:
             FileNotFoundError: If input_path doesn't exist

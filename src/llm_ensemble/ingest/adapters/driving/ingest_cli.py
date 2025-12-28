@@ -17,7 +17,6 @@ from __future__ import annotations
 import typer
 
 from llm_ensemble.ingest.startup.composition_root import build_application
-from llm_ensemble.libs.config.io_config_loader import IOConfigFactory
 from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.cli.params import (
     InputPath,
@@ -53,18 +52,13 @@ def ingest(
     Thin CLI driving adapter that builds the application and executes it.
     All backend logic (infrastructure, logging, normalization) handled by application.
     """
-    # Load I/O configuration
-    io_config = IOConfigFactory.load(io_cfg, cli_name="ingest")
-
     # Generate run name if not given
     if run_name is None:
-        name_hints = [io_config.name_hint]
-        run_name = generate_run_name(name_hints)
+        run_name = generate_run_name()
 
     # Build application
     application = build_application(
-        io_config=io_config,
-        io_config_name=io_cfg,
+        io_name=io_cfg,
         run_name=run_name,
         official=official,
         tag=tag,

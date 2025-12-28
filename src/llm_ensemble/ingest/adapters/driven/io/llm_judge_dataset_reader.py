@@ -10,7 +10,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
 
-from llm_ensemble.ingest.domain.entities import Query, Document, JudgingSample, NormalizedDataset
+from llm_ensemble.ingest.domain.entities.query import Query
+from llm_ensemble.ingest.domain.entities.document import Document
+from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
+from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
+from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
 from llm_ensemble.ingest.application.ports.driven.for_input import ForInput
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
@@ -38,7 +42,7 @@ class LlmJudgePaths:
         return self.base_dir / "llm4eval_test_qrel_2024.txt"
 
 
-class LLMJudgeDatasetReader(ForInput):
+class LlmJudgeDatasetReader(ForInput):
     """Reader for LLM Judge Challenge 2024 dataset.
 
     Reads queries (TSV), documents (JSONL), and relevance judgements (TSV)
@@ -50,25 +54,33 @@ class LLMJudgeDatasetReader(ForInput):
     - qrels: TSV with columns (query_id, relevance, docid) or (query_id, iteration, docid, relevance)
     """
 
+    def __init__(self, io_name: str):
+        """Initialize reader with IO format name.
+
+        Args:
+            io_name: Name of the IO format (e.g., 'llm_judge_ingest')
+        """
+        self.io_name = io_name
+
     def read(
         self,
-        input_path: str,
+        input_path: Path,
         limit: Optional[int] = None,
     ) -> NormalizedDataset:
         """Read and normalize LLM Judge dataset.
 
         Args:
-            input_path: Base directory containing dataset files (as string path)
+            input_path: Base directory containing dataset files
             limit: Optional maximum number of samples to return
 
         Returns:
-            NormalizedDataset with complete samples
+            NormalizedDataset with complete samples and embedded IngestRunConfig
 
         Raises:
             FileNotFoundError: If required dataset files are missing
             ValueError: If dataset files are malformed or qrels reference missing queries/documents
         """
-        paths = LlmJudgePaths(Path(input_path))
+        paths = LlmJudgePaths(input_path)
 
         # Load queries and documents into memory
         queries = self._read_queries(paths.queries)
@@ -107,9 +119,18 @@ class LLMJudgeDatasetReader(ForInput):
             if limit is not None and len(samples_by_content) >= limit:
                 break
 
+        # Create run config for this dataset
+        run_config = IngestRunConfig(
+            io_config_name=self.io_name,
+            input_path=str(input_path),
+            limit=limit,
+        )
+
+        # Create normalized dataset with embedded config
         samples = list(samples_by_content.values())
         return NormalizedDataset.create(
             samples=samples,
+            run_config=run_config,
             external_dataset_name="llmjudge"
         )
 

@@ -8,31 +8,31 @@ This adapter delegates ORM mapping to the mappers module for bidirectional symme
 """
 
 from __future__ import annotations
+from pathlib import Path
 from typing import List, Dict, Tuple
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from llm_ensemble.ingest.domain.entities import (
-    JudgingSample,
-    Query,
-    Document,
-    WriteSummary,
-    NormalizedDataset,
-)
+from llm_ensemble.ingest.domain.entities.query import Query
+from llm_ensemble.ingest.domain.entities.document import Document
+from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
+from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
+from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
+
 from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     QueryORM,
     DocumentORM,
-    IngestRunORM,
     JudgingSampleORM,
     NormalizedDatasetORM,
     DatasetSampleORM,
 )
 from llm_ensemble.ingest.application.ports.driven.for_output import ForOutput
-from llm_ensemble.ingest.adapters.driven.io.db.mappers import (
+from llm_ensemble.ingest.adapters.driven.io.db.mappers_to_orm import (
     query_to_orm,
     document_to_orm,
     judging_sample_to_orm,
@@ -64,17 +64,21 @@ class DbWriter(ForOutput):
     Example: postgresql://user:password@localhost:5432/llm_ensemble
     """
 
-    def __init__(self, database_url: str | None = None):
-        """Initialize SQL writer with its own logger."""
+    def __init__(self, io_name: str, run_dir: Path, database_url: str | None = None):
+        """Initialize SQL writer with IO format name and run directory.
+
+        Args:
+            io_name: Name of the IO format (e.g., 'llm_judge_ingest')
+            run_dir: Run directory path (for consistency with file-based writers)
+            database_url: Optional database URL (defaults to DATABASE_URL env var)
+        """
+        self.io_name = io_name
+        self.run_dir = run_dir
         self.database_url = database_url
         self.engine = get_engine(database_url)
         self.logger = get_logger(component="sql_writer")
 
-    def write(
-        self,
-        normalized_dataset: NormalizedDataset,
-        run_info: IngestRunInfo,
-    ) -> WriteSummary:
+    def write(self, run_info: IngestRunInfo) -> WriteSummary:
         """Write normalized dataset to SQL database with direct logging.
 
         Duplicate detection via database constraint violations (IntegrityError).
@@ -82,8 +86,7 @@ class DbWriter(ForOutput):
         Logs each entity type write and summary.
 
         Args:
-            normalized_dataset: Complete normalized dataset with fingerprint and samples
-            run_info: Immutable runtime context
+            run_info: Complete IngestRunInfo aggregate containing dataset and metadata
 
         Returns:
             WriteSummary as pure data (metadata for run summary)
@@ -91,6 +94,8 @@ class DbWriter(ForOutput):
         Raises:
             IOError: If database write fails
         """
+        # Extract dataset from aggregate
+        normalized_dataset = run_info.normalized_dataset
         dataset_samples = normalized_dataset.samples
         judging_samples = [ds.judging_sample for ds in dataset_samples]
 
@@ -110,9 +115,10 @@ class DbWriter(ForOutput):
                 # Dependency graph:
                 #   1. Query, Document (no dependencies - global entities)
                 #   2. JudgingSample (depends on Query, Document)
-                #   3. NormalizedDataset entity (no FK dependencies - just id + fingerprint)
-                #   4. NormalizedDataset junction (depends on NormalizedDataset + JudgingSample)
-                #   5. IngestRun (depends on NormalizedDataset)
+                #   3. IngestRunConfig (no dependencies)
+                #   4. NormalizedDataset entity (depends on IngestRunConfig)
+                #   5. NormalizedDataset junction (depends on NormalizedDataset + JudgingSample)
+                #   6. IngestRun (depends on NormalizedDataset)
 
                 # Collect unique queries and documents from batch
                 unique_queries, unique_documents = self._collect_unique_entities(dataset_samples)
@@ -135,7 +141,12 @@ class DbWriter(ForOutput):
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_JUDGING_SAMPLES, created=created, skipped=skipped)
 
-                # 4. NormalizedDataset entity (no FK dependencies)
+                # 4. IngestRunConfig (no FK dependencies)
+                created, skipped = self._save_ingest_run_config(session, normalized_dataset.run_config)
+                if created > 0 or skipped > 0:
+                    self.logger.info(IngestWriteEvent.WRITE_RUN_CONFIG, created=created, skipped=skipped)
+
+                # 5. NormalizedDataset entity (depends on IngestRunConfig)
                 created, skipped = self._save_normalized_dataset_entity(session, normalized_dataset)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_NORMALIZED_DATASET, created=created, skipped=skipped)
@@ -144,13 +155,13 @@ class DbWriter(ForOutput):
                 # (required because DatasetSample has FK to NormalizedDataset)
                 session.flush()
 
-                # 5. DatasetSample records (depend on NormalizedDataset + JudgingSample)
+                # 6. DatasetSample records (depend on NormalizedDataset + JudgingSample)
                 created, skipped = self._save_dataset_samples(session, normalized_dataset)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_DATASET_SAMPLES, created=created, skipped=skipped)
 
-                # 6. IngestRun (depends on NormalizedDataset)
-                created, skipped = self._save_ingest_run(session, run_info, normalized_dataset.id)
+                # 7. IngestRun (depends on NormalizedDataset)
+                created, skipped = self._save_ingest_run(session, run_info)
                 summary.add_runs(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_RUNS, created=created, skipped=skipped)
@@ -169,7 +180,7 @@ class DbWriter(ForOutput):
             raise IOError(f"Failed to write samples to database: {e}") from e
 
     def _save_ingest_run(
-        self, session: Session, run_info: IngestRunInfo, normalized_dataset_id: UUID
+        self, session: Session, run_info: IngestRunInfo
     ) -> Tuple[int, int]:
         """Save ingest run entity to database using mapper.
 
@@ -177,16 +188,39 @@ class DbWriter(ForOutput):
 
         Args:
             session: SQLAlchemy session
-            run_info: IngestRunInfo context object
-            normalized_dataset_id: UUID of the NormalizedDataset this run produced
+            run_info: IngestRunInfo aggregate (contains embedded normalized_dataset)
 
         Returns:
             Tuple of (created_count, skipped_count)
         """
         try:
             savepoint = session.begin_nested()
-            ingest_run_orm = ingest_run_info_to_orm(run_info, normalized_dataset_id)
+            ingest_run_orm = ingest_run_info_to_orm(run_info)
             session.add(ingest_run_orm)
+            session.flush()
+            return (1, 0)
+        except IntegrityError:
+            savepoint.rollback()
+            return (0, 1)
+
+    def _save_ingest_run_config(
+        self, session: Session, run_config: IngestRunConfig
+    ) -> Tuple[int, int]:
+        """Save ingest run config entity to database using mapper.
+
+        Uses constraint-based duplicate detection via IntegrityError on natural key.
+
+        Args:
+            session: SQLAlchemy session
+            run_config: IngestRunConfig domain object
+
+        Returns:
+            Tuple of (created_count, skipped_count)
+        """
+        try:
+            savepoint = session.begin_nested()
+            config_orm = ingest_run_config_to_orm(run_config)
+            session.add(config_orm)
             session.flush()
             return (1, 0)
         except IntegrityError:

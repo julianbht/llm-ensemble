@@ -67,6 +67,11 @@ class NormalizedDatasetORM(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     fingerprint = Column(CHAR(64), nullable=False, unique=True)
     external_dataset_name = Column(String(255), nullable=True)
+    ingest_run_config_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ingest.ingest_run_configs.id"),
+        nullable=False
+    )
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
@@ -76,6 +81,7 @@ class NormalizedDatasetORM(Base):
         back_populates="normalized_datasets",
         order_by="DatasetSampleORM.sequence_number"
     )
+    ingest_run_config = relationship("IngestRunConfigORM", back_populates="normalized_datasets")
     ingest_runs = relationship("IngestRunInfoORM", back_populates="normalized_dataset")
 
 
@@ -124,7 +130,7 @@ class IngestRunConfigORM(Base):
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    ingest_runs = relationship("IngestRunInfoORM", back_populates="ingest_run_config")
+    normalized_datasets = relationship("NormalizedDatasetORM", back_populates="ingest_run_config")
 
 
 class IngestRunInfoORM(Base):
@@ -136,11 +142,6 @@ class IngestRunInfoORM(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType, schema="public"), nullable=False, default=RunType.TEST)
-    ingest_run_config_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("ingest.ingest_run_configs.id"),
-        nullable=False
-    )
     normalized_dataset_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("ingest.normalized_datasets.id"),
@@ -153,7 +154,6 @@ class IngestRunInfoORM(Base):
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    ingest_run_config = relationship("IngestRunConfigORM", back_populates="ingest_runs")
     normalized_dataset = relationship("NormalizedDatasetORM", back_populates="ingest_runs")
 
 

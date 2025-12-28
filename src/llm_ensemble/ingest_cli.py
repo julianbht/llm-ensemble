@@ -1,7 +1,7 @@
 from __future__ import annotations
 import typer
 
-from llm_ensemble.ingest.orchestrator import run_ingest
+from llm_ensemble.ingest.application.orchestrator import run_ingest
 from llm_ensemble.libs.config.io_config_loader import IOConfigFactory
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.cli.params import (

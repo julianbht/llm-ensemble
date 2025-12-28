@@ -15,7 +15,7 @@ import inspect
 from sqlalchemy import UniqueConstraint
 
 from llm_ensemble.infer.schemas import orms_normalized
-from llm_ensemble.ingest.schemas import orms as ingest_orms
+from llm_ensemble.ingest.adapters.io.db import orms as ingest_orms
 from llm_ensemble.libs.db import uuid_helpers
 
 

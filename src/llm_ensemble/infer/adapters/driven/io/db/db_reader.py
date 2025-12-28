@@ -20,8 +20,8 @@ using SQLAlchemy sessions from the libs/db layer.
 from __future__ import annotations
 from typing import Optional
 
-from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
-from llm_ensemble.ingest.schemas.orms import (
+from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
+from llm_ensemble.ingest.adapters.io.db.orms import (
     JudgingSampleORM,
     QueryORM,
     DocumentORM,
@@ -29,7 +29,7 @@ from llm_ensemble.ingest.schemas.orms import (
     NormalizedDatasetORM,
     DatasetSampleORM,
 )
-from llm_ensemble.ingest.adapters.io.mappers import (
+from llm_ensemble.ingest.adapters.io.db.mappers import (
     query_from_orm,
     document_from_orm,
     judging_sample_from_orm,

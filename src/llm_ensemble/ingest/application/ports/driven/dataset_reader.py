@@ -8,7 +8,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from llm_ensemble.ingest.schemas import NormalizedDataset
+from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 
 
 class DatasetReader(ABC):

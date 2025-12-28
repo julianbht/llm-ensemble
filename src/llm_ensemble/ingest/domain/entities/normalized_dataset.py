@@ -18,8 +18,8 @@ from typing import Optional
 import hashlib
 from pydantic import BaseModel, Field, field_validator
 
-from llm_ensemble.ingest.schemas import JudgingSample
-from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 
 
 class NormalizedDataset(BaseModel):

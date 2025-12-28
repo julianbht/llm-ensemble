@@ -8,9 +8,9 @@ import json
 import pytest
 from pathlib import Path
 
-from llm_ensemble.ingest.orchestrator import run_ingest
+from llm_ensemble.ingest.application.orchestrator import run_ingest
 from llm_ensemble.ingest.schemas import WriteSummary
-from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
+from llm_ensemble.ingest.domain.entities.ingest_run_summary import IngestRunSummary
 from llm_ensemble.libs.schemas import LoggingConfig, IOConfig
 from llm_ensemble.libs.runtime.run_info import RunType
 

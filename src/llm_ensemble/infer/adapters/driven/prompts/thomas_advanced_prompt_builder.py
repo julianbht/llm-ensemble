@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from textwrap import dedent
 
-from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 from llm_ensemble.infer.application.ports.driven.for_building_prompts import ForBuildingPrompts
 from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_summary import RunSummary
-from llm_ensemble.ingest.schemas.write_summary import WriteSummary
+from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
 
 
 class IngestRunSummary(RunSummary):

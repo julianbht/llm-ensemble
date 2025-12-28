@@ -5,11 +5,10 @@ Defines the abstract contract for writing judging samples to persistent storage.
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import List
 
-from llm_ensemble.ingest.schemas import WriteSummary, NormalizedDataset
-from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
+from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
+from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
 
 
 class DatasetWriter(ABC):

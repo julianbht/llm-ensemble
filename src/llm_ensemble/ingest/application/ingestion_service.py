@@ -8,10 +8,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from llm_ensemble.ingest.schemas import NormalizedDataset
-from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
-from llm_ensemble.ingest.schemas.ingest_run_summary import IngestRunSummary
-from llm_ensemble.ingest.ports import DatasetReader, DatasetWriter
+from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
+from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.domain.entities.ingest_run_summary import IngestRunSummary
+from llm_ensemble.ingest.application.ports.driven.dataset_reader import DatasetReader
+from llm_ensemble.ingest.application.ports.driven.dataset_writer import DatasetWriter
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 from llm_ensemble.libs.logging.log_events import IngestLogEvent

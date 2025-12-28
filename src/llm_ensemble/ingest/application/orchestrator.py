@@ -11,9 +11,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from llm_ensemble.ingest.domain import IngestionService
+from llm_ensemble.ingest.application.ingestion_service import IngestionService
 from llm_ensemble.libs.schemas import IOConfig
-from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
 from llm_ensemble.libs.logging.log_events import IngestLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_manager import write_summary

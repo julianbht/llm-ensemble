@@ -18,7 +18,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
-from llm_ensemble.ingest.schemas.judging_sample import JudgingSample
+from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 
 
 class DatasetSample(BaseModel):

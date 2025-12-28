@@ -7,7 +7,7 @@ Adapters translate template rendering concerns into prompt text strings.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
-from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
 
 

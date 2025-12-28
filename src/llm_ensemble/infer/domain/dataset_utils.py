@@ -6,7 +6,7 @@ Pure domain logic for dataset operations - no adapter dependencies.
 from __future__ import annotations
 from typing import Optional
 
-from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
+from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 
 
 def resolve_slice_indices(

@@ -23,7 +23,7 @@ from llm_ensemble.ingest.schemas import (
 )
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.ingest.schemas.ingest_run_info import IngestRunInfo
-from llm_ensemble.ingest.schemas.orms import (
+from llm_ensemble.ingest.adapters.io.db.orms import (
     QueryORM,
     DocumentORM,
     IngestRunORM,

@@ -28,13 +28,15 @@ from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     QueryORM,
     DocumentORM,
     JudgingSampleORM,
     NormalizedDatasetORM,
     DatasetSampleORM,
-    IngestRunORM,
+    IngestRunInfoORM,
+    IngestRunConfigORM,
 )
 
 
@@ -254,34 +256,94 @@ def normalized_dataset_from_orm(
 
 
 # ============================================================================
-# IngestRun Mappers
+# IngestRunConfig Mappers
+# ============================================================================
+
+def ingest_run_config_to_orm(run_config: IngestRunConfig) -> IngestRunConfigORM:
+    """Convert IngestRunConfig to IngestRunConfigORM.
+
+    Args:
+        run_config: IngestRunConfig domain object
+
+    Returns:
+        IngestRunConfigORM model ready for persistence
+    """
+    return IngestRunConfigORM(
+        id=run_config.id,
+        io_config_name=run_config.io_config_name,
+        input_path=run_config.input_path,
+        limit=run_config.limit,
+    )
+
+
+def ingest_run_config_from_orm(run_config_orm: IngestRunConfigORM) -> IngestRunConfig:
+    """Convert IngestRunConfigORM to IngestRunConfig domain object.
+
+    Args:
+        run_config_orm: IngestRunConfigORM model from database
+
+    Returns:
+        IngestRunConfig domain object
+    """
+    return IngestRunConfig(
+        id=run_config_orm.id,
+        io_config_name=run_config_orm.io_config_name,
+        input_path=run_config_orm.input_path,
+        limit=run_config_orm.limit,
+    )
+
+
+# ============================================================================
+# IngestRunInfo Mappers
 # ============================================================================
 
 def ingest_run_info_to_orm(
     run_info: IngestRunInfo,
-    normalized_dataset_id: UUID
-) -> IngestRunORM:
-    """Convert IngestRunInfo to IngestRunORM.
-
-    Note: IngestRunInfo is a rich context object with full configuration,
-    but the ORM only persists a subset of fields for run tracking.
+    ingest_run_config_id: UUID,
+    normalized_dataset_id: UUID,
+) -> IngestRunInfoORM:
+    """Convert IngestRunInfo to IngestRunInfoORM.
 
     Args:
-        run_info: IngestRunInfo context object
-        normalized_dataset_id: UUID of the NormalizedDataset this run produced
+        run_info: IngestRunInfo domain object (runtime metadata only)
+        ingest_run_config_id: UUID of the IngestRunConfig used for this run
+        normalized_dataset_id: UUID of the NormalizedDataset produced by this run
 
     Returns:
-        IngestRunORM model ready for persistence
+        IngestRunInfoORM model ready for persistence
     """
-    return IngestRunORM(
+    return IngestRunInfoORM(
         id=run_info.id,
         run_name=run_info.run_name,
         run_type=run_info.run_type,
+        ingest_run_config_id=ingest_run_config_id,
         normalized_dataset_id=normalized_dataset_id,
-        io_config_name=run_info.io_config_name,
-        input_path=run_info.input_path,
-        limit=run_info.limit,
         git_sha=run_info.git_info.git_sha,
         git_branch=run_info.git_info.git_branch,
         git_is_dirty="true" if not run_info.git_info.git_clean else "false",
+        notes=run_info.notes,
+    )
+
+
+def ingest_run_info_from_orm(run_info_orm: IngestRunInfoORM) -> IngestRunInfo:
+    """Convert IngestRunInfoORM to IngestRunInfo domain object.
+
+    Args:
+        run_info_orm: IngestRunInfoORM model from database
+
+    Returns:
+        IngestRunInfo domain object
+    """
+    from llm_ensemble.libs.runtime.git_utils import GitInfo
+
+    return IngestRunInfo(
+        id=run_info_orm.id,
+        run_name=run_info_orm.run_name,
+        run_type=run_info_orm.run_type,
+        git_info=GitInfo(
+            git_sha=run_info_orm.git_sha,
+            git_branch=run_info_orm.git_branch,
+            git_clean=run_info_orm.git_is_dirty != "true",
+        ),
+        notes=run_info_orm.notes,
     )

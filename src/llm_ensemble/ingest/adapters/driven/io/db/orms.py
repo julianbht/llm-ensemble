@@ -76,7 +76,7 @@ class NormalizedDatasetORM(Base):
         back_populates="normalized_datasets",
         order_by="DatasetSampleORM.sequence_number"
     )
-    ingest_runs = relationship("IngestRunORM", back_populates="normalized_dataset")
+    ingest_runs = relationship("IngestRunInfoORM", back_populates="normalized_dataset")
 
 
 class DatasetSampleORM(Base):
@@ -103,7 +103,32 @@ class DatasetSampleORM(Base):
     )
 
 
-class IngestRunORM(Base):
+class IngestRunConfigORM(Base):
+    """Configuration for an ingest run."""
+    __tablename__ = "ingest_run_configs"
+    __table_args__ = (
+        UniqueConstraint(
+            "io_config_name",
+            "input_path",
+            "limit",
+            name="uq_ingest_run_config",
+        ),
+        {"schema": "ingest"},
+    )
+    __natural_key__ = ("io_config_name", "input_path", "limit")
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    io_config_name = Column(String(255), nullable=False)
+    input_path = Column(String(1024), nullable=False)
+    limit = Column(Integer, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    # Relationships
+    ingest_runs = relationship("IngestRunInfoORM", back_populates="ingest_run_config")
+
+
+class IngestRunInfoORM(Base):
+    """Runtime metadata for an ingest run."""
     __tablename__ = "ingest_runs"
     __table_args__ = {"schema": "ingest"}
     __natural_key__ = ("run_name",)
@@ -111,20 +136,24 @@ class IngestRunORM(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType, schema="public"), nullable=False, default=RunType.TEST)
+    ingest_run_config_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ingest.ingest_run_configs.id"),
+        nullable=False
+    )
     normalized_dataset_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("ingest.normalized_datasets.id"),
         nullable=False
     )
-    io_config_name = Column(String(255), nullable=False)
-    input_path = Column(String(1024), nullable=False)
-    limit = Column(Integer, nullable=True)
     git_sha = Column(String(40), nullable=True)
     git_branch = Column(String(255), nullable=True)
     git_is_dirty = Column(String(10), nullable=True)
+    notes = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
+    ingest_run_config = relationship("IngestRunConfigORM", back_populates="ingest_runs")
     normalized_dataset = relationship("NormalizedDatasetORM", back_populates="ingest_runs")
 
 

@@ -8,7 +8,7 @@ import pytest
 from pathlib import Path
 from typer.testing import CliRunner
 
-from llm_ensemble.ingest_cli import app
+from llm_ensemble.ingest.adapters.driving.ingest_cli import app
 
 
 runner = CliRunner()

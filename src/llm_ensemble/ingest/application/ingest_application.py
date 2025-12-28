@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
-import structlog
 
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
@@ -202,7 +201,6 @@ class IngestApplication(ForRunningIngest):
     def _build_run_info(
         self,
         run_name: str,
-        io_config: IOConfig,
         io_config_name: str,
         input_path: Path,
         limit: Optional[int],
@@ -213,7 +211,6 @@ class IngestApplication(ForRunningIngest):
 
         Args:
             run_name: Run identifier
-            io_config: Full I/O configuration
             io_config_name: Name of the I/O config file
             input_path: Path to input directory
             limit: Optional limit on samples to process
@@ -225,10 +222,11 @@ class IngestApplication(ForRunningIngest):
         """
         # Create immutable run info using create() method
         # git_info is automatically captured via default_factory
+        # io_config will be injected by the writer when persisting
         return IngestRunInfo.create(
             run_name=run_name,
             io_config_name=io_config_name,
-            io_config=io_config,
+            io_config=None,  # Will be injected by writer during persistence
             input_path=str(input_path),
             limit=limit,
             run_type=RunType.OFFICIAL if official else RunType.TEST,

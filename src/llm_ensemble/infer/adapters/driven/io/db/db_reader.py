@@ -36,11 +36,11 @@ from llm_ensemble.ingest.adapters.io.mappers import (
     dataset_sample_from_orm,
     normalized_dataset_from_orm,
 )
-from llm_ensemble.infer.application.ports.driven.input_port import InputPort
+from llm_ensemble.infer.application.ports.driven.for_input import ForInput
 from llm_ensemble.libs.db import get_engine, get_session
 
 
-class DBReader(InputPort):
+class DBReader(ForInput):
     """Read JudgingSample records from SQL database by ingest run name.
 
     This adapter implements the ExampleReader port while handling the

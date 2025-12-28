@@ -18,7 +18,7 @@ from typing import Optional
 from llm_ensemble.ingest.schemas.normalized_dataset import NormalizedDataset
 
 
-class InputPort(ABC):
+class ForInput(ABC):
     """Abstract base class for reading NormalizedDataset from ingest runs.
 
     Implementations can read from different sources (JSON, Parquet, SQL, etc.)

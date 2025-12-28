@@ -10,7 +10,7 @@ import re
 import uuid
 from typing import Optional
 
-from llm_ensemble.infer.application.ports.driven.response_parser_port import ResponseParserPort
+from llm_ensemble.infer.application.ports.driven.for_parsing_responses import ForParsingResponses
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
 from llm_ensemble.infer.domain.entities.warnings import ParserWarning, ParserWarningCode
@@ -18,7 +18,7 @@ from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
-class ThomasSimpleParser(ResponseParserPort):
+class ThomasSimpleParser(ForParsingResponses):
     """Parser for thomas-simple prompt responses.
 
     Expects JSON output: {"O": N} where N is 0, 1, 2, or 3.

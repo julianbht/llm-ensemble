@@ -11,7 +11,7 @@ To add a new parser:
 
 from __future__ import annotations
 
-from llm_ensemble.infer.application.ports.driven.response_parser_port import ResponseParserPort
+from llm_ensemble.infer.application.ports.driven.for_parsing_responses import ForParsingResponses
 from llm_ensemble.infer.adapters.driven.parsers.thomas_simple_parser import ThomasSimpleParser
 from llm_ensemble.infer.adapters.driven.parsers.thomas_advanced_parser import ThomasAdvancedParser
 
@@ -20,7 +20,7 @@ class ParserAdapterFactory:
     """Builder for creating response parser instances."""
 
     @staticmethod
-    def create(parser_name: str) -> ResponseParserPort:
+    def create(parser_name: str) -> ForParsingResponses:
         """Build and return a parser adapter instance.
 
         Uses explicit instantiation per parser to allow parser-specific

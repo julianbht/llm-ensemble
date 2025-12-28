@@ -17,7 +17,7 @@ from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.domain.entities.retry_config_schema import RetryConfig
 
 
-class LLMProviderPort(ABC):
+class ForInvokingLLM(ABC):
     """Abstract interface for LLM inference providers.
 
     Pure interface - adapters define their own constructors.

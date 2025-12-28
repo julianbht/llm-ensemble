@@ -16,8 +16,8 @@ To add a new IO format:
 from __future__ import annotations
 from pathlib import Path
 
-from llm_ensemble.infer.application.ports.driven.input_port import InputPort
-from llm_ensemble.infer.application.ports.driven.output_port import OutputPort
+from llm_ensemble.infer.application.ports.driven.for_input import ForInput
+from llm_ensemble.infer.application.ports.driven.for_output import ForOutput
 from llm_ensemble.infer.adapters.driven.io.db.db_reader import DBReader
 from llm_ensemble.infer.adapters.driven.io.db.db_writer import DBWriter
 from llm_ensemble.infer.adapters.driven.io.fully_populated_json_writer import FullyPopulatedJsonWriter
@@ -30,7 +30,7 @@ class IOAdapterFactory:
     """Builder for creating IO adapter instances."""
 
     @staticmethod
-    def create_reader(io_name: str) -> InputPort:
+    def create_reader(io_name: str) -> ForInput:
         """Build and return a reader adapter instance.
 
         Args:
@@ -54,7 +54,7 @@ class IOAdapterFactory:
             )
 
     @staticmethod
-    def create_writer(io_name: str, run_dir: Path) -> OutputPort:
+    def create_writer(io_name: str, run_dir: Path) -> ForOutput:
         """Build and return a writer adapter instance.
 
         Args:

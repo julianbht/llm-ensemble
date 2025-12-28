@@ -14,13 +14,13 @@ from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.application.write_summary import WriteSummary
-from llm_ensemble.infer.application.ports.driven.output_port import OutputPort
+from llm_ensemble.infer.application.ports.driven.for_output import ForOutput
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.utils.entity_filenames import get_entity_filename
 from llm_ensemble.libs.logging.log_events import InferWriteEvent
 
 
-class FullyPopulatedJsonWriter(OutputPort):
+class FullyPopulatedJsonWriter(ForOutput):
     """Fully populated JSON adapter for writing LLM judgements.
 
     Accumulates judgements in memory and writes them as a single JSON array

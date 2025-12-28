@@ -38,11 +38,11 @@ from llm_ensemble.infer.domain.dataset_utils import resolve_slice_indices
 from llm_ensemble.infer.application.ports.driving.for_running_inference import ForRunningInference
 
 # Driven ports (application depends on these)
-from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
-from llm_ensemble.infer.application.ports.driven.input_port import InputPort
-from llm_ensemble.infer.application.ports.driven.output_port import OutputPort
-from llm_ensemble.infer.application.ports.driven.response_parser_port import ResponseParserPort
-from llm_ensemble.infer.application.ports.driven.prompt_builder_port import PromptBuilderPort
+from llm_ensemble.infer.application.ports.driven.for_invoking_llm import ForInvokingLLM
+from llm_ensemble.infer.application.ports.driven.for_input import ForInput
+from llm_ensemble.infer.application.ports.driven.for_output import ForOutput
+from llm_ensemble.infer.application.ports.driven.for_parsing_responses import ForParsingResponses
+from llm_ensemble.infer.application.ports.driven.for_building_prompts import ForBuildingPrompts
 
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
@@ -79,11 +79,11 @@ class InferenceApplication(ForRunningInference):
 
     def __init__(
         self,
-        input_port: InputPort,
-        output_port: OutputPort,
-        prompt_builder: PromptBuilderPort,
-        llm_provider: LLMProviderPort,
-        response_parser: ResponseParserPort,
+        input_port: ForInput,
+        output_port: ForOutput,
+        prompt_builder: ForBuildingPrompts,
+        llm_provider: ForInvokingLLM,
+        response_parser: ForParsingResponses,
         run_dir: Path,
         run_name: str,
     ):
@@ -147,15 +147,14 @@ class InferenceApplication(ForRunningInference):
         # Track start time for summary
         start_time = datetime.now()
 
-        # Get logger (already configured by composition root)
+        # Get logger
         logger = get_logger()
-
         logger.info(
             InferLogEvent.INFER_STARTED,
             run_name=self.run_name
         )
 
-        # Read full NormalizedDataset
+        # Read NormalizedDataset
         resolved_input_run_name = TagManager.resolve_input(input_run_name, "ingest")
         normalized_dataset = self.input_port.read(resolved_input_run_name)
 
@@ -166,7 +165,7 @@ class InferenceApplication(ForRunningInference):
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
-        # Build run_config and run_info for manifest/persistence
+        # Build run_config and run_info for early persistence
         run_config = self._build_run_config(resolved_input_run_name, actual_start_idx, actual_end_idx)
         run_info = self._build_run_info(self.run_name, official, notes)
 

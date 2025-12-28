@@ -9,11 +9,11 @@ import uuid
 from textwrap import dedent
 
 from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
-from llm_ensemble.infer.application.ports.driven.prompt_builder_port import PromptBuilderPort
+from llm_ensemble.infer.application.ports.driven.for_building_prompts import ForBuildingPrompts
 from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
 
 
-class ThomasSimplePromptBuilder(PromptBuilderPort):
+class ThomasSimplePromptBuilder(ForBuildingPrompts):
     """Thomas et al. simple prompt (3-point relevance scoring).
 
     Template substitutes:

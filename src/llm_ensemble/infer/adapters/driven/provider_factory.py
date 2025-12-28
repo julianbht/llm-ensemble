@@ -11,7 +11,7 @@ To add a new provider:
 
 from __future__ import annotations
 
-from llm_ensemble.infer.application.ports.driven.llm_provider_port import LLMProviderPort
+from llm_ensemble.infer.application.ports.driven.for_invoking_llm import ForInvokingLLM
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.domain.entities.retry_config_schema import RetryConfig
 from llm_ensemble.infer.adapters.driven.providers.openrouter_adapter import OpenRouterAdapter
@@ -26,7 +26,7 @@ class ProviderFactory:
         provider_name: str,
         model_config: ModelConfig,
         retry_config: RetryConfig,
-    ) -> LLMProviderPort:
+    ) -> ForInvokingLLM:
         """Build and return a provider adapter instance.
 
         Uses explicit instantiation per provider to allow provider-specific

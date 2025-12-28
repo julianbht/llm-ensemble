@@ -11,7 +11,7 @@ from llm_ensemble.ingest.schemas.dataset_sample import DatasetSample
 from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
 
 
-class PromptBuilderPort(ABC):
+class ForBuildingPrompts(ABC):
     """Abstract interface for prompt builders.
 
     Adapters implement this interface to render prompt text from templates.

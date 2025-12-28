@@ -18,7 +18,7 @@ from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.application.write_summary import WriteSummary
 
 
-class OutputPort(ABC):
+class ForOutput(ABC):
     """Abstract base class for writing LLM judgements with streaming support.
 
     Implementations can write to different sinks (JSON, Parquet, etc.)
@@ -53,7 +53,7 @@ class OutputPort(ABC):
         self,
         run_info: InferRunInfo,
         run_config: InferRunConfig,
-    ) -> "OutputPort":
+    ) -> "ForOutput":
         """Initialize writer with run info and run config.
 
         The run_info contains metadata about the inference run (git SHA, timestamps, notes).
@@ -111,7 +111,7 @@ class OutputPort(ABC):
         """
         pass
 
-    def __enter__(self) -> OutputPort:
+    def __enter__(self) -> ForOutput:
         """Enter context manager.
 
         Returns:

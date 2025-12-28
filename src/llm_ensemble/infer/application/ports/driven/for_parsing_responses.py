@@ -12,7 +12,7 @@ from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
 from llm_ensemble.infer.domain.entities.warnings import BaseWarning
 
 
-class ResponseParserPort(ABC):
+class ForParsingResponses(ABC):
     """Abstract interface for response parsers.
 
     Adapters implement this interface to build LLMScore domain entities

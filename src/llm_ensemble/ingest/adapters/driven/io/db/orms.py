@@ -67,11 +67,6 @@ class NormalizedDatasetORM(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     fingerprint = Column(CHAR(64), nullable=False, unique=True)
     external_dataset_name = Column(String(255), nullable=True)
-    ingest_run_config_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("ingest.ingest_run_configs.id"),
-        nullable=False
-    )
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
@@ -81,8 +76,7 @@ class NormalizedDatasetORM(Base):
         back_populates="normalized_datasets",
         order_by="DatasetSampleORM.sequence_number"
     )
-    ingest_run_config = relationship("IngestRunConfigORM", back_populates="normalized_datasets")
-    ingest_runs = relationship("IngestRunInfoORM", back_populates="normalized_dataset")
+    ingest_runs = relationship("IngestRunORM", back_populates="normalized_dataset")
 
 
 class DatasetSampleORM(Base):
@@ -130,11 +124,14 @@ class IngestRunConfigORM(Base):
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    normalized_datasets = relationship("NormalizedDatasetORM", back_populates="ingest_run_config")
+    ingest_runs = relationship("IngestRunORM", back_populates="ingest_run_config")
 
 
-class IngestRunInfoORM(Base):
-    """Runtime metadata for an ingest run."""
+class IngestRunORM(Base):
+    """Complete record of an ingest execution.
+
+    Connects configuration (input) to dataset (output) with execution metadata.
+    """
     __tablename__ = "ingest_runs"
     __table_args__ = {"schema": "ingest"}
     __natural_key__ = ("run_name",)
@@ -142,18 +139,37 @@ class IngestRunInfoORM(Base):
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType, schema="public"), nullable=False, default=RunType.TEST)
+
+    # What was intended (configuration)
+    ingest_run_config_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ingest.ingest_run_configs.id"),
+        nullable=False,
+        comment="Configuration used for this run"
+    )
+
+    # What was produced (output)
     normalized_dataset_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("ingest.normalized_datasets.id"),
-        nullable=False
+        nullable=False,
+        comment="Dataset produced by this run"
     )
-    git_sha = Column(String(40), nullable=True)
-    git_branch = Column(String(255), nullable=True)
-    git_is_dirty = Column(String(10), nullable=True)
+
+    # Timing
+    start_time = Column(DateTime, nullable=False, comment="When the run started")
+    end_time = Column(DateTime, nullable=False, comment="When the run completed")
+
+    # Git metadata for reproducibility
+    git_sha = Column(String(40), nullable=False)
+    git_branch = Column(String(255), nullable=False)
+    git_is_dirty = Column(String(10), nullable=False)
+
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
+    ingest_run_config = relationship("IngestRunConfigORM", back_populates="ingest_runs")
     normalized_dataset = relationship("NormalizedDatasetORM", back_populates="ingest_runs")
 
 

@@ -22,8 +22,7 @@ from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDat
 from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
 
 from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
-from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
-from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
+from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     QueryORM,
     DocumentORM,
@@ -37,7 +36,8 @@ from llm_ensemble.ingest.adapters.driven.io.db.mappers_to_orm import (
     document_to_orm,
     judging_sample_to_orm,
     normalized_dataset_to_orm,
-    ingest_run_info_to_orm,
+    ingest_run_config_to_orm,
+    ingest_run_to_orm,
 )
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.db import (
@@ -78,15 +78,15 @@ class DbWriter(ForOutput):
         self.engine = get_engine(database_url)
         self.logger = get_logger(component="sql_writer")
 
-    def write(self, run_info: IngestRunInfo) -> WriteSummary:
-        """Write normalized dataset to SQL database with direct logging.
+    def write(self, ingest_run: IngestRun) -> WriteSummary:
+        """Write ingest run results to SQL database with direct logging.
 
         Duplicate detection via database constraint violations (IntegrityError).
         Tracks created vs skipped entities in WriteSummary.
         Logs each entity type write and summary.
 
         Args:
-            run_info: Complete IngestRunInfo aggregate containing dataset and metadata
+            ingest_run: Complete IngestRun aggregate containing config, dataset, and metadata
 
         Returns:
             WriteSummary as pure data (metadata for run summary)
@@ -95,7 +95,7 @@ class DbWriter(ForOutput):
             IOError: If database write fails
         """
         # Extract dataset from aggregate
-        normalized_dataset = run_info.normalized_dataset
+        normalized_dataset = ingest_run.normalized_dataset
         dataset_samples = normalized_dataset.samples
         judging_samples = [ds.judging_sample for ds in dataset_samples]
 
@@ -116,9 +116,9 @@ class DbWriter(ForOutput):
                 #   1. Query, Document (no dependencies - global entities)
                 #   2. JudgingSample (depends on Query, Document)
                 #   3. IngestRunConfig (no dependencies)
-                #   4. NormalizedDataset entity (depends on IngestRunConfig)
+                #   4. NormalizedDataset entity (no dependencies)
                 #   5. NormalizedDataset junction (depends on NormalizedDataset + JudgingSample)
-                #   6. IngestRun (depends on NormalizedDataset)
+                #   6. IngestRun (depends on IngestRunConfig + NormalizedDataset)
 
                 # Collect unique queries and documents from batch
                 unique_queries, unique_documents = self._collect_unique_entities(dataset_samples)
@@ -142,11 +142,11 @@ class DbWriter(ForOutput):
                     self.logger.info(IngestWriteEvent.WRITE_JUDGING_SAMPLES, created=created, skipped=skipped)
 
                 # 4. IngestRunConfig (no FK dependencies)
-                created, skipped = self._save_ingest_run_config(session, normalized_dataset.run_config)
+                created, skipped = self._save_ingest_run_config(session, ingest_run.ingest_run_config)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_RUN_CONFIG, created=created, skipped=skipped)
 
-                # 5. NormalizedDataset entity (depends on IngestRunConfig)
+                # 5. NormalizedDataset entity (no dependencies)
                 created, skipped = self._save_normalized_dataset_entity(session, normalized_dataset)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_NORMALIZED_DATASET, created=created, skipped=skipped)
@@ -160,8 +160,8 @@ class DbWriter(ForOutput):
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_DATASET_SAMPLES, created=created, skipped=skipped)
 
-                # 7. IngestRun (depends on NormalizedDataset)
-                created, skipped = self._save_ingest_run(session, run_info)
+                # 7. IngestRun (depends on IngestRunConfig + NormalizedDataset)
+                created, skipped = self._save_ingest_run(session, ingest_run)
                 summary.add_runs(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_RUNS, created=created, skipped=skipped)
@@ -180,7 +180,7 @@ class DbWriter(ForOutput):
             raise IOError(f"Failed to write samples to database: {e}") from e
 
     def _save_ingest_run(
-        self, session: Session, run_info: IngestRunInfo
+        self, session: Session, ingest_run: IngestRun
     ) -> Tuple[int, int]:
         """Save ingest run entity to database using mapper.
 
@@ -188,14 +188,14 @@ class DbWriter(ForOutput):
 
         Args:
             session: SQLAlchemy session
-            run_info: IngestRunInfo aggregate (contains embedded normalized_dataset)
+            ingest_run: IngestRun aggregate (contains config and dataset)
 
         Returns:
             Tuple of (created_count, skipped_count)
         """
         try:
             savepoint = session.begin_nested()
-            ingest_run_orm = ingest_run_info_to_orm(run_info)
+            ingest_run_orm = ingest_run_to_orm(ingest_run)
             session.add(ingest_run_orm)
             session.flush()
             return (1, 0)

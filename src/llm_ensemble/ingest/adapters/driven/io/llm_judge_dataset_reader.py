@@ -14,7 +14,6 @@ from llm_ensemble.ingest.domain.entities.query import Query
 from llm_ensemble.ingest.domain.entities.document import Document
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
-from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
 from llm_ensemble.ingest.application.ports.driven.for_input import ForInput
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
@@ -74,7 +73,7 @@ class LlmJudgeDatasetReader(ForInput):
             limit: Optional maximum number of samples to return
 
         Returns:
-            NormalizedDataset with complete samples and embedded IngestRunConfig
+            NormalizedDataset with complete samples
 
         Raises:
             FileNotFoundError: If required dataset files are missing
@@ -119,18 +118,10 @@ class LlmJudgeDatasetReader(ForInput):
             if limit is not None and len(samples_by_content) >= limit:
                 break
 
-        # Create run config for this dataset
-        run_config = IngestRunConfig(
-            io_config_name=self.io_name,
-            input_path=str(input_path),
-            limit=limit,
-        )
-
-        # Create normalized dataset with embedded config
+        # Create normalized dataset
         samples = list(samples_by_content.values())
         return NormalizedDataset.create(
             samples=samples,
-            run_config=run_config,
             external_dataset_name="llmjudge"
         )
 

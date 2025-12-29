@@ -22,7 +22,7 @@ from llm_ensemble.ingest.domain.entities.document import Document
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
-from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
 from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     QueryORM,
@@ -30,7 +30,7 @@ from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     JudgingSampleORM,
     NormalizedDatasetORM,
     DatasetSampleORM,
-    IngestRunInfoORM,
+    IngestRunORM,
     IngestRunConfigORM,
 )
 
@@ -124,13 +124,11 @@ def dataset_sample_to_orm(dataset_sample: DatasetSample) -> DatasetSampleORM:
 def normalized_dataset_to_orm(normalized_dataset: NormalizedDataset) -> NormalizedDatasetORM:
     """Convert NormalizedDataset domain object to NormalizedDatasetORM.
 
-    Extracts the ingest_run_config_id from the embedded run_config.
-
     Note: This only creates the NormalizedDatasetORM entity itself.
     The junction table records (linking to samples) must be created separately.
 
     Args:
-        normalized_dataset: NormalizedDataset domain object with embedded run_config
+        normalized_dataset: NormalizedDataset domain object
 
     Returns:
         NormalizedDatasetORM model ready for persistence
@@ -139,7 +137,6 @@ def normalized_dataset_to_orm(normalized_dataset: NormalizedDataset) -> Normaliz
         id=normalized_dataset.id,
         fingerprint=normalized_dataset.fingerprint,
         external_dataset_name=normalized_dataset.external_dataset_name,
-        ingest_run_config_id=normalized_dataset.run_config.id,
     )
 
 
@@ -165,29 +162,32 @@ def ingest_run_config_to_orm(run_config: IngestRunConfig) -> IngestRunConfigORM:
 
 
 # ============================================================================
-# IngestRunInfo Mappers
+# IngestRun Mappers
 # ============================================================================
 
-def ingest_run_info_to_orm(run_info: IngestRunInfo) -> IngestRunInfoORM:
-    """Convert IngestRunInfo aggregate to IngestRunInfoORM.
+def ingest_run_to_orm(ingest_run: IngestRun) -> IngestRunORM:
+    """Convert IngestRun aggregate to IngestRunORM.
 
     Extracts IDs from embedded objects within the aggregate:
-    - normalized_dataset.id from run_info.normalized_dataset
-    - run_config.id from run_info.normalized_dataset.run_config
+    - ingest_run_config.id from ingest_run.ingest_run_config
+    - normalized_dataset.id from ingest_run.normalized_dataset
 
     Args:
-        run_info: IngestRunInfo aggregate root containing embedded normalized_dataset
+        ingest_run: IngestRun aggregate root containing embedded config and dataset
 
     Returns:
-        IngestRunInfoORM model ready for persistence
+        IngestRunORM model ready for persistence
     """
-    return IngestRunInfoORM(
-        id=run_info.id,
-        run_name=run_info.run_name,
-        run_type=run_info.run_type,
-        normalized_dataset_id=run_info.normalized_dataset.id,
-        git_sha=run_info.git_info.git_sha,
-        git_branch=run_info.git_info.git_branch,
-        git_is_dirty="true" if not run_info.git_info.git_clean else "false",
-        notes=run_info.notes,
+    return IngestRunORM(
+        id=ingest_run.id,
+        run_name=ingest_run.run_name,
+        run_type=ingest_run.run_type,
+        ingest_run_config_id=ingest_run.ingest_run_config.id,
+        normalized_dataset_id=ingest_run.normalized_dataset.id,
+        start_time=ingest_run.start_time,
+        end_time=ingest_run.end_time,
+        git_sha=ingest_run.git_sha,
+        git_branch=ingest_run.git_branch,
+        git_is_dirty=ingest_run.git_is_dirty,
+        notes=ingest_run.notes,
     )

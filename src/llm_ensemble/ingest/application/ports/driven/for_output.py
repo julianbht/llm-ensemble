@@ -1,27 +1,28 @@
-"""Port interface for writing judging samples.
+"""Port interface for writing ingest run results.
 
-Defines the abstract contract for writing judging samples to persistent storage.
+Defines the abstract contract for persisting ingest run results to storage.
 """
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
-from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
 
 
 class ForOutput(ABC):
-    """Abstract base class for writing judging samples.
+    """Abstract base class for writing ingest run results.
 
     Writers are instantiated with io_name and run_dir, and receive the complete
-    IngestRunInfo aggregate at write time.
+    IngestRun aggregate at write time.
 
     Writers return WriteSummary objects to provide transparency into write operations
     without handling their own logging (separation of concerns).
 
-    Writers receive an IngestRunInfo aggregate root that embeds:
-    - normalized_dataset: The output dataset (which embeds run_config)
-    - Run metadata: git SHA, timestamps, run name, notes
+    Writers receive an IngestRun aggregate root that contains:
+    - ingest_run_config: The configuration used
+    - normalized_dataset: The output dataset produced
+    - Execution metadata: timing, git SHA, run name, notes
 
     This aggregate makes relationships explicit in the domain layer, avoiding
     the need to pass disconnected objects and manually inject foreign key IDs.
@@ -31,20 +32,21 @@ class ForOutput(ABC):
     """
 
     @abstractmethod
-    def write(self, run_info: IngestRunInfo) -> WriteSummary:
-        """Write judging samples to storage.
+    def write(self, ingest_run: IngestRun) -> WriteSummary:
+        """Write ingest run results to storage.
 
         The adapter determines output location and structure:
         - File-based writers: Use self.run_dir for output directory
         - Database writers: Write to centralized database
 
-        The run_info aggregate contains everything needed:
-        - run_info.normalized_dataset: Dataset with samples
-        - run_info.normalized_dataset.run_config: Config used to create dataset
-        - run_info.git_info, run_info.run_name, etc.: Runtime metadata
+        The ingest_run aggregate contains everything needed:
+        - ingest_run.normalized_dataset: Dataset with samples
+        - ingest_run.ingest_run_config: Config used to create dataset
+        - ingest_run.start_time, end_time: Timing information
+        - ingest_run.git_sha, git_branch, etc.: Git metadata
 
         Args:
-            run_info: Complete IngestRunInfo aggregate root
+            ingest_run: Complete IngestRun aggregate root
 
         Returns:
             WriteSummary tracking what was created vs. skipped

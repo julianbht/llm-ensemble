@@ -26,11 +26,12 @@ class ForInput(ABC):
     - Dataset metadata extraction
     - Creating Query and Document entities with UUIDs
     - Creating complete JudgingSample objects
-    - Creating IngestRunConfig and embedding it in NormalizedDataset
     - Packaging everything as NormalizedDataset
 
     Note: DatasetReader is for raw dataset ingestion, not reading from runs.
     It accepts paths to external data sources at runtime.
+    The application layer creates the IngestRunConfig based on the parameters
+    passed to the reader.
     """
 
     @abstractmethod
@@ -46,7 +47,7 @@ class ForInput(ABC):
             limit: Optional maximum number of samples to read
 
         Returns:
-            NormalizedDataset containing metadata, samples, and embedded IngestRunConfig
+            NormalizedDataset containing metadata and samples
 
         Raises:
             FileNotFoundError: If input_path doesn't exist

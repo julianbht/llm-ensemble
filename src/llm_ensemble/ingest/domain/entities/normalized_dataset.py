@@ -10,7 +10,7 @@ reproducible slicing via future start_sample/end_sample parameters.
 Design:
 - All samples within one NormalizedDataset are from one external dataset
 - external_dataset_name tracks the source dataset for context
-- run_config embeds the configuration used to originally create this dataset
+- Pure output data - no knowledge of how it was created (that's in IngestRun)
 """
 
 from __future__ import annotations
@@ -21,7 +21,6 @@ from pydantic import BaseModel, Field, field_validator
 
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
-from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
 
 
 class NormalizedDataset(BaseModel):
@@ -40,9 +39,8 @@ class NormalizedDataset(BaseModel):
     All samples within one NormalizedDataset are from one external dataset,
     tracked via external_dataset_name for context.
 
-    The run_config embeds the configuration used to originally create this dataset.
-    When deduplication occurs (same fingerprint), the existing dataset with its
-    original run_config is reused.
+    This is pure output data with no knowledge of how it was created.
+    The IngestRun entity connects this dataset to the configuration that produced it.
     """
 
     id: UUID = Field(
@@ -56,10 +54,6 @@ class NormalizedDataset(BaseModel):
     external_dataset_name: Optional[str] = Field(
         None,
         description="Name of the external source dataset (e.g., 'msmarco', 'llmjudge')"
-    )
-    run_config: IngestRunConfig = Field(
-        ...,
-        description="Configuration used to originally create this dataset"
     )
     samples: list[DatasetSample] = Field(
         ...,
@@ -84,14 +78,12 @@ class NormalizedDataset(BaseModel):
     def create(
         cls,
         samples: list[JudgingSample],
-        run_config: IngestRunConfig,
         external_dataset_name: Optional[str] = None
     ) -> "NormalizedDataset":
         """Create NormalizedDataset with computed fingerprint and random ID.
 
         Args:
             samples: List of judging samples (will be sorted by ID and wrapped in DatasetSample)
-            run_config: Configuration used to create this dataset
             external_dataset_name: Optional name of the external source dataset
 
         Returns:
@@ -122,7 +114,6 @@ class NormalizedDataset(BaseModel):
             id=dataset_id,
             fingerprint=fingerprint,
             external_dataset_name=external_dataset_name,
-            run_config=run_config,
             samples=dataset_samples,
         )
 

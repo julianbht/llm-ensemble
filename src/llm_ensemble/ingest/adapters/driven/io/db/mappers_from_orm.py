@@ -21,7 +21,7 @@ from llm_ensemble.ingest.domain.entities.document import Document
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
-from llm_ensemble.ingest.domain.entities.ingest_run_info import IngestRunInfo
+from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
 from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     QueryORM,
@@ -29,7 +29,7 @@ from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     JudgingSampleORM,
     NormalizedDatasetORM,
     DatasetSampleORM,
-    IngestRunInfoORM,
+    IngestRunORM,
     IngestRunConfigORM,
 )
 
@@ -179,28 +179,34 @@ def ingest_run_config_from_orm(run_config_orm: IngestRunConfigORM) -> IngestRunC
 
 
 # ============================================================================
-# IngestRunInfo Mappers
+# IngestRun Mappers
 # ============================================================================
 
-def ingest_run_info_from_orm(run_info_orm: IngestRunInfoORM) -> IngestRunInfo:
-    """Convert IngestRunInfoORM to IngestRunInfo domain object.
+def ingest_run_from_orm(
+    ingest_run_orm: IngestRunORM,
+    ingest_run_config: IngestRunConfig,
+    normalized_dataset: NormalizedDataset,
+) -> IngestRun:
+    """Convert IngestRunORM to IngestRun domain object.
 
     Args:
-        run_info_orm: IngestRunInfoORM model from database
+        ingest_run_orm: IngestRunORM model from database
+        ingest_run_config: IngestRunConfig domain object (already converted from ORM)
+        normalized_dataset: NormalizedDataset domain object (already converted from ORM)
 
     Returns:
-        IngestRunInfo domain object
+        IngestRun domain object
     """
-    from llm_ensemble.libs.runtime.git_utils import GitInfo
-
-    return IngestRunInfo(
-        id=run_info_orm.id,
-        run_name=run_info_orm.run_name,
-        run_type=run_info_orm.run_type,
-        git_info=GitInfo(
-            git_sha=run_info_orm.git_sha,
-            git_branch=run_info_orm.git_branch,
-            git_clean=run_info_orm.git_is_dirty != "true",
-        ),
-        notes=run_info_orm.notes,
+    return IngestRun(
+        id=ingest_run_orm.id,
+        run_name=ingest_run_orm.run_name,
+        run_type=ingest_run_orm.run_type,
+        ingest_run_config=ingest_run_config,
+        normalized_dataset=normalized_dataset,
+        start_time=ingest_run_orm.start_time,
+        end_time=ingest_run_orm.end_time,
+        git_sha=ingest_run_orm.git_sha,
+        git_branch=ingest_run_orm.git_branch,
+        git_is_dirty=ingest_run_orm.git_is_dirty,
+        notes=ingest_run_orm.notes,
     )

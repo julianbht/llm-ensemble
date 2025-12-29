@@ -18,7 +18,7 @@ from llm_ensemble.ingest.adapters.driven.io.llm_judge_dataset_reader import LlmJ
 from llm_ensemble.ingest.adapters.driven.io.db.db_writer import DbWriter
 
 
-AVAILABLE_FORMATS = ["llm_judge_ingest"]
+AVAILABLE_FORMATS = ["llm_judge_challenge_to_db"]
 
 
 class IOAdapterFactory:
@@ -37,7 +37,7 @@ class IOAdapterFactory:
         Raises:
             ValueError: If IO format not found
         """
-        if io_name == "llm_judge_ingest":
+        if io_name == "llm_judge_challenge_to_db":
             return LlmJudgeDatasetReader(io_name=io_name)
         else:
             available = ", ".join(sorted(AVAILABLE_FORMATS))
@@ -60,7 +60,7 @@ class IOAdapterFactory:
         Raises:
             ValueError: If IO format not found
         """
-        if io_name == "llm_judge_ingest":
+        if io_name == "llm_judge_challenge_to_db":
             return DbWriter(io_name=io_name, run_dir=run_dir)
         else:
             available = ", ".join(sorted(AVAILABLE_FORMATS))

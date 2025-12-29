@@ -111,13 +111,13 @@ def _build_application_hexagon(
         IngestApplication - the application's driving port interface
     """
     # Instantiate adapters from factory
-    dataset_reader = IOAdapterFactory.create_reader(io_name)
-    dataset_writer = IOAdapterFactory.create_writer(io_name, run_dir=run_dir)
+    reader = IOAdapterFactory.create_reader(io_name)
+    writer = IOAdapterFactory.create_writer(io_name, run_dir=run_dir)
 
     # Assemble application hexagon (use case with driven ports)
     return IngestApplication(
-        dataset_reader=dataset_reader,
-        dataset_writer=dataset_writer,
+        reader=reader,
+        writer=writer,
         run_dir=run_dir,
         run_name=run_name,
         io_name=io_name,

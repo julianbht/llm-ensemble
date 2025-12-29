@@ -20,9 +20,9 @@ from llm_ensemble.ingest.domain.entities.document import Document
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
-
 from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
+from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     QueryORM,
     DocumentORM,
@@ -76,7 +76,7 @@ class DbWriter(ForOutput):
         self.run_dir = run_dir
         self.database_url = database_url
         self.engine = get_engine(database_url)
-        self.logger = get_logger(component="sql_writer")
+        self.logger = get_logger(component=__name__)
 
     def write(self, ingest_run: IngestRun) -> WriteSummary:
         """Write ingest run results to SQL database with direct logging.
@@ -248,7 +248,7 @@ class DbWriter(ForOutput):
     ) -> Tuple[int, int]:
         """Save query entities to database using mapper.
 
-        Uses constraint-based duplicate detection via IntegrityError on content_hash.
+        Uses bulk insert with fallback to individual inserts for duplicate detection.
 
         Args:
             session: SQLAlchemy session
@@ -257,13 +257,23 @@ class DbWriter(ForOutput):
         Returns:
             Tuple of (created_count, skipped_count)
         """
+        query_orms = [query_to_orm(q) for q in queries.values()]
+
+        # Try bulk insert (fast path)
+        try:
+            savepoint = session.begin_nested()
+            session.add_all(query_orms)
+            session.flush()
+            return (len(query_orms), 0)
+        except IntegrityError:
+            savepoint.rollback()
+
+        # Duplicates exist - do individual inserts
         created = 0
         skipped = 0
-
-        for query in queries.values():
+        for query_orm in query_orms:
             try:
                 savepoint = session.begin_nested()
-                query_orm = query_to_orm(query)
                 session.add(query_orm)
                 session.flush()
                 created += 1
@@ -378,24 +388,17 @@ class DbWriter(ForOutput):
         Returns:
             Tuple of (created_count, skipped_count)
         """
-        created = 0
-        skipped = 0
-
         # Create DatasetSample records with sequence numbers
         for sample in normalized_dataset.samples:
-            try:
-                savepoint = session.begin_nested()
-                dataset_sample = DatasetSampleORM(
-                    id=sample.id,
-                    normalized_dataset_id=sample.normalized_dataset_id,
-                    judging_sample_id=sample.judging_sample.id,
-                    sequence_number=sample.sequence_number,
-                )
-                session.add(dataset_sample)
-                session.flush()
-                created += 1
-            except IntegrityError:
-                savepoint.rollback()
-                skipped += 1
+            dataset_sample = DatasetSampleORM(
+                id=sample.id,
+                normalized_dataset_id=sample.normalized_dataset_id,
+                judging_sample_id=sample.judging_sample.id,
+                sequence_number=sample.sequence_number,
+            )
+            session.add(dataset_sample)
 
-        return (created, skipped)
+        # Flush once at the end (not per-record to avoid lock exhaustion)
+        session.flush()
+
+        return (len(normalized_dataset.samples), 0)

@@ -34,6 +34,7 @@ class IngestWriteEvent(str, Enum):
     WRITE_DATASET_SAMPLES = "write_dataset_samples"
     WRITE_RUNS = "write_runs"
     WRITE_COMPLETE = "write_complete"
+    WRITE_RUN_CONFIG = "write_run_config"
 
 
 class InferLogEvent(str, Enum):

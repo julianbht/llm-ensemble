@@ -21,7 +21,7 @@ from __future__ import annotations
 from typing import Optional
 
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
-from llm_ensemble.ingest.adapters.io.db.orms import (
+from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     JudgingSampleORM,
     QueryORM,
     DocumentORM,
@@ -29,7 +29,7 @@ from llm_ensemble.ingest.adapters.io.db.orms import (
     NormalizedDatasetORM,
     DatasetSampleORM,
 )
-from llm_ensemble.ingest.adapters.io.db.mappers import (
+from llm_ensemble.ingest.adapters.driven.io.db.mappers_from_orm import (
     query_from_orm,
     document_from_orm,
     judging_sample_from_orm,

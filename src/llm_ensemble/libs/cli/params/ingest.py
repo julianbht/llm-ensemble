@@ -6,7 +6,7 @@ from typing import Annotated, Optional
 
 import typer
 
-from llm_ensemble.libs.cli.params.types import IOConfigParamType
+from llm_ensemble.libs.cli.params.types import IngestIOConfigParamType
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 IngestIoCfg = Annotated[
@@ -14,7 +14,7 @@ IngestIoCfg = Annotated[
     typer.Option(
         ...,
         "--io-cfg",
-        click_type=IOConfigParamType("ingest"),
+        click_type=IngestIOConfigParamType(),
         help=f"I/O config name. Configs in {(PathManager.get_configs_dir() / 'io' / 'ingest').relative_to(PathManager.get_project_root())}",
     ),
 ]

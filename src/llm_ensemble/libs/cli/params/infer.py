@@ -6,7 +6,7 @@ from typing import Annotated
 
 import typer
 
-from llm_ensemble.libs.cli.params.types import IOConfigParamType, RunInputParamType, ProviderParamType
+from llm_ensemble.libs.cli.params.types import InferIOConfigParamType, RunInputParamType, ProviderParamType
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 InferIoCfg = Annotated[
@@ -14,7 +14,7 @@ InferIoCfg = Annotated[
     typer.Option(
         ...,
         "--io-cfg",
-        click_type=IOConfigParamType("infer"),
+        click_type=InferIOConfigParamType(),
         help=f"I/O config name - bundles reader and writer",
     ),
 ]

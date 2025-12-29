@@ -7,13 +7,11 @@ for aggregate metrics to be computed at the end.
 """
 
 from __future__ import annotations
-from pathlib import Path
 from enum import Enum
 from typing import Optional
 from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
-from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.git_utils import GitInfo, get_git_info
 
 class RunType(str, Enum):
@@ -76,19 +74,3 @@ class RunInfo(BaseModel):
     )
 
     model_config = ConfigDict(frozen=True)
-
-    @property
-    def run_dir(self) -> Path:
-        """Derive run directory from run context.
-
-        Computed on-demand from run_name, cli_name, and run_type.
-        Single source of truth via PathManager.
-
-        Returns:
-            Path to run directory (e.g., artifacts/runs/{cli_name}/{test|official}/{run_name})
-        """
-        return PathManager.get_run_dir(
-            cli_name=self.cli_name,
-            run_name=self.run_name,
-            official=(self.run_type == RunType.OFFICIAL)
-        )

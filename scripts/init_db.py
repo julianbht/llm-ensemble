@@ -29,12 +29,13 @@ load_runtime_config()
 # This is required for create_all_tables() to know which tables to create
 
 # Ingest CLI ORMs
-from llm_ensemble.ingest.adapters.io.db.orms import (
+from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     QueryORM,
     DocumentORM,
     NormalizedDatasetORM,
     DatasetSampleORM,
-    IngestRunORM,
+    IngestRunConfigORM,
+    IngestRunInfoORM,
     JudgingSampleORM,
 )
 

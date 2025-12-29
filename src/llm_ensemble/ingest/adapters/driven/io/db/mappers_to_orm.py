@@ -171,6 +171,7 @@ def ingest_run_to_orm(ingest_run: IngestRun) -> IngestRunORM:
     Extracts IDs from embedded objects within the aggregate:
     - ingest_run_config.id from ingest_run.ingest_run_config
     - normalized_dataset.id from ingest_run.normalized_dataset
+    - git fields from ingest_run.git_info (inherited from RunInfo)
 
     Args:
         ingest_run: IngestRun aggregate root containing embedded config and dataset
@@ -186,8 +187,8 @@ def ingest_run_to_orm(ingest_run: IngestRun) -> IngestRunORM:
         normalized_dataset_id=ingest_run.normalized_dataset.id,
         start_time=ingest_run.start_time,
         end_time=ingest_run.end_time,
-        git_sha=ingest_run.git_sha,
-        git_branch=ingest_run.git_branch,
-        git_is_dirty=ingest_run.git_is_dirty,
+        git_sha=ingest_run.git_info.git_sha,
+        git_branch=ingest_run.git_info.git_branch,
+        git_is_dirty="true" if not ingest_run.git_info.git_clean else "false",
         notes=ingest_run.notes,
     )

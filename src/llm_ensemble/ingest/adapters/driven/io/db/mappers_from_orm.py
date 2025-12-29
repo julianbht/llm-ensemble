@@ -197,6 +197,8 @@ def ingest_run_from_orm(
     Returns:
         IngestRun domain object
     """
+    from llm_ensemble.libs.runtime.git_utils import GitInfo
+
     return IngestRun(
         id=ingest_run_orm.id,
         run_name=ingest_run_orm.run_name,
@@ -205,8 +207,10 @@ def ingest_run_from_orm(
         normalized_dataset=normalized_dataset,
         start_time=ingest_run_orm.start_time,
         end_time=ingest_run_orm.end_time,
-        git_sha=ingest_run_orm.git_sha,
-        git_branch=ingest_run_orm.git_branch,
-        git_is_dirty=ingest_run_orm.git_is_dirty,
+        git_info=GitInfo(
+            git_sha=ingest_run_orm.git_sha,
+            git_branch=ingest_run_orm.git_branch,
+            git_clean=ingest_run_orm.git_is_dirty != "true",
+        ),
         notes=ingest_run_orm.notes,
     )

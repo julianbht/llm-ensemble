@@ -6,40 +6,32 @@ This is the aggregate root that represents a complete ingest run.
 
 from __future__ import annotations
 from datetime import datetime
-from typing import Optional
-from uuid import UUID, uuid4
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
-from llm_ensemble.libs.runtime.run_info import RunType
+from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 
 
-class IngestRun(BaseModel):
+class IngestRun(RunInfo):
     """Complete record of an ingest execution.
+
+    Extends RunInfo with ingest-specific execution details.
 
     Aggregate root that connects:
     - What was intended (IngestRunConfig)
     - What was produced (NormalizedDataset)
-    - When and how it was executed (timing, git metadata)
+    - When it was executed (timing)
 
-    This matches the IngestRunORM structure and represents the complete
-    execution record.
+    Inherits from RunInfo:
+    - id, run_name, run_type
+    - notes
+    - git_info (git SHA, branch, clean status)
     """
 
-    id: UUID = Field(
-        default_factory=uuid4,
-        description="Random UUID identifier for this run"
-    )
-
-    run_name: str = Field(
-        ...,
-        description="Unique identifier for this run (timestamp-based)"
-    )
-
-    run_type: RunType = Field(
-        default=RunType.TEST,
-        description="Run type: 'official' for reproducible runs, 'test' for experiments"
+    cli_name: str = Field(
+        default="ingest",
+        description="Name of the CLI that generated this run (always 'ingest')"
     )
 
     # What was intended (configuration)
@@ -63,27 +55,6 @@ class IngestRun(BaseModel):
     end_time: datetime = Field(
         ...,
         description="When the run completed"
-    )
-
-    # Git metadata for reproducibility
-    git_sha: str = Field(
-        ...,
-        description="Git commit SHA at time of run"
-    )
-
-    git_branch: str = Field(
-        ...,
-        description="Git branch at time of run"
-    )
-
-    git_is_dirty: str = Field(
-        ...,
-        description="Whether git working directory was clean ('true' or 'false')"
-    )
-
-    notes: Optional[str] = Field(
-        default=None,
-        description="Optional user-provided notes about this run"
     )
 
     model_config = ConfigDict(frozen=True)

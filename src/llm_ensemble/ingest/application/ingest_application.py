@@ -34,7 +34,6 @@ from llm_ensemble.libs.logging.log_events import IngestLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_manager import write_summary
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
-from llm_ensemble.libs.runtime.git_utils import get_git_info
 
 # Load runtime env configuration
 from llm_ensemble.libs.runtime.env import load_runtime_config
@@ -154,9 +153,6 @@ class IngestApplication(ForRunningIngest):
             limit=limit,
         )
 
-        # Get git info
-        git_info = get_git_info()
-
         # Build complete aggregate root (IngestRun with config, dataset, and timing)
         ingest_run = IngestRun(
             run_name=self.run_name,
@@ -165,9 +161,6 @@ class IngestApplication(ForRunningIngest):
             normalized_dataset=normalized_dataset,
             start_time=summary_builder.start_time,
             end_time=summary_builder.end_time,
-            git_sha=git_info.git_sha,
-            git_branch=git_info.git_branch,
-            git_is_dirty="true" if not git_info.git_clean else "false",
             notes=notes,
         )
 

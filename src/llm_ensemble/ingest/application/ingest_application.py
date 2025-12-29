@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
+from datetime import datetime
 
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
@@ -33,7 +34,6 @@ from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import IngestLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_manager import write_summary
-from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 
 # Load runtime env configuration
 from llm_ensemble.libs.runtime.env import load_runtime_config
@@ -129,9 +129,7 @@ class IngestApplication(ForRunningIngest):
         logger = get_logger()
         logger.info(IngestLogEvent.INGEST_STARTED)
 
-        # Create run summary builder (for timing and collection of metrics)
-        summary_builder = RunSummaryBuilder()
-        summary_builder.set_start_time()
+        start_time = datetime.now()
 
         # Read and normalize dataset
         normalized_dataset: NormalizedDataset = self.reader.read(
@@ -139,12 +137,11 @@ class IngestApplication(ForRunningIngest):
             limit=limit
         )
         logger.info(
-            IngestLogEvent.DATASET_READ_COMPLETE,
+            IngestLogEvent.READ_COMPLETE,
             sample_count=normalized_dataset.sample_count,
         )
 
-        # Set end time before creating run record
-        summary_builder.set_end_time()
+        end_time = datetime.now()
 
         # Build run config
         run_config = IngestRunConfig(
@@ -159,24 +156,25 @@ class IngestApplication(ForRunningIngest):
             run_type=RunType.OFFICIAL if official else RunType.TEST,
             ingest_run_config=run_config,
             normalized_dataset=normalized_dataset,
-            start_time=summary_builder.start_time,
-            end_time=summary_builder.end_time,
+            start_time=start_time,
+            end_time=end_time,
             notes=notes,
         )
 
         # Write output
-        write_summary = self.writer.write(ingest_run)
+        write_result = self.writer.write(ingest_run)
 
-        # Add to write summary to builder for inclusion in final summary
-        summary_builder.add("write_summary", write_summary)
-        summary_builder.add("sample_count", normalized_dataset.sample_count)
-
-        # Finalize summary (creates immutable Pydantic object)
-        summary: IngestRunSummary = summary_builder.finalize(IngestRunSummary)
+        # Create summary
+        summary = IngestRunSummary(
+            start_time=start_time,
+            end_time=end_time,
+            sample_count=normalized_dataset.sample_count,
+            write_summary=write_result,
+        )
 
         # Write summary.json
         summary_path = write_summary(summary, self.run_dir)
         logger.info(IngestLogEvent.INGEST_SUMMARY_WRITTEN, path=str(summary_path))
 
-        # Return finalized summary
+        # Return summary
         return summary

@@ -21,6 +21,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
+# Load runtime env configuration (DATABASE_URL, API keys, etc.)
+from llm_ensemble.libs.runtime.env import load_runtime_config
+load_runtime_config()
+
 from llm_ensemble.ingest.application.ingest_application import IngestApplication
 from llm_ensemble.ingest.application.ports.driving.for_running_ingest import ForRunningIngest
 from llm_ensemble.ingest.adapters.driven.io_factory import IOAdapterFactory

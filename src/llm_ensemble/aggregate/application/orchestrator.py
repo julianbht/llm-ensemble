@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Optional
 
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
-from llm_ensemble.aggregate.registry import AggregationStrategyBuilder
+from llm_ensemble.aggregate.adapters.driven.aggregation_strategy_factory import AggregationStrategyBuilder
 from llm_ensemble.aggregate.domain import AggregationService
 from llm_ensemble.libs.schemas import IOConfig, LoggingConfig
 from llm_ensemble.libs.runtime.run_info import RunType

@@ -10,14 +10,14 @@ from collections import defaultdict
 
 from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.aggregate.schemas import AggregatedDataset, AggregatedVote
-from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
-from llm_ensemble.aggregate.schemas.aggregate_run_summary import AggregateRunSummary
-from llm_ensemble.aggregate.ports import (
-    AggregatedJudgementWriter,
-    AggregationStrategyPort,
-    JudgementReader,
-)
+from llm_ensemble.aggregate.domain.entities.aggregated_dataset import AggregatedDataset
+from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
+from llm_ensemble.aggregate.domain.entities.aggregate_run_info import AggregateRunInfo
+from llm_ensemble.aggregate.domain.entities.aggregate_run_summary import AggregateRunSummary
+from llm_ensemble.aggregate.application.ports.aggregated_judgement_writer import AggregatedJudgementWriter
+from llm_ensemble.aggregate.application.ports.aggregation_strategy import AggregationStrategyPort
+from llm_ensemble.aggregate.application.ports.judgement_reader import JudgementReader
+
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.runtime.run_summary_builder import RunSummaryBuilder
 

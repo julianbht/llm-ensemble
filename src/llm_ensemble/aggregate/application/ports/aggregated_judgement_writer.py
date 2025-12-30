@@ -7,9 +7,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from llm_ensemble.aggregate.schemas.aggregated_dataset import AggregatedDataset
-from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
-from llm_ensemble.aggregate.schemas.write_summary import WriteSummary
+from llm_ensemble.aggregate.domain.entities.aggregated_dataset import AggregatedDataset
+from llm_ensemble.aggregate.domain.entities.aggregate_run_info import AggregateRunInfo
+from llm_ensemble.aggregate.domain.entities.write_summary import WriteSummary
 
 
 class AggregatedJudgementWriter(ABC):

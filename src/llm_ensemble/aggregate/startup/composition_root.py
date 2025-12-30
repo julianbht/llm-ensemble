@@ -17,8 +17,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from llm_ensemble.aggregate.domain.aggregation_service import AggregationService
-from llm_ensemble.aggregate.registry import AggregationStrategyBuilder
+from llm_ensemble.aggregate.application.aggregation_service import AggregationService
+from llm_ensemble.aggregate.adapters.driven.aggregation_strategy_factory import AggregationStrategyBuilder
 from llm_ensemble.libs.config.io_config_loader import IOConfigFactory
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.tag_manager import TagManager

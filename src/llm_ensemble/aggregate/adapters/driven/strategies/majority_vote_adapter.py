@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections import Counter
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.aggregate.ports import AggregationStrategyPort
+from llm_ensemble.aggregate.application.ports.aggregation_strategy import AggregationStrategyPort
 from llm_ensemble.libs.schemas import RelevanceScore
 
 

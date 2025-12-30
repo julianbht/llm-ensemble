@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
 
-from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
+from llm_ensemble.aggregate.domain.entities.aggregate_run_info import AggregateRunInfo
 
 
 class AggregateRunSummary(BaseModel):

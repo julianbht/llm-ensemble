@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.schemas import RelevanceScore
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.aggregate.schemas.aggregation_strategy import AggregationStrategy
+from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy
 
 
 class AggregatedVote(BaseModel):

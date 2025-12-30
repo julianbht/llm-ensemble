@@ -12,8 +12,8 @@ To add a new strategy:
 from __future__ import annotations
 from typing import Dict, Type
 
-from llm_ensemble.aggregate.ports.aggregation_strategy import AggregationStrategyPort
-from llm_ensemble.aggregate.adapters.strategies.majority_vote_adapter import (
+from llm_ensemble.aggregate.application.ports.aggregation_strategy import AggregationStrategyPort
+from llm_ensemble.aggregate.adapters.driven.strategies.majority_vote_adapter import (
     MajorityVoteAdapter,
 )
 

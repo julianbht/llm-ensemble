@@ -9,7 +9,7 @@ import hashlib
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
-from llm_ensemble.aggregate.schemas.aggregated_vote import AggregatedVote
+from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
 
 
 class AggregatedDataset(BaseModel):

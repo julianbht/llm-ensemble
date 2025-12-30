@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import click
 
-from llm_ensemble.aggregate.registry import AggregationStrategyBuilder
+from llm_ensemble.aggregate.adapters.driven.aggregation_strategy_factory import AggregationStrategyBuilder
 
 
 class AggregationStrategyParamType(click.ParamType):

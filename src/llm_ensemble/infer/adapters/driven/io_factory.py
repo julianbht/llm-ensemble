@@ -20,7 +20,6 @@ from llm_ensemble.infer.application.ports.driven.for_input import ForInput
 from llm_ensemble.infer.application.ports.driven.for_output import ForOutput
 from llm_ensemble.infer.adapters.driven.io.db.db_reader import DBReader
 from llm_ensemble.infer.adapters.driven.io.db.db_writer import DBWriter
-from llm_ensemble.infer.adapters.driven.io.fully_populated_json_writer import FullyPopulatedJsonWriter
 
 
 AVAILABLE_FORMATS = ["db_to_db", "db_to_json"]
@@ -69,8 +68,6 @@ class IOAdapterFactory:
         """
         if io_name == "db_to_db":
             return DBWriter(io_name=io_name)
-        elif io_name == "db_to_json":
-            return FullyPopulatedJsonWriter(io_name=io_name, run_dir=run_dir)
         else:
             available = ", ".join(sorted(AVAILABLE_FORMATS))
             raise ValueError(

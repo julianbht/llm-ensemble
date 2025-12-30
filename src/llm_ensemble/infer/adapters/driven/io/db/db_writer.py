@@ -17,6 +17,7 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 from typing import Optional, Tuple
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -176,17 +177,28 @@ class DBWriter(ForOutput):
         self._session.commit()
 
     def close(self) -> WriteSummary:
-        """Close session and finalize InferRunOutput."""
+        """Close session and finalize InferRunOutput and end_time."""
         if self._session is not None:
+            # Capture end time
+            end_time = datetime.now()
+
             # Create InferRunOutput with fingerprint
             if self._dataset_sample_ids:
                 fingerprint = compute_judged_dataset_fingerprint(self._dataset_sample_ids)
 
-                infer_run_output_orm = infer_run_output_to_orm(
-                    self._infer_run_id,  # Use same ID as InferRun (1:1 relationship)
-                    self._infer_run_config_id,
-                    fingerprint,
+                # Build InferRunOutput domain entity
+                from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
+                infer_run_output = InferRunOutput(
+                    id=self._infer_run_id,  # Same ID as InferRun (1:1 relationship)
+                    llm_judgements=[],  # Judgements already persisted individually
+                    sample_fingerprint=fingerprint,
+                    judgement_count=len(self._dataset_sample_ids),
+                    error_count=0,  # TODO: Track errors
+                    avg_latency_ms=0.0,  # TODO: Track latency
                 )
+
+                # Map to ORM
+                infer_run_output_orm = infer_run_output_to_orm(infer_run_output)
                 try:
                     savepoint = self._session.begin_nested()
                     self._session.add(infer_run_output_orm)
@@ -197,9 +209,10 @@ class DBWriter(ForOutput):
                     savepoint.rollback()
                     self._write_summary.add_infer_run_outputs(created=0, skipped=1)
 
-                # Link InferRun to InferRunOutput
+                # Update InferRun to link to output and set end_time
                 infer_run = self._session.get(InferRunORM, self._infer_run_id)
                 infer_run.infer_run_output_id = self._infer_run_output_id
+                infer_run.end_time = end_time
 
                 self._session.commit()
 

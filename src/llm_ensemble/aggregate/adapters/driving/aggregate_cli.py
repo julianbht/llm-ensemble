@@ -1,11 +1,24 @@
-"""Aggregate CLI - Combine judgements using ensemble strategies."""
+"""Aggregate CLI - Driving Adapter
+
+CLI Layer - Driving Adapter
+
+This is a thin driving adapter that:
+1. Parses CLI arguments
+2. Calls the dependency configurator to build the application
+3. Executes the application via its run_aggregation method
+
+The application handles all backend concerns (infrastructure setup, logging,
+aggregation execution, result persistence). This adapter simply triggers it
+and all logging appears in the terminal automatically.
+
+Tested via CLI integration tests.
+"""
 
 from __future__ import annotations
 import typer
 
 from llm_ensemble.aggregate.startup.composition_root import build_application
 from llm_ensemble.libs.runtime.run_name import generate_run_name
-from llm_ensemble.libs.runtime.tag_manager import TagManager
 from llm_ensemble.libs.cli.params import (
     RunName,
     Official,
@@ -35,11 +48,11 @@ def aggregate(
     notes: Notes = None,
     tag: Tag = None,
 ):
-    """Combine model judgements using ensemble strategies (e.g., majority vote)."""
+    """Combine model judgements using ensemble strategies (e.g., majority vote).
 
-    # Resolve tags if any input starts with @ (already validated by RunInputParamType)
-    resolved_run_names = [TagManager.resolve_input(rn, "infer") for rn in input_run_names]
-
+    Thin CLI driving adapter that builds the application and executes it.
+    All backend logic (infrastructure, logging, aggregation) handled by application.
+    """
     # Generate run name if not given
     if run_name is None:
         name_hints = [
@@ -59,11 +72,12 @@ def aggregate(
 
     # Run application
     application.run_aggregation(
-        run_names=resolved_run_names,
+        aggregation_strategy_name=aggregation_strategy,
         io_config_name=io_cfg,
-        run_name=run_name,
+        input_run_names=input_run_names,
         official=official,
         notes=notes,
+        tag=tag,
     )
 
 

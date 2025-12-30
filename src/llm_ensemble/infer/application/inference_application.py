@@ -186,14 +186,17 @@ class InferenceApplication(ForRunningInference):
                 builder = LLMJudgementBuilder(dataset_sample)
 
                 # Step 1: Build prompt
+                logger.info(InferLogEvent.BUILDING_PROMPT)
                 prompt_text = self.prompt_builder.build_prompt(dataset_sample)
                 builder.with_prompt(prompt_text)
 
                 # Step 2: Run inference (model_config was passed at provider initialization)
+                logger.info(InferLogEvent.SENDING_REQUEST)
                 raw_response_text, llm_invocation_metrics = self.llm_provider.infer(prompt_text)
                 builder.with_llm_response(raw_response_text, llm_invocation_metrics)
 
                 # Step 3: Parse response (returns tuple of score and warnings)
+                logger.info(InferLogEvent.PARSING_REQUEST)
                 llm_score, parser_warnings = self.response_parser.parse(raw_response_text)
                 builder.with_parsed_score(llm_score, parser_warnings)
 

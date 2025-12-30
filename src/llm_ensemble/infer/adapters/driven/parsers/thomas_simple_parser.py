@@ -60,7 +60,7 @@ class ThomasSimpleParser(ForParsingResponses):
             score_value = self._extract_score_field(json_data, warnings)
             if score_value is not None:
                 label = self._validate_score(score_value, warnings)
-
+        
         score = LLMScore(
             label=label,
             confidence=None,

@@ -38,8 +38,11 @@ class InferLogEvent(str, Enum):
     """Log events for infer orchestrator."""
 
     INFER_STARTED = "inference_started"
-    JUDGEMENT_PROCESSED = "response_parsed"
+    SENDING_REQUEST = "sending_request"
+    RESPONSE_PARSED = "response_parsed"
+    AGREEMENT_CHECKED = "agreement_checked"
     COST_CALCULATED = "cost_calculated"
+    TOKENS_COUNTED = "tokens_counted"
     RETRY_ATTEMPT = "retry_attempt"
     RETRY_EXHAUSTED = "retry_exhausted"
     ALL_SAMPLES_PROCESSED = "all_samples_processed"
@@ -47,6 +50,8 @@ class InferLogEvent(str, Enum):
     INFER_COMPLETE = "inference_complete"
     LOGS_SAVED = "logs_saved"
     WARNINGS_COLLECTED = "warnings_collected"
+    BUILDING_PROMPT = "building_prompt"
+    PARSING_REQUEST = "parsing_request"
 
 
 class InferWriteEvent(str, Enum):

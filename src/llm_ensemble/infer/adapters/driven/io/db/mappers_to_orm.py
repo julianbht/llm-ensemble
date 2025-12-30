@@ -284,9 +284,6 @@ def llm_score_to_orm(
     # Handle case where label is None (parsing failed) - need default for non-nullable column
     label = llm_score.label if llm_score.label is not None else RelevanceScore.NOT_RELEVANT
 
-    # Extract parser warnings (convert to dict format for JSONB array)
-    parser_warnings = [w.to_dict() for w in llm_score.warnings] if llm_score.warnings else []
-
     return LLMScoreORM(
         id=llm_score.id,
         label=label,

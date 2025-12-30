@@ -3,26 +3,18 @@
 from __future__ import annotations
 import typer
 
-from llm_ensemble.aggregate.orchestrator import run_aggregation
-from llm_ensemble.libs.config import load_io_config
-from llm_ensemble.libs.config.logging_config_loader import load_logging_config
-from llm_ensemble.libs.runtime.env import load_runtime_config
+from llm_ensemble.aggregate.startup.composition_root import build_application
+from llm_ensemble.libs.runtime.run_name import generate_run_name
 from llm_ensemble.libs.runtime.tag_manager import TagManager
-from llm_ensemble.libs.utils.config_overrides import parse_and_route_overrides, apply_overrides
 from llm_ensemble.libs.cli.params import (
     RunName,
-    LogCfg,
     Official,
     Notes,
-    Override,
     AggregationStrategy,
     AggregateIoCfg,
     InferRunInput,
     Tag,
 )
-
-# Load runtime configuration early
-load_runtime_config()
 
 app = typer.Typer(
     add_completion=True,
@@ -39,10 +31,8 @@ def aggregate(
     input_run_names: InferRunInput,
     # Optional parameters
     run_name: RunName = None,
-    log_cfg: LogCfg = "observability",
     official: Official = False,
     notes: Notes = None,
-    override: Override = [],
     tag: Tag = None,
 ):
     """Combine model judgements using ensemble strategies (e.g., majority vote)."""
@@ -50,27 +40,30 @@ def aggregate(
     # Resolve tags if any input starts with @ (already validated by RunInputParamType)
     resolved_run_names = [TagManager.resolve_input(rn, "infer") for rn in input_run_names]
 
-    # Load configurations
-    io_config = load_io_config(io_cfg, cli_name="aggregate")
-    logging_config = load_logging_config(log_cfg or "observability")
+    # Generate run name if not given
+    if run_name is None:
+        name_hints = [
+            aggregation_strategy,
+            io_cfg,
+        ]
+        run_name = generate_run_name(name_hints)
 
-    # Parse and route overrides if provided
-    if override:
-        overrides = parse_and_route_overrides(override)
-        if overrides.get('io'):
-            io_config = apply_overrides(io_config, overrides['io'])
-
-    # Run aggregation with final configs
-    run_aggregation(
+    # Build application
+    application = build_application(
         aggregation_strategy_name=aggregation_strategy,
-        io_config=io_config,
-        logging_config=logging_config,
-        input_run_names=resolved_run_names,
+        io_name=io_cfg,
+        run_name=run_name,
+        official=official,
+        tag=tag,
+    )
+
+    # Run application
+    application.run_aggregation(
+        run_names=resolved_run_names,
         io_config_name=io_cfg,
         run_name=run_name,
         official=official,
         notes=notes,
-        tag=tag,
     )
 
 

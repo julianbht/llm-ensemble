@@ -8,8 +8,8 @@ from __future__ import annotations
 from uuid import UUID
 from collections import defaultdict
 
-from llm_ensemble.infer.schemas.entities.infer_run_output import InferRunOutput
-from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
+from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
+from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.schemas import AggregatedDataset, AggregatedVote
 from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
 from llm_ensemble.aggregate.schemas.aggregate_run_summary import AggregateRunSummary
@@ -103,26 +103,33 @@ class AggregationService:
     def run_aggregation(
         self,
         run_names: list[str],
-        run_info: AggregateRunInfo,
+        io_config_name: str,
+        run_name: str,
         run_dir,
+        official: bool,
+        notes: Optional[str] = None,
     ) -> AggregateRunSummary:
         """Execute the aggregation pipeline.
 
         Pure business logic that:
-        1. Reads InferRunOutputs via reader port
-        2. Validates sample_fingerprints match
-        3. For each dataset_sample_id:
+        1. Creates run_info from parameters
+        2. Reads InferRunOutputs via reader port
+        3. Validates sample_fingerprints match
+        4. For each dataset_sample_id:
            - Collects all llm_judgements for that sample from all runs
            - Applies aggregation strategy to get consensus
            - Creates AggregatedVote with result
            - Creates DatasetVote with the AggregatedVote
-        4. Creates AggregatedDataset from all DatasetVotes
-        5. Tracks statistics (ties, no-votes, etc.)
+        5. Creates AggregatedDataset from all DatasetVotes
+        6. Tracks statistics (ties, no-votes, etc.)
 
         Args:
             run_names: List of infer run identifiers to read judgements from
-            run_info: Immutable runtime context (attached to summary)
+            io_config_name: Name of the I/O config file
+            run_name: Custom run ID
             run_dir: Run directory for output
+            official: Mark as official run
+            notes: Notes about this run
 
         Returns:
             AggregateRunSummary with statistics
@@ -130,6 +137,20 @@ class AggregationService:
         # Initialize summary builder
         summary_builder = RunSummaryBuilder()
         summary_builder.set_start_time()
+
+        # Create run_info from parameters
+        # Note: We need to get the io_config to include in run_info
+        # For now, we'll create a minimal run_info without io_config
+        # TODO: Consider if we need to pass io_config or just io_config_name
+        run_info = AggregateRunInfo(
+            run_name=run_name,
+            run_type=RunType.OFFICIAL if official else RunType.TEST,
+            notes=notes,
+            aggregation_strategy_name=self.strategy.__class__.__name__,  # TODO: Better way to get strategy name
+            io_config_name=io_config_name,
+            io_config=None,  # TODO: Need to pass this or remove from schema
+            input_run_names=run_names,
+        )
         summary_builder.add("run_info", run_info)
 
         # Read InferRunOutputs (one per run) via reader port

@@ -220,11 +220,14 @@ class InferenceApplication(ForRunningInference):
                 llm_judgements.append(judgement)
 
         # Retrieve aggregate write summary after context manager closes (writer logged directly)
-        write_summary = self.output_port.get_summary()
+        output_write_summary = self.output_port.get_summary()
 
-        # Build and finalize summary
-        summary = self._build_summary(start_time, llm_judgements, write_summary)
-        self._finalize_run(summary, self.run_dir, logger)
+        # Build summary
+        summary = self._build_summary(start_time, llm_judgements, output_write_summary)
+
+        # Write summary to disk and log completion
+        summary_path = write_summary(summary, self.run_dir)
+        logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(summary_path))
 
         # Return finalized summary
         return summary
@@ -317,7 +320,7 @@ class InferenceApplication(ForRunningInference):
             warnings_summary,
         ) = calculate_aggregate_statistics(llm_judgements)
         
-        # Construct Pydantic summary (application responsibility)
+        # Construct Pydantic summary
         return InferRunSummary(
             start_time=start_time,
             end_time=datetime.now(),
@@ -328,20 +331,3 @@ class InferenceApplication(ForRunningInference):
             avg_latency_ms=avg_latency_ms,
             warnings_summary=warnings_summary,
         )
-
-    def _finalize_run(
-        self,
-        summary: InferRunSummary,
-        run_dir: Path,
-        logger: structlog.stdlib.BoundLogger,
-    ) -> None:
-        """Finalize backend outputs: write summary to disk and log completion.
-
-        Args:
-            summary: Inference run summary from pipeline execution
-            run_dir: Run directory path
-            logger: Configured logger instance
-        """
-        # Write summary to disk
-        summary_path = write_summary(summary, run_dir)
-        logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(summary_path))

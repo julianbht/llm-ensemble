@@ -10,7 +10,7 @@ This script:
 Usage:
     python scripts/update_model_pricing.py
     python scripts/update_model_pricing.py --dry-run
-    python scripts/update_model_pricing.py --model gpt-oss-20b-free
+    python scripts/update_model_pricing.py --model gemma-3n-e2b-it-free
     python scripts/update_model_pricing.py --debug
 """
 
@@ -27,12 +27,7 @@ import yaml
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from llm_ensemble.libs.logging.structlog_logger import configure_logger
-from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.runtime.path_manager import PathManager
-
-# Load runtime configuration
-load_runtime_config()
 
 app = typer.Typer(
     add_completion=True,
@@ -43,12 +38,11 @@ app = typer.Typer(
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
 
-def fetch_openrouter_pricing(logger, debug: bool = False) -> dict[str, dict[str, float]]:
+def fetch_openrouter_pricing(debug: bool = False) -> dict[str, dict[str, float]]:
     """Fetch current pricing from OpenRouter API.
 
     Args:
-        logger: Structlog logger instance
-        debug: Whether to log debug information
+        debug: Whether to print debug information
 
     Returns:
         Dict mapping model IDs to pricing info: {
@@ -58,14 +52,14 @@ def fetch_openrouter_pricing(logger, debug: bool = False) -> dict[str, dict[str,
             }
         }
     """
-    logger.info("fetching_pricing", url=OPENROUTER_MODELS_URL)
+    print(f"Fetching pricing from {OPENROUTER_MODELS_URL}...")
 
     try:
         response = requests.get(OPENROUTER_MODELS_URL, timeout=30)
         response.raise_for_status()
         data = response.json()
     except requests.RequestException as e:
-        logger.error("api_request_failed", error=str(e))
+        print(f"Error: API request failed: {e}", file=sys.stderr)
         raise typer.Exit(code=1)
 
     # Extract pricing from response
@@ -73,7 +67,7 @@ def fetch_openrouter_pricing(logger, debug: bool = False) -> dict[str, dict[str,
     pricing_map = {}
 
     if "data" not in data:
-        logger.error("api_response_invalid", error="Missing 'data' key in response")
+        print("Error: Invalid API response (missing 'data' key)", file=sys.stderr)
         raise typer.Exit(code=1)
 
     for model in data["data"]:
@@ -85,11 +79,8 @@ def fetch_openrouter_pricing(logger, debug: bool = False) -> dict[str, dict[str,
 
         # Debug: log first model's pricing structure
         if debug and len(pricing_map) == 0:
-            logger.debug(
-                "api_response_sample",
-                model_id=model_id,
-                raw_pricing=pricing,
-            )
+            print(f"\nDebug: Sample pricing structure for {model_id}:")
+            print(f"  Raw pricing: {pricing}")
 
         # Convert string prices to floats and scale to per-1M tokens
         # OpenRouter returns prices as strings in dollars per token
@@ -103,14 +94,11 @@ def fetch_openrouter_pricing(logger, debug: bool = False) -> dict[str, dict[str,
                 "completion": completion_price * 1_000_000,
             }
         except (ValueError, TypeError) as e:
-            logger.warning(
-                "pricing_parse_error",
-                model_id=model_id,
-                error=str(e),
-            )
+            if debug:
+                print(f"Warning: Could not parse pricing for {model_id}: {e}", file=sys.stderr)
             continue
 
-    logger.info("pricing_fetched", total_models=len(pricing_map))
+    print(f"Fetched pricing for {len(pricing_map)} models\n")
     return pricing_map
 
 
@@ -134,7 +122,7 @@ def update_config_with_pricing(
     config_path: Path,
     pricing_map: dict[str, dict[str, float]],
     dry_run: bool,
-    logger,
+    debug: bool = False,
 ) -> str:
     """Update a single model config with pricing.
 
@@ -142,7 +130,7 @@ def update_config_with_pricing(
         config_path: Path to model config file
         pricing_map: Mapping of model IDs to pricing info
         dry_run: Whether to preview changes without writing
-        logger: Structlog logger instance
+        debug: Whether to print debug information
 
     Returns:
         "updated" if config was updated, "skipped" if not applicable
@@ -151,41 +139,20 @@ def update_config_with_pricing(
     try:
         config, raw_content = load_yaml_preserving_structure(config_path)
     except Exception as e:
-        logger.error(
-            "config_load_error",
-            config=config_path.name,
-            error=str(e),
-        )
+        print(f"Error loading {config_path.name}: {e}", file=sys.stderr)
         return "skipped"
 
-    # Check if it's an OpenRouter model
-    if config.get("provider") != "openrouter":
-        logger.debug(
-            "config_skipped",
-            config=config_path.name,
-            reason="not_openrouter",
-            provider=config.get("provider"),
-        )
+    # Check if it's an OpenRouter model (model_id contains "/" like "openai/gpt-4")
+    model_id = config.get("model_id")
+    if not model_id or "/" not in model_id:
+        if debug:
+            print(f"Skipped {config_path.name}: not an OpenRouter model (model_id={model_id})")
         return "skipped"
 
-    openrouter_model_id = config.get("openrouter_model_id")
-    if not openrouter_model_id:
-        logger.warning(
-            "config_skipped",
-            config=config_path.name,
-            reason="missing_openrouter_model_id",
-        )
-        return "skipped"
-
-    # Find pricing
-    pricing = pricing_map.get(openrouter_model_id)
+    # Find pricing (use model_id directly)
+    pricing = pricing_map.get(model_id)
     if not pricing:
-        logger.warning(
-            "config_skipped",
-            config=config_path.name,
-            reason="no_pricing_available",
-            openrouter_model_id=openrouter_model_id,
-        )
+        print(f"Warning: No pricing available for {config_path.name} (model_id={model_id})", file=sys.stderr)
         return "skipped"
 
     # Build pricing section
@@ -227,23 +194,15 @@ pricing:
 
     # Write back
     if dry_run:
-        logger.info(
-            "config_would_update",
-            config=config_path.name,
-            openrouter_model_id=openrouter_model_id,
-            prompt_per_1m=f"${pricing['prompt']:.6f}",
-            completion_per_1m=f"${pricing['completion']:.6f}",
-        )
+        print(f"Would update {config_path.name}: "
+              f"prompt=${pricing['prompt']:.6f}/1M, "
+              f"completion=${pricing['completion']:.6f}/1M")
     else:
         with open(config_path, "w", encoding="utf-8") as f:
             f.write(updated_content)
-        logger.info(
-            "config_updated",
-            config=config_path.name,
-            openrouter_model_id=openrouter_model_id,
-            prompt_per_1m=f"${pricing['prompt']:.6f}",
-            completion_per_1m=f"${pricing['completion']:.6f}",
-        )
+        print(f"Updated {config_path.name}: "
+              f"prompt=${pricing['prompt']:.6f}/1M, "
+              f"completion=${pricing['completion']:.6f}/1M")
 
     return "updated"
 
@@ -255,7 +214,7 @@ def update_pricing(
         typer.Option(
             "--model",
             "-m",
-            help="Update only a specific model config (e.g., 'gpt-oss-20b-free'). If not specified, updates all OpenRouter models.",
+            help="Update only a specific model config (e.g., 'gemma-3n-e2b-it-free'). If not specified, updates all OpenRouter models.",
         ),
     ] = None,
     dry_run: Annotated[
@@ -290,38 +249,24 @@ def update_pricing(
         python scripts/update_model_pricing.py
 
         # Update specific model
-        python scripts/update_model_pricing.py --model gpt-oss-20b-free
+        python scripts/update_model_pricing.py --model gemma-3n-e2b-it-free
 
         # Debug mode to see API response structure
         python scripts/update_model_pricing.py --dry-run --debug
     """
-    # Configure logging (no file logging for utility script)
-    logger = configure_logger(
-        cli_name="update_pricing",
-        pretty_print=True,
-        save_logs=False,
-        console_level="DEBUG" if debug else "INFO",
-    )
-
-    logger.info(
-        "script_started",
-        command="update-pricing",
-        dry_run=dry_run,
-        target_model=model_name or "all",
-    )
+    print(f"Update Model Pricing")
+    print(f"===================")
+    print(f"Mode: {'DRY RUN' if dry_run else 'LIVE'}")
+    print(f"Target: {model_name or 'all models'}\n")
 
     # Fetch pricing from OpenRouter
-    pricing_map = fetch_openrouter_pricing(logger, debug)
+    pricing_map = fetch_openrouter_pricing(debug)
 
     # Get model configs directory
     models_dir = PathManager.get_model_configs_dir()
 
     if not models_dir.exists():
-        logger.error(
-            "config_error",
-            error="Models directory not found",
-            path=str(models_dir),
-        )
+        print(f"Error: Models directory not found: {models_dir}", file=sys.stderr)
         raise typer.Exit(code=1)
 
     # Find model config files
@@ -329,22 +274,13 @@ def update_pricing(
         # Single model
         config_files = [models_dir / f"{model_name}.yaml"]
         if not config_files[0].exists():
-            logger.error(
-                "config_error",
-                error="Model config not found",
-                model=model_name,
-                path=str(config_files[0]),
-            )
+            print(f"Error: Model config not found: {config_files[0]}", file=sys.stderr)
             raise typer.Exit(code=1)
     else:
         # All YAML files
         config_files = sorted(models_dir.glob("*.yaml"))
 
-    logger.info(
-        "processing_configs",
-        total_configs=len(config_files),
-        models_dir=str(models_dir.relative_to(PathManager.get_project_root())),
-    )
+    print(f"Processing {len(config_files)} config file(s) from {models_dir.relative_to(PathManager.get_project_root())}\n")
 
     # Update each config
     updated_count = 0
@@ -352,7 +288,7 @@ def update_pricing(
 
     for config_path in config_files:
         result = update_config_with_pricing(
-            config_path, pricing_map, dry_run, logger
+            config_path, pricing_map, dry_run, debug
         )
         if result == "updated":
             updated_count += 1
@@ -360,13 +296,13 @@ def update_pricing(
             skipped_count += 1
 
     # Summary
-    logger.info(
-        "script_complete",
-        mode="dry_run" if dry_run else "live",
-        total_configs=len(config_files),
-        updated=updated_count,
-        skipped=skipped_count,
-    )
+    print(f"\n{'=' * 50}")
+    print(f"Summary:")
+    print(f"  Total configs: {len(config_files)}")
+    print(f"  Updated: {updated_count}")
+    print(f"  Skipped: {skipped_count}")
+    if dry_run:
+        print(f"\nRun without --dry-run to apply changes")
 
 
 if __name__ == "__main__":

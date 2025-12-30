@@ -18,3 +18,9 @@ seed: null
 
 # Additional provider-specific parameters (stop sequences, response_format, etc.)
 additional_params: {}
+
+# Pricing information (auto-updated from OpenRouter API)
+pricing:
+  prompt_cost_per_1m_tokens: 0.0
+  completion_cost_per_1m_tokens: 0.0
+  last_updated: "2025-12-30T13:32:40.556644+00:00"

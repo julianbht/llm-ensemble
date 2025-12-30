@@ -33,12 +33,6 @@ from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     IngestRunORM,
 )
 from llm_ensemble.ingest.application.ports.driven.for_output import ForOutput
-from llm_ensemble.ingest.adapters.driven.io.db.mappers_to_orm import (
-    query_to_orm,
-    document_to_orm,
-    normalized_dataset_to_orm,
-    ingest_run_config_to_orm,
-)
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.db import (
     get_engine,
@@ -289,7 +283,12 @@ class DbWriter(ForOutput):
             return (0, 1, str(existing.id))
 
         # Insert new config
-        config_orm = ingest_run_config_to_orm(run_config)
+        config_orm = IngestRunConfigORM(
+            id=run_config.id,
+            io_config_name=run_config.io_config_name,
+            input_path=run_config.input_path,
+            limit=run_config.limit,
+        )
         session.add(config_orm)
         session.flush()
         return (1, 0, str(config_orm.id))
@@ -313,7 +312,14 @@ class DbWriter(ForOutput):
             return (0, 0, {})
 
         # Convert all queries to ORM objects
-        query_orms = [query_to_orm(q) for q in queries.values()]
+        query_orms = [
+            QueryORM(
+                id=q.id,
+                query_text=q.query_text,
+                content_hash=q.content_hash,
+            )
+            for q in queries.values()
+        ]
         content_hashes = [q.content_hash for q in queries.values()]
 
         # Query existing queries and get their UUIDs
@@ -363,7 +369,14 @@ class DbWriter(ForOutput):
             return (0, 0, {})
 
         # Convert all documents to ORM objects
-        doc_orms = [document_to_orm(d) for d in documents.values()]
+        doc_orms = [
+            DocumentORM(
+                id=d.id,
+                doc_text=d.doc_text,
+                content_hash=d.content_hash,
+            )
+            for d in documents.values()
+        ]
         content_hashes = [d.content_hash for d in documents.values()]
 
         # Query existing documents and get their UUIDs
@@ -502,7 +515,11 @@ class DbWriter(ForOutput):
             return (0, 1, str(existing.id))
 
         # Insert new dataset
-        normalized_dataset_orm = normalized_dataset_to_orm(normalized_dataset)
+        normalized_dataset_orm = NormalizedDatasetORM(
+            id=normalized_dataset.id,
+            fingerprint=normalized_dataset.fingerprint,
+            external_dataset_name=normalized_dataset.external_dataset_name,
+        )
         session.add(normalized_dataset_orm)
         session.flush()
         return (1, 0, str(normalized_dataset_orm.id))

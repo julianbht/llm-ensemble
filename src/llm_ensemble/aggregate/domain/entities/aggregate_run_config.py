@@ -11,7 +11,9 @@ Separate from AggregateRun (git info, timestamps, run metadata).
 
 from __future__ import annotations
 from uuid import UUID, uuid4
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
+from hashlib import sha256
+import json
 
 
 class AggregateRunConfig(BaseModel):
@@ -40,5 +42,19 @@ class AggregateRunConfig(BaseModel):
         ...,
         description="List of infer run identifiers to read judgements from"
     )
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def input_run_names_hash(self) -> str:
+        """Compute SHA256 hash of sorted input_run_names for natural key.
+
+        Sorting ensures deterministic hash regardless of input order.
+
+        Returns:
+            64-character hex digest (SHA256)
+        """
+        sorted_names = sorted(self.input_run_names)
+        canonical = json.dumps(sorted_names, sort_keys=True)
+        return sha256(canonical.encode()).hexdigest()
 
     model_config = ConfigDict(frozen=True)

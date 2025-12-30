@@ -1,293 +1,541 @@
-"""Database adapter for writing aggregated datasets.
+"""SQL writer adapter for persisting aggregate runs to database.
 
-Writes AggregatedDataset records to PostgreSQL database using SQLAlchemy ORM.
-Decomposes denormalized domain objects into normalized relational entities.
+Uses pure SQLAlchemy ORM models with random UUIDs.
+Duplicate detection via pre-querying existing entities (no exception handling).
+Handles its own logging and returns write summary as metadata.
 
-Uses data mapper pattern: domain service works with AggregatedDataset objects,
-SQL writer maps them to ORM entities. Mapper logic lives in mappers_domain_to_orm.py.
-
-Architecture:
-- Run metadata initialized once in open()
-- Per-vote entities created in write_one() using mappers
-- Immediate commits for fault tolerance
-- AggregatedDataset finalized in close()
+No mapper layer - direct ORM conversion for bidirectional symmetry.
 """
 
 from __future__ import annotations
-import uuid
-from pathlib import Path
+from typing import List, Dict, Tuple
+from uuid import UUID
 
 from sqlalchemy.orm import Session
+from sqlalchemy import tuple_
 
-from llm_ensemble.aggregate.schemas.aggregated_dataset import AggregatedDataset
-from llm_ensemble.aggregate.schemas.aggregated_vote import AggregatedVote
-from llm_ensemble.aggregate.schemas.aggregation_strategy import AggregationStrategy
-from llm_ensemble.aggregate.schemas.write_summary import WriteSummary
-from llm_ensemble.aggregate.schemas.aggregate_run_info import AggregateRunInfo
-from llm_ensemble.aggregate.ports import AggregatedJudgementWriter
-from llm_ensemble.libs.logging import get_logger
-from llm_ensemble.libs.db import (
-    get_engine,
-    get_session,
-)
-from llm_ensemble.aggregate.schemas.orms_normalized import (
+from llm_ensemble.aggregate.domain.entities.aggregate_run import AggregateRun
+from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
+from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy
+from llm_ensemble.aggregate.domain.entities.write_summary import WriteSummary
+from llm_ensemble.aggregate.adapters.driven.io.orms import (
     AggregationStrategyORM,
+    AggregateRunConfigORM,
     AggregateRunORM,
     AggregatedDatasetORM,
     AggregatedVoteORM,
     AggregationVoteORM,
     AggregatedDatasetVoteORM,
 )
-from llm_ensemble.aggregate.adapters.io.mappers_domain_to_orm import (
-    aggregation_strategy_to_orm,
-    aggregate_run_info_to_orm,
-    aggregated_dataset_to_orm,
-    aggregated_vote_to_orm,
-    create_aggregation_vote_orm,
-    create_aggregated_dataset_vote_orm,
+from llm_ensemble.aggregate.application.ports.driven.for_output import ForOutput
+from llm_ensemble.libs.logging import get_logger
+from llm_ensemble.libs.db import (
+    get_engine,
+    session_context,
 )
+from llm_ensemble.libs.logging.log_events import AggregateWriteEvent
 
 
-class DbAggregatedDatasetWriter(AggregatedJudgementWriter):
-    """Write AggregatedDataset records to SQL database.
+class DbAggregatedDatasetWriter(ForOutput):
+    """SQL writer adapter for aggregate runs - handles ORM mapping.
 
-    Normalized schema: decomposes aggregated datasets into AggregationSpec,
-    AggregateRun, AggregatedDataset, AggregatedVote, AggregationVote,
-    and AggregatedDatasetVote entities.
+    Writes aggregate runs to SQL database using pure SQLAlchemy ORM.
+    Contains the mapping layer that extracts dataset/run context from aggregate_run
+    and handles ORM relationships.
 
-    Deduplication via deterministic UUIDs + unique constraints.
+    Features:
+    - Duplicate detection via pre-querying existing entities by natural keys
+    - Bulk insert operations for maximum performance
+    - UUID mapping to ensure correct foreign key references across runs
+    - Natural key deduplication (name for Strategy, fingerprint for Dataset)
+    - Uses session_context() for transaction management
+    - Logs write operations directly
+
+    Database URL is read from DATABASE_URL environment variable (required).
+    Example: postgresql://user:password@localhost:5432/llm_ensemble
     """
 
-    def __init__(self, io_name: str = "db_to_db"):
-        """Initialize database writer.
+    def __init__(self, io_name: str, database_url: str | None = None):
+        """Initialize SQL writer with IO format name.
 
         Args:
-            io_name: I/O adapter name for metadata tracking
+            io_name: Name of the IO format (e.g., 'db_to_db')
+            database_url: Optional database URL (defaults to DATABASE_URL env var)
         """
         self._io_name = io_name
-        self.logger = get_logger(component="db_aggregated_dataset_writer")
+        self.database_url = database_url
+        self.engine = get_engine(database_url)
+        self.logger = get_logger(component=__name__)
 
     @property
     def io_name(self) -> str:
         """Get I/O adapter name."""
         return self._io_name
 
-    def write(
-        self,
-        run_dir: Path,
-        run_info: AggregateRunInfo,
-        aggregated_dataset: AggregatedDataset,
-    ) -> WriteSummary:
-        """Write entire aggregated dataset to database in one batch.
+    def write(self, aggregate_run: AggregateRun) -> WriteSummary:
+        """Write aggregate run results to SQL database with direct logging.
+
+        Duplicate detection via pre-querying existing entities by natural keys.
+        Uses bulk insert operations for aggregated votes and junctions.
+        Maintains UUID mappings to ensure correct foreign key references.
+        Tracks created vs skipped entities in WriteSummary.
+        Logs each entity type write and summary.
 
         Args:
-            run_dir: Run directory (unused for database writes)
-            run_info: Aggregate run context
-            aggregated_dataset: The aggregated dataset to write
+            aggregate_run: Complete AggregateRun aggregate containing config, dataset, and metadata
 
         Returns:
-            WriteSummary tracking what entities were created/skipped
+            WriteSummary as pure data (metadata for run summary)
+
+        Raises:
+            IOError: If database write fails
         """
-        write_summary = WriteSummary()
+        # Extract dataset from aggregate
+        aggregated_dataset = aggregate_run.aggregated_dataset
+        aggregated_votes = aggregated_dataset.aggregated_votes
 
-        engine = get_engine()
-        session = get_session(engine)
+        if not aggregated_votes:
+            return WriteSummary()
 
+        # Extract aggregation strategy from first vote
+        aggregation_strategy = aggregated_votes[0].aggregation_strategy
+
+        # Note: Tables must be created via `make db-init` before first write
+        # Create summary builder
+        summary = WriteSummary()
+
+        # Write to database in transaction
         try:
-            # Upsert AggregationStrategy (extract from first aggregated_vote)
-            if aggregated_dataset.aggregated_votes:
-                aggregation_strategy = aggregated_dataset.aggregated_votes[0].aggregation_strategy
-                self._upsert_aggregation_strategy(session, aggregation_strategy, write_summary)
+            with session_context(self.engine) as session:
+                # Save entities in strict dependency order to satisfy foreign key constraints
+                # Order matters! Each step depends on previous steps being persisted.
+                #
+                # Dependency graph:
+                #   1. AggregationStrategy (no dependencies - global entity)
+                #   2. AggregateRunConfig (no dependencies)
+                #   3. AggregatedDataset entity (no dependencies)
+                #   4. AggregatedVote (depends on AggregationStrategy)
+                #   5. AggregationVote junction (depends on AggregatedVote + LLMJudgement)
+                #   6. AggregatedDatasetVote junction (depends on AggregatedDataset + AggregatedVote)
+                #   7. AggregateRun (depends on AggregateRunConfig + AggregatedDataset)
 
-            # Initialize run metadata (aggregate run)
-            aggregate_run_id = self._initialize_run_metadata(
-                session, run_info, write_summary
-            )
+                # 1. AggregationStrategy (no dependencies - global entity)
+                created, skipped = self._save_aggregation_strategy(session, aggregation_strategy)
+                summary.add_aggregation_strategies(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(AggregateWriteEvent.WRITE_STRATEGY, created=created, skipped=skipped)
 
-            # Upsert AggregatedDataset
-            aggregated_dataset_id = self._upsert_aggregated_dataset(
-                session, aggregated_dataset, write_summary
-            )
-
-            self.logger.info(
-                "writing_aggregated_dataset",
-                aggregated_dataset_id=str(aggregated_dataset_id),
-                fingerprint=aggregated_dataset.fingerprint[:16] + "...",
-                vote_count=len(aggregated_dataset.aggregated_votes),
-            )
-
-            # Write all aggregated votes
-            for aggregated_vote in aggregated_dataset.aggregated_votes:
-                self._write_aggregated_vote(
-                    session,
-                    aggregated_dataset_id,
-                    aggregated_vote,
-                    write_summary
+                # 2. AggregateRunConfig (no FK dependencies)
+                created, skipped, config_uuid = self._save_aggregate_run_config(
+                    session, aggregate_run.aggregate_run_config
                 )
+                summary.add_configs(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(AggregateWriteEvent.WRITE_RUN_CONFIG, created=created, skipped=skipped)
 
-            # Link AggregateRun to AggregatedDataset (finalize relationship)
-            aggregate_run = session.get(AggregateRunORM, aggregate_run_id)
-            if aggregate_run:
-                aggregate_run.aggregated_dataset_id = aggregated_dataset_id
-                session.commit()
+                # 3. AggregatedDataset entity (no dependencies)
+                created, skipped, dataset_uuid = self._save_aggregated_dataset_entity(session, aggregated_dataset)
+                summary.add_aggregated_datasets(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(AggregateWriteEvent.WRITE_DATASET, created=created, skipped=skipped)
+
+                # Flush to ensure entities are persisted before creating dependent records
+                session.flush()
+
+                # 4. AggregatedVote (depends on AggregationStrategy)
+                created, skipped, vote_uuid_map = self._save_aggregated_votes(
+                    session, aggregated_votes, aggregation_strategy.id
+                )
+                summary.add_aggregated_votes(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(AggregateWriteEvent.WRITE_VOTES, created=created, skipped=skipped)
+
+                # 5. AggregationVote junction (depends on AggregatedVote + LLMJudgement)
+                created, skipped = self._save_aggregation_votes(session, aggregated_votes)
+                summary.add_aggregation_votes(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(AggregateWriteEvent.WRITE_AGGREGATION_VOTES, created=created, skipped=skipped)
+
+                # 6. AggregatedDatasetVote junction (depends on AggregatedDataset + AggregatedVote)
+                created, skipped = self._save_aggregated_dataset_votes(
+                    session, aggregated_votes, dataset_uuid
+                )
+                summary.add_aggregated_dataset_votes(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(AggregateWriteEvent.WRITE_DATASET_VOTES, created=created, skipped=skipped)
+
+                # 7. AggregateRun (depends on AggregateRunConfig + AggregatedDataset)
+                created, skipped = self._save_aggregate_run(
+                    session, aggregate_run, config_uuid, dataset_uuid
+                )
+                summary.add_aggregate_runs(created=created, skipped=skipped)
+                if created > 0 or skipped > 0:
+                    self.logger.info(AggregateWriteEvent.WRITE_RUNS, created=created, skipped=skipped)
 
             # Log totals
-            self.logger.info(
-                "write_complete",
-                total_created=write_summary.total_created,
-                total_skipped=write_summary.total_skipped,
-            )
+            if summary.total_created > 0 or summary.total_skipped > 0:
+                self.logger.info(
+                    AggregateWriteEvent.WRITE_COMPLETE,
+                    total_created=summary.total_created,
+                    total_skipped=summary.total_skipped,
+                )
 
-            return write_summary
+            return summary
 
-        finally:
-            session.close()
+        except Exception as e:
+            raise IOError(f"Failed to write aggregate run to database: {e}") from e
 
-    def _upsert_aggregation_strategy(
-        self,
-        session: Session,
-        aggregation_strategy: "AggregationStrategy",
-        write_summary: WriteSummary,
-    ) -> None:
-        """Upsert AggregationStrategy entity.
+    def _save_aggregation_strategy(
+        self, session: Session, aggregation_strategy: AggregationStrategy
+    ) -> Tuple[int, int]:
+        """Save aggregation strategy entity to database using pre-query pattern.
+
+        Checks if name already exists before inserting.
 
         Args:
-            session: Database session
+            session: SQLAlchemy session
             aggregation_strategy: AggregationStrategy domain entity
-            write_summary: Summary tracker
-        """
-        strategy_id = self._upsert_entity(
-            session,
-            AggregationStrategyORM,
-            aggregation_strategy.id,
-            lambda: aggregation_strategy_to_orm(aggregation_strategy),
-            "aggregation_strategies",
-            write_summary
-        )
-
-    def _initialize_run_metadata(
-        self,
-        session: Session,
-        run_info: AggregateRunInfo,
-        write_summary: WriteSummary,
-    ) -> uuid.UUID:
-        """Initialize run metadata.
 
         Returns:
-            aggregate_run_id
+            Tuple of (created_count, skipped_count)
         """
-        # Create AggregateRun
-        config_names = {
-            "aggregation_strategy": run_info.aggregation_strategy_name,
-            "io_config": run_info.io_config_name,
+        # Check if this strategy name already exists
+        existing = (
+            session.query(AggregationStrategyORM)
+            .filter_by(name=aggregation_strategy.name)
+            .first()
+        )
+
+        if existing:
+            return (0, 1)
+
+        # Insert new strategy
+        strategy_orm = AggregationStrategyORM(
+            id=aggregation_strategy.id,
+            name=aggregation_strategy.name,
+        )
+        session.add(strategy_orm)
+        session.flush()
+        return (1, 0)
+
+    def _save_aggregate_run_config(
+        self, session: Session, run_config: "AggregateRunConfig"
+    ) -> Tuple[int, int, str]:
+        """Save aggregate run config entity to database using pre-query pattern.
+
+        Checks if natural key already exists.
+        Returns UUID of existing or newly created config.
+
+        Args:
+            session: SQLAlchemy session
+            run_config: AggregateRunConfig domain object
+
+        Returns:
+            Tuple of (created_count, skipped_count, config_uuid)
+        """
+        # Check if this config already exists (by natural key)
+        existing = (
+            session.query(AggregateRunConfigORM)
+            .filter_by(
+                aggregation_strategy_name=run_config.aggregation_strategy_name,
+                io_config_name=run_config.io_config_name,
+                input_run_names_hash=run_config.input_run_names_hash,
+            )
+            .first()
+        )
+
+        if existing:
+            return (0, 1, str(existing.id))
+
+        # Insert new config
+        config_orm = AggregateRunConfigORM(
+            id=run_config.id,
+            aggregation_strategy_name=run_config.aggregation_strategy_name,
+            io_config_name=run_config.io_config_name,
+            input_run_names=run_config.input_run_names,
+            input_run_names_hash=run_config.input_run_names_hash,
+        )
+        session.add(config_orm)
+        session.flush()
+        return (1, 0, str(config_orm.id))
+
+    def _save_aggregated_dataset_entity(
+        self, session: Session, aggregated_dataset: "AggregatedDataset"
+    ) -> Tuple[int, int, str]:
+        """Save AggregatedDataset entity.
+
+        Checks if fingerprint already exists before inserting.
+        Returns UUID of existing or newly created dataset.
+
+        Args:
+            session: SQLAlchemy session
+            aggregated_dataset: AggregatedDataset domain object
+
+        Returns:
+            Tuple of (created_count, skipped_count, dataset_uuid)
+        """
+        # Check if this dataset fingerprint already exists
+        existing = (
+            session.query(AggregatedDatasetORM)
+            .filter_by(fingerprint=aggregated_dataset.fingerprint)
+            .first()
+        )
+
+        if existing:
+            return (0, 1, str(existing.id))
+
+        # Insert new dataset
+        dataset_orm = AggregatedDatasetORM(
+            id=aggregated_dataset.id,
+            fingerprint=aggregated_dataset.fingerprint,
+        )
+        session.add(dataset_orm)
+        session.flush()
+        return (1, 0, str(dataset_orm.id))
+
+    def _save_aggregated_votes(
+        self,
+        session: Session,
+        aggregated_votes: List[AggregatedVote],
+        strategy_id: UUID,
+    ) -> Tuple[int, int, Dict[UUID, str]]:
+        """Save aggregated vote entities to database using bulk insert with pre-filtering.
+
+        Queries existing votes by (dataset_sample_id, aggregation_strategy_id), filters to new ones,
+        then bulk inserts. Returns mapping of vote domain UUID -> actual UUID in DB.
+
+        Args:
+            session: SQLAlchemy session
+            aggregated_votes: List of AggregatedVote domain objects
+            strategy_id: UUID of the aggregation strategy
+
+        Returns:
+            Tuple of (created_count, skipped_count, vote_uuid_mapping)
+        """
+        if not aggregated_votes:
+            return (0, 0, {})
+
+        # Convert votes to ORM objects
+        vote_orms: List[AggregatedVoteORM] = []
+        for vote in aggregated_votes:
+            # Extract dataset_sample_id from first judgement (all are for same sample)
+            dataset_sample_id = vote.llm_judgements[0].dataset_sample.id
+
+            orm = AggregatedVoteORM(
+                id=vote.id,
+                dataset_sample_id=dataset_sample_id,
+                aggregation_strategy_id=strategy_id,
+                final_label=vote.final_label,
+                final_confidence=vote.final_confidence,
+                final_reasoning=vote.final_reasoning,
+            )
+            vote_orms.append(orm)
+
+        # Build list of (dataset_sample_id, strategy_id) tuples to check
+        vote_keys = [(orm.dataset_sample_id, orm.aggregation_strategy_id) for orm in vote_orms]
+
+        # Query existing votes and get their UUIDs
+        existing_votes = {
+            (str(sample_id), str(strat_id)): str(vote_id)
+            for (sample_id, strat_id, vote_id) in
+            session.query(
+                AggregatedVoteORM.dataset_sample_id,
+                AggregatedVoteORM.aggregation_strategy_id,
+                AggregatedVoteORM.id
+            )
+            .filter(
+                tuple_(AggregatedVoteORM.dataset_sample_id, AggregatedVoteORM.aggregation_strategy_id)
+                .in_(vote_keys)
+            )
         }
-        aggregate_run_orm = aggregate_run_info_to_orm(
-            run_info,
-            run_info.id,
-            config_names
+
+        # Filter to only new votes
+        new_vote_orms = [
+            orm for orm in vote_orms
+            if (str(orm.dataset_sample_id), str(orm.aggregation_strategy_id)) not in existing_votes
+        ]
+
+        # Bulk insert new votes
+        if new_vote_orms:
+            session.add_all(new_vote_orms)
+            session.flush()
+
+        # Build complete mapping: domain vote UUID -> actual UUID in DB (existing + new)
+        vote_uuid_map = {}
+        for vote, orm in zip(aggregated_votes, vote_orms):
+            vote_uuid_map[vote.id] = str(orm.id)
+
+        created = len(new_vote_orms)
+        skipped = len(vote_orms) - created
+
+        return (created, skipped, vote_uuid_map)
+
+    def _save_aggregation_votes(
+        self,
+        session: Session,
+        aggregated_votes: List[AggregatedVote],
+    ) -> Tuple[int, int]:
+        """Save AggregationVote junction records using bulk insert with pre-filtering.
+
+        Links AggregatedVote to LLMJudgements.
+
+        Args:
+            session: SQLAlchemy session
+            aggregated_votes: List of AggregatedVote domain objects
+
+        Returns:
+            Tuple of (created_count, skipped_count)
+        """
+        # Create all junction records
+        junction_orms: List[AggregationVoteORM] = []
+        for vote in aggregated_votes:
+            for llm_judgement in vote.llm_judgements:
+                junction = AggregationVoteORM(
+                    aggregated_vote_id=vote.id,
+                    llm_judgement_id=llm_judgement.id,
+                )
+                junction_orms.append(junction)
+
+        if not junction_orms:
+            return (0, 0)
+
+        # Build list of (vote_id, judgement_id) tuples to check
+        junction_keys = [(j.aggregated_vote_id, j.llm_judgement_id) for j in junction_orms]
+
+        # Query existing junctions
+        existing_junctions = {
+            (str(vote_id), str(judgement_id))
+            for (vote_id, judgement_id) in
+            session.query(
+                AggregationVoteORM.aggregated_vote_id,
+                AggregationVoteORM.llm_judgement_id
+            )
+            .filter(
+                tuple_(AggregationVoteORM.aggregated_vote_id, AggregationVoteORM.llm_judgement_id)
+                .in_(junction_keys)
+            )
+        }
+
+        # Filter to only new junctions
+        new_junction_orms = [
+            j for j in junction_orms
+            if (str(j.aggregated_vote_id), str(j.llm_judgement_id)) not in existing_junctions
+        ]
+
+        # Bulk insert new junctions
+        if new_junction_orms:
+            session.add_all(new_junction_orms)
+            session.flush()
+
+        created = len(new_junction_orms)
+        skipped = len(junction_orms) - created
+
+        return (created, skipped)
+
+    def _save_aggregated_dataset_votes(
+        self,
+        session: Session,
+        aggregated_votes: List[AggregatedVote],
+        dataset_uuid: str,
+    ) -> Tuple[int, int]:
+        """Save AggregatedDatasetVote junction records using bulk insert with pre-filtering.
+
+        Links AggregatedDataset to AggregatedVotes.
+
+        Args:
+            session: SQLAlchemy session
+            aggregated_votes: List of AggregatedVote domain objects
+            dataset_uuid: UUID of the AggregatedDataset in database
+
+        Returns:
+            Tuple of (created_count, skipped_count)
+        """
+        # Create all junction records
+        junction_orms: List[AggregatedDatasetVoteORM] = []
+        for vote in aggregated_votes:
+            junction = AggregatedDatasetVoteORM(
+                aggregated_dataset_id=dataset_uuid,
+                aggregated_vote_id=vote.id,
+            )
+            junction_orms.append(junction)
+
+        if not junction_orms:
+            return (0, 0)
+
+        # Build list of (dataset_id, vote_id) tuples to check
+        junction_keys = [(j.aggregated_dataset_id, j.aggregated_vote_id) for j in junction_orms]
+
+        # Query existing junctions
+        existing_junctions = {
+            (str(dataset_id), str(vote_id))
+            for (dataset_id, vote_id) in
+            session.query(
+                AggregatedDatasetVoteORM.aggregated_dataset_id,
+                AggregatedDatasetVoteORM.aggregated_vote_id
+            )
+            .filter(
+                tuple_(AggregatedDatasetVoteORM.aggregated_dataset_id, AggregatedDatasetVoteORM.aggregated_vote_id)
+                .in_(junction_keys)
+            )
+        }
+
+        # Filter to only new junctions
+        new_junction_orms = [
+            j for j in junction_orms
+            if (str(j.aggregated_dataset_id), str(j.aggregated_vote_id)) not in existing_junctions
+        ]
+
+        # Bulk insert new junctions
+        if new_junction_orms:
+            session.add_all(new_junction_orms)
+            session.flush()
+
+        created = len(new_junction_orms)
+        skipped = len(junction_orms) - created
+
+        return (created, skipped)
+
+    def _save_aggregate_run(
+        self,
+        session: Session,
+        aggregate_run: AggregateRun,
+        config_uuid: str,
+        dataset_uuid: str,
+    ) -> Tuple[int, int]:
+        """Save aggregate run entity to database using pre-query pattern.
+
+        Checks if run_name already exists before inserting.
+        Uses provided config and dataset UUIDs for correct foreign key references.
+
+        Args:
+            session: SQLAlchemy session
+            aggregate_run: AggregateRun aggregate (contains config and dataset)
+            config_uuid: UUID of the AggregateRunConfig in database
+            dataset_uuid: UUID of the AggregatedDataset in database
+
+        Returns:
+            Tuple of (created_count, skipped_count)
+        """
+        # Check if this run_name already exists
+        existing = session.query(AggregateRunORM).filter_by(run_name=aggregate_run.run_name).first()
+
+        if existing:
+            return (0, 1)
+
+        # Insert new run with correct foreign key UUIDs
+        aggregate_run_orm = AggregateRunORM(
+            id=aggregate_run.id,
+            run_name=aggregate_run.run_name,
+            run_type=aggregate_run.run_type,
+            aggregate_run_config_id=config_uuid,
+            aggregated_dataset_id=dataset_uuid,
+            start_time=aggregate_run.start_time,
+            end_time=aggregate_run.end_time,
+            git_sha=aggregate_run.git_info.git_sha,
+            git_branch=aggregate_run.git_info.git_branch,
+            git_is_dirty="true" if not aggregate_run.git_info.git_clean else "false",
+            notes=aggregate_run.notes,
         )
         session.add(aggregate_run_orm)
-        write_summary.add_aggregate_runs(created=1)
-        session.commit()
-
-        return run_info.id
-
-    def _upsert_entity(
-        self,
-        session: Session,
-        orm_class,
-        entity_id: uuid.UUID,
-        create_fn,
-        entity_name: str,
-        write_summary: WriteSummary,
-    ) -> uuid.UUID:
-        """Generic upsert helper."""
-        existing = session.get(orm_class, entity_id)
-        if existing:
-            # Track skip
-            attr_name = f"add_{entity_name}"
-            if hasattr(write_summary, attr_name):
-                getattr(write_summary, attr_name)(created=0, skipped=1)
-            return entity_id
-
-        entity_orm = create_fn()
-        session.add(entity_orm)
-
-        # Track create
-        attr_name = f"add_{entity_name}"
-        if hasattr(write_summary, attr_name):
-            getattr(write_summary, attr_name)(created=1, skipped=0)
-
-        return entity_id
-
-    def _upsert_aggregated_dataset(
-        self,
-        session: Session,
-        aggregated_dataset: AggregatedDataset,
-        write_summary: WriteSummary,
-    ) -> uuid.UUID:
-        """Upsert AggregatedDataset from domain object."""
-        aggregated_dataset_orm = aggregated_dataset_to_orm(aggregated_dataset)
-        existing = session.get(AggregatedDatasetORM, aggregated_dataset.id)
-
-        if existing:
-            write_summary.add_aggregated_datasets(created=0, skipped=1)
-            return aggregated_dataset.id
-
-        session.add(aggregated_dataset_orm)
-        write_summary.add_aggregated_datasets(created=1, skipped=0)
-        session.commit()
-        return aggregated_dataset.id
-
-    def _write_aggregated_vote(
-        self,
-        session: Session,
-        aggregated_dataset_id: uuid.UUID,
-        aggregated_vote: AggregatedVote,
-        write_summary: WriteSummary,
-    ) -> None:
-        """Write a single aggregated vote with all junction records."""
-        # Upsert AggregatedVote
-        aggregated_vote_orm = aggregated_vote_to_orm(aggregated_vote)
-        existing = session.get(AggregatedVoteORM, aggregated_vote.id)
-
-        if not existing:
-            session.add(aggregated_vote_orm)
-            write_summary.add_aggregated_votes(created=1, skipped=0)
-        else:
-            write_summary.add_aggregated_votes(created=0, skipped=1)
-
-        # Create AggregationVote junction records (link to llm_judgements)
-        for llm_judgement in aggregated_vote.llm_judgements:
-            aggregation_vote_orm = create_aggregation_vote_orm(
-                aggregated_vote.id,
-                llm_judgement.id
-            )
-            # Upsert (handle duplicates)
-            existing_junction = session.query(AggregationVoteORM).filter_by(
-                aggregated_vote_id=aggregated_vote.id,
-                llm_judgement_id=llm_judgement.id
-            ).one_or_none()
-
-            if not existing_junction:
-                session.add(aggregation_vote_orm)
-                write_summary.add_aggregation_votes(created=1)
-            else:
-                write_summary.add_aggregation_votes(skipped=1)
-
-        # Create AggregatedDatasetVote junction record (link dataset to vote)
-        aggregated_dataset_vote_orm = create_aggregated_dataset_vote_orm(
-            aggregated_dataset_id,
-            aggregated_vote.id
-        )
-        # Upsert (handle duplicates)
-        existing_dataset_vote = session.query(AggregatedDatasetVoteORM).filter_by(
-            aggregated_dataset_id=aggregated_dataset_id,
-            aggregated_vote_id=aggregated_vote.id
-        ).one_or_none()
-
-        if not existing_dataset_vote:
-            session.add(aggregated_dataset_vote_orm)
-            write_summary.add_aggregated_dataset_votes(created=1)
-
-        session.commit()
+        session.flush()
+        return (1, 0)

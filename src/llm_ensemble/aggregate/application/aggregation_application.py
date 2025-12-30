@@ -26,6 +26,7 @@ from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVot
 from llm_ensemble.aggregate.domain.entities.aggregate_run_summary import AggregateRunSummary
 from llm_ensemble.aggregate.domain.aggregate_run_factory import AggregateRunFactory
 from llm_ensemble.aggregate.domain.aggregated_dataset_builder import build_aggregated_dataset
+from llm_ensemble.aggregate.domain.validation import validate_infer_run_outputs_for_aggregation
 
 # Driving port (application implements this)
 from llm_ensemble.aggregate.application.ports.driving.for_running_aggregation import ForRunningAggregation
@@ -135,19 +136,14 @@ class AggregationApplication(ForRunningAggregation):
         judged_datasets: list[InferRunOutput] = self.input_port.read(resolved_run_names)
 
         # Validate completion and sample_fingerprint consistency
-        self._validate_judged_datasets(judged_datasets, resolved_run_names)
-
-        # Log validation
-        sample_fingerprints = {dataset.sample_fingerprint for dataset in judged_datasets}
+        validate_infer_run_outputs_for_aggregation(judged_datasets, resolved_run_names)
         logger.info(
             AggregateLogEvent.DATASETS_VALIDATED,
             num_datasets=len(judged_datasets),
-            shared_sample_fingerprint=list(sample_fingerprints)[0][:16] + "..." if sample_fingerprints else "N/A"
         )
 
         # Group llm_judgements by dataset_sample_id across all runs
         grouped_by_sample: dict[UUID, list[LLMJudgement]] = defaultdict(list)
-
         for judged_dataset in judged_datasets:
             for llm_judgement in judged_dataset.llm_judgements:
                 dataset_sample_id = llm_judgement.dataset_sample.id
@@ -156,12 +152,8 @@ class AggregationApplication(ForRunningAggregation):
         # Track statistics
         tie_count = 0
         no_valid_votes_count = 0
-        aggregated_votes = []
+        aggregated_votes : list[AggregatedVote] = []
 
-        # Process each dataset_sample_id
-        # Extract strategy metadata from adapter
-        strategy_entity = self.strategy.get_strategy()
-        logger.info(AggregateLogEvent.APPLYING_STRATEGY, strategy=strategy_entity.name)
         for dataset_sample_id in sorted(grouped_by_sample.keys()):
             # All llm_judgements for this sample (one from each run/model config)
             llm_judgements_for_sample = grouped_by_sample[dataset_sample_id]
@@ -180,7 +172,6 @@ class AggregationApplication(ForRunningAggregation):
             # Log progress
             logger.info(
                 AggregateLogEvent.SAMPLE_AGGREGATED,
-                dataset_sample_id=str(dataset_sample_id)[:8] + "...",
                 final_label=aggregated_vote.final_label.label if aggregated_vote.final_label else "None",
                 confidence=f"{aggregated_vote.final_confidence:.2f}" if aggregated_vote.final_confidence else "0.00",
                 num_llm_judgements=len(llm_judgements_for_sample),
@@ -192,13 +183,9 @@ class AggregationApplication(ForRunningAggregation):
         # Track end time
         end_time = datetime.now()
 
-        # Build AggregateRun entity
-        # Extract metadata from adapters (application layer responsibility)
-        io_name = self.output_port.io_name
-
         aggregate_run = AggregateRunFactory.create(
-            aggregation_strategy_name=strategy_entity.name,
-            io_config_name=io_name,
+            aggregation_strategy_name=self.strategy.get_strategy().name,
+            io_config_name=self.output_port.io_name,
             input_run_names=resolved_run_names,
             run_name=self.run_name,
             run_type=RunType.OFFICIAL if official else RunType.TEST,
@@ -241,39 +228,3 @@ class AggregationApplication(ForRunningAggregation):
         summary_path = write_summary(summary, self.run_dir)
 
         return summary
-
-    def _validate_judged_datasets(
-        self, judged_datasets: list[InferRunOutput], run_names: list[str]
-    ) -> None:
-        """Validate that all InferRunOutputs are complete and compatible for aggregation.
-
-        Checks:
-        1. All InferRunOutputs have non-NULL sample_fingerprints (run completed successfully)
-        2. All sample_fingerprints match (same samples were processed)
-
-        Args:
-            judged_datasets: List of InferRunOutput objects loaded by reader
-            run_names: Corresponding run names (for error messages)
-
-        Raises:
-            ValueError: If validation fails
-        """
-        if not judged_datasets:
-            raise ValueError("No InferRunOutputs found. Cannot aggregate empty list.")
-
-        # Check for NULL sample_fingerprints (incomplete runs)
-        for dataset, run_name in zip(judged_datasets, run_names):
-            if dataset.sample_fingerprint is None:
-                raise ValueError(
-                    f"InferRunOutput for run '{run_name}' has NULL sample_fingerprint. "
-                    f"This indicates the run did not complete successfully."
-                )
-
-        # Check that all sample_fingerprints match
-        sample_fingerprints = {dataset.sample_fingerprint for dataset in judged_datasets}
-        if len(sample_fingerprints) > 1:
-            raise ValueError(
-                f"Cannot aggregate runs with different InferRunOutput sample_fingerprints. "
-                f"Found {len(sample_fingerprints)} distinct sample_fingerprints. "
-                f"This means the runs processed different sets of samples."
-            )

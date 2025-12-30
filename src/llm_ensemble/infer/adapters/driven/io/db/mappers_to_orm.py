@@ -18,22 +18,21 @@ from __future__ import annotations
 from uuid import UUID
 
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
-from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
+from llm_ensemble.infer.domain.entities.infer_run import InferRun
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
+from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
 from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
 from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.domain.entities.prompt_template import PromptTemplate
-from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunContext
 from llm_ensemble.infer.adapters.driven.io.db.orms import (
     ProviderORM,
     ModelConfigORM,
     PromptBuilderORM,
     ParserORM,
     PromptTemplateORM,
-    IngestRunContextORM,
     InferRunConfigORM,
     InferRunORM,
     LLMPromptTextORM,
@@ -160,32 +159,13 @@ def prompt_template_to_orm(prompt_template: PromptTemplate) -> PromptTemplateORM
 
 
 # ============================================================================
-# IngestRunContext Mappers
-# ============================================================================
-
-def ingest_run_context_to_orm(ingest_run_context: IngestRunContext) -> IngestRunContextORM:
-    """Convert IngestRunContext domain object to IngestRunContextORM.
-
-    Args:
-        ingest_run_context: IngestRunContext domain object (already has UUID)
-
-    Returns:
-        IngestRunContextORM model ready for persistence
-    """
-    return IngestRunContextORM(
-        id=ingest_run_context.id,
-        input_run_name=ingest_run_context.input_run_name,
-        start_idx=ingest_run_context.start_idx,
-        end_idx=ingest_run_context.end_idx,
-    )
-
-
-# ============================================================================
 # InferRunConfig Mappers
 # ============================================================================
 
 def infer_run_config_to_orm(infer_run_config: InferRunConfig) -> InferRunConfigORM:
     """Convert InferRunConfig domain object to InferRunConfigORM.
+
+    Execution context fields (input_run_name, start_idx, end_idx) are inlined.
 
     Args:
         infer_run_config: InferRunConfig domain object (already has UUID)
@@ -198,7 +178,9 @@ def infer_run_config_to_orm(infer_run_config: InferRunConfig) -> InferRunConfigO
         model_config_id=infer_run_config.model_cfg.id,
         provider_id=infer_run_config.provider.id,
         prompt_template_id=infer_run_config.prompt_template.id,
-        ingest_run_context_id=infer_run_config.ingest_run_context.id,
+        input_run_name=infer_run_config.input_run_name,
+        start_idx=infer_run_config.start_idx,
+        end_idx=infer_run_config.end_idx,
         io_name=infer_run_config.io_name,
     )
 
@@ -207,32 +189,31 @@ def infer_run_config_to_orm(infer_run_config: InferRunConfig) -> InferRunConfigO
 # InferRun Mappers
 # ============================================================================
 
-def infer_run_info_to_orm(
-    run_info: InferRunInfo,
-    start_idx: int,
-    end_idx: int,
+def infer_run_to_orm(
+    infer_run: InferRun,
+    infer_run_config_id: UUID,
+    infer_run_output_id: UUID,
 ) -> InferRunORM:
-    """Convert InferRunInfo to InferRunORM.
+    """Convert InferRun aggregate root to InferRunORM.
 
     Args:
-        run_info: InferRunInfo context object (already has UUID)
-        start_idx: Computed start index into NormalizedDataset.samples
-        end_idx: Computed end index into NormalizedDataset.samples
+        infer_run: InferRun aggregate root (already has UUID)
+        infer_run_config_id: InferRunConfig UUID (for foreign key)
+        infer_run_output_id: InferRunOutput UUID (for foreign key, same as InferRun.id)
 
     Returns:
-        InferRunORM model ready for persistence (without judged_dataset_id)
+        InferRunORM model ready for persistence
     """
     return InferRunORM(
-        id=run_info.id,
-        run_name=run_info.run_name,
-        run_type=run_info.run_type,
-        start_idx=start_idx,
-        end_idx=end_idx,
-        judged_dataset_id=None,  # Set in close() after computing actual dataset
-        git_sha=run_info.git_info.git_sha,
-        git_branch=run_info.git_info.git_branch,
-        git_is_dirty=not run_info.git_info.git_clean,
-        notes=run_info.notes,
+        id=infer_run.id,
+        run_name=infer_run.run_name,
+        run_type=infer_run.run_type,
+        infer_run_config_id=infer_run_config_id,
+        infer_run_output_id=infer_run_output_id,
+        git_sha=infer_run.git_info.git_sha,
+        git_branch=infer_run.git_info.git_branch,
+        git_is_dirty=not infer_run.git_info.git_clean,
+        notes=infer_run.notes,
     )
 
 
@@ -365,22 +346,19 @@ def llm_judgement_to_orm(
 # ============================================================================
 
 def infer_run_output_to_orm(
-    infer_run_output_id: UUID,
-    infer_run_config_id: UUID,
-    sample_fingerprint: str,
+    infer_run_output: InferRunOutput,
 ) -> InferRunOutputORM:
-    """Create InferRunOutputORM.
+    """Convert InferRunOutput to InferRunOutputORM.
+
+    Configuration reference is via InferRunORM (not stored here).
 
     Args:
-        infer_run_output_id: InferRunOutput UUID (same as InferRun.id for 1:1 relationship)
-        infer_run_config_id: InferRunConfig UUID (for foreign key)
-        sample_fingerprint: SHA256 hash of sorted dataset_sample IDs
+        infer_run_output: InferRunOutput domain object (already has UUID, same as InferRun.id)
 
     Returns:
         InferRunOutputORM model ready for persistence
     """
     return InferRunOutputORM(
-        id=infer_run_output_id,
-        infer_run_config_id=infer_run_config_id,
-        sample_fingerprint=sample_fingerprint,
+        id=infer_run_output.id,
+        sample_fingerprint=infer_run_output.sample_fingerprint,
     )

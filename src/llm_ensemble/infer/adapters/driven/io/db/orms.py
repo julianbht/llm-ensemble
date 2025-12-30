@@ -202,7 +202,7 @@ class InferRunConfigORM(Base):
     - Model configuration
     - Provider configuration
     - Prompt template (builder + parser)
-    - Execution context (input source, sample range)
+    - Execution context (input source, sample range) - INLINED
     - I/O adapter name
 
     Note: retry_config is not persisted (transient execution detail).
@@ -213,13 +213,15 @@ class InferRunConfigORM(Base):
             "model_config_id",
             "provider_id",
             "prompt_template_id",
-            "ingest_run_context_id",
+            "input_run_name",
+            "start_idx",
+            "end_idx",
             "io_name",
             name="uq_infer_run_config",
         ),
         {"schema": "infer"},
     )
-    __natural_key__ = ("model_config_id", "provider_id", "prompt_template_id", "ingest_run_context_id", "io_name")
+    __natural_key__ = ("model_config_id", "provider_id", "prompt_template_id", "input_run_name", "start_idx", "end_idx", "io_name")
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
@@ -238,11 +240,24 @@ class InferRunConfigORM(Base):
         ForeignKey("infer.prompt_templates.id"),
         nullable=False,
     )
-    ingest_run_context_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.ingest_run_contexts.id"),
+
+    # Execution context (inlined from IngestRunContext)
+    input_run_name = Column(
+        String(255),
         nullable=False,
+        comment="Ingest run name to read samples from"
     )
+    start_idx = Column(
+        Integer,
+        nullable=True,
+        comment="Start index into NormalizedDataset.samples (None = from beginning)"
+    )
+    end_idx = Column(
+        Integer,
+        nullable=True,
+        comment="End index into NormalizedDataset.samples (None = until end)"
+    )
+
     io_name = Column(
         String(255),
         nullable=False,
@@ -255,32 +270,24 @@ class InferRunConfigORM(Base):
     model_config = relationship("ModelConfigORM", back_populates="infer_run_configs")
     provider = relationship("ProviderORM", back_populates="infer_run_configs")
     prompt_template = relationship("PromptTemplateORM", back_populates="infer_run_configs")
-    ingest_run_context = relationship("IngestRunContextORM", back_populates="infer_run_configs")
-    infer_run_outputs = relationship("InferRunOutputORM", back_populates="infer_run_config")
+    infer_runs = relationship("InferRunORM", back_populates="infer_run_config")
 
 
 class InferRunOutputORM(Base):
     """Output produced during an inference run.
 
     Contains:
-    - Reference to the complete configuration used (InferRunConfigORM)
     - Sample fingerprint identifying which samples were judged
     - LLM judgements (via relationship)
 
-    This is the "what was produced" entity, linking to "what configuration was used".
+    This is the "what was produced" entity. Configuration reference is via InferRun.
+    1:1 relationship with InferRunORM (same ID).
     """
     __tablename__ = "infer_run_outputs"
     __table_args__ = {"schema": "infer"}
     __natural_key__ = None  # 1:1 with InferRun, uses same ID
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, comment="Same as InferRun.id (1:1 relationship)")
-
-    infer_run_config_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("infer.infer_run_configs.id"),
-        nullable=False,
-        comment="Complete configuration bundle used to produce these judgements"
-    )
 
     sample_fingerprint = Column(
         CHAR(64),
@@ -290,12 +297,17 @@ class InferRunOutputORM(Base):
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    infer_run_config = relationship("InferRunConfigORM", back_populates="infer_run_outputs")
     llm_judgements = relationship("LLMJudgementORM", back_populates="infer_run_output")
     infer_run = relationship("InferRunORM", back_populates="infer_run_output", uselist=False)
 
 
 class InferRunORM(Base):
+    """Inference run metadata and relationships.
+
+    Links to:
+    - InferRunConfigORM: What configuration was used (always present)
+    - InferRunOutputORM: What output was produced (1:1, always present)
+    """
     __tablename__ = "infer_runs"
     __natural_key__ = "run_name"
     __table_args__ = {"schema": "infer"}
@@ -304,25 +316,20 @@ class InferRunORM(Base):
     run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType, schema="public"), nullable=False, default=RunType.TEST)
 
-    # INTENT: What range of NormalizedDataset to process (set in open())
-    start_idx = Column(
-        Integer,
+    # Configuration used for this run
+    infer_run_config_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("infer.infer_run_configs.id"),
         nullable=False,
-        default=0,
-        comment="Start index into NormalizedDataset.samples (0-indexed, inclusive)"
-    )
-    end_idx = Column(
-        Integer,
-        nullable=False,
-        comment="End index into NormalizedDataset.samples (exclusive)"
+        comment="Complete configuration bundle used for this run"
     )
 
-    # ACTUAL RESULT: What was actually produced (set in close())
+    # Output produced by this run (1:1 relationship, same ID)
     infer_run_output_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("infer.infer_run_outputs.id"),
-        nullable=True,
-        comment="What output was actually produced (NULL = run incomplete/failed)"
+        nullable=False,
+        comment="Output produced by this run (1:1, always present)"
     )
 
     git_sha = Column(String(40), nullable=True)
@@ -332,6 +339,7 @@ class InferRunORM(Base):
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
+    infer_run_config = relationship("InferRunConfigORM", back_populates="infer_runs")
     infer_run_output = relationship("InferRunOutputORM", back_populates="infer_run", uselist=False)
 
 

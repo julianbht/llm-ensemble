@@ -13,7 +13,6 @@ is responsible for extracting these entities from adapters.
 from __future__ import annotations
 
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
-from llm_ensemble.infer.domain.entities.ingest_run_context import IngestRunContext
 from llm_ensemble.infer.domain.entities.prompt_template import PromptTemplate
 from llm_ensemble.infer.domain.entities.provider import Provider
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
@@ -42,6 +41,8 @@ class InferRunConfigFactory:
     ) -> InferRunConfig:
         """Create InferRunConfig from domain entities.
 
+        Execution context fields (input_run_name, start_idx, end_idx) are inlined.
+
         Args:
             provider: LLM provider configuration entity
             model_config: Model configuration entity
@@ -51,8 +52,8 @@ class InferRunConfigFactory:
             template_text: The actual prompt template text
             io_name: I/O configuration name
             input_run_name: Resolved ingest run name
-            start_idx: Actual start index used
-            end_idx: Actual end index used
+            start_idx: Actual start index used (None = from beginning)
+            end_idx: Actual end index used (None = until end)
 
         Returns:
             Assembled InferRunConfig entity
@@ -66,19 +67,14 @@ class InferRunConfigFactory:
             response_text_parser=response_parser,
         )
 
-        # Build IngestRunContext entity
-        ingest_run_context = IngestRunContext(
-            input_run_name=input_run_name,
-            start_idx=start_idx,
-            end_idx=end_idx,
-        )
-
-        # Assemble complete config
+        # Assemble complete config with inlined execution context
         return InferRunConfig(
             model_cfg=model_config,
             retry_config=retry_config,
             prompt_template=prompt_template,
             provider=provider,
             io_name=io_name,
-            ingest_run_context=ingest_run_context,
+            input_run_name=input_run_name,
+            start_idx=start_idx,
+            end_idx=end_idx,
         )

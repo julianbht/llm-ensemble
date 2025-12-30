@@ -160,7 +160,7 @@ class DbWriter(ForOutput):
 
                 # 6. DatasetSample records (depend on NormalizedDataset + JudgingSample)
                 created, skipped = self._save_dataset_samples(
-                    session, normalized_dataset, query_uuid_map, document_uuid_map, sample_uuid_map
+                    session, normalized_dataset, query_uuid_map, document_uuid_map, sample_uuid_map, dataset_uuid
                 )
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_DATASET_SAMPLES, created=created, skipped=skipped)
@@ -533,10 +533,12 @@ class DbWriter(ForOutput):
         query_uuid_map: Dict[str, str],
         document_uuid_map: Dict[str, str],
         sample_uuid_map: Dict[Tuple[str, str], str],
+        dataset_uuid: str,
     ) -> Tuple[int, int]:
-        """Save DatasetSample records (step 5 in dependency order).
+        """Save DatasetSample records using bulk insert with pre-filtering.
 
-        Uses UUID mappings to ensure correct foreign key references to JudgingSamples.
+        Queries existing DatasetSamples by (dataset_id, sample_id), filters to new ones,
+        then bulk inserts. Uses UUID mappings for correct foreign key references.
 
         Note: This MUST be called after _save_normalized_dataset_entity because
         DatasetSample has FK to NormalizedDataset.
@@ -547,11 +549,13 @@ class DbWriter(ForOutput):
             query_uuid_map: Mapping of query content_hash -> actual UUID in DB
             document_uuid_map: Mapping of document content_hash -> actual UUID in DB
             sample_uuid_map: Mapping of (query_uuid, doc_uuid) -> judging_sample_uuid
+            dataset_uuid: UUID of the NormalizedDataset in database
 
         Returns:
             Tuple of (created_count, skipped_count)
         """
-        # Create DatasetSample records with sequence numbers
+        # Create DatasetSample ORM objects with correct UUIDs
+        dataset_sample_orms = []
         for sample in normalized_dataset.samples:
             # Look up the correct judging_sample_id using mappings
             query_uuid = query_uuid_map[sample.judging_sample.query.content_hash]
@@ -560,13 +564,32 @@ class DbWriter(ForOutput):
 
             dataset_sample = DatasetSampleORM(
                 id=sample.id,
-                normalized_dataset_id=sample.normalized_dataset_id,
+                normalized_dataset_id=dataset_uuid,  # Use actual UUID from DB
                 judging_sample_id=judging_sample_uuid,
                 sequence_number=sample.sequence_number,
             )
-            session.add(dataset_sample)
+            dataset_sample_orms.append(dataset_sample)
 
-        # Flush once at the end (not per-record to avoid lock exhaustion)
-        session.flush()
+        # Query which judging_sample_ids already exist for this dataset
+        # Since all samples belong to the same dataset_uuid, we can query efficiently
+        existing_sample_ids = {
+            str(sample_id) for (sample_id,) in
+            session.query(DatasetSampleORM.judging_sample_id)
+            .filter(DatasetSampleORM.normalized_dataset_id == dataset_uuid)
+        }
 
-        return (len(normalized_dataset.samples), 0)
+        # Filter to only new dataset samples
+        new_dataset_sample_orms = [
+            orm for orm in dataset_sample_orms
+            if orm.judging_sample_id not in existing_sample_ids
+        ]
+
+        # Bulk insert new dataset samples
+        if new_dataset_sample_orms:
+            session.add_all(new_dataset_sample_orms)
+            session.flush()
+
+        created = len(new_dataset_sample_orms)
+        skipped = len(dataset_sample_orms) - created
+
+        return (created, skipped)

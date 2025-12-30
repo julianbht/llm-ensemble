@@ -127,7 +127,7 @@ class IngestApplication(ForRunningIngest):
         """
         # Get logger
         logger = get_logger()
-        logger.info(IngestLogEvent.INGEST_STARTED)
+        logger.info(IngestLogEvent.INGEST_STARTED, name=self.run_name)
 
         start_time = datetime.now()        
 

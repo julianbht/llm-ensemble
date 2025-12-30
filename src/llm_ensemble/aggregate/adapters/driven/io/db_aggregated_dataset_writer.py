@@ -122,7 +122,8 @@ class DbAggregatedDatasetWriter(ForOutput):
                 #   7. AggregateRun (depends on AggregateRunConfig + AggregatedDataset)
 
                 # 1. AggregationStrategy (no dependencies - global entity)
-                created, skipped = self._save_aggregation_strategy(session, aggregation_strategy)
+                # Returns actual DB UUID for use in foreign keys
+                created, skipped, strategy_uuid = self._save_aggregation_strategy(session, aggregation_strategy)
                 summary.add_aggregation_strategies(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(AggregateWriteEvent.WRITE_STRATEGY, created=created, skipped=skipped)
@@ -145,22 +146,25 @@ class DbAggregatedDatasetWriter(ForOutput):
                 session.flush()
 
                 # 4. AggregatedVote (depends on AggregationStrategy)
+                # Use actual DB UUID from strategy, not domain UUID
                 created, skipped, vote_uuid_map = self._save_aggregated_votes(
-                    session, aggregated_votes, aggregation_strategy.id
+                    session, aggregated_votes, strategy_uuid
                 )
                 summary.add_aggregated_votes(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(AggregateWriteEvent.WRITE_VOTES, created=created, skipped=skipped)
 
                 # 5. AggregationVote junction (depends on AggregatedVote + LLMJudgement)
-                created, skipped = self._save_aggregation_votes(session, aggregated_votes)
+                # Use vote_uuid_map to get actual DB UUIDs
+                created, skipped = self._save_aggregation_votes(session, aggregated_votes, vote_uuid_map)
                 summary.add_aggregation_votes(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(AggregateWriteEvent.WRITE_AGGREGATION_VOTES, created=created, skipped=skipped)
 
                 # 6. AggregatedDatasetVote junction (depends on AggregatedDataset + AggregatedVote)
+                # Use vote_uuid_map to get actual DB UUIDs
                 created, skipped = self._save_aggregated_dataset_votes(
-                    session, aggregated_votes, dataset_uuid
+                    session, aggregated_votes, dataset_uuid, vote_uuid_map
                 )
                 summary.add_aggregated_dataset_votes(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
@@ -189,17 +193,18 @@ class DbAggregatedDatasetWriter(ForOutput):
 
     def _save_aggregation_strategy(
         self, session: Session, aggregation_strategy: AggregationStrategy
-    ) -> Tuple[int, int]:
+    ) -> Tuple[int, int, UUID]:
         """Save aggregation strategy entity to database using pre-query pattern.
 
         Checks if name already exists before inserting.
+        Returns actual database UUID for foreign key references.
 
         Args:
             session: SQLAlchemy session
             aggregation_strategy: AggregationStrategy domain entity
 
         Returns:
-            Tuple of (created_count, skipped_count)
+            Tuple of (created_count, skipped_count, actual_db_uuid)
         """
         # Check if this strategy name already exists
         existing = (
@@ -209,7 +214,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         )
 
         if existing:
-            return (0, 1)
+            return (0, 1, existing.id)
 
         # Insert new strategy
         strategy_orm = AggregationStrategyORM(
@@ -218,7 +223,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         )
         session.add(strategy_orm)
         session.flush()
-        return (1, 0)
+        return (1, 0, strategy_orm.id)
 
     def _save_aggregate_run_config(
         self, session: Session, run_config: AggregateRunConfig
@@ -376,6 +381,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         self,
         session: Session,
         aggregated_votes: List[AggregatedVote],
+        vote_uuid_map: Dict[UUID, str],
     ) -> Tuple[int, int]:
         """Save AggregationVote junction records using bulk insert with pre-filtering.
 
@@ -384,6 +390,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         Args:
             session: SQLAlchemy session
             aggregated_votes: List of AggregatedVote domain objects
+            vote_uuid_map: Maps domain vote UUID to actual DB UUID
 
         Returns:
             Tuple of (created_count, skipped_count)
@@ -391,9 +398,11 @@ class DbAggregatedDatasetWriter(ForOutput):
         # Create all junction records
         junction_orms: List[AggregationVoteORM] = []
         for vote in aggregated_votes:
+            # Use actual DB UUID from map, not domain UUID
+            actual_vote_id = vote_uuid_map[vote.id]
             for llm_judgement in vote.llm_judgements:
                 junction = AggregationVoteORM(
-                    aggregated_vote_id=vote.id,
+                    aggregated_vote_id=actual_vote_id,
                     llm_judgement_id=llm_judgement.id,
                 )
                 junction_orms.append(junction)
@@ -439,6 +448,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         session: Session,
         aggregated_votes: List[AggregatedVote],
         dataset_uuid: str,
+        vote_uuid_map: Dict[UUID, str],
     ) -> Tuple[int, int]:
         """Save AggregatedDatasetVote junction records using bulk insert with pre-filtering.
 
@@ -448,6 +458,7 @@ class DbAggregatedDatasetWriter(ForOutput):
             session: SQLAlchemy session
             aggregated_votes: List of AggregatedVote domain objects
             dataset_uuid: UUID of the AggregatedDataset in database
+            vote_uuid_map: Maps domain vote UUID to actual DB UUID
 
         Returns:
             Tuple of (created_count, skipped_count)
@@ -455,9 +466,11 @@ class DbAggregatedDatasetWriter(ForOutput):
         # Create all junction records
         junction_orms: List[AggregatedDatasetVoteORM] = []
         for vote in aggregated_votes:
+            # Use actual DB UUID from map, not domain UUID
+            actual_vote_id = vote_uuid_map[vote.id]
             junction = AggregatedDatasetVoteORM(
                 aggregated_dataset_id=dataset_uuid,
-                aggregated_vote_id=vote.id,
+                aggregated_vote_id=actual_vote_id,
             )
             junction_orms.append(junction)
 

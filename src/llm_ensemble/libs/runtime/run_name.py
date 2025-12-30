@@ -45,6 +45,6 @@ def generate_run_name(name_hints: Optional[list[str]] = None) -> str:
     if not safe_hints:
         return timestamp
 
-    # Join hints with underscores
-    hints_str = "_".join(safe_hints)
+    # Join hints with colons
+    hints_str = "+".join(safe_hints)
     return f"{timestamp}_{hints_str}"

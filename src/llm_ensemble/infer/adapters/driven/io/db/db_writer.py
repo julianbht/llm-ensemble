@@ -126,6 +126,7 @@ class DBWriter(ForOutput):
         self._session.add(infer_run_orm)
         self._infer_run_id = infer_run.id
         self._write_summary.add_infer_runs(created=1, skipped=0)
+        self.logger.info(InferWriteEvent.WRITE_INFER_RUNS, created=1, skipped=0)
         self._session.commit()
 
         # InferRunOutput will be created in close() after all judgements written
@@ -205,9 +206,13 @@ class DBWriter(ForOutput):
                     self._session.flush()
                     self._infer_run_output_id = self._infer_run_id
                     self._write_summary.add_infer_run_outputs(created=1, skipped=0)
+                    created, skipped = 1, 0
                 except IntegrityError:
                     savepoint.rollback()
                     self._write_summary.add_infer_run_outputs(created=0, skipped=1)
+                    created, skipped = 0, 1
+
+                self.logger.info(InferWriteEvent.WRITE_INFER_RUN_OUTPUTS, created=created, skipped=skipped)
 
                 # Update InferRun to link to output and set end_time
                 infer_run = self._session.get(InferRunORM, self._infer_run_id)
@@ -215,6 +220,32 @@ class DBWriter(ForOutput):
                 infer_run.end_time = end_time
 
                 self._session.commit()
+
+            # Log per-judgement entity totals (accumulated during write_one calls)
+            if self._write_summary.llm_prompts_created > 0 or self._write_summary.llm_prompts_skipped > 0:
+                self.logger.info(
+                    InferWriteEvent.WRITE_LLM_PROMPTS,
+                    created=self._write_summary.llm_prompts_created,
+                    skipped=self._write_summary.llm_prompts_skipped,
+                )
+            if self._write_summary.llm_responses_created > 0 or self._write_summary.llm_responses_skipped > 0:
+                self.logger.info(
+                    InferWriteEvent.WRITE_LLM_RESPONSES,
+                    created=self._write_summary.llm_responses_created,
+                    skipped=self._write_summary.llm_responses_skipped,
+                )
+            if self._write_summary.llm_scores_created > 0 or self._write_summary.llm_scores_skipped > 0:
+                self.logger.info(
+                    InferWriteEvent.WRITE_LLM_SCORES,
+                    created=self._write_summary.llm_scores_created,
+                    skipped=self._write_summary.llm_scores_skipped,
+                )
+            if self._write_summary.llm_judgements_created > 0 or self._write_summary.llm_judgements_skipped > 0:
+                self.logger.info(
+                    InferWriteEvent.WRITE_LLM_JUDGEMENTS,
+                    created=self._write_summary.llm_judgements_created,
+                    skipped=self._write_summary.llm_judgements_skipped,
+                )
 
             # Log totals
             self.logger.info(
@@ -241,21 +272,28 @@ class DBWriter(ForOutput):
         # Upsert Provider and get actual UUID
         created, skipped, provider_id = self._upsert_provider(infer_run_config.provider)
         self._write_summary.add_providers(created=created, skipped=skipped)
+        if created > 0 or skipped > 0:
+            self.logger.info(InferWriteEvent.WRITE_PROVIDERS, created=created, skipped=skipped)
 
         # Upsert ModelConfig and get actual UUID
         created, skipped, model_config_id = self._upsert_model_config(infer_run_config.model_cfg)
         self._write_summary.add_model_configs(created=created, skipped=skipped)
+        if created > 0 or skipped > 0:
+            self.logger.info(InferWriteEvent.WRITE_MODEL_CONFIGS, created=created, skipped=skipped)
 
         # Upsert PromptBuilder and get actual UUID
         created, skipped, prompt_builder_id = self._upsert_prompt_builder(
             infer_run_config.prompt_template.prompt_builder
         )
+        # Note: PromptBuilder tracking is done via PromptTemplate
 
         # Upsert Parser and get actual UUID
         created, skipped, parser_id = self._upsert_parser(
             infer_run_config.prompt_template.response_parser
         )
         self._write_summary.add_parser(created=created, skipped=skipped)
+        if created > 0 or skipped > 0:
+            self.logger.info(InferWriteEvent.WRITE_PARSERS, created=created, skipped=skipped)
 
         # Upsert PromptTemplate (bundles prompt_builder + parser) and get actual UUID
         created, skipped, prompt_template_id = self._upsert_prompt_template(
@@ -264,6 +302,8 @@ class DBWriter(ForOutput):
             parser_id,
         )
         self._write_summary.add_prompt_templates(created=created, skipped=skipped)
+        if created > 0 or skipped > 0:
+            self.logger.info(InferWriteEvent.WRITE_PROMPT_TEMPLATES, created=created, skipped=skipped)
 
         # Upsert InferRunConfig (bundles all components, execution context inlined) and get actual UUID
         created, skipped, infer_run_config_id = self._upsert_infer_run_config_entity(
@@ -273,6 +313,8 @@ class DBWriter(ForOutput):
             prompt_template_id,
         )
         self._write_summary.add_infer_run_configs(created=created, skipped=skipped)
+        if created > 0 or skipped > 0:
+            self.logger.info(InferWriteEvent.WRITE_INFER_RUN_CONFIGS, created=created, skipped=skipped)
         # CRITICAL: Use actual UUID from database, not random domain UUID
         self._infer_run_config_id = infer_run_config_id
 

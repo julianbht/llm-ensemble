@@ -22,11 +22,9 @@ import structlog
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.llm_judgement_builder import LLMJudgementBuilder
 from llm_ensemble.infer.domain.entities.infer_run import InferRun
-from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.domain.metrics import (
     calculate_agreement,
     calculate_aggregate_statistics,
-    calculate_latency_seconds,
     get_extracted_score,
 )
 from llm_ensemble.infer.domain.entities.infer_run_summary import InferRunSummary

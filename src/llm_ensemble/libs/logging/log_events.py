@@ -61,8 +61,9 @@ class InferWriteEvent(str, Enum):
     WRITE_PROVIDERS = "write_providers"
     WRITE_MODELS = "write_models"
     WRITE_MODEL_CONFIGS = "write_model_configs"
+    WRITE_PARSERS = "write_parsers"
     WRITE_PROMPT_TEMPLATES = "write_prompt_templates"
-    WRITE_parser = "write_parser"
+    WRITE_INFER_RUN_CONFIGS = "write_infer_run_configs"
     WRITE_INFER_RUNS = "write_infer_runs"
 
     # Per-judgement entities (written during write_one)
@@ -73,6 +74,7 @@ class InferWriteEvent(str, Enum):
     WRITE_LLM_JUDGEMENTS = "write_llm_judgements"
 
     # Dataset finalization (written during close)
+    WRITE_INFER_RUN_OUTPUTS = "write_infer_run_outputs"
     WRITE_JUDGED_DATASETS = "write_judged_datasets"
     WRITE_JUDGED_DATASET_JUNCTIONS = "write_judged_dataset_junctions"
 

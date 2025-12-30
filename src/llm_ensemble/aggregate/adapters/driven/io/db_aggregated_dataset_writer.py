@@ -15,6 +15,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import tuple_
 
 from llm_ensemble.aggregate.domain.entities.aggregate_run import AggregateRun
+from llm_ensemble.aggregate.domain.entities.aggregate_run_config import AggregateRunConfig
+from llm_ensemble.aggregate.domain.entities.aggregated_dataset import AggregatedDataset
 from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
 from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy
 from llm_ensemble.aggregate.domain.entities.write_summary import WriteSummary
@@ -219,7 +221,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         return (1, 0)
 
     def _save_aggregate_run_config(
-        self, session: Session, run_config: "AggregateRunConfig"
+        self, session: Session, run_config: AggregateRunConfig
     ) -> Tuple[int, int, str]:
         """Save aggregate run config entity to database using pre-query pattern.
 
@@ -260,7 +262,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         return (1, 0, str(config_orm.id))
 
     def _save_aggregated_dataset_entity(
-        self, session: Session, aggregated_dataset: "AggregatedDataset"
+        self, session: Session, aggregated_dataset: AggregatedDataset
     ) -> Tuple[int, int, str]:
         """Save AggregatedDataset entity.
 

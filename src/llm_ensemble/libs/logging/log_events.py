@@ -100,11 +100,11 @@ class AggregateLogEvent(str, Enum):
 class AggregateWriteEvent(str, Enum):
     """Log events for aggregation write operations."""
 
-    WRITE_AGGREGATION_STRATEGIES = "write_aggregation_strategies"
-    WRITE_AGGREGATE_RUN_CONFIGS = "write_aggregate_run_configs"
-    WRITE_AGGREGATE_RUNS = "write_aggregate_runs"
-    WRITE_AGGREGATED_DATASETS = "write_aggregated_datasets"
-    WRITE_DATASET_VOTES = "write_dataset_votes"
-    WRITE_AGGREGATED_VOTES = "write_aggregated_votes"
+    WRITE_STRATEGY = "write_aggregation_strategy"
+    WRITE_RUN_CONFIG = "write_aggregate_run_config"
+    WRITE_DATASET = "write_aggregated_dataset"
+    WRITE_VOTES = "write_aggregated_votes"
     WRITE_AGGREGATION_VOTES = "write_aggregation_votes"
+    WRITE_DATASET_VOTES = "write_dataset_votes"
+    WRITE_RUNS = "write_aggregate_runs"
     WRITE_COMPLETE = "write_complete"

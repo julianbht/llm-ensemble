@@ -216,5 +216,9 @@ class AggregationApplication(ForRunningAggregation):
 
         # Write summary.json
         summary_path = write_summary(summary, self.run_dir)
+        logger.info(
+                AggregateLogEvent.AGGREGATE_SUMMARY_WRITTEN,
+                summary_path=summary_path
+            )
 
         return summary

@@ -5,9 +5,28 @@ Flat configuration for LLM models matching the database ORM structure.
 
 from __future__ import annotations
 from typing import Optional, Any, Dict
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from llm_ensemble.libs.schemas.base_config import BaseConfig
+
+
+class Pricing(BaseModel):
+    """Pricing information for LLM API calls.
+
+    Costs are specified per 1 million tokens to match common provider pricing formats.
+    """
+
+    prompt_cost_per_1m_tokens: float = Field(
+        ...,
+        ge=0.0,
+        description="Cost per 1 million prompt tokens in USD"
+    )
+
+    completion_cost_per_1m_tokens: float = Field(
+        ...,
+        ge=0.0,
+        description="Cost per 1 million completion tokens in USD"
+    )
 
 
 class ModelConfig(BaseConfig):
@@ -101,4 +120,10 @@ class ModelConfig(BaseConfig):
     additional_params: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Additional provider-specific parameters (e.g., stop, response_format, top_k)"
+    )
+
+    # Pricing information (optional)
+    pricing: Optional[Pricing] = Field(
+        default=None,
+        description="Pricing information for cost estimation (prompt and completion costs per 1M tokens)"
     )

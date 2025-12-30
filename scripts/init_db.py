@@ -45,7 +45,6 @@ from llm_ensemble.infer.adapters.driven.io.db.orms import (
     ParserORM,
     PromptBuilderORM,
     PromptTemplateORM,
-    IngestRunContextORM,
     ModelConfigORM,
     InferRunConfigORM,
     InferRunOutputORM,

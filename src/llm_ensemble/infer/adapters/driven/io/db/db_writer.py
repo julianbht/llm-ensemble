@@ -245,12 +245,12 @@ class DBWriter(ForOutput):
         self._write_summary.add_model_configs(created=created, skipped=skipped)
 
         # Upsert PromptBuilder (includes template_text)
+        # Note: PromptBuilders are components of PromptTemplate, tracked via prompt_templates
         created, skipped = self._upsert_prompt_builder(infer_run_config.prompt_template.prompt_builder)
-        self._write_summary.add_prompt_builders(created=created, skipped=skipped)
 
         # Upsert Parser
         created, skipped = self._upsert_parser(infer_run_config.prompt_template.response_parser)
-        self._write_summary.add_parsers(created=created, skipped=skipped)
+        self._write_summary.add_parser(created=created, skipped=skipped)
 
         # Upsert PromptTemplate (bundles prompt_builder + parser)
         created, skipped = self._upsert_prompt_template(infer_run_config.prompt_template)

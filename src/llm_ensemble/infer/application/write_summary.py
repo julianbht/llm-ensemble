@@ -33,8 +33,12 @@ class WriteSummary(BaseModel):
     prompt_templates_skipped: int = Field(default=0, ge=0, description="Number of prompt templates skipped (already existed)")
     parser_created: int = Field(default=0, ge=0, description="Number of parser specs created")
     parser_skipped: int = Field(default=0, ge=0, description="Number of parser specs skipped (already existed)")
+    infer_run_configs_created: int = Field(default=0, ge=0, description="Number of infer run configs created")
+    infer_run_configs_skipped: int = Field(default=0, ge=0, description="Number of infer run configs skipped (already existed)")
     infer_runs_created: int = Field(default=0, ge=0, description="Number of infer runs created")
     infer_runs_skipped: int = Field(default=0, ge=0, description="Number of infer runs skipped (already existed)")
+    infer_run_outputs_created: int = Field(default=0, ge=0, description="Number of infer run outputs created")
+    infer_run_outputs_skipped: int = Field(default=0, ge=0, description="Number of infer run outputs skipped (already existed)")
 
     # Dataset finalization (created in close)
     judged_datasets_created: int = Field(default=0, ge=0, description="Number of judged datasets created")
@@ -78,10 +82,20 @@ class WriteSummary(BaseModel):
         self.parser_created += created
         self.parser_skipped += skipped
 
+    def add_infer_run_configs(self, created: int = 0, skipped: int = 0) -> None:
+        """Increment infer run config counts."""
+        self.infer_run_configs_created += created
+        self.infer_run_configs_skipped += skipped
+
     def add_infer_runs(self, created: int = 0, skipped: int = 0) -> None:
         """Increment infer run counts."""
         self.infer_runs_created += created
         self.infer_runs_skipped += skipped
+
+    def add_infer_run_outputs(self, created: int = 0, skipped: int = 0) -> None:
+        """Increment infer run output counts."""
+        self.infer_run_outputs_created += created
+        self.infer_run_outputs_skipped += skipped
 
     def add_llm_prompts(self, created: int = 0, skipped: int = 0) -> None:
         """Increment LLM prompt text counts."""
@@ -126,7 +140,9 @@ class WriteSummary(BaseModel):
             + self.model_configs_created
             + self.prompt_templates_created
             + self.parser_created
+            + self.infer_run_configs_created
             + self.infer_runs_created
+            + self.infer_run_outputs_created
             + self.judged_datasets_created
             + self.judged_dataset_junctions_created
             + self.llm_prompts_created
@@ -145,7 +161,9 @@ class WriteSummary(BaseModel):
             + self.model_configs_skipped
             + self.prompt_templates_skipped
             + self.parser_skipped
+            + self.infer_run_configs_skipped
             + self.infer_runs_skipped
+            + self.infer_run_outputs_skipped
             + self.judged_datasets_skipped
             + self.llm_prompts_skipped
             + self.llm_responses_skipped

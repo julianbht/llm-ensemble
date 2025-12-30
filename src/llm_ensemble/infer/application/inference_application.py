@@ -190,12 +190,18 @@ class InferenceApplication(ForRunningInference):
                 prompt_text = self.prompt_builder.build_prompt(dataset_sample)
                 builder.with_prompt(prompt_text)
 
-                # Step 2: Run inference (model_config was passed at provider initialization)
+                # Step 2: Run inference
                 logger.info(InferLogEvent.SENDING_REQUEST)
                 raw_response_text, llm_invocation_metrics = self.llm_provider.infer(prompt_text)
                 builder.with_llm_response(raw_response_text, llm_invocation_metrics)
 
-                # Step 3: Parse response (returns tuple of score and warnings)
+                if llm_invocation_metrics.cost_estimate_usd is not None:
+                    logger.info(
+                        InferLogEvent.COST_CALCULATED,
+                        cost_estimate_usd=llm_invocation_metrics.cost_estimate_usd,
+                    )
+
+                # Step 3: Parse response
                 logger.info(InferLogEvent.PARSING_REQUEST)
                 llm_score, parser_warnings = self.response_parser.parse(raw_response_text)
                 builder.with_parsed_score(llm_score, parser_warnings)
@@ -204,11 +210,10 @@ class InferenceApplication(ForRunningInference):
                 judgement = builder.build()
 
                 logger.info(
-                    InferLogEvent.JUDGEMENT_PROCESSED,
+                    InferLogEvent.RESPONSE_PARSED,
                     extracted_score=get_extracted_score(judgement),
                     gold_score=judgement.dataset_sample.judging_sample.gold_score.value,
                     agreement=calculate_agreement(judgement),
-                    latency_s=calculate_latency_seconds(judgement),
                 )
 
                 # Write judgement immediately to disk (fault tolerance!)
@@ -216,8 +221,6 @@ class InferenceApplication(ForRunningInference):
 
                 # Collect for summary statistics
                 llm_judgements.append(judgement)
-
-        logger.info(InferLogEvent.ALL_SAMPLES_PROCESSED, count=llm_judgements.count)
 
         # Retrieve aggregate write summary after context manager closes (writer logged directly)
         write_summary = self.output_port.get_summary()
@@ -345,8 +348,3 @@ class InferenceApplication(ForRunningInference):
         # Write summary to disk
         summary_path = write_summary(summary, run_dir)
         logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(summary_path))
-
-        # Log file location
-        log_file = run_dir / "run.log"
-        if log_file.exists():
-            logger.info(InferLogEvent.LOGS_SAVED, path=str(log_file))

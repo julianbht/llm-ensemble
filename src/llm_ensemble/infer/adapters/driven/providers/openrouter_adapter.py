@@ -207,14 +207,6 @@ class OpenRouterAdapter(ForInvokingLLM):
             prompt_cost = (prompt_tokens / 1_000_000) * self.model_config.pricing.prompt_cost_per_1m_tokens
             completion_cost = (completion_tokens / 1_000_000) * self.model_config.pricing.completion_cost_per_1m_tokens
             cost_estimate_usd = prompt_cost + completion_cost
-            
-            # Log cost at the source where it's calculated
-            self.logger.info(
-                InferLogEvent.COST_CALCULATED,
-                cost_estimate_usd=cost_estimate_usd,
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-            )
 
         # Create metrics
         metrics = LLMInvocationMetrics(

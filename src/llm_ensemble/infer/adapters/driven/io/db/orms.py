@@ -130,34 +130,6 @@ class PromptTemplateORM(Base):
     infer_run_configs = relationship("InferRunConfigORM", back_populates="prompt_template")
 
 
-class IngestRunContextORM(Base):
-    """Execution context for an infer run.
-
-    Captures which ingest run to read from and which samples to process.
-    Separate table allows deduplication when multiple runs use the same context.
-    """
-    __tablename__ = "ingest_run_contexts"
-    __natural_key__ = ("input_run_name", "start_idx", "end_idx")
-    __table_args__ = (
-        UniqueConstraint(
-            "input_run_name",
-            "start_idx",
-            "end_idx",
-            name="uq_ingest_run_context",
-        ),
-        {"schema": "infer"},
-    )
-
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    input_run_name = Column(String(255), nullable=False, comment="Ingest run name to read samples from")
-    start_idx = Column(Integer, nullable=True, comment="Start index into NormalizedDataset.samples (None = from beginning)")
-    end_idx = Column(Integer, nullable=True, comment="End index into NormalizedDataset.samples (None = until end)")
-    created_at = Column(DateTime, nullable=False, default=utcnow)
-
-    # Relationships
-    infer_run_configs = relationship("InferRunConfigORM", back_populates="ingest_run_context")
-
-
 class ModelConfigORM(Base):
     """Complete model configuration used for an inference run.
 

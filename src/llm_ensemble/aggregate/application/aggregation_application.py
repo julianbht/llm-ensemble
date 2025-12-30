@@ -157,7 +157,7 @@ class AggregationApplication(ForRunningAggregation):
             llm_judgements_for_sample = grouped_by_sample[dataset_sample_id]
 
             # Apply aggregation strategy to get AggregatedVote
-            aggregated_vote: AggregatedVote = self.strategy.aggregate(llm_judgements_for_sample)
+            aggregated_vote = self.strategy.aggregate(llm_judgements_for_sample)
 
             # Track statistics
             if aggregated_vote.final_label is None:

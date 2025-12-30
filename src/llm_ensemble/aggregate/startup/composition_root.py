@@ -120,6 +120,4 @@ def _build_application_hexagon(
         aggregation_strategy=aggregation_strategy,
         run_dir=run_dir,
         run_name=run_name,
-        io_name=io_name,
-        aggregation_strategy_name=aggregation_strategy_name,
     )

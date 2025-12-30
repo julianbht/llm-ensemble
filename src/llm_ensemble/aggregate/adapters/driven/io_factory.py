@@ -62,7 +62,7 @@ class IOAdapterFactory:
             ValueError: If IO format not found
         """
         if io_name == "db_to_db":
-            return DbAggregatedDatasetWriter()
+            return DbAggregatedDatasetWriter(io_name=io_name)
         else:
             available = ", ".join(sorted(AVAILABLE_FORMATS))
             raise ValueError(

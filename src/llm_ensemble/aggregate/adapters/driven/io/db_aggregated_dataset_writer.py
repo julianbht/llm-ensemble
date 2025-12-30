@@ -58,8 +58,19 @@ class DbAggregatedDatasetWriter(AggregatedJudgementWriter):
     Deduplication via deterministic UUIDs + unique constraints.
     """
 
-    def __init__(self):
+    def __init__(self, io_name: str = "db_to_db"):
+        """Initialize database writer.
+
+        Args:
+            io_name: I/O adapter name for metadata tracking
+        """
+        self._io_name = io_name
         self.logger = get_logger(component="db_aggregated_dataset_writer")
+
+    @property
+    def io_name(self) -> str:
+        """Get I/O adapter name."""
+        return self._io_name
 
     def write(
         self,

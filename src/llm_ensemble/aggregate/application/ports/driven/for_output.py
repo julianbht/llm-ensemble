@@ -19,6 +19,16 @@ class ForOutput(ABC):
     Supports batch writing of entire aggregate run (config + dataset + metadata).
     """
 
+    @property
+    @abstractmethod
+    def io_name(self) -> str:
+        """Get I/O adapter name for this output port.
+
+        Returns:
+            I/O adapter name (e.g., 'db_to_db', 'json')
+        """
+        pass
+
     @abstractmethod
     def write(self, aggregate_run: AggregateRun) -> WriteSummary:
         """Write entire aggregate run in one batch.

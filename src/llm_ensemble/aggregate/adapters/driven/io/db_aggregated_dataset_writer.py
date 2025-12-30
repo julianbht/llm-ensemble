@@ -370,7 +370,13 @@ class DbAggregatedDatasetWriter(ForOutput):
         # Build complete mapping: domain vote UUID -> actual UUID in DB (existing + new)
         vote_uuid_map = {}
         for vote, orm in zip(aggregated_votes, vote_orms):
-            vote_uuid_map[vote.id] = str(orm.id)
+            vote_key = (str(orm.dataset_sample_id), str(orm.aggregation_strategy_id))
+            if vote_key in existing_votes:
+                # Vote exists - use actual database UUID from existing record
+                vote_uuid_map[vote.id] = existing_votes[vote_key]
+            else:
+                # New vote - use ORM's UUID (just inserted)
+                vote_uuid_map[vote.id] = str(orm.id)
 
         created = len(new_vote_orms)
         skipped = len(vote_orms) - created

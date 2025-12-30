@@ -13,7 +13,7 @@ from typing import Dict, Optional
 from llm_ensemble.ingest.domain.entities.query import Query
 from llm_ensemble.ingest.domain.entities.document import Document
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
-from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
+from llm_ensemble.ingest.domain.normalized_dataset_builder import build_normalized_dataset
 from llm_ensemble.ingest.application.ports.driven.for_input import ForInput
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
@@ -118,9 +118,9 @@ class LlmJudgeDatasetReader(ForInput):
             if limit is not None and len(samples_by_content) >= limit:
                 break
 
-        # Create normalized dataset
+        # Build normalized dataset with content-based fingerprint
         samples = list(samples_by_content.values())
-        return NormalizedDataset.create(
+        return build_normalized_dataset(
             samples=samples,
             external_dataset_name="llmjudge"
         )

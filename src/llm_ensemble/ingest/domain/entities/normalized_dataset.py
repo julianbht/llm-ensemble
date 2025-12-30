@@ -1,46 +1,37 @@
-"""NormalizedDataset - internal dataset with deterministic fingerprint.
+"""NormalizedDataset - pure data entity for internal dataset representation.
 
-This is the output of the DatasetReader and represents the "internal dataset" -
-a specific collection of judging samples. Multiple ingest runs can produce the
-same NormalizedDataset (same fingerprint) enabling idempotent re-runs.
-
-Samples are always stored in deterministic order (sorted by sample.id) to support
-reproducible slicing via future start_sample/end_sample parameters.
+Represents a specific collection of judging samples with a content-based fingerprint.
+Multiple ingest runs with identical data produce the same fingerprint, enabling
+deduplication and idempotent re-runs.
 
 Design:
-- All samples within one NormalizedDataset are from one external dataset
-- external_dataset_name tracks the source dataset for context
-- Pure output data - no knowledge of how it was created (that's in IngestRun)
+- Pure data carrier - no business logic or factory methods
+- Fingerprint computed by domain builder (normalized_dataset_builder.py)
+- All samples from one external dataset
+- Samples stored in deterministic order for reproducibility
 """
 
 from __future__ import annotations
 from uuid import UUID, uuid4
 from typing import Optional
-import hashlib
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
-from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 
 
 class NormalizedDataset(BaseModel):
-    """Internal dataset with fingerprint for deduplication.
+    """Pure data entity representing an internal dataset.
 
-    Represents a specific collection of dataset samples with a fingerprint
-    computed from sorted judging sample IDs. This enables:
-    - Deduplication detection via database unique constraint on fingerprint
-    - Reproducible sample ordering for start/end slicing
-    - Efficient validation in aggregate CLI (compare fingerprints)
+    Contains a collection of judging samples with a content-based fingerprint for
+    deduplication. Same data across runs produces the same fingerprint, enabling:
+    - Idempotent re-runs (no duplicate datasets)
+    - Database constraint enforcement (unique fingerprint)
+    - Efficient dataset comparison
 
-    The fingerprint is computed from the sorted list of judging sample IDs (UUIDs).
-    Samples are wrapped in DatasetSample objects that track position and dataset context,
-    and are always stored sorted by judging_sample.id to ensure reproducibility.
+    Samples are wrapped in DatasetSample objects with sequence numbers and stored
+    in deterministic order for reproducibility.
 
-    All samples within one NormalizedDataset are from one external dataset,
-    tracked via external_dataset_name for context.
-
-    This is pure output data with no knowledge of how it was created.
-    The IngestRun entity connects this dataset to the configuration that produced it.
+    Use `build_normalized_dataset()` from normalized_dataset_builder.py to create instances.
     """
 
     id: UUID = Field(
@@ -49,7 +40,7 @@ class NormalizedDataset(BaseModel):
     )
     fingerprint: str = Field(
         ...,
-        description="SHA256 hash of sorted sample IDs for deduplication detection"
+        description="SHA256 hash of sample content (query/doc hashes + scores) for deduplication"
     )
     external_dataset_name: Optional[str] = Field(
         None,
@@ -57,65 +48,8 @@ class NormalizedDataset(BaseModel):
     )
     samples: list[DatasetSample] = Field(
         ...,
-        description="Dataset samples with position info, sorted by judging_sample.id for reproducibility"
+        description="Dataset samples with sequence numbers, sorted by content for reproducibility"
     )
-
-    @field_validator('samples')
-    @classmethod
-    def validate_samples_sorted(cls, v: list[DatasetSample]) -> list[DatasetSample]:
-        """Ensure samples are sorted by judging_sample.id for deterministic ordering."""
-        if not v:
-            return v
-
-        # Check if already sorted by judging_sample.id
-        sample_ids = [s.judging_sample.id for s in v]
-        if sample_ids != sorted(sample_ids):
-            raise ValueError("Samples must be sorted by judging_sample.id for deterministic ordering")
-
-        return v
-
-    @classmethod
-    def create(
-        cls,
-        samples: list[JudgingSample],
-        external_dataset_name: Optional[str] = None
-    ) -> "NormalizedDataset":
-        """Create NormalizedDataset with computed fingerprint and random ID.
-
-        Args:
-            samples: List of judging samples (will be sorted by ID and wrapped in DatasetSample)
-            external_dataset_name: Optional name of the external source dataset
-
-        Returns:
-            NormalizedDataset with computed fingerprint and random UUID
-        """
-
-        # Generate random UUID for this dataset
-        dataset_id = uuid4()
-
-        # Sort samples by ID for deterministic ordering
-        sorted_samples = sorted(samples, key=lambda s: s.id)
-
-        # Compute fingerprint from sorted sample IDs
-        sample_ids_str = ":".join(str(s.id) for s in sorted_samples)
-        fingerprint = hashlib.sha256(sample_ids_str.encode()).hexdigest()
-
-        # Wrap each JudgingSample in a DatasetSample with sequence number
-        dataset_samples = [
-            DatasetSample(
-                normalized_dataset_id=dataset_id,
-                judging_sample=sample,
-                sequence_number=idx,
-            )
-            for idx, sample in enumerate(sorted_samples)
-        ]
-
-        return cls(
-            id=dataset_id,
-            fingerprint=fingerprint,
-            external_dataset_name=external_dataset_name,
-            samples=dataset_samples,
-        )
 
     @property
     def sample_count(self) -> int:

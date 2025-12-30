@@ -9,6 +9,7 @@ from typing import Optional
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
 from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy
+from llm_ensemble.aggregate.domain.validation import validate_judgements_same_sample
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
@@ -19,9 +20,11 @@ def build_aggregated_vote(
     final_confidence: Optional[float] = None,
     final_reasoning: Optional[str] = None,
 ) -> AggregatedVote:
-    """Build AggregatedVote from domain entities.
+    """Build AggregatedVote from domain entities with validation.
 
-    Simple construction - caller is responsible for validation.
+    Validates business rules before construction:
+    - Judgements must be for the same dataset_sample
+    - Judgements list cannot be empty
 
     Args:
         aggregation_strategy: Which aggregation strategy was used (full entity)
@@ -32,7 +35,13 @@ def build_aggregated_vote(
 
     Returns:
         AggregatedVote with random UUID
+
+    Raises:
+        ValueError: If validation fails (empty list or mixed dataset_sample_ids)
     """
+    # Validate business rules
+    validate_judgements_same_sample(llm_judgements)
+
     return AggregatedVote(
         aggregation_strategy=aggregation_strategy,
         llm_judgements=llm_judgements,

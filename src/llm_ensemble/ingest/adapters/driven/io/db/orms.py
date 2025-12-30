@@ -97,6 +97,9 @@ class DatasetSampleORM(Base):
     sequence_number = Column(Integer, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
+    # Relationships for eager loading
+    judging_sample = relationship("JudgingSampleORM", lazy="select")
+
     __table_args__ = (
         UniqueConstraint("normalized_dataset_id", "judging_sample_id", name="uq_dataset_sample"),
         {"schema": "ingest"},

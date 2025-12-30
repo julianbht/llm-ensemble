@@ -24,6 +24,7 @@ from sqlalchemy.exc import IntegrityError
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run import InferRun
+from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
 from llm_ensemble.infer.application.write_summary import WriteSummary
 from llm_ensemble.infer.application.ports.driven.for_output import ForOutput
 from llm_ensemble.libs.logging import get_logger
@@ -116,12 +117,29 @@ class DBWriter(ForOutput):
         # This initializes _infer_run_config_id for use in write_one()
         self._upsert_infer_run_config(infer_run.infer_run_config)
 
+        # Create InferRunOutput FIRST (before InferRun) so judgements can reference it
+        # Use same ID as InferRun (1:1 relationship)
+        # Start with NULL fingerprint - will be updated in close()
+        infer_run_output = InferRunOutput(
+            id=infer_run.id,  # Same ID as InferRun (1:1 relationship)
+            llm_judgements=[],  # Judgements written individually via write_one()
+            sample_fingerprint=None,  # Set in close() after all samples collected
+            judgement_count=0,  # Updated in close()
+            error_count=0,  # Updated in close()
+            avg_latency_ms=0.0,  # Updated in close()
+        )
+        infer_run_output_orm = infer_run_output_to_orm(infer_run_output)
+        self._session.add(infer_run_output_orm)
+        self._infer_run_output_id = infer_run.id
+        self._write_summary.add_infer_run_outputs(created=1, skipped=0)
+        self.logger.info(InferWriteEvent.WRITE_INFER_RUN_OUTPUTS, created=1, skipped=0)
+
         # Create InferRun (always new - unique run_name constraint)
-        # output_id is None at this stage (set in close())
+        # Link to InferRunOutput created above
         infer_run_orm = infer_run_to_orm(
             infer_run=infer_run,
             infer_run_config_id=self._infer_run_config_id,
-            infer_run_output_id=None,  # Set in close()
+            infer_run_output_id=self._infer_run_output_id,
         )
         self._session.add(infer_run_orm)
         self._infer_run_id = infer_run.id
@@ -129,20 +147,18 @@ class DBWriter(ForOutput):
         self.logger.info(InferWriteEvent.WRITE_INFER_RUNS, created=1, skipped=0)
         self._session.commit()
 
-        # InferRunOutput will be created in close() after all judgements written
-        self._infer_run_output_id = None
-
         return self
 
     def write_one(self, judgement: LLMJudgement) -> None:
         """Write a single judgement to database.
 
-        Uses savepoint + IntegrityError pattern for deduplication.
+        LLM judgements are always unique per run (no deduplication needed).
+        Each run produces new judgements even for the same samples.
         """
         if self._session is None:
             raise RuntimeError("Writer is not open")
-        if self._infer_run_config_id is None:
-            raise RuntimeError("InferRunConfig not initialized")
+        if self._infer_run_output_id is None:
+            raise RuntimeError("InferRunOutput not initialized")
 
         # Track dataset_sample ID for fingerprint computation in close()
         self._dataset_sample_ids.append(judgement.dataset_sample.id)
@@ -156,24 +172,19 @@ class DBWriter(ForOutput):
         # Upsert LLMScore
         llm_score_id = self._upsert_llm_score(judgement)
 
-        # Create LLMJudgement (unique constraint on infer_run_output_id + dataset_sample_id)
-        # Note: We'll create InferRunOutput in close(), so use infer_run_id as placeholder
+        # Create LLMJudgement (always new - unique per run)
+        # InferRunOutput was created in open(), so FK constraint is satisfied
         llm_judgement_orm = llm_judgement_to_orm(
             judgement,
-            self._infer_run_id,  # Temporary - will be updated to infer_run_output_id in close()
+            self._infer_run_output_id,
             judgement.dataset_sample.id,
             llm_prompt_text_id,
             llm_response_text_id,
             llm_score_id,
         )
-        try:
-            savepoint = self._session.begin_nested()
-            self._session.add(llm_judgement_orm)
-            self._session.flush()
-            self._write_summary.add_llm_judgements(created=1, skipped=0)
-        except IntegrityError:
-            savepoint.rollback()
-            self._write_summary.add_llm_judgements(created=0, skipped=1)
+        self._session.add(llm_judgement_orm)
+        self._session.flush()
+        self._write_summary.add_llm_judgements(created=1, skipped=0)
 
         self._session.commit()
 
@@ -183,41 +194,17 @@ class DBWriter(ForOutput):
             # Capture end time
             end_time = datetime.now()
 
-            # Create InferRunOutput with fingerprint
+            # Update InferRunOutput with fingerprint (created in open())
             if self._dataset_sample_ids:
                 fingerprint = compute_judged_dataset_fingerprint(self._dataset_sample_ids)
 
-                # Build InferRunOutput domain entity
-                from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
-                infer_run_output = InferRunOutput(
-                    id=self._infer_run_id,  # Same ID as InferRun (1:1 relationship)
-                    llm_judgements=[],  # Judgements already persisted individually
-                    sample_fingerprint=fingerprint,
-                    judgement_count=len(self._dataset_sample_ids),
-                    error_count=0,  # TODO: Track errors
-                    avg_latency_ms=0.0,  # TODO: Track latency
-                )
+                # Update existing InferRunOutput with computed fingerprint
+                infer_run_output_orm = self._session.get(InferRunOutputORM, self._infer_run_output_id)
+                infer_run_output_orm.sample_fingerprint = fingerprint
 
-                # Map to ORM
-                infer_run_output_orm = infer_run_output_to_orm(infer_run_output)
-                try:
-                    savepoint = self._session.begin_nested()
-                    self._session.add(infer_run_output_orm)
-                    self._session.flush()
-                    self._infer_run_output_id = self._infer_run_id
-                    self._write_summary.add_infer_run_outputs(created=1, skipped=0)
-                    created, skipped = 1, 0
-                except IntegrityError:
-                    savepoint.rollback()
-                    self._write_summary.add_infer_run_outputs(created=0, skipped=1)
-                    created, skipped = 0, 1
-
-                self.logger.info(InferWriteEvent.WRITE_INFER_RUN_OUTPUTS, created=created, skipped=skipped)
-
-                # Update InferRun to link to output and set end_time
-                infer_run = self._session.get(InferRunORM, self._infer_run_id)
-                infer_run.infer_run_output_id = self._infer_run_output_id
-                infer_run.end_time = end_time
+                # Update InferRun end_time
+                infer_run_orm = self._session.get(InferRunORM, self._infer_run_id)
+                infer_run_orm.end_time = end_time
 
                 self._session.commit()
 

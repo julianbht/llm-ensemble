@@ -155,6 +155,7 @@ class InferenceApplication(ForRunningInference):
         # Read NormalizedDataset
         resolved_input_run_name = TagManager.resolve_input(input_run_name, "ingest")
         normalized_dataset = self.input_port.read(resolved_input_run_name)
+        logger.info(InferLogEvent.INPUT_READ)
 
         # Slice to get samples that we want to judge
         actual_start_idx, actual_end_idx = resolve_slice_indices(normalized_dataset, start_idx, end_idx)

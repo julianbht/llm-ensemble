@@ -46,9 +46,9 @@ class InferRunOutput(BaseModel):
         description="LLM judgements, one per dataset_sample"
     )
 
-    sample_fingerprint: str = Field(
-        ...,
-        description="SHA256 hash of sorted dataset_sample IDs (deterministic identifier)"
+    sample_fingerprint: Optional[str] = Field(
+        default=None,
+        description="SHA256 hash of sorted dataset_sample IDs (deterministic identifier, NULL until finalized)"
     )
 
     # Aggregate metrics (computed after run completes)

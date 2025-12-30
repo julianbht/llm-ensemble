@@ -163,7 +163,7 @@ class InferenceApplication(ForRunningInference):
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
-        # Build InferRun for early persistence (config present, output=None)
+        # Build InferRun for early persistence
         infer_run = self._build_infer_run(
             run_name=self.run_name,
             official=official,
@@ -174,10 +174,10 @@ class InferenceApplication(ForRunningInference):
             start_time=start_time,
         )
 
-        # Open writer for streaming (run_dir already provided at construction)
+        # Open writer for streaming
         with self.output_port.open(infer_run) as writer:
 
-            # Process each dataset sample in slice (streaming loop)
+            # Process each dataset sample in slice
             for dataset_sample in samples_to_process:
 
                 # Initialize builder for this sample

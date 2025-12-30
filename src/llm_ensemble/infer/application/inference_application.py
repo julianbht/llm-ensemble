@@ -193,11 +193,10 @@ class InferenceApplication(ForRunningInference):
                 raw_response_text, llm_invocation_metrics = self.llm_provider.infer(prompt_text)
                 builder.with_llm_response(raw_response_text, llm_invocation_metrics)
 
-                if llm_invocation_metrics.cost_estimate_usd is not None:
-                    logger.info(
-                        InferLogEvent.COST_CALCULATED,
-                        cost_estimate_usd=llm_invocation_metrics.cost_estimate_usd,
-                    )
+                logger.info(
+                    InferLogEvent.COST_CALCULATED,
+                    cost_estimate_usd=llm_invocation_metrics.cost_estimate_usd,
+                )            
 
                 # Step 3: Parse response
                 logger.info(InferLogEvent.PARSING_REQUEST)

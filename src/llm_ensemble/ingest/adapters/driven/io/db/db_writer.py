@@ -38,7 +38,6 @@ from llm_ensemble.ingest.adapters.driven.io.db.mappers_to_orm import (
     document_to_orm,
     normalized_dataset_to_orm,
     ingest_run_config_to_orm,
-    ingest_run_to_orm,
 )
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.db import (
@@ -150,12 +149,12 @@ class DbWriter(ForOutput):
                     self.logger.info(IngestWriteEvent.WRITE_JUDGING_SAMPLES, created=created, skipped=skipped)
 
                 # 4. IngestRunConfig (no FK dependencies)
-                created, skipped = self._save_ingest_run_config(session, ingest_run.ingest_run_config)
+                created, skipped, config_uuid = self._save_ingest_run_config(session, ingest_run.ingest_run_config)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_RUN_CONFIG, created=created, skipped=skipped)
 
                 # 5. NormalizedDataset entity (no dependencies)
-                created, skipped = self._save_normalized_dataset_entity(session, normalized_dataset)
+                created, skipped, dataset_uuid = self._save_normalized_dataset_entity(session, normalized_dataset)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_NORMALIZED_DATASET, created=created, skipped=skipped)
 
@@ -171,7 +170,8 @@ class DbWriter(ForOutput):
                     self.logger.info(IngestWriteEvent.WRITE_DATASET_SAMPLES, created=created, skipped=skipped)
 
                 # 7. IngestRun (depends on IngestRunConfig + NormalizedDataset)
-                created, skipped = self._save_ingest_run(session, ingest_run)
+                # Use UUID mappings to ensure correct foreign key references
+                created, skipped = self._save_ingest_run(session, ingest_run, config_uuid, dataset_uuid)
                 summary.add_runs(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_RUNS, created=created, skipped=skipped)
@@ -188,67 +188,7 @@ class DbWriter(ForOutput):
 
         except Exception as e:
             raise IOError(f"Failed to write samples to database: {e}") from e
-
-    def _save_ingest_run(
-        self, session: Session, ingest_run: IngestRun
-    ) -> Tuple[int, int]:
-        """Save ingest run entity to database using pre-query pattern.
-
-        Checks if run_name already exists before inserting.
-
-        Args:
-            session: SQLAlchemy session
-            ingest_run: IngestRun aggregate (contains config and dataset)
-
-        Returns:
-            Tuple of (created_count, skipped_count)
-        """
-        # Check if this run_name already exists
-        existing = session.query(IngestRunORM).filter_by(run_name=ingest_run.run_name).first()
-
-        if existing:
-            return (0, 1)
-
-        # Insert new run
-        ingest_run_orm = ingest_run_to_orm(ingest_run)
-        session.add(ingest_run_orm)
-        session.flush()
-        return (1, 0)
-
-    def _save_ingest_run_config(
-        self, session: Session, run_config: IngestRunConfig
-    ) -> Tuple[int, int]:
-        """Save ingest run config entity to database using pre-query pattern.
-
-        Checks if natural key (io_config_name, input_path, limit) already exists.
-
-        Args:
-            session: SQLAlchemy session
-            run_config: IngestRunConfig domain object
-
-        Returns:
-            Tuple of (created_count, skipped_count)
-        """
-        # Check if this config already exists (by natural key)
-        existing = (
-            session.query(IngestRunConfigORM)
-            .filter_by(
-                io_config_name=run_config.io_config_name,
-                input_path=run_config.input_path,
-                limit=run_config.limit,
-            )
-            .first()
-        )
-
-        if existing:
-            return (0, 1)
-
-        # Insert new config
-        config_orm = ingest_run_config_to_orm(run_config)
-        session.add(config_orm)
-        session.flush()
-        return (1, 0)
-
+        
     def _collect_unique_entities(
         self, samples: List[DatasetSample]
     ) -> Tuple[Dict[str, Query], Dict[str, Document]]:
@@ -272,6 +212,87 @@ class DbWriter(ForOutput):
                 unique_documents[document.content_hash] = document
 
         return unique_queries, unique_documents
+
+
+    def _save_ingest_run(
+        self,
+        session: Session,
+        ingest_run: IngestRun,
+        config_uuid: str,
+        dataset_uuid: str,
+    ) -> Tuple[int, int]:
+        """Save ingest run entity to database using pre-query pattern.
+
+        Checks if run_name already exists before inserting.
+        Uses provided config and dataset UUIDs for correct foreign key references.
+
+        Args:
+            session: SQLAlchemy session
+            ingest_run: IngestRun aggregate (contains config and dataset)
+            config_uuid: UUID of the IngestRunConfig in database
+            dataset_uuid: UUID of the NormalizedDataset in database
+
+        Returns:
+            Tuple of (created_count, skipped_count)
+        """
+        # Check if this run_name already exists
+        existing = session.query(IngestRunORM).filter_by(run_name=ingest_run.run_name).first()
+
+        if existing:
+            return (0, 1)
+
+        # Insert new run with correct foreign key UUIDs
+        ingest_run_orm = IngestRunORM(
+            id=ingest_run.id,
+            run_name=ingest_run.run_name,
+            run_type=ingest_run.run_type,
+            ingest_run_config_id=config_uuid,
+            normalized_dataset_id=dataset_uuid,
+            start_time=ingest_run.start_time,
+            end_time=ingest_run.end_time,
+            git_sha=ingest_run.git_info.git_sha,
+            git_branch=ingest_run.git_info.git_branch,
+            git_is_dirty="true" if not ingest_run.git_info.git_clean else "false",
+            notes=ingest_run.notes,
+        )
+        session.add(ingest_run_orm)
+        session.flush()
+        return (1, 0)
+
+    def _save_ingest_run_config(
+        self, session: Session, run_config: IngestRunConfig
+    ) -> Tuple[int, int, str]:
+        """Save ingest run config entity to database using pre-query pattern.
+
+        Checks if natural key (io_config_name, input_path, limit) already exists.
+        Returns UUID of existing or newly created config.
+
+        Args:
+            session: SQLAlchemy session
+            run_config: IngestRunConfig domain object
+
+        Returns:
+            Tuple of (created_count, skipped_count, config_uuid)
+        """
+        # Check if this config already exists (by natural key)
+        existing = (
+            session.query(IngestRunConfigORM)
+            .filter_by(
+                io_config_name=run_config.io_config_name,
+                input_path=run_config.input_path,
+                limit=run_config.limit,
+            )
+            .first()
+        )
+
+        if existing:
+            return (0, 1, str(existing.id))
+
+        # Insert new config
+        config_orm = ingest_run_config_to_orm(run_config)
+        session.add(config_orm)
+        session.flush()
+        return (1, 0, str(config_orm.id))
 
     def _save_queries(
         self, session: Session, queries: Dict[str, Query]
@@ -454,10 +475,11 @@ class DbWriter(ForOutput):
 
     def _save_normalized_dataset_entity(
         self, session: Session, normalized_dataset: NormalizedDataset
-    ) -> Tuple[int, int]:
+    ) -> Tuple[int, int, str]:
         """Save NormalizedDataset entity (step 4 in dependency order).
 
         Checks if fingerprint already exists before inserting.
+        Returns UUID of existing or newly created dataset.
 
         Note: This MUST be called before _save_dataset_samples because
         DatasetSample records have FK to NormalizedDataset.
@@ -467,7 +489,7 @@ class DbWriter(ForOutput):
             normalized_dataset: NormalizedDataset domain object
 
         Returns:
-            Tuple of (created_count, skipped_count)
+            Tuple of (created_count, skipped_count, dataset_uuid)
         """
         # Check if this dataset fingerprint already exists
         existing = (
@@ -477,13 +499,13 @@ class DbWriter(ForOutput):
         )
 
         if existing:
-            return (0, 1)
+            return (0, 1, str(existing.id))
 
         # Insert new dataset
         normalized_dataset_orm = normalized_dataset_to_orm(normalized_dataset)
         session.add(normalized_dataset_orm)
         session.flush()
-        return (1, 0)
+        return (1, 0, str(normalized_dataset_orm.id))
 
     def _save_dataset_samples(
         self,

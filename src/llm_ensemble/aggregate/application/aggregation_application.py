@@ -46,6 +46,20 @@ from llm_ensemble.libs.runtime.run_manager import write_summary
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 
 
+def _format_vote_breakdown(llm_judgements: list[LLMJudgement], final_label: Optional[int]) -> str:
+    """Format vote breakdown string for logging.
+
+    Shows individual votes and final result.
+    Example: "0 0 1 → 0" (votes were 0, 0, 1, final is 0)
+    """
+    input_labels = [
+        j.llm_score.label if j.llm_score and j.llm_score.label is not None else None
+        for j in llm_judgements
+    ]
+    votes_str = " ".join(str(label) for label in input_labels)
+    return f"{votes_str} → {final_label}"
+
+
 class AggregationApplication(ForRunningAggregation):
     """Application use case for coordinating ensemble aggregation pipeline.
 
@@ -171,10 +185,11 @@ class AggregationApplication(ForRunningAggregation):
 
             aggregated_votes.append(aggregated_vote)
 
-            # Log progress
+            # Log progress with vote breakdown
+            vote_breakdown = _format_vote_breakdown(llm_judgements_for_sample, aggregated_vote.final_label)
             logger.info(
                 AggregateLogEvent.SAMPLE_AGGREGATED,
-                final_label=aggregated_vote.final_label,
+                votes=vote_breakdown,
                 confidence=aggregated_vote.final_confidence
             )
 

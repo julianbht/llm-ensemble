@@ -109,17 +109,14 @@ class DBReader(ForInput):
 
             # 2. Query DatasetSample entities via NormalizedDataset with eager loading
             # Eager load all related entities to avoid N+1 queries
+            # Uses association object pattern with proper relationships
             # Order by sequence_number for deterministic ordering
             query = (
                 session.query(DatasetSampleORM)
                 .filter(DatasetSampleORM.normalized_dataset_id == ingest_run.normalized_dataset_id)
                 .options(
-                    joinedload(DatasetSampleORM.judging_sample)
-                    .joinedload(JudgingSampleORM.query)
-                )
-                .options(
-                    joinedload(DatasetSampleORM.judging_sample)
-                    .joinedload(JudgingSampleORM.document)
+                    joinedload(DatasetSampleORM.judging_sample).joinedload(JudgingSampleORM.query),
+                    joinedload(DatasetSampleORM.judging_sample).joinedload(JudgingSampleORM.document),
                 )
                 .order_by(DatasetSampleORM.sequence_number)
             )

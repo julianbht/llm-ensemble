@@ -1,7 +1,8 @@
 """SQL writer adapter for persisting judging samples to database.
 
 Uses pure SQLAlchemy ORM models with random UUIDs.
-Duplicate detection via database constraint violations (IntegrityError).
+Duplicate detection via pre-querying existing entities (no exception handling).
+Returns UUID mappings to ensure correct foreign key references across runs.
 Handles its own logging and returns write summary as metadata.
 
 This adapter delegates ORM mapping to the mappers module for bidirectional symmetry.
@@ -10,10 +11,9 @@ This adapter delegates ORM mapping to the mappers module for bidirectional symme
 from __future__ import annotations
 from pathlib import Path
 from typing import List, Dict, Tuple
-from uuid import UUID
 
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import tuple_
 
 from llm_ensemble.ingest.domain.entities.query import Query
 from llm_ensemble.ingest.domain.entities.document import Document
@@ -27,14 +27,15 @@ from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     QueryORM,
     DocumentORM,
     JudgingSampleORM,
-    NormalizedDatasetORM,
     DatasetSampleORM,
+    NormalizedDatasetORM,
+    IngestRunConfigORM,
+    IngestRunORM,
 )
 from llm_ensemble.ingest.application.ports.driven.for_output import ForOutput
 from llm_ensemble.ingest.adapters.driven.io.db.mappers_to_orm import (
     query_to_orm,
     document_to_orm,
-    judging_sample_to_orm,
     normalized_dataset_to_orm,
     ingest_run_config_to_orm,
     ingest_run_to_orm,
@@ -55,7 +56,9 @@ class DbWriter(ForOutput):
     and handles ORM relationships.
 
     Features:
-    - Duplicate detection via database constraints (catches IntegrityError)
+    - Duplicate detection via pre-querying existing entities by natural keys
+    - Bulk insert operations for maximum performance
+    - UUID mapping to ensure correct foreign key references across runs
     - Natural key deduplication (content_hash for Query/Document, fingerprint for Dataset)
     - Uses session_context() for transaction management
     - Logs write operations directly
@@ -81,7 +84,9 @@ class DbWriter(ForOutput):
     def write(self, ingest_run: IngestRun) -> WriteSummary:
         """Write ingest run results to SQL database with direct logging.
 
-        Duplicate detection via database constraint violations (IntegrityError).
+        Duplicate detection via pre-querying existing entities by natural keys.
+        Uses bulk insert operations for queries, documents, and judging samples.
+        Maintains UUID mappings to ensure correct foreign key references.
         Tracks created vs skipped entities in WriteSummary.
         Logs each entity type write and summary.
 
@@ -124,19 +129,22 @@ class DbWriter(ForOutput):
                 unique_queries, unique_documents = self._collect_unique_entities(dataset_samples)
 
                 # 1. Queries (no dependencies - global entities)
-                created, skipped = self._save_queries(session, unique_queries)
+                created, skipped, query_uuid_map = self._save_queries(session, unique_queries)
                 summary.add_queries(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_QUERIES, created=created, skipped=skipped)
 
                 # 2. Documents (no dependencies - global entities)
-                created, skipped = self._save_documents(session, unique_documents)
+                created, skipped, document_uuid_map = self._save_documents(session, unique_documents)
                 summary.add_documents(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_DOCUMENTS, created=created, skipped=skipped)
 
                 # 3. JudgingSamples (depend on Query + Document)
-                created, skipped = self._save_samples(session, judging_samples)
+                # Use UUID mappings to ensure correct foreign key references
+                created, skipped, sample_uuid_map = self._save_samples(
+                    session, judging_samples, query_uuid_map, document_uuid_map
+                )
                 summary.add_samples(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_JUDGING_SAMPLES, created=created, skipped=skipped)
@@ -156,7 +164,9 @@ class DbWriter(ForOutput):
                 session.flush()
 
                 # 6. DatasetSample records (depend on NormalizedDataset + JudgingSample)
-                created, skipped = self._save_dataset_samples(session, normalized_dataset)
+                created, skipped = self._save_dataset_samples(
+                    session, normalized_dataset, query_uuid_map, document_uuid_map, sample_uuid_map
+                )
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_DATASET_SAMPLES, created=created, skipped=skipped)
 
@@ -182,9 +192,9 @@ class DbWriter(ForOutput):
     def _save_ingest_run(
         self, session: Session, ingest_run: IngestRun
     ) -> Tuple[int, int]:
-        """Save ingest run entity to database using mapper.
+        """Save ingest run entity to database using pre-query pattern.
 
-        Uses constraint-based duplicate detection via IntegrityError on run_name.
+        Checks if run_name already exists before inserting.
 
         Args:
             session: SQLAlchemy session
@@ -193,22 +203,24 @@ class DbWriter(ForOutput):
         Returns:
             Tuple of (created_count, skipped_count)
         """
-        try:
-            savepoint = session.begin_nested()
-            ingest_run_orm = ingest_run_to_orm(ingest_run)
-            session.add(ingest_run_orm)
-            session.flush()
-            return (1, 0)
-        except IntegrityError:
-            savepoint.rollback()
+        # Check if this run_name already exists
+        existing = session.query(IngestRunORM).filter_by(run_name=ingest_run.run_name).first()
+
+        if existing:
             return (0, 1)
+
+        # Insert new run
+        ingest_run_orm = ingest_run_to_orm(ingest_run)
+        session.add(ingest_run_orm)
+        session.flush()
+        return (1, 0)
 
     def _save_ingest_run_config(
         self, session: Session, run_config: IngestRunConfig
     ) -> Tuple[int, int]:
-        """Save ingest run config entity to database using mapper.
+        """Save ingest run config entity to database using pre-query pattern.
 
-        Uses constraint-based duplicate detection via IntegrityError on natural key.
+        Checks if natural key (io_config_name, input_path, limit) already exists.
 
         Args:
             session: SQLAlchemy session
@@ -217,15 +229,25 @@ class DbWriter(ForOutput):
         Returns:
             Tuple of (created_count, skipped_count)
         """
-        try:
-            savepoint = session.begin_nested()
-            config_orm = ingest_run_config_to_orm(run_config)
-            session.add(config_orm)
-            session.flush()
-            return (1, 0)
-        except IntegrityError:
-            savepoint.rollback()
+        # Check if this config already exists (by natural key)
+        existing = (
+            session.query(IngestRunConfigORM)
+            .filter_by(
+                io_config_name=run_config.io_config_name,
+                input_path=run_config.input_path,
+                limit=run_config.limit,
+            )
+            .first()
+        )
+
+        if existing:
             return (0, 1)
+
+        # Insert new config
+        config_orm = ingest_run_config_to_orm(run_config)
+        session.add(config_orm)
+        session.flush()
+        return (1, 0)
 
     def _collect_unique_entities(
         self, samples: List[DatasetSample]
@@ -253,110 +275,189 @@ class DbWriter(ForOutput):
 
     def _save_queries(
         self, session: Session, queries: Dict[str, Query]
-    ) -> Tuple[int, int]:
-        """Save query entities to database using mapper.
+    ) -> Tuple[int, int, Dict[str, str]]:
+        """Save query entities to database using bulk insert with pre-filtering.
 
-        Uses bulk insert with fallback to individual inserts for duplicate detection.
+        Queries existing queries by content_hash, filters to new ones, then bulk inserts.
+        Returns mapping of content_hash -> UUID for both existing and new queries.
 
         Args:
             session: SQLAlchemy session
-            queries: Dictionary of Query domain objects keyed by ID
+            queries: Dictionary of Query domain objects keyed by content_hash
 
         Returns:
-            Tuple of (created_count, skipped_count)
+            Tuple of (created_count, skipped_count, content_hash_to_uuid_mapping)
         """
+        if not queries:
+            return (0, 0, {})
+
+        # Convert all queries to ORM objects
         query_orms = [query_to_orm(q) for q in queries.values()]
+        content_hashes = [q.content_hash for q in queries.values()]
 
-        # Try bulk insert (fast path)
-        try:
-            savepoint = session.begin_nested()
-            session.add_all(query_orms)
+        # Query existing queries and get their UUIDs
+        existing_queries = {
+            content_hash: str(uuid) for (content_hash, uuid) in
+            session.query(QueryORM.content_hash, QueryORM.id)
+            .filter(QueryORM.content_hash.in_(content_hashes))
+        }
+
+        # Filter to only new queries
+        new_query_orms = [
+            orm for orm in query_orms
+            if orm.content_hash not in existing_queries
+        ]
+
+        # Bulk insert new queries
+        if new_query_orms:
+            session.add_all(new_query_orms)
             session.flush()
-            return (len(query_orms), 0)
-        except IntegrityError:
-            savepoint.rollback()
 
-        # Duplicates exist - do individual inserts
-        created = 0
-        skipped = 0
-        for query_orm in query_orms:
-            try:
-                savepoint = session.begin_nested()
-                session.add(query_orm)
-                session.flush()
-                created += 1
-            except IntegrityError:
-                savepoint.rollback()
-                skipped += 1
+        # Build complete mapping: content_hash -> UUID (existing + new)
+        content_hash_to_uuid = existing_queries.copy()
+        for orm in new_query_orms:
+            content_hash_to_uuid[orm.content_hash] = str(orm.id)
 
-        return (created, skipped)
+        created = len(new_query_orms)
+        skipped = len(query_orms) - created
+
+        return (created, skipped, content_hash_to_uuid)
 
     def _save_documents(
         self, session: Session, documents: Dict[str, Document]
-    ) -> Tuple[int, int]:
-        """Save document entities to database using mapper.
+    ) -> Tuple[int, int, Dict[str, str]]:
+        """Save document entities to database using bulk insert with pre-filtering.
 
-        Uses constraint-based duplicate detection via IntegrityError on content_hash.
+        Queries existing documents by content_hash, filters to new ones, then bulk inserts.
+        Returns mapping of content_hash -> UUID for both existing and new documents.
 
         Args:
             session: SQLAlchemy session
-            documents: Dictionary of Document domain objects keyed by ID
+            documents: Dictionary of Document domain objects keyed by content_hash
 
         Returns:
-            Tuple of (created_count, skipped_count)
+            Tuple of (created_count, skipped_count, content_hash_to_uuid_mapping)
         """
-        created = 0
-        skipped = 0
+        if not documents:
+            return (0, 0, {})
 
-        for document in documents.values():
-            try:
-                savepoint = session.begin_nested()
-                doc_orm = document_to_orm(document)
-                session.add(doc_orm)
-                session.flush()
-                created += 1
-            except IntegrityError:
-                savepoint.rollback()
-                skipped += 1
+        # Convert all documents to ORM objects
+        doc_orms = [document_to_orm(d) for d in documents.values()]
+        content_hashes = [d.content_hash for d in documents.values()]
 
-        return (created, skipped)
+        # Query existing documents and get their UUIDs
+        existing_documents = {
+            content_hash: str(uuid) for (content_hash, uuid) in
+            session.query(DocumentORM.content_hash, DocumentORM.id)
+            .filter(DocumentORM.content_hash.in_(content_hashes))
+        }
+
+        # Filter to only new documents
+        new_doc_orms = [
+            orm for orm in doc_orms
+            if orm.content_hash not in existing_documents
+        ]
+
+        # Bulk insert new documents
+        if new_doc_orms:
+            session.add_all(new_doc_orms)
+            session.flush()
+
+        # Build complete mapping: content_hash -> UUID (existing + new)
+        content_hash_to_uuid = existing_documents.copy()
+        for orm in new_doc_orms:
+            content_hash_to_uuid[orm.content_hash] = str(orm.id)
+
+        created = len(new_doc_orms)
+        skipped = len(doc_orms) - created
+
+        return (created, skipped, content_hash_to_uuid)
 
     def _save_samples(
-        self, session: Session, samples: List[JudgingSample]
-    ) -> Tuple[int, int]:
-        """Save judging sample entities to database.
+        self,
+        session: Session,
+        samples: List[JudgingSample],
+        query_uuid_map: Dict[str, str],
+        document_uuid_map: Dict[str, str],
+    ) -> Tuple[int, int, Dict[Tuple[str, str], str]]:
+        """Save judging sample entities to database using bulk insert with pre-filtering.
 
-        Uses constraint-based duplicate detection via IntegrityError on (query_id, document_id).
+        Uses query/document UUID mappings to ensure correct foreign key references.
+        Returns mapping of (query_uuid, doc_uuid) -> judging_sample_uuid.
 
         Args:
             session: SQLAlchemy session
             samples: List of JudgingSample domain objects
+            query_uuid_map: Mapping of query content_hash -> actual UUID in DB
+            document_uuid_map: Mapping of document content_hash -> actual UUID in DB
 
         Returns:
-            Tuple of (created_count, skipped_count)
+            Tuple of (created_count, skipped_count, sample_uuid_mapping)
         """
-        created = 0
-        skipped = 0
+        if not samples:
+            return (0, 0, {})
 
-        for sample in samples:
-            try:
-                savepoint = session.begin_nested()
-                sample_orm = judging_sample_to_orm(sample)
-                session.add(sample_orm)
-                session.flush()
-                created += 1
-            except IntegrityError:
-                savepoint.rollback()
-                skipped += 1
+        # Convert samples to ORM objects using correct UUIDs from mappings
+        sample_orms: List[JudgingSampleORM] = []
+        for s in samples:
+            # Look up the actual UUIDs that exist in the database
+            query_uuid = query_uuid_map[s.query.content_hash]
+            doc_uuid = document_uuid_map[s.document.content_hash]
 
-        return (created, skipped)
+            # Create ORM object with correct foreign key references
+            orm = JudgingSampleORM(
+                id=s.id,
+                query_id=query_uuid,
+                document_id=doc_uuid,
+                gold_score=s.gold_score.value,
+            )
+            sample_orms.append(orm)
+
+        # Build list of (query_id, document_id) tuples to check
+        sample_keys = [(orm.query_id, orm.document_id) for orm in sample_orms]
+
+        # Query existing samples and get their UUIDs
+        existing_samples = {
+            (str(query_id), str(doc_id)): str(sample_id)
+            for (query_id, doc_id, sample_id) in
+            session.query(
+                JudgingSampleORM.query_id,
+                JudgingSampleORM.document_id,
+                JudgingSampleORM.id
+            )
+            .filter(
+                tuple_(JudgingSampleORM.query_id, JudgingSampleORM.document_id)
+                .in_(sample_keys)
+            )
+        }
+
+        # Filter to only new samples
+        new_sample_orms = [
+            orm for orm in sample_orms
+            if (orm.query_id, orm.document_id) not in existing_samples
+        ]
+
+        # Bulk insert new samples
+        if new_sample_orms:
+            session.add_all(new_sample_orms)
+            session.flush()
+
+        # Build complete mapping: (query_uuid, doc_uuid) -> sample_uuid (existing + new)
+        sample_uuid_map = existing_samples.copy()
+        for orm in new_sample_orms:
+            sample_uuid_map[(str(orm.query_id), str(orm.document_id))] = str(orm.id)
+
+        created = len(new_sample_orms)
+        skipped = len(sample_orms) - created
+
+        return (created, skipped, sample_uuid_map)
 
     def _save_normalized_dataset_entity(
         self, session: Session, normalized_dataset: NormalizedDataset
     ) -> Tuple[int, int]:
         """Save NormalizedDataset entity (step 4 in dependency order).
 
-        Uses constraint-based duplicate detection via IntegrityError on fingerprint.
+        Checks if fingerprint already exists before inserting.
 
         Note: This MUST be called before _save_dataset_samples because
         DatasetSample records have FK to NormalizedDataset.
@@ -368,23 +469,33 @@ class DbWriter(ForOutput):
         Returns:
             Tuple of (created_count, skipped_count)
         """
-        try:
-            savepoint = session.begin_nested()
-            normalized_dataset_orm = normalized_dataset_to_orm(normalized_dataset)
-            session.add(normalized_dataset_orm)
-            session.flush()
-            return (1, 0)
-        except IntegrityError:
-            savepoint.rollback()
+        # Check if this dataset fingerprint already exists
+        existing = (
+            session.query(NormalizedDatasetORM)
+            .filter_by(fingerprint=normalized_dataset.fingerprint)
+            .first()
+        )
+
+        if existing:
             return (0, 1)
 
+        # Insert new dataset
+        normalized_dataset_orm = normalized_dataset_to_orm(normalized_dataset)
+        session.add(normalized_dataset_orm)
+        session.flush()
+        return (1, 0)
+
     def _save_dataset_samples(
-        self, session: Session, normalized_dataset: NormalizedDataset
+        self,
+        session: Session,
+        normalized_dataset: NormalizedDataset,
+        query_uuid_map: Dict[str, str],
+        document_uuid_map: Dict[str, str],
+        sample_uuid_map: Dict[Tuple[str, str], str],
     ) -> Tuple[int, int]:
         """Save DatasetSample records (step 5 in dependency order).
 
-        Uses constraint-based duplicate detection via IntegrityError on
-        (normalized_dataset_id, judging_sample_id).
+        Uses UUID mappings to ensure correct foreign key references to JudgingSamples.
 
         Note: This MUST be called after _save_normalized_dataset_entity because
         DatasetSample has FK to NormalizedDataset.
@@ -392,16 +503,24 @@ class DbWriter(ForOutput):
         Args:
             session: SQLAlchemy session
             normalized_dataset: NormalizedDataset domain object
+            query_uuid_map: Mapping of query content_hash -> actual UUID in DB
+            document_uuid_map: Mapping of document content_hash -> actual UUID in DB
+            sample_uuid_map: Mapping of (query_uuid, doc_uuid) -> judging_sample_uuid
 
         Returns:
             Tuple of (created_count, skipped_count)
         """
         # Create DatasetSample records with sequence numbers
         for sample in normalized_dataset.samples:
+            # Look up the correct judging_sample_id using mappings
+            query_uuid = query_uuid_map[sample.judging_sample.query.content_hash]
+            doc_uuid = document_uuid_map[sample.judging_sample.document.content_hash]
+            judging_sample_uuid = sample_uuid_map[(query_uuid, doc_uuid)]
+
             dataset_sample = DatasetSampleORM(
                 id=sample.id,
                 normalized_dataset_id=sample.normalized_dataset_id,
-                judging_sample_id=sample.judging_sample.id,
+                judging_sample_id=judging_sample_uuid,
                 sequence_number=sample.sequence_number,
             )
             session.add(dataset_sample)

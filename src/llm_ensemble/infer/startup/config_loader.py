@@ -51,7 +51,7 @@ def load_retry_config(retry_id: str) -> RetryConfig:
         FileNotFoundError: If config file doesn't exist
         ValueError: If YAML is invalid
     """
-    config_dir = PathManager.get_configs_dir() / "retry"
+    config_dir = PathManager.get_retries_dir()
     return load_yaml_config(
         config_name=retry_id,
         config_dir=config_dir,

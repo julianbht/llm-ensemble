@@ -49,7 +49,6 @@ class OpenRouterAdapter(ForInvokingLLM):
         if not self.api_key:
             raise ValueError(
                 "OpenRouter API key required. Set OPENROUTER_API_KEY env var "
-                "or pass api_key parameter."
             )
 
     def get_provider(self):

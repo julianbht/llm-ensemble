@@ -234,104 +234,208 @@ class DBWriter(ForOutput):
         """Upsert InferRunConfig and all its components.
 
         Uses savepoint + IntegrityError pattern for each entity.
-        Stores _infer_run_config_id for use in write_one().
+        Stores _infer_run_config_id (actual UUID from database) for use in write_one().
+
+        IMPORTANT: Returns actual UUIDs from database to ensure correct FK references.
         """
-        # Upsert Provider
-        created, skipped = self._upsert_provider(infer_run_config.provider)
+        # Upsert Provider and get actual UUID
+        created, skipped, provider_id = self._upsert_provider(infer_run_config.provider)
         self._write_summary.add_providers(created=created, skipped=skipped)
 
-        # Upsert ModelConfig
-        created, skipped = self._upsert_model_config(infer_run_config.model_cfg)
+        # Upsert ModelConfig and get actual UUID
+        created, skipped, model_config_id = self._upsert_model_config(infer_run_config.model_cfg)
         self._write_summary.add_model_configs(created=created, skipped=skipped)
 
-        # Upsert PromptBuilder (includes template_text)
-        # Note: PromptBuilders are components of PromptTemplate, tracked via prompt_templates
-        created, skipped = self._upsert_prompt_builder(infer_run_config.prompt_template.prompt_builder)
+        # Upsert PromptBuilder and get actual UUID
+        created, skipped, prompt_builder_id = self._upsert_prompt_builder(
+            infer_run_config.prompt_template.prompt_builder
+        )
 
-        # Upsert Parser
-        created, skipped = self._upsert_parser(infer_run_config.prompt_template.response_parser)
+        # Upsert Parser and get actual UUID
+        created, skipped, parser_id = self._upsert_parser(
+            infer_run_config.prompt_template.response_parser
+        )
         self._write_summary.add_parser(created=created, skipped=skipped)
 
-        # Upsert PromptTemplate (bundles prompt_builder + parser)
-        created, skipped = self._upsert_prompt_template(infer_run_config.prompt_template)
+        # Upsert PromptTemplate (bundles prompt_builder + parser) and get actual UUID
+        created, skipped, prompt_template_id = self._upsert_prompt_template(
+            infer_run_config.prompt_template,
+            prompt_builder_id,
+            parser_id,
+        )
         self._write_summary.add_prompt_templates(created=created, skipped=skipped)
 
-        # Upsert InferRunConfig (bundles all components, execution context inlined)
-        created, skipped = self._upsert_infer_run_config_entity(infer_run_config)
+        # Upsert InferRunConfig (bundles all components, execution context inlined) and get actual UUID
+        created, skipped, infer_run_config_id = self._upsert_infer_run_config_entity(
+            infer_run_config,
+            provider_id,
+            model_config_id,
+            prompt_template_id,
+        )
         self._write_summary.add_infer_run_configs(created=created, skipped=skipped)
-        self._infer_run_config_id = infer_run_config.id
+        # CRITICAL: Use actual UUID from database, not random domain UUID
+        self._infer_run_config_id = infer_run_config_id
 
-    def _upsert_provider(self, provider) -> Tuple[int, int]:
-        """Upsert Provider entity."""
+    def _upsert_provider(self, provider) -> Tuple[int, int, uuid.UUID]:
+        """Upsert Provider entity and return actual database UUID.
+
+        Returns:
+            Tuple of (created_count, skipped_count, actual_uuid)
+        """
         provider_orm = provider_to_orm(provider)
         try:
             savepoint = self._session.begin_nested()
             self._session.add(provider_orm)
             self._session.flush()
-            return (1, 0)
+            return (1, 0, provider_orm.id)
         except IntegrityError:
             savepoint.rollback()
-            return (0, 1)
+            # Query for existing provider by natural key
+            existing = self._session.query(ProviderORM).filter_by(
+                name=provider.name,
+                version=provider.version,
+            ).first()
+            return (0, 1, existing.id)
 
-    def _upsert_model_config(self, model_cfg) -> Tuple[int, int]:
-        """Upsert ModelConfig entity."""
+    def _upsert_model_config(self, model_cfg) -> Tuple[int, int, uuid.UUID]:
+        """Upsert ModelConfig entity and return actual database UUID.
+
+        Returns:
+            Tuple of (created_count, skipped_count, actual_uuid)
+        """
         model_config_orm = model_config_to_orm(model_cfg)
         try:
             savepoint = self._session.begin_nested()
             self._session.add(model_config_orm)
             self._session.flush()
-            return (1, 0)
+            return (1, 0, model_config_orm.id)
         except IntegrityError:
             savepoint.rollback()
-            return (0, 1)
+            # Query for existing model config by natural key
+            existing = self._session.query(ModelConfigORM).filter_by(
+                name=model_cfg.name,
+            ).first()
+            return (0, 1, existing.id)
 
-    def _upsert_prompt_builder(self, prompt_builder) -> Tuple[int, int]:
-        """Upsert PromptBuilder entity."""
+    def _upsert_prompt_builder(self, prompt_builder) -> Tuple[int, int, uuid.UUID]:
+        """Upsert PromptBuilder entity and return actual database UUID.
+
+        Returns:
+            Tuple of (created_count, skipped_count, actual_uuid)
+        """
         prompt_builder_orm = prompt_builder_to_orm(prompt_builder)
         try:
             savepoint = self._session.begin_nested()
             self._session.add(prompt_builder_orm)
             self._session.flush()
-            return (1, 0)
+            return (1, 0, prompt_builder_orm.id)
         except IntegrityError:
             savepoint.rollback()
-            return (0, 1)
+            # Query for existing prompt builder by natural key
+            existing = self._session.query(PromptBuilderORM).filter_by(
+                name=prompt_builder.name,
+                version=prompt_builder.version,
+            ).first()
+            return (0, 1, existing.id)
 
-    def _upsert_parser(self, parser) -> Tuple[int, int]:
-        """Upsert Parser entity."""
+    def _upsert_parser(self, parser) -> Tuple[int, int, uuid.UUID]:
+        """Upsert Parser entity and return actual database UUID.
+
+        Returns:
+            Tuple of (created_count, skipped_count, actual_uuid)
+        """
         parser_orm = parser_to_orm(parser)
         try:
             savepoint = self._session.begin_nested()
             self._session.add(parser_orm)
             self._session.flush()
-            return (1, 0)
+            return (1, 0, parser_orm.id)
         except IntegrityError:
             savepoint.rollback()
-            return (0, 1)
+            # Query for existing parser by natural key
+            existing = self._session.query(ParserORM).filter_by(
+                name=parser.name,
+                version=parser.version,
+            ).first()
+            return (0, 1, existing.id)
 
-    def _upsert_prompt_template(self, prompt_template) -> Tuple[int, int]:
-        """Upsert PromptTemplate entity."""
+    def _upsert_prompt_template(
+        self,
+        prompt_template,
+        prompt_builder_id: uuid.UUID,
+        parser_id: uuid.UUID,
+    ) -> Tuple[int, int, uuid.UUID]:
+        """Upsert PromptTemplate entity and return actual database UUID.
+
+        Args:
+            prompt_template: PromptTemplate domain object
+            prompt_builder_id: Actual UUID of PromptBuilder in database
+            parser_id: Actual UUID of Parser in database
+
+        Returns:
+            Tuple of (created_count, skipped_count, actual_uuid)
+        """
         prompt_template_orm = prompt_template_to_orm(prompt_template)
+        # Override with actual database UUIDs
+        prompt_template_orm.prompt_builder_id = prompt_builder_id
+        prompt_template_orm.parser_id = parser_id
+
         try:
             savepoint = self._session.begin_nested()
             self._session.add(prompt_template_orm)
             self._session.flush()
-            return (1, 0)
+            return (1, 0, prompt_template_orm.id)
         except IntegrityError:
             savepoint.rollback()
-            return (0, 1)
+            # Query for existing prompt template by natural key
+            existing = self._session.query(PromptTemplateORM).filter_by(
+                name=prompt_template.name,
+            ).first()
+            return (0, 1, existing.id)
 
-    def _upsert_infer_run_config_entity(self, infer_run_config) -> Tuple[int, int]:
-        """Upsert InferRunConfig entity."""
+    def _upsert_infer_run_config_entity(
+        self,
+        infer_run_config,
+        provider_id: uuid.UUID,
+        model_config_id: uuid.UUID,
+        prompt_template_id: uuid.UUID,
+    ) -> Tuple[int, int, uuid.UUID]:
+        """Upsert InferRunConfig entity and return actual database UUID.
+
+        Args:
+            infer_run_config: InferRunConfig domain object
+            provider_id: Actual UUID of Provider in database
+            model_config_id: Actual UUID of ModelConfig in database
+            prompt_template_id: Actual UUID of PromptTemplate in database
+
+        Returns:
+            Tuple of (created_count, skipped_count, actual_uuid)
+        """
         infer_run_config_orm = infer_run_config_to_orm(infer_run_config)
+        # Override with actual database UUIDs
+        infer_run_config_orm.provider_id = provider_id
+        infer_run_config_orm.model_config_id = model_config_id
+        infer_run_config_orm.prompt_template_id = prompt_template_id
+
         try:
             savepoint = self._session.begin_nested()
             self._session.add(infer_run_config_orm)
             self._session.flush()
-            return (1, 0)
+            return (1, 0, infer_run_config_orm.id)
         except IntegrityError:
             savepoint.rollback()
-            return (0, 1)
+            # Query for existing infer run config by natural key
+            # Natural key includes all the FK IDs plus execution context
+            existing = self._session.query(InferRunConfigORM).filter_by(
+                model_config_id=model_config_id,
+                provider_id=provider_id,
+                prompt_template_id=prompt_template_id,
+                input_run_name=infer_run_config.input_run_name,
+                start_idx=infer_run_config.start_idx,
+                end_idx=infer_run_config.end_idx,
+                io_name=infer_run_config.io_name,
+            ).first()
+            return (0, 1, existing.id)
 
     def _upsert_llm_prompt_text(self, judgement: LLMJudgement) -> uuid.UUID:
         """Upsert LLMPromptText and return its ID."""

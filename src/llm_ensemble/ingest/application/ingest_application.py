@@ -155,6 +155,7 @@ class IngestApplication(ForRunningIngest):
 
         # Write output
         write_result = self.output_port.write(ingest_run)
+        logger.info(IngestLogEvent.PERSISTENCE_COMPLETE)
 
         # Create summary
         summary = IngestRunSummary(

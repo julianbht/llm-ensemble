@@ -11,13 +11,10 @@ class IngestLogEvent(str, Enum):
     """Log events for ingest orchestrator."""
 
     INGEST_STARTED = "ingest_started"
-    RUN_DIRECTORY_CREATED = "run_directory_created"
     READ_COMPLETE = "dataset_read_complete"
-    JUDGING_SAMPLES_PREPARED = "judging_samples_prepared"
     INGEST_SUMMARY_WRITTEN = "ingest_summary_written"
-    INGEST_COMPLETE = "ingest_complete"
-    INGEST_FAILED = "ingest_failed"
     LOGS_SAVED = "logs_saved"
+    PERSISTENCE_COMPLETE = "persistence_complete"
 
 
 class IngestWriteEvent(str, Enum):

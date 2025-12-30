@@ -144,11 +144,13 @@ class DbWriter(ForOutput):
 
                 # 4. IngestRunConfig (no FK dependencies)
                 created, skipped, config_uuid = self._save_ingest_run_config(session, ingest_run.ingest_run_config)
+                summary.add_configs(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_RUN_CONFIG, created=created, skipped=skipped)
 
                 # 5. NormalizedDataset entity (no dependencies)
                 created, skipped, dataset_uuid = self._save_normalized_dataset_entity(session, normalized_dataset)
+                summary.add_datasets(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
                     self.logger.info(IngestWriteEvent.WRITE_NORMALIZED_DATASET, created=created, skipped=skipped)
 

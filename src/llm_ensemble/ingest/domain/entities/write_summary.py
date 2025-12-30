@@ -18,6 +18,8 @@ class WriteSummary(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True)
 
+    configs_created: int = Field(default=0, ge=0, description="Number of ingest run configs created")
+    configs_skipped: int = Field(default=0, ge=0, description="Number of ingest run configs skipped (already existed)")
     datasets_created: int = Field(default=0, ge=0, description="Number of datasets created")
     datasets_skipped: int = Field(default=0, ge=0, description="Number of datasets skipped (already existed)")
     runs_created: int = Field(default=0, ge=0, description="Number of ingest runs created")
@@ -28,6 +30,11 @@ class WriteSummary(BaseModel):
     documents_skipped: int = Field(default=0, ge=0, description="Number of documents skipped (already existed)")
     samples_created: int = Field(default=0, ge=0, description="Number of samples created")
     samples_skipped: int = Field(default=0, ge=0, description="Number of samples skipped (already existed)")
+
+    def add_configs(self, created: int = 0, skipped: int = 0) -> None:
+        """Increment config counts."""
+        self.configs_created += created
+        self.configs_skipped += skipped
 
     def add_datasets(self, created: int = 0, skipped: int = 0) -> None:
         """Increment dataset counts."""
@@ -58,7 +65,8 @@ class WriteSummary(BaseModel):
     def total_created(self) -> int:
         """Total entities created across all types."""
         return (
-            self.datasets_created
+            self.configs_created
+            + self.datasets_created
             + self.runs_created
             + self.queries_created
             + self.documents_created
@@ -69,7 +77,8 @@ class WriteSummary(BaseModel):
     def total_skipped(self) -> int:
         """Total entities skipped across all types."""
         return (
-            self.datasets_skipped
+            self.configs_skipped
+            + self.datasets_skipped
             + self.runs_skipped
             + self.queries_skipped
             + self.documents_skipped

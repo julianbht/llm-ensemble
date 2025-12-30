@@ -97,7 +97,8 @@ class DatasetSampleORM(Base):
     sequence_number = Column(Integer, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
-    # Relationships for eager loading
+    # Relationships - junction table connects both sides
+    normalized_dataset = relationship("NormalizedDatasetORM", lazy="select")
     judging_sample = relationship("JudgingSampleORM", lazy="select")
 
     __table_args__ = (

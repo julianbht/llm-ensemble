@@ -97,7 +97,7 @@ def _build_application_hexagon(
 
     Driven ports (infrastructure dependencies):
     - JudgementReader: Reading InferRunOutput records
-    - AggregatedJudgementWriter: Writing AggregatedDataset records
+    - AggregatedJudgementWriter: Writing AggregateRun records
     - AggregationStrategyPort: Strategy for aggregating votes
 
     Logging configuration is read from environment variables during application execution.
@@ -118,9 +118,11 @@ def _build_application_hexagon(
 
     # Assemble application hexagon (application with driven ports)
     return AggregationApplication(
-        judgement_reader=reader,
-        aggregated_judgement_writer=writer,
-        aggregation_strategy_adapter=aggregation_strategy,
+        reader=reader,
+        writer=writer,
+        aggregation_strategy=aggregation_strategy,
         run_dir=run_dir,
         run_name=run_name,
+        io_name=io_config.name_hint,
+        aggregation_strategy_name=aggregation_strategy_name,
     )

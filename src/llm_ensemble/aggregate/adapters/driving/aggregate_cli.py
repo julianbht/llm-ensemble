@@ -72,12 +72,9 @@ def aggregate(
 
     # Run application
     application.run_aggregation(
-        aggregation_strategy_name=aggregation_strategy,
-        io_config_name=io_cfg,
         input_run_names=input_run_names,
         official=official,
         notes=notes,
-        tag=tag,
     )
 
 

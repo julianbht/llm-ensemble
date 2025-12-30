@@ -215,6 +215,8 @@ def infer_run_to_orm(
         git_branch=infer_run.git_info.git_branch,
         git_is_dirty=not infer_run.git_info.git_clean,
         notes=infer_run.notes,
+        start_time=infer_run.start_time,
+        end_time=infer_run.end_time,
     )
 
 

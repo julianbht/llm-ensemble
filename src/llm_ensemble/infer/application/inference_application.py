@@ -173,6 +173,7 @@ class InferenceApplication(ForRunningInference):
             input_run_name=resolved_input_run_name,
             start_idx=actual_start_idx,
             end_idx=actual_end_idx,
+            start_time=start_time,
         )
 
         # Open writer for streaming (run_dir already provided at construction)
@@ -233,6 +234,7 @@ class InferenceApplication(ForRunningInference):
         input_run_name: str,
         start_idx: int,
         end_idx: int,
+        start_time: datetime,
     ) -> InferRun:
         """Build InferRun aggregate root for early persistence.
 
@@ -248,9 +250,10 @@ class InferenceApplication(ForRunningInference):
             input_run_name: Resolved ingest run name
             start_idx: Actual start index used
             end_idx: Actual end index used
+            start_time: When the run started
 
         Returns:
-            InferRun aggregate root (config present, output=None)
+            InferRun aggregate root (config present, output=None, start_time present, end_time=None)
         """
         # Extract domain entities from adapters
         provider = self.llm_provider.get_provider()
@@ -282,6 +285,8 @@ class InferenceApplication(ForRunningInference):
             notes=notes,
             infer_run_config=run_config,
             infer_run_output=None,  # Set at close time
+            start_time=start_time,
+            end_time=None,  # Set at close time
         )
 
     def _build_summary(

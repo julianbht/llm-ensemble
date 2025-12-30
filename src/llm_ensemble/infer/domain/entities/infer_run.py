@@ -6,6 +6,7 @@ This is the aggregate root that represents a complete inference run.
 
 from __future__ import annotations
 from typing import Optional
+from datetime import datetime
 from pydantic import ConfigDict, Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
@@ -48,6 +49,17 @@ class InferRun(RunInfo):
     infer_run_output: Optional[InferRunOutput] = Field(
         default=None,
         description="Output produced by this run (None until run completes, then 1:1)"
+    )
+
+    # Timing
+    start_time: datetime = Field(
+        ...,
+        description="When the run started"
+    )
+
+    end_time: Optional[datetime] = Field(
+        default=None,
+        description="When the run completed (None until run completes)"
     )
 
     model_config = ConfigDict(frozen=True)

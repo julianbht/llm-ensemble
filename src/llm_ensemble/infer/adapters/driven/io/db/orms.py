@@ -340,6 +340,11 @@ class InferRunORM(Base):
     git_branch = Column(String(255), nullable=True)
     git_is_dirty = Column(Boolean, nullable=True)
     notes = Column(Text, nullable=True)
+
+    # Timing
+    start_time = Column(DateTime, nullable=False, comment="When the run started")
+    end_time = Column(DateTime, nullable=True, comment="When the run completed (NULL until run completes)")
+
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships

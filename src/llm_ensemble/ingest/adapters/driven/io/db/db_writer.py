@@ -229,22 +229,30 @@ class DbWriter(ForOutput):
 
     def _collect_unique_entities(
         self, samples: List[DatasetSample]
-    ) -> Tuple[Dict[UUID, Query], Dict[UUID, Document]]:
-        """Collect unique queries and documents from dataset samples batch."""
-        unique_queries: Dict[UUID, Query] = {}
-        unique_documents: Dict[UUID, Document] = {}
+    ) -> Tuple[Dict[str, Query], Dict[str, Document]]:
+        """Collect unique queries and documents from dataset samples batch.
+
+        Deduplicates by content_hash (natural key) to reduce payload size.
+        Database will handle cross-batch deduplication via ON CONFLICT.
+        """
+        unique_queries: Dict[str, Query] = {}
+        unique_documents: Dict[str, Document] = {}
 
         for sample in samples:
             judging_sample = sample.judging_sample
-            if judging_sample.query.id not in unique_queries:
-                unique_queries[judging_sample.query.id] = judging_sample.query
-            if judging_sample.document.id not in unique_documents:
-                unique_documents[judging_sample.document.id] = judging_sample.document
+            query = judging_sample.query
+            document = judging_sample.document
+
+            # Deduplicate by natural key (content_hash)
+            if query.content_hash not in unique_queries:
+                unique_queries[query.content_hash] = query
+            if document.content_hash not in unique_documents:
+                unique_documents[document.content_hash] = document
 
         return unique_queries, unique_documents
 
     def _save_queries(
-        self, session: Session, queries: Dict[UUID, Query]
+        self, session: Session, queries: Dict[str, Query]
     ) -> Tuple[int, int]:
         """Save query entities to database using mapper.
 
@@ -284,7 +292,7 @@ class DbWriter(ForOutput):
         return (created, skipped)
 
     def _save_documents(
-        self, session: Session, documents: Dict[UUID, Document]
+        self, session: Session, documents: Dict[str, Document]
     ) -> Tuple[int, int]:
         """Save document entities to database using mapper.
 

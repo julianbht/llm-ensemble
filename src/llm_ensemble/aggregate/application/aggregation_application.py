@@ -26,6 +26,10 @@ from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVot
 from llm_ensemble.aggregate.domain.entities.aggregate_run_summary import AggregateRunSummary
 from llm_ensemble.aggregate.domain.aggregate_run_factory import AggregateRunFactory
 from llm_ensemble.aggregate.domain.validation import validate_infer_run_outputs_for_aggregation
+from llm_ensemble.aggregate.domain.aggregate_statistics import (
+    calculate_total_judgements,
+    build_warnings_summary,
+)
 
 # Driving port (application implements this)
 from llm_ensemble.aggregate.application.ports.driving.for_running_aggregation import ForRunningAggregation
@@ -193,18 +197,9 @@ class AggregationApplication(ForRunningAggregation):
         # Write output (batch persistence like ingest)
         write_result = self.output_port.write(aggregate_run)
 
-        # Build summary
-        total_llm_judgements = sum(
-            len(judged_dataset.llm_judgements)
-            for judged_dataset in judged_datasets
-        )
-
-        # Build warnings summary
-        warnings_summary = {}
-        if tie_count > 0:
-            warnings_summary["tie"] = tie_count
-        if no_valid_votes_count > 0:
-            warnings_summary["no_valid_votes"] = no_valid_votes_count
+        # Calculate statistics using domain functions
+        total_llm_judgements = calculate_total_judgements(judged_datasets)
+        warnings_summary = build_warnings_summary(tie_count, no_valid_votes_count)
 
         # Construct summary
         summary = AggregateRunSummary(
@@ -215,7 +210,7 @@ class AggregationApplication(ForRunningAggregation):
             output_aggregated_count=len(aggregated_votes),
             tie_count=tie_count,
             no_valid_votes_count=no_valid_votes_count,
-            warnings_summary=warnings_summary if warnings_summary else None,
+            warnings_summary=warnings_summary,
             write_summary=write_result,
         )
 

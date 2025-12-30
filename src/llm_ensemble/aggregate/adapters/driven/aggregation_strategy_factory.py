@@ -13,9 +13,7 @@ from __future__ import annotations
 from typing import Dict, Type
 
 from llm_ensemble.aggregate.application.ports.driven.for_aggregating import ForAggregating
-from llm_ensemble.aggregate.adapters.driven.strategies.majority_vote_adapter import (
-    MajorityVoteAdapter,
-)
+from llm_ensemble.aggregate.adapters.driven.strategies.majority_vote_adapter import MajorityVoteAdapter
 
 
 # Explicit mapping of strategy names to adapter classes

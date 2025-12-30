@@ -19,6 +19,7 @@ need to run this once unless you:
 """
 
 from collections import defaultdict
+from typing import DefaultDict
 from llm_ensemble.libs.runtime.env import load_runtime_config
 from llm_ensemble.libs.db import get_engine, create_schemas, create_all_tables, Base
 
@@ -27,6 +28,7 @@ load_runtime_config()
 
 # Import all ORM models so they are registered with SQLAlchemy's Base.metadata
 # This is required for create_all_tables() to know which tables to create
+# Note: Imports appear "unused" but have side effects (register tables with metadata)
 
 # Ingest CLI ORMs
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
@@ -56,14 +58,15 @@ from llm_ensemble.infer.adapters.driven.io.db.orms import (
 )
 
 # Aggregate CLI ORMs
-# from llm_ensemble.aggregate.schemas.orms_normalized import (
-#     AggregationSpecORM,
-#     AggregateRunORM,
-#     AggregatedDatasetORM,
-#     AggregatedVoteORM,
-#     AggregatedDatasetVoteORM,
-#     AggregationVoteORM,
-# )
+from llm_ensemble.aggregate.adapters.driven.io.orms import (
+    AggregationStrategyORM,
+    AggregateRunConfigORM,
+    AggregateRunORM,
+    AggregatedDatasetORM,
+    AggregatedVoteORM,
+    AggregatedDatasetVoteORM,
+    AggregationVoteORM,
+)
 
 
 def main():
@@ -90,9 +93,9 @@ def main():
     create_all_tables(engine)
 
     # Dynamically list all created tables grouped by schema
-    tables_by_schema = defaultdict(list)
+    tables_by_schema: DefaultDict[str, list[str]] = defaultdict(list)
     for table in Base.metadata.sorted_tables:
-        schema = table.schema or 'public'
+        schema: str = table.schema or 'public'
         tables_by_schema[schema].append(table.name)
 
     total_tables = sum(len(tables) for tables in tables_by_schema.values())

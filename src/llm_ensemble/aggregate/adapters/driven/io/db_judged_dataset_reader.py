@@ -7,20 +7,36 @@ objects for use in the aggregation pipeline.
 
 from __future__ import annotations
 
-from llm_ensemble.infer.schemas.entities.infer_run_output import InferRunOutput
-from llm_ensemble.infer.schemas.entities.llm_judgement import LLMJudgement
-from llm_ensemble.infer.schemas.orms_normalized import (
+from sqlalchemy.orm import joinedload
+
+from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
+from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
+from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
+from llm_ensemble.infer.domain.entities.llm_score import LLMScore
+from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
+from llm_ensemble.ingest.domain.entities.query import Query
+from llm_ensemble.ingest.domain.entities.document import Document
+
+from llm_ensemble.infer.adapters.driven.io.db.orms import (
     InferRunORM,
     LLMJudgementORM,
 )
-from llm_ensemble.aggregate.ports import JudgementReader
-from llm_ensemble.libs.db import get_engine, get_session
+from llm_ensemble.ingest.adapters.driven.io.db.orms import (
+    DatasetSampleORM,
+    JudgingSampleORM,
+    QueryORM,
+    DocumentORM,
+)
+from llm_ensemble.aggregate.application.ports.driven.for_input import ForInput
+from llm_ensemble.libs.db import get_engine, session_context
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
-class DbInferRunOutputReader(JudgementReader):
+class DbInferRunOutputReader(ForInput):
     """Read InferRunOutput records from database by infer run name(s).
 
-    This adapter implements the JudgementReader port by loading InferRunOutputs
+    This adapter implements the ForInput port by loading InferRunOutputs
     from the infer schema. It queries via InferRun → InferRunOutput relationship
     and reconstructs complete domain objects.
 
@@ -32,8 +48,11 @@ class DbInferRunOutputReader(JudgementReader):
     Query strategy:
     - For each run_name, find InferRunORM
     - Load linked InferRunOutputORM via FK
-    - Query LLMJudgementORM records directly
-    - Eager load related entities (prompt, score, metrics)
+    - Query LLMJudgementORM records with eager loading of related entities:
+      - dataset_sample (via DatasetSampleORM)
+      - judging_sample (via JudgingSampleORM)
+      - query and document (via QueryORM, DocumentORM)
+      - llm_prompt_text, llm_response_text, llm_score
     - Reconstruct Pydantic InferRunOutput models
 
     Note: This reader does NOT validate fingerprints or completeness.
@@ -56,17 +75,16 @@ class DbInferRunOutputReader(JudgementReader):
             LookupError: If any infer run doesn't exist in database
         """
         engine = get_engine()
-        session = get_session(engine)
 
-        try:
-            judged_datasets = []
+        with session_context(engine) as session:
+            infer_run_outputs = []
 
             for run_name in run_names:
                 # Find infer run by name with eager loading
                 infer_run = (
                     session.query(InferRunORM)
                     .filter_by(run_name=run_name)
-                    .options(joinedload(InferRunORM.judged_dataset))
+                    .options(joinedload(InferRunORM.infer_run_output))
                     .one_or_none()
                 )
 
@@ -76,33 +94,122 @@ class DbInferRunOutputReader(JudgementReader):
                         f"Available runs: SELECT run_name FROM infer.infer_runs"
                     )
 
-                judged_dataset_orm = infer_run.judged_dataset
+                infer_run_output_orm = infer_run.infer_run_output
 
-                if not judged_dataset_orm:
+                if not infer_run_output_orm:
                     raise LookupError(
                         f"Infer run '{run_name}' has no linked InferRunOutput. "
                         f"This indicates the run did not complete successfully."
                     )
 
-                # TODO: Query and convert LLM judgements from ORM to domain models
-                # For now, create empty judgements list until we implement proper ORM-to-domain mappers
-                # Will need to query LLMJudgementORM and eagerly load related entities:
-                #   - llm_prompt_text + prompt_template + dataset_sample
-                #   - llm_score + parser_spec + llm_response_text
-                #   - llm_invocation_metrics
-                llm_judgements = []
-
-                # Create InferRunOutput domain object
-                judged_dataset = InferRunOutput(
-                    id=judged_dataset_orm.id,
-                    model_config_id=judged_dataset_orm.model_config_id,
-                    sample_fingerprint=judged_dataset_orm.sample_fingerprint or "",
-                    llm_judgements=llm_judgements,
+                # Query all judgements for this infer_run_output with eager loading
+                llm_judgement_orms = (
+                    session.query(LLMJudgementORM)
+                    .filter_by(infer_run_output_id=infer_run_output_orm.id)
+                    .options(
+                        joinedload(LLMJudgementORM.llm_prompt_text),
+                        joinedload(LLMJudgementORM.llm_response_text),
+                        joinedload(LLMJudgementORM.llm_score),
+                    )
+                    .all()
                 )
 
-                judged_datasets.append(judged_dataset)
+                # Load dataset_sample data for all judgements
+                # Need to query DatasetSampleORM and join to JudgingSampleORM
+                dataset_sample_ids = [j.dataset_sample_id for j in llm_judgement_orms]
+                dataset_samples_orms = (
+                    session.query(DatasetSampleORM, JudgingSampleORM, QueryORM, DocumentORM)
+                    .join(JudgingSampleORM, DatasetSampleORM.judging_sample_id == JudgingSampleORM.id)
+                    .join(QueryORM, JudgingSampleORM.query_id == QueryORM.id)
+                    .join(DocumentORM, JudgingSampleORM.document_id == DocumentORM.id)
+                    .filter(DatasetSampleORM.id.in_(dataset_sample_ids))
+                    .all()
+                )
 
-            return judged_datasets
+                # Build mapping of dataset_sample_id -> DatasetSample domain object
+                dataset_sample_map = {}
+                for ds_orm, js_orm, query_orm, doc_orm in dataset_samples_orms:
+                    # Build Query domain object
+                    query = Query(
+                        id=query_orm.id,
+                        query_text=query_orm.query_text,
+                        content_hash=query_orm.content_hash,
+                    )
 
-        finally:
-            session.close()
+                    # Build Document domain object
+                    document = Document(
+                        id=doc_orm.id,
+                        doc_text=doc_orm.doc_text,
+                        content_hash=doc_orm.content_hash,
+                    )
+
+                    # Build JudgingSample domain object
+                    judging_sample = JudgingSample(
+                        id=js_orm.id,
+                        query=query,
+                        document=document,
+                        gold_score=RelevanceScore(js_orm.gold_score),
+                    )
+
+                    # Build DatasetSample domain object
+                    dataset_sample = DatasetSample(
+                        id=ds_orm.id,
+                        normalized_dataset_id=ds_orm.normalized_dataset_id,
+                        judging_sample=judging_sample,
+                        sequence_number=ds_orm.sequence_number,
+                    )
+
+                    dataset_sample_map[ds_orm.id] = dataset_sample
+
+                # Convert LLMJudgementORMs to domain objects
+                llm_judgements = []
+                for j_orm in llm_judgement_orms:
+                    # Get dataset_sample from map
+                    dataset_sample = dataset_sample_map[j_orm.dataset_sample_id]
+
+                    # Build LLMInvocationMetrics
+                    invocation_metrics = LLMInvocationMetrics(
+                        latency_ms=j_orm.latency_ms,
+                        retries=j_orm.retries,
+                        cost_estimate_usd=j_orm.cost_estimate_usd,
+                        generation_id=j_orm.generation_id,
+                        prompt_tokens=j_orm.prompt_tokens,
+                        completion_tokens=j_orm.completion_tokens,
+                        total_tokens=j_orm.total_tokens,
+                    )
+
+                    # Build LLMScore (may be None if parsing failed)
+                    llm_score = None
+                    if j_orm.llm_score:
+                        llm_score = LLMScore(
+                            label=j_orm.llm_score.label,
+                            confidence=j_orm.llm_score.confidence,
+                            rationale=j_orm.llm_score.rationale,
+                        )
+
+                    # Build LLMJudgement
+                    llm_judgement = LLMJudgement(
+                        id=j_orm.id,
+                        dataset_sample=dataset_sample,
+                        prompt_text=j_orm.llm_prompt_text.prompt_text,
+                        response_text=j_orm.llm_response_text.llm_response_text,
+                        llm_invocation_metrics=invocation_metrics,
+                        llm_score=llm_score,
+                        parser_warnings=j_orm.parser_warnings or [],
+                    )
+
+                    llm_judgements.append(llm_judgement)
+
+                # Create InferRunOutput domain object
+                # Note: Aggregate metrics (judgement_count, error_count, avg_latency_ms) use defaults
+                # These are not stored in the database and not needed for aggregation
+                infer_run_output = InferRunOutput(
+                    id=infer_run_output_orm.id,
+                    sample_fingerprint=infer_run_output_orm.sample_fingerprint or "",
+                    llm_judgements=llm_judgements,
+                    judgement_count=len(llm_judgements),
+                )
+
+                infer_run_outputs.append(infer_run_output)
+
+            return infer_run_outputs

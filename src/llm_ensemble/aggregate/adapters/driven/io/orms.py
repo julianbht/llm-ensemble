@@ -46,37 +46,74 @@ class AggregationStrategyORM(Base):
     aggregated_votes = relationship("AggregatedVoteORM", back_populates="aggregation_strategy")
 
 
+class AggregateRunConfigORM(Base):
+    """Configuration for an aggregate run."""
+    __tablename__ = "aggregate_run_configs"
+    __table_args__ = (
+        UniqueConstraint(
+            "aggregation_strategy_name",
+            "io_config_name",
+            "input_run_names_hash",
+            name="uq_aggregate_run_config",
+        ),
+        {"schema": "aggregate"},
+    )
+    __natural_key__ = ("aggregation_strategy_name", "io_config_name", "input_run_names_hash")
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    aggregation_strategy_name = Column(String(255), nullable=False)
+    io_config_name = Column(String(255), nullable=False)
+    input_run_names = Column(JSONB, nullable=False, comment="List of infer run identifiers")
+    input_run_names_hash = Column(CHAR(64), nullable=False, comment="SHA256 of sorted input_run_names for uniqueness")
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    # Relationships
+    aggregate_runs = relationship("AggregateRunORM", back_populates="aggregate_run_config")
+
+
 class AggregateRunORM(Base):
+    """Complete record of an aggregate execution.
+
+    Connects configuration (input) to dataset (output) with execution metadata.
+    """
     __tablename__ = "aggregate_runs"
     __table_args__ = {"schema": "aggregate"}
-    __natural_key__ = "run_name"
+    __natural_key__ = ("run_name",)
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType, schema="public"), nullable=False, default=RunType.TEST)
 
-    # Config names snapshot for easy viewing
-    config_names = Column(
-        JSONB,
+    # What was intended (configuration)
+    aggregate_run_config_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("aggregate.aggregate_run_configs.id"),
         nullable=False,
-        comment="Config names used: {aggregation_strategy, io_config}"
+        comment="Configuration used for this run"
     )
 
-    # ACTUAL RESULT: What was actually aggregated (set in close())
+    # What was produced (output)
     aggregated_dataset_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("aggregate.aggregated_datasets.id"),
-        nullable=True,
-        comment="What aggregations were actually produced (NULL = run incomplete/failed)"
+        nullable=False,
+        comment="Dataset produced by this run"
     )
 
-    git_sha = Column(String(40), nullable=True)
-    git_branch = Column(String(255), nullable=True)
-    git_is_dirty = Column(Boolean, nullable=True)
+    # Timing
+    start_time = Column(DateTime, nullable=False, comment="When the run started")
+    end_time = Column(DateTime, nullable=False, comment="When the run completed")
+
+    # Git metadata for reproducibility
+    git_sha = Column(String(40), nullable=False)
+    git_branch = Column(String(255), nullable=False)
+    git_is_dirty = Column(String(10), nullable=False)
+
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
+    aggregate_run_config = relationship("AggregateRunConfigORM", back_populates="aggregate_runs")
     aggregated_dataset = relationship("AggregatedDatasetORM", back_populates="aggregate_runs")
 
 

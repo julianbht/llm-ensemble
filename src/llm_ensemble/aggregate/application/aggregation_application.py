@@ -26,9 +26,9 @@ from llm_ensemble.aggregate.domain.entities.aggregated_dataset import Aggregated
 from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
 from llm_ensemble.aggregate.domain.entities.aggregate_run_summary import AggregateRunSummary
 from llm_ensemble.aggregate.domain.aggregate_run_factory import AggregateRunFactory
-from llm_ensemble.aggregate.application.ports.aggregated_judgement_writer import AggregatedJudgementWriter
-from llm_ensemble.aggregate.application.ports.aggregation_strategy import AggregationStrategyPort
-from llm_ensemble.aggregate.application.ports.judgement_reader import JudgementReader
+from llm_ensemble.aggregate.application.ports.driven.for_output import ForOutput
+from llm_ensemble.aggregate.application.ports.driven.for_aggregating import ForAggregating
+from llm_ensemble.aggregate.application.ports.driven.for_input import ForInput
 
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import AggregateLogEvent
@@ -58,9 +58,9 @@ class AggregationApplication:
 
     def __init__(
         self,
-        reader: JudgementReader,
-        writer: AggregatedJudgementWriter,
-        aggregation_strategy: AggregationStrategyPort,
+        reader: ForInput,
+        writer: ForOutput,
+        aggregation_strategy: ForAggregating,
         run_dir: Path,
         run_name: str,
         io_name: str,
@@ -126,7 +126,6 @@ class AggregationApplication:
         logger = get_logger()
         logger.info(AggregateLogEvent.AGGREGATE_STARTED, name=self.run_name)
 
-        # Track start time for summary
         start_time = datetime.now()
 
         # Read InferRunOutputs (one per run) via reader port
@@ -145,7 +144,6 @@ class AggregationApplication:
         )
 
         # Group llm_judgements by dataset_sample_id across all runs
-        logger.info(AggregateLogEvent.GROUPING_JUDGEMENTS)
         grouped_by_sample: dict[UUID, list[LLMJudgement]] = defaultdict(list)
 
         for judged_dataset in judged_datasets:
@@ -187,11 +185,6 @@ class AggregationApplication:
 
         # Create AggregatedDataset (computes fingerprint and UUID from votes)
         aggregated_dataset = AggregatedDataset.create(aggregated_votes)
-        logger.info(
-            AggregateLogEvent.DATASET_CREATED,
-            dataset_id=str(aggregated_dataset.id)[:8] + "...",
-            vote_count=aggregated_dataset.vote_count,
-        )
 
         # Track end time
         end_time = datetime.now()
@@ -211,7 +204,6 @@ class AggregationApplication:
 
         # Write output (batch persistence like ingest)
         write_result = self.output_port.write(aggregate_run)
-        logger.info(AggregateLogEvent.AGGREGATE_COMPLETE)
 
         # Build summary
         total_llm_judgements = sum(
@@ -241,14 +233,6 @@ class AggregationApplication:
 
         # Write summary.json
         summary_path = write_summary(summary, self.run_dir)
-        logger.info(AggregateLogEvent.AGGREGATE_SUMMARY_WRITTEN, path=str(summary_path))
-
-        # Log warnings summary if any
-        if summary.warnings_summary:
-            logger.info(
-                AggregateLogEvent.WARNINGS_COLLECTED,
-                **summary.warnings_summary
-            )
 
         return summary
 

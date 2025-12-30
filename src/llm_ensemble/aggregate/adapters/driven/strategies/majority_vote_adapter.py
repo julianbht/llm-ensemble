@@ -8,11 +8,11 @@ from __future__ import annotations
 from collections import Counter
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.aggregate.application.ports.aggregation_strategy import AggregationStrategyPort
+from llm_ensemble.aggregate.application.ports.driven.for_aggregating import ForAggregating
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
-class MajorityVoteAdapter(AggregationStrategyPort):
+class MajorityVoteAdapter(ForAggregating):
     """Simple majority vote aggregation strategy adapter.
 
     Counts votes for each label and selects the label with the most votes.

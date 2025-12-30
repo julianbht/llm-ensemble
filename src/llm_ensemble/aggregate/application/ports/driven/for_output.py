@@ -10,7 +10,7 @@ from llm_ensemble.aggregate.domain.entities.aggregate_run import AggregateRun
 from llm_ensemble.aggregate.domain.entities.write_summary import WriteSummary
 
 
-class AggregatedJudgementWriter(ABC):
+class ForOutput(ABC):
     """Abstract base class for writing AggregateRun records.
 
     Implementations can write to different formats (Database, JSON, etc.)

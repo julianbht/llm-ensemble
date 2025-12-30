@@ -12,14 +12,14 @@ To add a new strategy:
 from __future__ import annotations
 from typing import Dict, Type
 
-from llm_ensemble.aggregate.application.ports.aggregation_strategy import AggregationStrategyPort
+from llm_ensemble.aggregate.application.ports.driven.for_aggregating import ForAggregating
 from llm_ensemble.aggregate.adapters.driven.strategies.majority_vote_adapter import (
     MajorityVoteAdapter,
 )
 
 
 # Explicit mapping of strategy names to adapter classes
-STRATEGIES: Dict[str, Type[AggregationStrategyPort]] = {
+STRATEGIES: Dict[str, Type[ForAggregating]] = {
     "majority_vote": MajorityVoteAdapter,
 }
 
@@ -28,7 +28,7 @@ class AggregationStrategyBuilder:
     """Builder for creating aggregation strategy instances."""
     
     @staticmethod
-    def build(strategy_name: str) -> AggregationStrategyPort:
+    def build(strategy_name: str) -> ForAggregating:
         """Build and return a strategy adapter instance.
         
         Args:

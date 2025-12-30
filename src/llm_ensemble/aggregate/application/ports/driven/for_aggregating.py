@@ -18,7 +18,7 @@ from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVot
 from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy as AggregationStrategyEntity
 
 
-class AggregationStrategyPort(ABC):
+class ForAggregating(ABC):
     """Abstract base class for aggregation strategy adapters with built-in mapping.
 
     Implementations provide voting logic in aggregate_raw(), which returns a simple dict.

@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
 
 
-class JudgementReader(ABC):
+class ForInput(ABC):
     """Abstract base class for reading InferRunOutput from infer runs.
 
     Implementations can read from different formats (JSON, SQL, etc.)

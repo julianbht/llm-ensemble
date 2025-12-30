@@ -3,12 +3,12 @@
 Application Layer - Hexagonal Architecture
 
 This module contains the complete aggregation backend orchestration.
-It handles:
+It implements the driving port (ForRunningAggregation) and handles:
 - Infrastructure setup (run directories, logging)
 - Aggregation pipeline execution via driven ports
 - Result persistence and finalization
 
-This is the backend that the CLI adapter uses.
+This is the backend that both CLI and Web adapters use.
 Depends only on port abstractions for testability.
 """
 
@@ -26,6 +26,11 @@ from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVot
 from llm_ensemble.aggregate.domain.entities.aggregate_run_summary import AggregateRunSummary
 from llm_ensemble.aggregate.domain.aggregate_run_factory import AggregateRunFactory
 from llm_ensemble.aggregate.domain.aggregated_dataset_builder import build_aggregated_dataset
+
+# Driving port (application implements this)
+from llm_ensemble.aggregate.application.ports.driving.for_running_aggregation import ForRunningAggregation
+
+# Driven ports (application depends on these)
 from llm_ensemble.aggregate.application.ports.driven.for_output import ForOutput
 from llm_ensemble.aggregate.application.ports.driven.for_aggregating import ForAggregating
 from llm_ensemble.aggregate.application.ports.driven.for_input import ForInput
@@ -37,8 +42,11 @@ from llm_ensemble.libs.runtime.run_manager import write_summary
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 
 
-class AggregationApplication:
+class AggregationApplication(ForRunningAggregation):
     """Application use case for coordinating ensemble aggregation pipeline.
+
+    Implements the driving port ForRunningAggregation - this IS the application's API.
+    Driving adapters (CLI, Web API, etc.) call the run_aggregation() method.
 
     This is the backend application that handles:
     - Logging configuration
@@ -48,10 +56,10 @@ class AggregationApplication:
     Infrastructure setup (run directories, run naming) is handled by the
     composition root before application instantiation.
 
-    The CLI adapter is a thin wrapper that:
-    - Parses CLI arguments
-    - Calls this application
-    - Presents results (terminal output)
+    Driving adapters are thin wrappers that:
+    - Parse input (CLI args, HTTP requests)
+    - Call this application
+    - Present results (terminal output, HTTP responses)
 
     Depends only on driven port abstractions, enabling unit testing with mocked ports.
     """

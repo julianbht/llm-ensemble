@@ -149,7 +149,7 @@ class AggregationApplication:
         for judged_dataset in judged_datasets:
             for llm_judgement in judged_dataset.llm_judgements:
                 # Get dataset_sample_id via llm_prompt → dataset_sample
-                dataset_sample_id = llm_judgement.llm_prompt.dataset_sample.id
+                dataset_sample_id = llm_judgement.dataset_sample.id
                 grouped_by_sample[dataset_sample_id].append(llm_judgement)
 
         # Track statistics

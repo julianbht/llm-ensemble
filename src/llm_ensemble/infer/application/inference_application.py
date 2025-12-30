@@ -149,7 +149,7 @@ class InferenceApplication(ForRunningInference):
         logger = get_logger()
         logger.info(
             InferLogEvent.INFER_STARTED,
-            run_name=self.run_name
+            name=self.run_name
         )
 
         # Read NormalizedDataset

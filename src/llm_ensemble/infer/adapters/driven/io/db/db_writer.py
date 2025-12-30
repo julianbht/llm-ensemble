@@ -22,10 +22,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
+from llm_ensemble.infer.domain.entities.infer_run import InferRun
 from llm_ensemble.infer.application.write_summary import WriteSummary
 from llm_ensemble.infer.application.ports.driven.for_output import ForOutput
-from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.db import (
     get_engine,
@@ -38,7 +37,6 @@ from llm_ensemble.infer.adapters.driven.io.db.orms import (
     PromptBuilderORM,
     ParserORM,
     PromptTemplateORM,
-    IngestRunContextORM,
     InferRunConfigORM,
     InferRunORM,
     InferRunOutputORM,
@@ -53,9 +51,8 @@ from llm_ensemble.infer.adapters.driven.io.db.mappers_to_orm import (
     prompt_builder_to_orm,
     parser_to_orm,
     prompt_template_to_orm,
-    ingest_run_context_to_orm,
     infer_run_config_to_orm,
-    infer_run_info_to_orm,
+    infer_run_to_orm,
     infer_run_output_to_orm,
     llm_prompt_text_to_orm,
     llm_response_text_to_orm,
@@ -98,14 +95,12 @@ class DBWriter(ForOutput):
 
     def open(
         self,
-        run_info: InferRunInfo,
-        infer_run_config: InferRunConfig,
+        infer_run: InferRun,
     ) -> DBWriter:
         """Open database session and initialize run metadata.
 
         Args:
-            run_info: Run metadata (git info, timestamps)
-            infer_run_config: Complete configuration bundle with resolved indices
+            infer_run: InferRun aggregate root (config present, output=None)
 
         Returns:
             Self for method chaining
@@ -116,21 +111,21 @@ class DBWriter(ForOutput):
         engine = get_engine()
         self._session = get_session(engine)
 
-        # Get resolved indices from infer_run_config
-        context = infer_run_config.ingest_run_context
-        start_idx = context.start_idx
-        end_idx = context.end_idx
-
-        # Create InferRun (always new - unique run_name constraint)
-        infer_run_orm = infer_run_info_to_orm(run_info, start_idx, end_idx)
-        self._session.add(infer_run_orm)
-        self._infer_run_id = run_info.id
-        self._write_summary.add_infer_runs(created=1, skipped=0)
-        self._session.commit()
-
         # Upsert InferRunConfig components and create InferRunConfig
         # This initializes _infer_run_config_id for use in write_one()
-        self._upsert_infer_run_config(infer_run_config)
+        self._upsert_infer_run_config(infer_run.infer_run_config)
+
+        # Create InferRun (always new - unique run_name constraint)
+        # output_id is None at this stage (set in close())
+        infer_run_orm = infer_run_to_orm(
+            infer_run=infer_run,
+            infer_run_config_id=self._infer_run_config_id,
+            infer_run_output_id=None,  # Set in close()
+        )
+        self._session.add(infer_run_orm)
+        self._infer_run_id = infer_run.id
+        self._write_summary.add_infer_runs(created=1, skipped=0)
+        self._session.commit()
 
         # InferRunOutput will be created in close() after all judgements written
         self._infer_run_output_id = None
@@ -248,11 +243,7 @@ class DBWriter(ForOutput):
         created, skipped = self._upsert_prompt_template(infer_run_config.prompt_template)
         self._write_summary.add_prompt_templates(created=created, skipped=skipped)
 
-        # Upsert IngestRunContext
-        created, skipped = self._upsert_ingest_run_context(infer_run_config.ingest_run_context)
-        self._write_summary.add_ingest_run_contexts(created=created, skipped=skipped)
-
-        # Upsert InferRunConfig (bundles all components)
+        # Upsert InferRunConfig (bundles all components, execution context inlined)
         created, skipped = self._upsert_infer_run_config_entity(infer_run_config)
         self._write_summary.add_infer_run_configs(created=created, skipped=skipped)
         self._infer_run_config_id = infer_run_config.id
@@ -311,18 +302,6 @@ class DBWriter(ForOutput):
         try:
             savepoint = self._session.begin_nested()
             self._session.add(prompt_template_orm)
-            self._session.flush()
-            return (1, 0)
-        except IntegrityError:
-            savepoint.rollback()
-            return (0, 1)
-
-    def _upsert_ingest_run_context(self, ingest_run_context) -> Tuple[int, int]:
-        """Upsert IngestRunContext entity."""
-        ingest_run_context_orm = ingest_run_context_to_orm(ingest_run_context)
-        try:
-            savepoint = self._session.begin_nested()
-            self._session.add(ingest_run_context_orm)
             self._session.flush()
             return (1, 0)
         except IntegrityError:

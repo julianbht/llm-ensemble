@@ -21,7 +21,7 @@ import structlog
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.llm_judgement_builder import LLMJudgementBuilder
-from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
+from llm_ensemble.infer.domain.entities.infer_run import InferRun
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.domain.metrics import (
     calculate_agreement,
@@ -165,12 +165,18 @@ class InferenceApplication(ForRunningInference):
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
-        # Build run_config and run_info for early persistence
-        run_config = self._build_run_config(resolved_input_run_name, actual_start_idx, actual_end_idx)
-        run_info = self._build_run_info(self.run_name, official, notes)
+        # Build InferRun for early persistence (config present, output=None)
+        infer_run = self._build_infer_run(
+            run_name=self.run_name,
+            official=official,
+            notes=notes,
+            input_run_name=resolved_input_run_name,
+            start_idx=actual_start_idx,
+            end_idx=actual_end_idx,
+        )
 
         # Open writer for streaming (run_dir already provided at construction)
-        with self.output_port.open(run_info, run_config) as writer:
+        with self.output_port.open(infer_run) as writer:
 
             # Process each dataset sample in slice (streaming loop)
             for dataset_sample in samples_to_process:
@@ -219,24 +225,32 @@ class InferenceApplication(ForRunningInference):
         # Return finalized summary
         return summary
 
-    def _build_run_config(
+    def _build_infer_run(
         self,
+        run_name: str,
+        official: bool,
+        notes: Optional[str],
         input_run_name: str,
         start_idx: int,
         end_idx: int,
-    ) -> InferRunConfig:
-        """Build run config for manifest by extracting entities from adapters.
+    ) -> InferRun:
+        """Build InferRun aggregate root for early persistence.
+
+        Created with config present but output=None (set at close).
 
         Application layer responsibility: extract domain entities from ports,
-        then delegate to domain factory for assembly.
+        then assemble into aggregate root.
 
         Args:
+            run_name: Run name
+            official: Whether this is an official run
+            notes: Optional notes about this run
             input_run_name: Resolved ingest run name
             start_idx: Actual start index used
             end_idx: Actual end index used
 
         Returns:
-            InferRunConfig for manifest persistence
+            InferRun aggregate root (config present, output=None)
         """
         # Extract domain entities from adapters
         provider = self.llm_provider.get_provider()
@@ -247,8 +261,8 @@ class InferenceApplication(ForRunningInference):
         template_text = self.prompt_builder.get_template_text()
         io_name = self.output_port.io_name
 
-        # Delegate to domain factory for assembly
-        return InferRunConfigFactory.create(
+        # Build config via factory
+        run_config = InferRunConfigFactory.create(
             provider=provider,
             model_config=model_config,
             retry_config=retry_config,
@@ -261,26 +275,13 @@ class InferenceApplication(ForRunningInference):
             end_idx=end_idx,
         )
 
-    def _build_run_info(
-        self,
-        run_name: str,
-        official: bool,
-        notes: Optional[str],
-    ) -> InferRunInfo:
-        """Build InferRunInfo entity for manifest persistence.
-
-        Args:
-            run_name: Run name
-            official: Whether this is an official run
-            notes: Optional notes about this run
-
-        Returns:
-            InferRunInfo entity
-        """
-        return InferRunInfo(
+        # Build InferRun aggregate root (output=None at this stage)
+        return InferRun(
             run_name=run_name,
             run_type=RunType.OFFICIAL if official else RunType.TEST,
             notes=notes,
+            infer_run_config=run_config,
+            infer_run_output=None,  # Set at close time
         )
 
     def _build_summary(

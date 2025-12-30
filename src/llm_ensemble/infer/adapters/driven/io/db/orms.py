@@ -306,7 +306,11 @@ class InferRunORM(Base):
 
     Links to:
     - InferRunConfigORM: What configuration was used (always present)
-    - InferRunOutputORM: What output was produced (1:1, always present)
+    - InferRunOutputORM: What output was produced (1:1, set when run completes)
+
+    Lifecycle:
+    - Created at start with config, output is NULL
+    - Output set when run completes
     """
     __tablename__ = "infer_runs"
     __natural_key__ = "run_name"
@@ -316,7 +320,7 @@ class InferRunORM(Base):
     run_name = Column(String(255), nullable=False, unique=True)
     run_type = Column(SQLEnum(RunType, schema="public"), nullable=False, default=RunType.TEST)
 
-    # Configuration used for this run
+    # Configuration used for this run (always present)
     infer_run_config_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("infer.infer_run_configs.id"),
@@ -324,12 +328,12 @@ class InferRunORM(Base):
         comment="Complete configuration bundle used for this run"
     )
 
-    # Output produced by this run (1:1 relationship, same ID)
+    # Output produced by this run (NULL until run completes, then 1:1)
     infer_run_output_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("infer.infer_run_outputs.id"),
-        nullable=False,
-        comment="Output produced by this run (1:1, always present)"
+        nullable=True,
+        comment="Output produced by this run (NULL until run completes, then 1:1 with same ID)"
     )
 
     git_sha = Column(String(40), nullable=True)

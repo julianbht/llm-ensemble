@@ -13,8 +13,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.infer.domain.entities.infer_run_info import InferRunInfo
-from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
+from llm_ensemble.infer.domain.entities.infer_run import InferRun
 from llm_ensemble.infer.application.write_summary import WriteSummary
 
 
@@ -31,8 +30,8 @@ class ForOutput(ABC):
     The write summary is captured when close() is called and can be retrieved
     after the context manager exits via get_summary().
 
-    Run context (InferRunInfo) is provided once during open() rather than
-    being embedded in every judgement, keeping the domain model clean.
+    InferRun is provided once during open() with config but no output yet.
+    Output is finalized in close().
 
     Note: Output destination (e.g., run_dir for file-based adapters) is
     provided at construction time, not through this interface.
@@ -51,24 +50,19 @@ class ForOutput(ABC):
     @abstractmethod
     def open(
         self,
-        run_info: InferRunInfo,
-        run_config: InferRunConfig,
+        infer_run: InferRun,
     ) -> "ForOutput":
-        """Initialize writer with run info and run config.
+        """Initialize writer with InferRun aggregate root.
 
-        The run_info contains metadata about the inference run (git SHA, timestamps, notes).
-
-        The run_config contains all configuration used for inference (model config, adapters,
-        retry config, execution context with input source and resolved sample range).
-
-        All metadata (provider, model_config, prompt_template, parser, indices)
-        is available from run_config and can be extracted during open() or write_one().
+        InferRun contains:
+        - Metadata: run_name, git_info, notes, run_type
+        - Configuration: infer_run_config (model, adapters, execution context)
+        - Output: infer_run_output (None at open time, set at close)
 
         For SQL writers, this creates the InferRun entity and prepares for streaming writes.
 
         Args:
-            run_info: Inference run metadata (git state, timestamps, notes)
-            run_config: Configuration bundle (model, adapters, retry, execution context with resolved indices)
+            infer_run: InferRun aggregate root (config present, output=None)
 
         Returns:
             Self, to enable context manager usage

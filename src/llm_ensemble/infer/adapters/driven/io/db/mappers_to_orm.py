@@ -15,6 +15,7 @@ These mappers handle the impedance mismatch for the write path.
 """
 
 from __future__ import annotations
+from typing import Optional
 from uuid import UUID
 
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
@@ -192,14 +193,14 @@ def infer_run_config_to_orm(infer_run_config: InferRunConfig) -> InferRunConfigO
 def infer_run_to_orm(
     infer_run: InferRun,
     infer_run_config_id: UUID,
-    infer_run_output_id: UUID,
+    infer_run_output_id: Optional[UUID] = None,
 ) -> InferRunORM:
     """Convert InferRun aggregate root to InferRunORM.
 
     Args:
         infer_run: InferRun aggregate root (already has UUID)
         infer_run_config_id: InferRunConfig UUID (for foreign key)
-        infer_run_output_id: InferRunOutput UUID (for foreign key, same as InferRun.id)
+        infer_run_output_id: InferRunOutput UUID (for foreign key, None until run completes)
 
     Returns:
         InferRunORM model ready for persistence

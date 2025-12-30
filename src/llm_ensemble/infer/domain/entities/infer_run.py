@@ -5,6 +5,7 @@ This is the aggregate root that represents a complete inference run.
 """
 
 from __future__ import annotations
+from typing import Optional
 from pydantic import ConfigDict, Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
@@ -18,15 +19,18 @@ class InferRun(RunInfo):
     Extends RunInfo with inference-specific execution details.
 
     Aggregate root that connects:
-    - What was intended (InferRunConfig)
-    - What was produced (InferRunOutput)
+    - What was intended (InferRunConfig) - always present
+    - What was produced (InferRunOutput) - set when run completes
 
     Inherits from RunInfo:
     - id, run_name, run_type
     - notes
     - git_info (git SHA, branch, clean status)
 
-    1:1 relationship between InferRun and InferRunOutput (same ID).
+    Lifecycle:
+    - Created at start with config, output is None
+    - Output added when run completes
+    - 1:1 relationship between InferRun and InferRunOutput (same ID)
     """
 
     cli_name: str = Field(
@@ -34,16 +38,16 @@ class InferRun(RunInfo):
         description="Name of the CLI that generated this run (always 'infer')"
     )
 
-    # What was intended (configuration)
+    # What was intended (configuration) - always present
     infer_run_config: InferRunConfig = Field(
         ...,
         description="Configuration used for this run"
     )
 
-    # What was produced (output) - 1:1 relationship
-    infer_run_output: InferRunOutput = Field(
-        ...,
-        description="Output produced by this run (1:1, always present)"
+    # What was produced (output) - None until run completes
+    infer_run_output: Optional[InferRunOutput] = Field(
+        default=None,
+        description="Output produced by this run (None until run completes, then 1:1)"
     )
 
     model_config = ConfigDict(frozen=True)

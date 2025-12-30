@@ -22,10 +22,10 @@ from datetime import datetime
 
 from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.aggregate.domain.entities.aggregated_dataset import AggregatedDataset
 from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
 from llm_ensemble.aggregate.domain.entities.aggregate_run_summary import AggregateRunSummary
 from llm_ensemble.aggregate.domain.aggregate_run_factory import AggregateRunFactory
+from llm_ensemble.aggregate.domain.aggregated_dataset_builder import build_aggregated_dataset
 from llm_ensemble.aggregate.application.ports.driven.for_output import ForOutput
 from llm_ensemble.aggregate.application.ports.driven.for_aggregating import ForAggregating
 from llm_ensemble.aggregate.application.ports.driven.for_input import ForInput
@@ -184,7 +184,7 @@ class AggregationApplication:
             )
 
         # Create AggregatedDataset (computes fingerprint and UUID from votes)
-        aggregated_dataset = AggregatedDataset.create(aggregated_votes)
+        aggregated_dataset = build_aggregated_dataset(aggregated_votes)
 
         # Track end time
         end_time = datetime.now()

@@ -9,6 +9,9 @@ from collections import Counter
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.application.ports.driven.for_aggregating import ForAggregating
+from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
+from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy
+from llm_ensemble.aggregate.domain.aggregated_vote_builder import build_aggregated_vote
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
@@ -22,22 +25,25 @@ class MajorityVoteAdapter(ForAggregating):
 
     Confidence: Fraction of votes that went to the winning label.
 
-    Implements pure voting logic in aggregate_raw(), returning simple dict.
-    Domain object creation handled by base class.
     Strategy identity comes from config via constructor.
     """
 
-    def aggregate_raw(
-        self,
-        judgements: list[LLMJudgement]
-    ) -> dict:
-        """Apply majority vote logic - return raw vote data.
+    def __init__(self, strategy_name: str):
+        """Initialize majority vote adapter with strategy name.
+
+        Args:
+            strategy_name: Natural key for AggregationStrategy entity (from config)
+        """
+        self.strategy_name = strategy_name
+
+    def aggregate(self, judgements: list[LLMJudgement]) -> AggregatedVote:
+        """Apply majority vote logic and create AggregatedVote entity.
 
         Args:
             judgements: All model judgements for a single (query_id, docid) pair
 
         Returns:
-            dict with final_label, final_confidence, final_reasoning
+            AggregatedVote domain entity with consensus decision and metadata
         """
         # Extract valid labels for voting
         valid_labels: list[RelevanceScore] = []
@@ -49,11 +55,14 @@ class MajorityVoteAdapter(ForAggregating):
 
         # Handle edge case: no valid votes
         if not valid_labels:
-            return {
-                "final_label": None,
-                "final_confidence": 0.0,
-                "final_reasoning": "No valid votes (all models failed to parse)",
-            }
+            aggregation_strategy = self.get_strategy()
+            return build_aggregated_vote(
+                aggregation_strategy=aggregation_strategy,
+                llm_judgements=judgements,
+                final_label=None,
+                final_confidence=0.0,
+                final_reasoning="No valid votes (all models failed to parse)",
+            )
 
         # Count votes for each label
         vote_counts = Counter(valid_labels)
@@ -81,8 +90,20 @@ class MajorityVoteAdapter(ForAggregating):
         else:
             reasoning = f"{max_count}/{total_votes} models voted {final_label.label}"
 
-        return {
-            "final_label": final_label,
-            "final_confidence": final_confidence,
-            "final_reasoning": reasoning,
-        }
+        # Build AggregatedVote entity
+        aggregation_strategy = self.get_strategy()
+        return build_aggregated_vote(
+            aggregation_strategy=aggregation_strategy,
+            llm_judgements=judgements,
+            final_label=final_label,
+            final_confidence=final_confidence,
+            final_reasoning=reasoning,
+        )
+
+    def get_strategy(self) -> AggregationStrategy:
+        """Get AggregationStrategy metadata for this adapter.
+
+        Returns:
+            AggregationStrategy entity with id and name
+        """
+        return AggregationStrategy(name=self.strategy_name)

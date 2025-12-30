@@ -1,13 +1,7 @@
 """Port interface for aggregation strategy adapters.
 
 Defines the abstract contract that all aggregation strategy adapters must implement.
-This allows the system to use different aggregation methods (majority vote, weighted,
-etc.) without coupling to specific implementations.
-
-Uses template method pattern: aggregate() is concrete and handles DTO→Domain mapping,
-subclasses implement aggregate_raw() with pure voting logic.
-
-Strategy identity comes from config, not from adapter.
+Adapters translate aggregation logic concerns into AggregatedVote entities.
 """
 
 from __future__ import annotations
@@ -15,45 +9,35 @@ from abc import ABC, abstractmethod
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
-from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy as AggregationStrategyEntity
+from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy
 
 
 class ForAggregating(ABC):
-    """Abstract base class for aggregation strategy adapters with built-in mapping.
+    """Abstract interface for aggregation strategy adapters.
 
-    Implementations provide voting logic in aggregate_raw(), which returns a simple dict.
-    The base class handles conversion to AggregatedVote domain objects.
+    Adapters implement this interface to build AggregatedVote domain entities
+    from lists of LLM judgements. The adapter is responsible for:
+    1. Applying the aggregation logic (internal implementation detail)
+    2. Constructing and returning complete AggregatedVote entities
+    3. Providing metadata about the strategy (via get_strategy())
 
-    Template Method Pattern:
-    - aggregate() (concrete): calls aggregate_raw() and creates domain object
-    - aggregate_raw() (abstract): subclasses implement voting logic
-
-    This separates pure algorithm logic from domain object creation.
-    Strategy identity (strategy_name) comes from config and is passed to constructor.
+    This follows proper hexagonal architecture - adapters (outer layer)
+    depend on domain entities (inner layer), translating external concerns
+    (aggregation algorithms) into domain concepts the service can work with.
     """
 
-    def __init__(self, strategy_name: str):
-        """Initialize strategy adapter with identity from config.
-
-        Args:
-            strategy_name: Natural key for AggregationStrategy entity (from config)
-        """
-        self.strategy_name = strategy_name
-
     @abstractmethod
-    def aggregate_raw(
-        self,
-        judgements: list[LLMJudgement]
-    ) -> dict:
-        """Implement voting logic - return raw vote data.
+    def aggregate(self, judgements: list[LLMJudgement]) -> AggregatedVote:
+        """Apply aggregation strategy and create AggregatedVote domain entity.
 
-        Subclasses implement this with pure voting logic.
+        Applies the aggregation logic to the judgements and constructs
+        an AggregatedVote domain entity with the results.
 
         Args:
             judgements: All model judgements for a single query-document pair
 
         Returns:
-            dict with keys: final_label, final_confidence, final_reasoning
+            AggregatedVote domain entity with consensus decision and metadata
 
         Note:
             Strategy should handle edge cases gracefully:
@@ -63,32 +47,11 @@ class ForAggregating(ABC):
         """
         pass
 
-    def aggregate(
-        self,
-        judgements: list[LLMJudgement]
-    ) -> AggregatedVote:
-        """Apply aggregation strategy to combine multiple model judgements.
-
-        Public interface called by service. Internally calls aggregate_raw()
-        and maps result to domain object.
-
-        Args:
-            judgements: All model judgements for a single query-document pair
+    @abstractmethod
+    def get_strategy(self) -> AggregationStrategy:
+        """Get AggregationStrategy metadata for this adapter.
 
         Returns:
-            AggregatedVote with consensus decision and metadata
+            AggregationStrategy entity with id and name
         """
-        # Call subclass implementation (returns dict)
-        vote_data = self.aggregate_raw(judgements)
-
-        # Create AggregationStrategy entity from adapter's strategy_name
-        aggregation_strategy = AggregationStrategyEntity.create(self.strategy_name)
-
-        # Map to domain entity (port layer's responsibility)
-        return AggregatedVote.create(
-            aggregation_strategy=aggregation_strategy,
-            llm_judgements=judgements,
-            final_label=vote_data.get("final_label"),
-            final_confidence=vote_data.get("final_confidence"),
-            final_reasoning=vote_data.get("final_reasoning"),
-        )
+        pass

@@ -1,9 +1,13 @@
-"""AggregatedVote - result from applying an ensemble strategy to multiple model votes.
+"""AggregatedVote - pure data entity for aggregation results.
 
 Represents the output of a single aggregation strategy (e.g., majority vote, weighted vote)
 applied to a group of LLM judgements for the same query-document pair.
 
-This replaces the old AggregatedScore schema to match the new ORM structure.
+Design:
+- Pure data carrier - no business logic or factory methods
+- Validation and construction logic in aggregated_vote_builder.py
+- Stores full LLMJudgement objects for self-contained domain model
+- Each LLMJudgement comes from a different judged_dataset (different model config)
 """
 
 from __future__ import annotations
@@ -17,18 +21,11 @@ from llm_ensemble.aggregate.domain.entities.aggregation_strategy import Aggregat
 
 
 class AggregatedVote(BaseModel):
-    """Result from applying an ensemble strategy to multiple model predictions.
+    """Pure data entity for aggregation results.
 
-    Contains:
-    - id: Random UUID identifier
-    - aggregation_strategy: Which aggregation strategy was used (full entity)
-    - llm_judgements: All LLM judgements that were aggregated (full objects, all for same dataset_sample)
-    - final_label: Consensus label chosen by the strategy
-    - final_confidence: Strategy's confidence in the decision
-    - final_reasoning: Human-readable explanation of how consensus was reached
+    Contains the result from applying an ensemble strategy to multiple model predictions.
 
-    Design: Stores full LLMJudgement objects for self-contained domain model.
-    Each LLMJudgement comes from a different judged_dataset (different model config).
+    Use `build_aggregated_vote()` from aggregated_vote_builder.py to create instances.
     """
 
     id: UUID = Field(
@@ -42,7 +39,7 @@ class AggregatedVote(BaseModel):
     )
 
     llm_judgements: list[LLMJudgement] = Field(
-        default_factory=list,
+        ...,
         description="All LLM judgements that were aggregated (one from each judged_dataset/model config, all for same dataset_sample)"
     )
 
@@ -69,49 +66,3 @@ class AggregatedVote(BaseModel):
             "E.g., '3/5 models voted RELEVANT', 'tie broken by lowest label'"
         )
     )
-
-    @classmethod
-    def create(
-        cls,
-        aggregation_strategy: AggregationStrategy,
-        llm_judgements: list[LLMJudgement],
-        final_label: Optional[RelevanceScore] = None,
-        final_confidence: Optional[float] = None,
-        final_reasoning: Optional[str] = None,
-    ) -> "AggregatedVote":
-        """Create AggregatedVote with validation.
-
-        Args:
-            aggregation_strategy: Which aggregation strategy was used (full entity)
-            llm_judgements: All LLM judgements that were aggregated (must all be for same dataset_sample)
-            final_label: Consensus label chosen by the strategy
-            final_confidence: Confidence in the aggregated decision
-            final_reasoning: Explanation of how consensus was reached
-
-        Returns:
-            AggregatedVote with random UUID
-
-        Raises:
-            ValueError: If llm_judgements is empty or judgements have different dataset_sample_ids
-        """
-        if not llm_judgements:
-            raise ValueError("llm_judgements cannot be empty")
-
-        # Extract dataset_sample_id from first judgement
-        dataset_sample_id = llm_judgements[0].llm_prompt.dataset_sample.id
-
-        # Validate all judgements are for the same sample
-        for judgement in llm_judgements[1:]:
-            if judgement.llm_prompt.dataset_sample.id != dataset_sample_id:
-                raise ValueError(
-                    f"All llm_judgements must be for the same dataset_sample. "
-                    f"Expected {dataset_sample_id}, got {judgement.llm_prompt.dataset_sample.id}"
-                )
-
-        return cls(
-            aggregation_strategy=aggregation_strategy,
-            llm_judgements=llm_judgements,
-            final_label=final_label,
-            final_confidence=final_confidence,
-            final_reasoning=final_reasoning,
-        )

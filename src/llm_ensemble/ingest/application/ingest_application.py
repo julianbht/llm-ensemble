@@ -35,10 +35,6 @@ from llm_ensemble.libs.logging.log_events import IngestLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_manager import write_summary
 
-# Load runtime env configuration
-from llm_ensemble.libs.runtime.env import load_runtime_config
-load_runtime_config()
-
 
 class IngestApplication(ForRunningIngest):
     """Application use case for coordinating data ingestion pipeline.

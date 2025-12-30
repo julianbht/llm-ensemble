@@ -48,10 +48,6 @@ from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_manager import write_summary
 from llm_ensemble.libs.runtime.tag_manager import TagManager
 
-# Load runtime env configuration
-from llm_ensemble.libs.runtime.env import load_runtime_config
-load_runtime_config()
-
 
 class InferenceApplication(ForRunningInference):
     """Application use case for coordinating LLM inference pipeline.

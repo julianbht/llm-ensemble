@@ -25,7 +25,6 @@ from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
 from llm_ensemble.aggregate.domain.entities.aggregate_run_summary import AggregateRunSummary
 from llm_ensemble.aggregate.domain.aggregate_run_factory import AggregateRunFactory
-from llm_ensemble.aggregate.domain.aggregated_dataset_builder import build_aggregated_dataset
 from llm_ensemble.aggregate.domain.validation import validate_infer_run_outputs_for_aggregation
 
 # Driving port (application implements this)
@@ -104,8 +103,7 @@ class AggregationApplication(ForRunningAggregation):
         - Validate sample_fingerprints match
         - Group judgements by dataset_sample_id
         - Apply aggregation strategy to each group
-        - Create AggregatedDataset
-        - Build AggregateRun entity
+        - Build AggregateRun entity via factory (creates AggregatedDataset)
         - Write AggregateRun via writer port (batch persistence)
         - Write summary and finalize outputs
         - Return summary statistics
@@ -172,24 +170,21 @@ class AggregationApplication(ForRunningAggregation):
             # Log progress
             logger.info(
                 AggregateLogEvent.SAMPLE_AGGREGATED,
-                final_label=aggregated_vote.final_label.label if aggregated_vote.final_label else "None",
-                confidence=f"{aggregated_vote.final_confidence:.2f}" if aggregated_vote.final_confidence else "0.00",
-                num_llm_judgements=len(llm_judgements_for_sample),
+                final_label=aggregated_vote.final_label,
+                confidence=aggregated_vote.final_confidence
             )
-
-        # Create AggregatedDataset (computes fingerprint and UUID from votes)
-        aggregated_dataset = build_aggregated_dataset(aggregated_votes)
 
         # Track end time
         end_time = datetime.now()
 
+        # Build complete aggregate root via factory
         aggregate_run = AggregateRunFactory.create(
             aggregation_strategy_name=self.strategy.get_strategy().name,
             io_config_name=self.output_port.io_name,
             input_run_names=resolved_run_names,
             run_name=self.run_name,
             run_type=RunType.OFFICIAL if official else RunType.TEST,
-            aggregated_dataset=aggregated_dataset,
+            aggregated_votes=aggregated_votes,
             start_time=start_time,
             end_time=end_time,
             notes=notes,

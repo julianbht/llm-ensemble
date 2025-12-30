@@ -17,7 +17,8 @@ from typing import Optional
 
 from llm_ensemble.aggregate.domain.entities.aggregate_run import AggregateRun
 from llm_ensemble.aggregate.domain.entities.aggregate_run_config import AggregateRunConfig
-from llm_ensemble.aggregate.domain.entities.aggregated_dataset import AggregatedDataset
+from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
+from llm_ensemble.aggregate.domain.aggregated_dataset_builder import build_aggregated_dataset
 from llm_ensemble.libs.runtime.run_info import RunType
 
 
@@ -34,7 +35,7 @@ class AggregateRunFactory:
         input_run_names: list[str],
         run_name: str,
         run_type: RunType,
-        aggregated_dataset: AggregatedDataset,
+        aggregated_votes: list[AggregatedVote],
         start_time: datetime,
         end_time: datetime,
         notes: Optional[str],
@@ -47,7 +48,7 @@ class AggregateRunFactory:
             input_run_names: List of infer run identifiers to read judgements from
             run_name: Run identifier
             run_type: Type of run (OFFICIAL or TEST)
-            aggregated_dataset: Dataset produced by this run
+            aggregated_votes: List of aggregated votes produced by this run
             start_time: When the run started
             end_time: When the run completed
             notes: Notes about this run (experiment purpose, hypothesis, etc.)
@@ -61,6 +62,9 @@ class AggregateRunFactory:
             io_config_name=io_config_name,
             input_run_names=input_run_names,
         )
+
+        # Build AggregatedDataset from votes (computes fingerprint and UUID)
+        aggregated_dataset = build_aggregated_dataset(aggregated_votes)
 
         # Assemble complete aggregate root
         return AggregateRun(

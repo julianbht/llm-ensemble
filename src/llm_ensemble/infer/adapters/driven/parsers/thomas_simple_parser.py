@@ -14,7 +14,6 @@ from llm_ensemble.infer.application.ports.driven.for_parsing_responses import Fo
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
 from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue, ParserIssueCode
-from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
@@ -35,7 +34,6 @@ class ThomasSimpleParser(ForParsingResponses):
             name=self.PARSER_NAME,
             version="1.0"
         )
-        self.logger = get_logger(component="thomas_simple_parser")
 
     def parse(self, raw_text: str) -> tuple[Optional[LLMScore], list[ParserIssue]]:
         """Parse JSON response and create LLMScore domain entity.
@@ -103,7 +101,6 @@ class ThomasSimpleParser(ForParsingResponses):
                 metadata={"expected_format": '{"O": N}'}
             )
             warnings.append(warning)
-            self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
             return None
 
         json_str = json_match.group(0)
@@ -117,7 +114,6 @@ class ThomasSimpleParser(ForParsingResponses):
                 metadata={"error_type": type(e).__name__}
             )
             warnings.append(warning)
-            self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
             return None
 
     def _extract_score_field(self, json_data: dict, warnings: list[ParserIssue]) -> Optional[int]:
@@ -141,7 +137,6 @@ class ThomasSimpleParser(ForParsingResponses):
                 metadata={"field_name": "O"}
             )
             warnings.append(warning)
-            self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
             return None
 
         return score
@@ -165,7 +160,6 @@ class ThomasSimpleParser(ForParsingResponses):
                 metadata={"field_name": "O", "actual_value": str(score_value)}
             )
             warnings.append(warning)
-            self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
             return None
 
         try:
@@ -177,5 +171,4 @@ class ThomasSimpleParser(ForParsingResponses):
                 metadata={"value": score_value}
             )
             warnings.append(warning)
-            self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
             return None

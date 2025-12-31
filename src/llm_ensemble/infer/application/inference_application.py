@@ -184,6 +184,7 @@ class InferenceApplication(ForRunningInference):
                 logger.info(InferLogEvent.BUILDING_PROMPT)
                 prompt_text = self.prompt_builder.build_prompt(dataset_sample)
                 builder.with_prompt(prompt_text)
+                logger.debug(InferLogEvent.PROMPT_BUILT, prompt_text=prompt_text)
 
                 # Step 2: Run inference
                 logger.info(InferLogEvent.SENDING_REQUEST)
@@ -191,18 +192,17 @@ class InferenceApplication(ForRunningInference):
                 builder.with_llm_response(raw_response_text, invocation_metrics)
                 logger.info(InferLogEvent.RESPONSE_RECEIVED, latency_s=round(invocation_metrics.latency_ms / 1000))
                 logger.info(InferLogEvent.COST_CALCULATED,cost_estimate_usd=invocation_metrics.cost_estimate_usd)
+                logger.debug(InferLogEvent.RAW_RESPONSE, raw_response=raw_response_text)
 
                 # Step 3: Parse response
                 logger.info(InferLogEvent.PARSING_REQUEST)
                 llm_score, parse_issues = self.response_parser.parse(raw_response_text)
                 builder.with_parsed_score(llm_score, parse_issues)
+                logger.debug(InferLogEvent.SCORE_EXTRACTED, extracted_label=llm_score.label if llm_score else None)
 
                 if parse_issues:
                     for issue in parse_issues:
                         logger.warning(issue_to_string(issue))
-                elif llm_score is None:
-                    # Parser returned None but no issues - log raw response for debugging
-                    logger.warning(f"Parsing failed with no issues reported. Raw response: {raw_response_text[:500]}")
 
                 # Build complete judgement
                 judgement = builder.build()

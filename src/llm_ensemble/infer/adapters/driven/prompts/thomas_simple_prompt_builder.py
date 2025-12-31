@@ -24,18 +24,14 @@ class ThomasSimplePromptBuilder(ForBuildingPrompts):
     TEMPLATE_NAME = "thomas-simple"
     TEMPLATE_ID = uuid.uuid5(uuid.NAMESPACE_DNS, "thomas-simple-prompt-builder-v1")
     TEMPLATE_TEXT = dedent("""\
-        Given a query and a web page, you must
-        provide a score on an integer scale of 0 to 2 with the
-        following meanings:
+        Given a query and a web page, you must provide a score on an integer scale of 0 to 2 with the following meanings:
         2 = highly relevant, very helpful for this query
-        1 = relevant, may be partly helpful but might contain
-        other irrelevant content
+        1 = relevant, may be partly helpful but might contain other irrelevant content
         0 = not relevant, should never be shown for this query
-        Assume that you are writing a report on the subject of the
-        topic. If you would use any of the information contained
-        in the web page in such a report, mark it 1. If the web page
-        is primarily about the topic, or contains vital information
-        about the topic, mark it 2. Otherwise, mark it 0.
+        Assume that you are writing a report on the subject of the topic.
+        If you would use any of the information contained in the web page in such a report, mark it 1.
+        If the web page is primarily about the topic, or contains vital information about the topic, mark it 2. 
+        Otherwise, mark it 0.
 
         Query
         A person has typed [{query}] into a search engine.

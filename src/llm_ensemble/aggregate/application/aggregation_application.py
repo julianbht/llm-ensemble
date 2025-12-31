@@ -188,7 +188,7 @@ class AggregationApplication(ForRunningAggregation):
             logger.info(
                 AggregateLogEvent.SAMPLE_AGGREGATED,
                 votes=vote_breakdown,
-                confidence=aggregated_vote.final_confidence
+                reason=aggregated_vote.final_reasoning
             )
 
         # Track end time
@@ -198,7 +198,7 @@ class AggregationApplication(ForRunningAggregation):
         aggregate_run = AggregateRunFactory.create(
             aggregation_strategy_name=self.strategy.get_strategy().name,
             io_config_name=self.output_port.io_name,
-            input_run_names=resolved_run_names,
+            input_run_names=input_run_names,
             run_name=self.run_name,
             run_type=RunType.OFFICIAL if official else RunType.TEST,
             aggregated_votes=aggregated_votes,

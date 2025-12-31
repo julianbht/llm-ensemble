@@ -199,7 +199,6 @@ class InferenceApplication(ForRunningInference):
                 llm_score, parse_issues = self.response_parser.parse(raw_response_text)
                 builder.with_parsed_score(llm_score, parse_issues)
                 logger.debug(InferLogEvent.SCORE_EXTRACTED, extracted_label=llm_score.label if llm_score else None)
-
                 if parse_issues:
                     for issue in parse_issues:
                         logger.warning(issue_to_string(issue))

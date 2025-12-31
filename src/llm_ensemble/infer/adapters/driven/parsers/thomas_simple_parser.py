@@ -37,18 +37,18 @@ class ThomasSimpleParser(ForParsingResponses):
         )
         self.logger = get_logger(component="thomas_simple_parser")
 
-    def parse(self, raw_text: str) -> tuple[LLMScore, list[ParserIssue]]:
+    def parse(self, raw_text: str) -> tuple[Optional[LLMScore], list[ParserIssue]]:
         """Parse JSON response and create LLMScore domain entity.
 
         Extracts the "O" field from JSON response and constructs an LLMScore
-        with extracted label. Returns warnings separately.
+        with extracted label. Returns None if no label could be extracted.
 
         Args:
             raw_text: Raw text response from the LLM
 
         Returns:
-            Tuple of (LLMScore, warnings):
-            - LLMScore: parsed fields (no parser metadata or response_text)
+            Tuple of (LLMScore or None, warnings):
+            - LLMScore: parsed fields, or None if no label could be extracted
             - warnings: List of parser warnings from the parsing process
         """
         warnings: list[ParserIssue] = []
@@ -60,7 +60,11 @@ class ThomasSimpleParser(ForParsingResponses):
             score_value = self._extract_score_field(json_data, warnings)
             if score_value is not None:
                 label = self._validate_score(score_value, warnings)
-        
+
+        # Only create LLMScore if we successfully extracted a label
+        if label is None:
+            return None, warnings
+
         score = LLMScore(
             label=label,
             confidence=None,

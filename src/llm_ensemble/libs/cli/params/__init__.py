@@ -11,7 +11,6 @@ from .shared_params import (
     EndIdx,
     ModelCfg,
     RetryCfg,
-    Tag,
     PromptTemplate,
 )
 from .aggregate import AggregationStrategy, AggregateIoCfg, InferRunInput
@@ -29,7 +28,6 @@ __all__ = [
     "EndIdx",
     "ModelCfg",
     "RetryCfg",
-    "Tag",
     "PromptTemplate",
     "Provider",
     "AggregationStrategy",

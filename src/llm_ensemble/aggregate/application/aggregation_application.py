@@ -43,7 +43,6 @@ from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import AggregateLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_manager import write_summary
-from llm_ensemble.libs.runtime.tag_manager import TagManager
 
 
 def _format_vote_breakdown(llm_judgements: list[LLMJudgement], final_label: Optional[int]) -> str:
@@ -148,11 +147,10 @@ class AggregationApplication(ForRunningAggregation):
         start_time = datetime.now()
 
         # Read InferRunOutputs (one per run) via reader port
-        resolved_run_names = [TagManager.resolve_input(rn, "infer") for rn in input_run_names]
-        judged_datasets: list[InferRunOutput] = self.input_port.read(resolved_run_names)
+        judged_datasets: list[InferRunOutput] = self.input_port.read(input_run_names)
 
         # Validate completion and sample_fingerprint consistency
-        validate_infer_run_outputs_for_aggregation(judged_datasets, resolved_run_names)
+        validate_infer_run_outputs_for_aggregation(judged_datasets, input_run_names)
         logger.info(
             AggregateLogEvent.DATASETS_VALIDATED,
             num_datasets=len(judged_datasets),

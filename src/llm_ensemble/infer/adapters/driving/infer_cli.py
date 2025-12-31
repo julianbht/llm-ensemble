@@ -30,7 +30,6 @@ from llm_ensemble.libs.cli.params import (
     Provider,
     InferIoCfg,
     RetryCfg,
-    Tag,
     InferIngestRunInput,
 )
 
@@ -56,7 +55,6 @@ def infer(
     run_name: RunName = None,
     official: Official = False,
     notes: Notes = None,
-    tag: Tag = None,
 ):
     """Run LLM inference on judging examples.
 
@@ -82,7 +80,6 @@ def infer(
         retry_config_name=retry_cfg,
         run_name=run_name,
         official=official,
-        tag=tag,
     )
 
     # Run application

@@ -6,7 +6,7 @@ from typing import Annotated
 
 import typer
 
-from llm_ensemble.libs.cli.params.types import InferIOConfigParamType, RunInputParamType, ProviderParamType
+from llm_ensemble.libs.cli.params.types import InferIOConfigParamType, ProviderParamType
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
 InferIoCfg = Annotated[
@@ -25,8 +25,7 @@ IngestRunInput = Annotated[
         ...,
         "--input",
         "-i",
-        click_type=RunInputParamType("ingest"),
-        help="Ingest run to read samples from. Use run name or @tag (e.g., '@my-experiment')",
+        help="Ingest run name to read samples from",
     ),
 ]
 

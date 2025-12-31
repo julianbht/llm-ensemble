@@ -6,7 +6,7 @@ from typing import Annotated
 
 import typer
 
-from llm_ensemble.libs.cli.params.types import AggregateIOConfigParamType, RunInputParamType
+from llm_ensemble.libs.cli.params.types import AggregateIOConfigParamType
 from llm_ensemble.libs.cli.params.aggregation_strategy import AggregationStrategyParamType
 from llm_ensemble.libs.runtime.path_manager import PathManager
 
@@ -36,7 +36,6 @@ InferRunInput = Annotated[
         ...,
         "--input",
         "-i",
-        click_type=RunInputParamType("infer"),
-        help="Infer runs to read judgements from. Use run names or @tags (e.g., '@my-experiment'). Can specify multiple.",
+        help="Infer run names to read judgements from. Can specify multiple.",
     ),
 ]

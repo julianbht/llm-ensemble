@@ -46,7 +46,6 @@ from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_manager import write_summary
-from llm_ensemble.libs.runtime.tag_manager import TagManager
 
 
 class InferenceApplication(ForRunningInference):
@@ -149,8 +148,7 @@ class InferenceApplication(ForRunningInference):
         )
 
         # Read NormalizedDataset
-        resolved_input_run_name = TagManager.resolve_input(input_run_name, "ingest")
-        normalized_dataset = self.input_port.read(resolved_input_run_name)
+        normalized_dataset = self.input_port.read(input_run_name)
         logger.info(InferLogEvent.INPUT_READ)
 
         # Slice to get samples that we want to judge

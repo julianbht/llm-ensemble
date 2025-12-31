@@ -13,7 +13,6 @@ from llm_ensemble.libs.cli.params.types import (
     ModelConfigParamType,
     PromptTemplateParamType,
     RetryConfigParamType,
-    RunInputParamType,
 )
 
 InputPath = Annotated[
@@ -115,13 +114,5 @@ PromptTemplate = Annotated[
         "--prompt-template",
         click_type=PromptTemplateParamType(),
         help="Prompt template name (bundles builder and parser, e.g., 'thomas-simple')",
-    ),
-]
-
-Tag = Annotated[
-    Optional[str],
-    typer.Option(
-        "--tag",
-        help="Tag this run for easy reference by downstream CLIs (e.g., 'my-experiment')",
     ),
 ]

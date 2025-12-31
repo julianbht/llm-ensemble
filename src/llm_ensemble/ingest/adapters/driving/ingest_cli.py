@@ -25,7 +25,6 @@ from llm_ensemble.libs.cli.params import (
     Notes,
     Limit,
     IngestIoCfg,
-    Tag,
 )
 
 app = typer.Typer(
@@ -45,7 +44,6 @@ def ingest(
     run_name: RunName = None,
     official: Official = False,
     notes: Notes = None,
-    tag: Tag = None,
 ):
     """Normalize raw IR datasets into JudgingSample records.
 
@@ -61,7 +59,6 @@ def ingest(
         io_name=io_cfg,
         run_name=run_name,
         official=official,
-        tag=tag,
     )
 
     # Run application

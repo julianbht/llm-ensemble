@@ -26,7 +26,6 @@ from llm_ensemble.libs.cli.params import (
     AggregationStrategy,
     AggregateIoCfg,
     InferRunInput,
-    Tag,
 )
 
 app = typer.Typer(
@@ -46,7 +45,6 @@ def aggregate(
     run_name: RunName = None,
     official: Official = False,
     notes: Notes = None,
-    tag: Tag = None,
 ):
     """Combine model judgements using ensemble strategies (e.g., majority vote).
 
@@ -67,7 +65,6 @@ def aggregate(
         io_name=io_cfg,
         run_name=run_name,
         official=official,
-        tag=tag,
     )
 
     # Run application

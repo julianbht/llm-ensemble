@@ -53,7 +53,7 @@ class InferLogEvent(str, Enum):
     LOGS_SAVED = "logs_saved"
     WARNINGS_COLLECTED = "warnings_collected"
     BUILDING_PROMPT = "building_prompt"
-    PARSING_REQUEST = "parsing_request"
+    PARSING_RESPONSE = "parsing_response"
 
     # Debug-level events (file-only, not console)
     PROMPT_BUILT = "prompt_built"

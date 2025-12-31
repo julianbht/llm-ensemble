@@ -195,7 +195,7 @@ class InferenceApplication(ForRunningInference):
                 logger.debug(InferLogEvent.RAW_RESPONSE, raw_response=raw_response_text)
 
                 # Step 3: Parse response
-                logger.info(InferLogEvent.PARSING_REQUEST)
+                logger.info(InferLogEvent.PARSING_RESPONSE)
                 llm_score, parse_issues = self.response_parser.parse(raw_response_text)
                 builder.with_parsed_score(llm_score, parse_issues)
                 logger.debug(InferLogEvent.SCORE_EXTRACTED, extracted_label=llm_score.label if llm_score else None)

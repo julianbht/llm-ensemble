@@ -15,6 +15,8 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 from hashlib import sha256
 import json
 
+from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy
+
 
 class AggregateRunConfig(BaseModel):
     """Immutable configuration bundle for an aggregate run.
@@ -28,9 +30,9 @@ class AggregateRunConfig(BaseModel):
         description="Random UUID for this config bundle"
     )
 
-    aggregation_strategy_name: str = Field(
+    aggregation_strategy: AggregationStrategy = Field(
         ...,
-        description="Name of the aggregation strategy used (e.g., 'majority_vote')"
+        description="Aggregation strategy configuration (id + name, e.g., 'majority_vote')"
     )
 
     io_config_name: str = Field(
@@ -43,7 +45,7 @@ class AggregateRunConfig(BaseModel):
         description="List of infer run identifiers to read judgements from"
     )
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  
     @property
     def input_run_names_hash(self) -> str:
         """Compute SHA256 hash of sorted input_run_names for natural key.

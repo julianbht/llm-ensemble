@@ -99,8 +99,8 @@ class DbAggregatedDatasetWriter(ForOutput):
         if not aggregated_votes:
             return WriteSummary()
 
-        # Extract aggregation strategy from first vote
-        aggregation_strategy = aggregated_votes[0].aggregation_strategy
+        # Extract aggregation strategy from run config
+        aggregation_strategy = aggregate_run.aggregate_run_config.aggregation_strategy
 
         # Note: Tables must be created via `make db-init` before first write
         # Create summary builder
@@ -114,9 +114,9 @@ class DbAggregatedDatasetWriter(ForOutput):
                 #
                 # Dependency graph:
                 #   1. AggregationStrategy (no dependencies - global entity)
-                #   2. AggregateRunConfig (no dependencies)
+                #   2. AggregateRunConfig (depends on AggregationStrategy)
                 #   3. AggregatedDataset entity (no dependencies)
-                #   4. AggregatedVote (depends on AggregationStrategy)
+                #   4. AggregatedVote (no FK dependencies - pure data)
                 #   5. AggregationVote junction (depends on AggregatedVote + LLMJudgement)
                 #   6. AggregatedDatasetVote junction (depends on AggregatedDataset + AggregatedVote)
                 #   7. AggregateRun (depends on AggregateRunConfig + AggregatedDataset)
@@ -128,9 +128,9 @@ class DbAggregatedDatasetWriter(ForOutput):
                 if created > 0 or skipped > 0:
                     self.logger.info(AggregateWriteEvent.WRITE_STRATEGY, created=created, skipped=skipped)
 
-                # 2. AggregateRunConfig (no FK dependencies)
+                # 2. AggregateRunConfig (depends on AggregationStrategy)
                 created, skipped, config_uuid = self._save_aggregate_run_config(
-                    session, aggregate_run.aggregate_run_config
+                    session, aggregate_run.aggregate_run_config, strategy_uuid
                 )
                 summary.add_configs(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
@@ -145,10 +145,9 @@ class DbAggregatedDatasetWriter(ForOutput):
                 # Flush to ensure entities are persisted before creating dependent records
                 session.flush()
 
-                # 4. AggregatedVote (depends on AggregationStrategy)
-                # Use actual DB UUID from strategy, not domain UUID
+                # 4. AggregatedVote (no FK dependencies - pure data)
                 created, skipped, vote_uuid_map = self._save_aggregated_votes(
-                    session, aggregated_votes, strategy_uuid
+                    session, aggregated_votes
                 )
                 summary.add_aggregated_votes(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
@@ -226,7 +225,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         return (1, 0, strategy_orm.id)
 
     def _save_aggregate_run_config(
-        self, session: Session, run_config: AggregateRunConfig
+        self, session: Session, run_config: AggregateRunConfig, strategy_uuid: UUID
     ) -> Tuple[int, int, str]:
         """Save aggregate run config entity to database using pre-query pattern.
 
@@ -236,6 +235,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         Args:
             session: SQLAlchemy session
             run_config: AggregateRunConfig domain object
+            strategy_uuid: Actual database UUID of the aggregation strategy
 
         Returns:
             Tuple of (created_count, skipped_count, config_uuid)
@@ -244,7 +244,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         existing = (
             session.query(AggregateRunConfigORM)
             .filter_by(
-                aggregation_strategy_name=run_config.aggregation_strategy_name,
+                aggregation_strategy_id=strategy_uuid,
                 io_config_name=run_config.io_config_name,
                 input_run_names_hash=run_config.input_run_names_hash,
             )
@@ -257,7 +257,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         # Insert new config
         config_orm = AggregateRunConfigORM(
             id=run_config.id,
-            aggregation_strategy_name=run_config.aggregation_strategy_name,
+            aggregation_strategy_id=strategy_uuid,
             io_config_name=run_config.io_config_name,
             input_run_names=run_config.input_run_names,
             input_run_names_hash=run_config.input_run_names_hash,
@@ -304,17 +304,15 @@ class DbAggregatedDatasetWriter(ForOutput):
         self,
         session: Session,
         aggregated_votes: List[AggregatedVote],
-        strategy_id: UUID,
     ) -> Tuple[int, int, Dict[UUID, str]]:
         """Save aggregated vote entities to database using bulk insert with pre-filtering.
 
-        Queries existing votes by (dataset_sample_id, aggregation_strategy_id), filters to new ones,
-        then bulk inserts. Returns mapping of vote domain UUID -> actual UUID in DB.
+        Queries existing votes by natural key (judgement_fingerprint, final_label, final_confidence, final_reasoning),
+        filters to new ones, then bulk inserts. Returns mapping of vote domain UUID -> actual UUID in DB.
 
         Args:
             session: SQLAlchemy session
             aggregated_votes: List of AggregatedVote domain objects
-            strategy_id: UUID of the aggregation strategy
 
         Returns:
             Tuple of (created_count, skipped_count, vote_uuid_mapping)
@@ -322,36 +320,51 @@ class DbAggregatedDatasetWriter(ForOutput):
         if not aggregated_votes:
             return (0, 0, {})
 
-        # Convert votes to ORM objects
+        # Import here to avoid circular dependency
+        from hashlib import sha256
+        import json
+
+        # Convert votes to ORM objects and compute judgement fingerprints
         vote_orms: List[AggregatedVoteORM] = []
         for vote in aggregated_votes:
-            # Extract dataset_sample_id from first judgement (all are for same sample)
-            dataset_sample_id = vote.llm_judgements[0].dataset_sample.id
+            # Compute judgement fingerprint from sorted judgement IDs
+            sorted_judgement_ids = sorted([str(j.id) for j in vote.llm_judgements])
+            canonical = json.dumps(sorted_judgement_ids, sort_keys=True)
+            judgement_fingerprint = sha256(canonical.encode()).hexdigest()
 
             orm = AggregatedVoteORM(
                 id=vote.id,
-                dataset_sample_id=dataset_sample_id,
-                aggregation_strategy_id=strategy_id,
+                judgement_fingerprint=judgement_fingerprint,
                 final_label=vote.final_label,
                 final_confidence=vote.final_confidence,
                 final_reasoning=vote.final_reasoning,
             )
             vote_orms.append(orm)
 
-        # Build list of (dataset_sample_id, strategy_id) tuples to check
-        vote_keys = [(orm.dataset_sample_id, orm.aggregation_strategy_id) for orm in vote_orms]
+        # Build list of natural key tuples to check
+        vote_keys = [
+            (orm.judgement_fingerprint, orm.final_label, orm.final_confidence, orm.final_reasoning)
+            for orm in vote_orms
+        ]
 
         # Query existing votes and get their UUIDs
         existing_votes = {
-            (str(sample_id), str(strat_id)): str(vote_id)
-            for (sample_id, strat_id, vote_id) in
+            (fp, label, conf, reasoning): str(vote_id)
+            for (fp, label, conf, reasoning, vote_id) in
             session.query(
-                AggregatedVoteORM.dataset_sample_id,
-                AggregatedVoteORM.aggregation_strategy_id,
+                AggregatedVoteORM.judgement_fingerprint,
+                AggregatedVoteORM.final_label,
+                AggregatedVoteORM.final_confidence,
+                AggregatedVoteORM.final_reasoning,
                 AggregatedVoteORM.id
             )
             .filter(
-                tuple_(AggregatedVoteORM.dataset_sample_id, AggregatedVoteORM.aggregation_strategy_id)
+                tuple_(
+                    AggregatedVoteORM.judgement_fingerprint,
+                    AggregatedVoteORM.final_label,
+                    AggregatedVoteORM.final_confidence,
+                    AggregatedVoteORM.final_reasoning
+                )
                 .in_(vote_keys)
             )
         }
@@ -359,7 +372,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         # Filter to only new votes
         new_vote_orms = [
             orm for orm in vote_orms
-            if (str(orm.dataset_sample_id), str(orm.aggregation_strategy_id)) not in existing_votes
+            if (orm.judgement_fingerprint, orm.final_label, orm.final_confidence, orm.final_reasoning) not in existing_votes
         ]
 
         # Bulk insert new votes
@@ -370,7 +383,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         # Build complete mapping: domain vote UUID -> actual UUID in DB (existing + new)
         vote_uuid_map = {}
         for vote, orm in zip(aggregated_votes, vote_orms):
-            vote_key = (str(orm.dataset_sample_id), str(orm.aggregation_strategy_id))
+            vote_key = (orm.judgement_fingerprint, orm.final_label, orm.final_confidence, orm.final_reasoning)
             if vote_key in existing_votes:
                 # Vote exists - use actual database UUID from existing record
                 vote_uuid_map[vote.id] = existing_votes[vote_key]

@@ -8,10 +8,8 @@ from __future__ import annotations
 
 from sqlalchemy import (
     CHAR,
-    Boolean,
     Column,
     String,
-    Integer,
     Float,
     DateTime,
     Text,
@@ -32,6 +30,7 @@ class AggregationStrategyORM(Base):
 
     Just id + name - no wiring details (module/class paths).
     Name comes from adapter's strategy_name property (e.g., 'majority_vote').
+    Referenced via aggregate_run_configs.
     """
     __tablename__ = "aggregation_strategies"
     __table_args__ = {"schema": "aggregate"}
@@ -43,7 +42,7 @@ class AggregationStrategyORM(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     # Relationships
-    aggregated_votes = relationship("AggregatedVoteORM", back_populates="aggregation_strategy")
+    aggregate_run_configs = relationship("AggregateRunConfigORM", back_populates="aggregation_strategy")
 
 
 class AggregateRunConfigORM(Base):
@@ -51,23 +50,28 @@ class AggregateRunConfigORM(Base):
     __tablename__ = "aggregate_run_configs"
     __table_args__ = (
         UniqueConstraint(
-            "aggregation_strategy_name",
+            "aggregation_strategy_id",
             "io_config_name",
             "input_run_names_hash",
             name="uq_aggregate_run_config",
         ),
         {"schema": "aggregate"},
     )
-    __natural_key__ = ("aggregation_strategy_name", "io_config_name", "input_run_names_hash")
+    __natural_key__ = ("aggregation_strategy_id", "io_config_name", "input_run_names_hash")
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    aggregation_strategy_name = Column(String(255), nullable=False)
+    aggregation_strategy_id = Column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("aggregate.aggregation_strategies.id"),
+        nullable=False,
+    )
     io_config_name = Column(String(255), nullable=False)
     input_run_names = Column(JSONB, nullable=False, comment="List of infer run identifiers")
     input_run_names_hash = Column(CHAR(64), nullable=False, comment="SHA256 of sorted input_run_names for uniqueness")
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
+    aggregation_strategy = relationship("AggregationStrategyORM", back_populates="aggregate_run_configs")
     aggregate_runs = relationship("AggregateRunORM", back_populates="aggregate_run_config")
 
 
@@ -145,21 +149,14 @@ class AggregatedDatasetORM(Base):
 class AggregatedVoteORM(Base):
     __tablename__ = "aggregated_votes"
     __table_args__ = {"schema": "aggregate"}
-    __natural_key__ = ("dataset_sample_id", "aggregation_strategy_id")
-    __uuid_function__ = "compute_aggregated_vote_uuid"
+    __natural_key__ = ("judgement_fingerprint", "final_label", "final_confidence", "final_reasoning")
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
 
-    dataset_sample_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("ingest.dataset_sample.id"),
+    judgement_fingerprint = Column(
+        CHAR(64),
         nullable=False,
-        comment="Which dataset sample this vote aggregated judgements for"
-    )
-    aggregation_strategy_id = Column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("aggregate.aggregation_strategies.id"),
-        nullable=False,
+        comment="SHA256 hash of sorted judgement IDs that were aggregated"
     )
 
     # Aggregated results
@@ -183,15 +180,16 @@ class AggregatedVoteORM(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "dataset_sample_id",
-            "aggregation_strategy_id",
+            "judgement_fingerprint",
+            "final_label",
+            "final_confidence",
+            "final_reasoning",
             name="uq_aggregated_vote_identity",
         ),
         {"schema": "aggregate"},
     )
 
     # Relationships
-    aggregation_strategy = relationship("AggregationStrategyORM", back_populates="aggregated_votes")
     aggregation_votes = relationship("AggregationVoteORM", back_populates="aggregated_vote")
     # Many-to-many with AggregatedDatasetORM via join table
     aggregated_datasets = relationship(

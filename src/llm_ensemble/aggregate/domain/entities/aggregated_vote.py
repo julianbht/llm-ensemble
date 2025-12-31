@@ -17,7 +17,6 @@ from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.schemas import RelevanceScore
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy
 
 
 class AggregatedVote(BaseModel):
@@ -31,11 +30,6 @@ class AggregatedVote(BaseModel):
     id: UUID = Field(
         default_factory=uuid4,
         description="Random UUID identifier"
-    )
-
-    aggregation_strategy: AggregationStrategy = Field(
-        ...,
-        description="Which aggregation strategy was used (full entity: id + name)"
     )
 
     llm_judgements: list[LLMJudgement] = Field(

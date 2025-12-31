@@ -24,12 +24,10 @@ from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
 from llm_ensemble.aggregate.domain.entities.aggregate_run_summary import AggregateRunSummary
+from llm_ensemble.aggregate.domain.entities.write_summary import WriteSummary
 from llm_ensemble.aggregate.domain.aggregate_run_factory import AggregateRunFactory
 from llm_ensemble.aggregate.domain.validation import validate_infer_run_outputs_for_aggregation
-from llm_ensemble.aggregate.domain.aggregate_statistics import (
-    calculate_total_judgements,
-    build_warnings_summary,
-)
+from llm_ensemble.aggregate.domain.aggregate_statistics import calculate_aggregate_statistics
 
 # Driving port (application implements this)
 from llm_ensemble.aggregate.application.ports.driving.for_running_aggregation import ForRunningAggregation
@@ -163,9 +161,7 @@ class AggregationApplication(ForRunningAggregation):
                 dataset_sample_id = llm_judgement.dataset_sample.id
                 grouped_by_sample[dataset_sample_id].append(llm_judgement)
 
-        # Track statistics
-        tie_count = 0
-        no_valid_votes_count = 0
+        # Collect aggregated votes
         aggregated_votes : list[AggregatedVote] = []
 
         for dataset_sample_id in sorted(grouped_by_sample.keys()):
@@ -174,13 +170,6 @@ class AggregationApplication(ForRunningAggregation):
 
             # Apply aggregation strategy to get AggregatedVote
             aggregated_vote = self.strategy.aggregate(llm_judgements_for_sample)
-
-            # Track statistics
-            if aggregated_vote.final_label is None:
-                no_valid_votes_count += 1
-            elif aggregated_vote.final_reasoning and "tie" in aggregated_vote.final_reasoning.lower():
-                tie_count += 1
-
             aggregated_votes.append(aggregated_vote)
 
             # Log progress with vote breakdown
@@ -210,21 +199,13 @@ class AggregationApplication(ForRunningAggregation):
         # Write output (batch persistence like ingest)
         write_result = self.output_port.write(aggregate_run)
 
-        # Calculate statistics using domain functions
-        total_llm_judgements = calculate_total_judgements(judged_datasets)
-        warnings_summary = build_warnings_summary(tie_count, no_valid_votes_count)
-
-        # Construct summary
-        summary = AggregateRunSummary(
-            start_time=start_time,
-            end_time=end_time,
-            input_judgement_count=total_llm_judgements,
-            unique_pair_count=len(grouped_by_sample),
-            output_aggregated_count=len(aggregated_votes),
-            tie_count=tie_count,
-            no_valid_votes_count=no_valid_votes_count,
-            warnings_summary=warnings_summary,
-            write_summary=write_result,
+        # Build summary
+        summary = self._build_summary(
+            start_time,
+            end_time,
+            judged_datasets,
+            aggregated_votes,
+            write_result,
         )
 
         # Write summary.json
@@ -235,3 +216,45 @@ class AggregationApplication(ForRunningAggregation):
             )
 
         return summary
+
+    def _build_summary(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        judged_datasets: list[InferRunOutput],
+        aggregated_votes: list[AggregatedVote],
+        write_result: WriteSummary,
+    ) -> AggregateRunSummary:
+        """Build run summary from execution results.
+
+        Args:
+            start_time: Time when aggregation pipeline started
+            end_time: Time when aggregation pipeline completed
+            judged_datasets: List of input InferRunOutput objects
+            aggregated_votes: List of AggregatedVote entities produced
+            write_result: Write operation summary from output port
+
+        Returns:
+            Complete AggregateRunSummary with all statistics
+        """
+        # Calculate domain statistics
+        (
+            total_judgements,
+            unique_pairs,
+            tie_count,
+            no_valid_votes_count,
+            warnings_summary,
+        ) = calculate_aggregate_statistics(judged_datasets, aggregated_votes)
+
+        # Construct Pydantic summary
+        return AggregateRunSummary(
+            start_time=start_time,
+            end_time=end_time,
+            input_judgement_count=total_judgements,
+            unique_pair_count=unique_pairs,
+            output_aggregated_count=len(aggregated_votes),
+            tie_count=tie_count,
+            no_valid_votes_count=no_valid_votes_count,
+            warnings_summary=warnings_summary,
+            write_summary=write_result,
+        )

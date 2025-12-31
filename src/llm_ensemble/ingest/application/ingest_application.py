@@ -21,7 +21,9 @@ from datetime import datetime
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
 from llm_ensemble.ingest.domain.entities.ingest_run_summary import IngestRunSummary
+from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
 from llm_ensemble.ingest.domain.ingest_run_factory import IngestRunFactory
+from llm_ensemble.ingest.domain.ingest_statistics import calculate_ingest_statistics
 
 # Driving port (application implements this)
 from llm_ensemble.ingest.application.ports.driving.for_running_ingest import ForRunningIngest
@@ -153,12 +155,12 @@ class IngestApplication(ForRunningIngest):
         write_result = self.output_port.write(ingest_run)
         logger.info(IngestLogEvent.PERSISTENCE_COMPLETE)
 
-        # Create summary
-        summary = IngestRunSummary(
-            start_time=start_time,
-            end_time=end_time,
-            sample_count=normalized_dataset.sample_count,
-            write_summary=write_result,
+        # Build summary
+        summary = self._build_summary(
+            start_time,
+            end_time,
+            normalized_dataset,
+            write_result,
         )
 
         # Write summary.json
@@ -167,3 +169,32 @@ class IngestApplication(ForRunningIngest):
 
         # Return summary
         return summary
+
+    def _build_summary(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        normalized_dataset: NormalizedDataset,
+        write_result: WriteSummary,
+    ) -> IngestRunSummary:
+        """Build run summary from execution results.
+
+        Args:
+            start_time: Time when ingestion pipeline started
+            end_time: Time when ingestion pipeline completed
+            normalized_dataset: The normalized dataset entity produced
+            write_result: Write operation summary from output port
+
+        Returns:
+            Complete IngestRunSummary with all statistics
+        """
+        # Calculate domain statistics
+        (sample_count,) = calculate_ingest_statistics(normalized_dataset)
+
+        # Construct Pydantic summary
+        return IngestRunSummary(
+            start_time=start_time,
+            end_time=end_time,
+            sample_count=sample_count,
+            write_summary=write_result,
+        )

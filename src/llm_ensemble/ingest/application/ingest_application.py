@@ -23,7 +23,6 @@ from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
 from llm_ensemble.ingest.domain.entities.ingest_run_summary import IngestRunSummary
 from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
 from llm_ensemble.ingest.domain.ingest_run_factory import IngestRunFactory
-from llm_ensemble.ingest.domain.ingest_statistics import calculate_ingest_statistics
 
 # Driving port (application implements this)
 from llm_ensemble.ingest.application.ports.driving.for_running_ingest import ForRunningIngest
@@ -188,13 +187,10 @@ class IngestApplication(ForRunningIngest):
         Returns:
             Complete IngestRunSummary with all statistics
         """
-        # Calculate domain statistics
-        (sample_count,) = calculate_ingest_statistics(normalized_dataset)
-
         # Construct Pydantic summary
         return IngestRunSummary(
             start_time=start_time,
             end_time=end_time,
-            sample_count=sample_count,
+            sample_count=normalized_dataset.sample_count,
             write_summary=write_result,
         )

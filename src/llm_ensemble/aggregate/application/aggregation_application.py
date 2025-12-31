@@ -27,7 +27,12 @@ from llm_ensemble.aggregate.domain.entities.aggregate_run_summary import Aggrega
 from llm_ensemble.aggregate.domain.entities.write_summary import WriteSummary
 from llm_ensemble.aggregate.domain.aggregate_run_factory import AggregateRunFactory
 from llm_ensemble.aggregate.domain.validation import validate_infer_run_outputs_for_aggregation
-from llm_ensemble.aggregate.domain.aggregate_statistics import calculate_aggregate_statistics
+from llm_ensemble.aggregate.domain.aggregate_statistics import (
+    count_total_judgements,
+    count_ties,
+    count_no_valid_votes,
+    build_warnings_summary,
+)
 
 # Driving port (application implements this)
 from llm_ensemble.aggregate.application.ports.driving.for_running_aggregation import ForRunningAggregation
@@ -138,7 +143,7 @@ class AggregationApplication(ForRunningAggregation):
             ValueError: If validation fails or strategy not found
             FileNotFoundError: If any run directory doesn't exist
         """
-        # Get logger
+        # Setup
         logger = get_logger()
         logger.info(AggregateLogEvent.AGGREGATE_STARTED, name=self.run_name)
 
@@ -165,10 +170,10 @@ class AggregationApplication(ForRunningAggregation):
         aggregated_votes : list[AggregatedVote] = []
 
         for dataset_sample_id in sorted(grouped_by_sample.keys()):
-            # All llm_judgements for this sample (one from each run/model config)
+            # All llm_judgements for this sample
             llm_judgements_for_sample = grouped_by_sample[dataset_sample_id]
 
-            # Apply aggregation strategy to get AggregatedVote
+            # Apply aggregation strategy
             aggregated_vote = self.strategy.aggregate(llm_judgements_for_sample)
             aggregated_votes.append(aggregated_vote)
 
@@ -196,7 +201,7 @@ class AggregationApplication(ForRunningAggregation):
             notes=notes,
         )
 
-        # Write output (batch persistence like ingest)
+        # Persist
         write_result = self.output_port.write(aggregate_run)
 
         # Build summary
@@ -237,21 +242,16 @@ class AggregationApplication(ForRunningAggregation):
         Returns:
             Complete AggregateRunSummary with all statistics
         """
-        # Calculate domain statistics
-        (
-            total_judgements,
-            unique_pairs,
-            tie_count,
-            no_valid_votes_count,
-            warnings_summary,
-        ) = calculate_aggregate_statistics(judged_datasets, aggregated_votes)
+        total_judgements = count_total_judgements(judged_datasets)
+        tie_count = count_ties(aggregated_votes)
+        no_valid_votes_count = count_no_valid_votes(aggregated_votes)
+        warnings_summary = build_warnings_summary(tie_count, no_valid_votes_count)
 
-        # Construct Pydantic summary
         return AggregateRunSummary(
             start_time=start_time,
             end_time=end_time,
             input_judgement_count=total_judgements,
-            unique_pair_count=unique_pairs,
+            unique_pair_count=len(aggregated_votes),
             output_aggregated_count=len(aggregated_votes),
             tie_count=tie_count,
             no_valid_votes_count=no_valid_votes_count,

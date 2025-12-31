@@ -24,8 +24,10 @@ from llm_ensemble.infer.domain.llm_judgement_builder import LLMJudgementBuilder
 from llm_ensemble.infer.domain.entities.infer_run import InferRun
 from llm_ensemble.infer.domain.metrics import (
     calculate_agreement,
-    calculate_aggregate_statistics,
     get_extracted_score,
+    count_errors,
+    calculate_average_latency,
+    aggregate_parser_warnings,
 )
 from llm_ensemble.infer.domain.entities.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.application.write_summary import WriteSummary
@@ -306,21 +308,18 @@ class InferenceApplication(ForRunningInference):
         Returns:
             Complete InferRunSummary with all statistics
         """
-        # Calculate domain statistics
-        (
-            judgement_count,
-            error_count,
-            total_latency_ms,
-            avg_latency_ms,
-            warnings_summary,
-        ) = calculate_aggregate_statistics(llm_judgements)
-        
+        # Calculate domain statistics using focused functions
+        error_count = count_errors(llm_judgements)
+        total_latency_ms = sum(j.llm_invocation_metrics.latency_ms for j in llm_judgements)
+        avg_latency_ms = calculate_average_latency(llm_judgements)
+        warnings_summary = aggregate_parser_warnings(llm_judgements)
+
         # Construct Pydantic summary
         return InferRunSummary(
             start_time=start_time,
             end_time=datetime.now(),
             write_summary=write_summary,
-            judgement_count=judgement_count,
+            judgement_count=len(llm_judgements),
             error_count=error_count,
             total_latency_ms=total_latency_ms,
             avg_latency_ms=avg_latency_ms,

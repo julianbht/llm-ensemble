@@ -192,7 +192,7 @@ class DbAggregatedDatasetWriter(ForOutput):
 
     def _save_aggregation_strategy(
         self, session: Session, aggregation_strategy: AggregationStrategy
-    ) -> Tuple[int, int, UUID]:
+    ) -> Tuple[int, int, str]:
         """Save aggregation strategy entity to database using pre-query pattern.
 
         Checks if name already exists before inserting.
@@ -203,7 +203,7 @@ class DbAggregatedDatasetWriter(ForOutput):
             aggregation_strategy: AggregationStrategy domain entity
 
         Returns:
-            Tuple of (created_count, skipped_count, actual_db_uuid)
+            Tuple of (created_count, skipped_count, actual_db_uuid_as_string)
         """
         # Check if this strategy name already exists
         existing = (
@@ -213,7 +213,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         )
 
         if existing:
-            return (0, 1, existing.id)
+            return (0, 1, str(existing.id))
 
         # Insert new strategy
         strategy_orm = AggregationStrategyORM(
@@ -222,10 +222,10 @@ class DbAggregatedDatasetWriter(ForOutput):
         )
         session.add(strategy_orm)
         session.flush()
-        return (1, 0, strategy_orm.id)
+        return (1, 0, str(strategy_orm.id))
 
     def _save_aggregate_run_config(
-        self, session: Session, run_config: AggregateRunConfig, strategy_uuid: UUID
+        self, session: Session, run_config: AggregateRunConfig, strategy_uuid: str
     ) -> Tuple[int, int, str]:
         """Save aggregate run config entity to database using pre-query pattern.
 
@@ -235,7 +235,7 @@ class DbAggregatedDatasetWriter(ForOutput):
         Args:
             session: SQLAlchemy session
             run_config: AggregateRunConfig domain object
-            strategy_uuid: Actual database UUID of the aggregation strategy
+            strategy_uuid: Actual database UUID of the aggregation strategy (as string)
 
         Returns:
             Tuple of (created_count, skipped_count, config_uuid)

@@ -222,12 +222,12 @@ class DBWriter(ForOutput):
                 # Update existing InferRunOutput with computed fingerprint
                 infer_run_output_orm = self._session.get(InferRunOutputORM, self._infer_run_output_id)
                 assert infer_run_output_orm is not None  # Created in open()
-                infer_run_output_orm.sample_fingerprint = fingerprint
+                setattr(infer_run_output_orm, "sample_fingerprint", fingerprint)
 
                 # Update InferRun end_time
                 infer_run_orm = self._session.get(InferRunORM, self._infer_run_id)
                 assert infer_run_orm is not None  # Created in open()
-                infer_run_orm.end_time = end_time
+                setattr(infer_run_orm, "end_time", end_time)
 
                 self._session.commit()
 
@@ -433,8 +433,8 @@ class DBWriter(ForOutput):
         # Insert new prompt template
         prompt_template_orm = prompt_template_to_orm(prompt_template)
         # Override with actual database UUIDs
-        prompt_template_orm.prompt_builder_id = prompt_builder_id
-        prompt_template_orm.parser_id = parser_id
+        setattr(prompt_template_orm, "prompt_builder_id", prompt_builder_id)
+        setattr(prompt_template_orm, "parser_id", parser_id)
         self._session.add(prompt_template_orm)
         self._session.flush()
         return (1, 0, uuid.UUID(str(prompt_template_orm.id)))
@@ -479,9 +479,9 @@ class DBWriter(ForOutput):
         # Insert new infer run config
         infer_run_config_orm = infer_run_config_to_orm(infer_run_config)
         # Override with actual database UUIDs
-        infer_run_config_orm.provider_id = provider_id
-        infer_run_config_orm.model_config_id = model_config_id
-        infer_run_config_orm.prompt_template_id = prompt_template_id
+        setattr(infer_run_config_orm, "provider_id", provider_id)
+        setattr(infer_run_config_orm, "model_config_id", model_config_id)
+        setattr(infer_run_config_orm, "prompt_template_id", prompt_template_id)
         self._session.add(infer_run_config_orm)
         self._session.flush()
         return (1, 0, uuid.UUID(str(infer_run_config_orm.id)))

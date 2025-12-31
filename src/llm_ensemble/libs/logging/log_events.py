@@ -40,6 +40,7 @@ class InferLogEvent(str, Enum):
     INFER_STARTED = "inference_started"
     INPUT_READ = "input_read"
     SENDING_REQUEST = "sending_request"
+    RESPONSE_RECEIVED = "response_received"
     RESPONSE_PARSED = "response_parsed"
     AGREEMENT_CHECKED = "agreement_checked"
     COST_CALCULATED = "cost_calculated"

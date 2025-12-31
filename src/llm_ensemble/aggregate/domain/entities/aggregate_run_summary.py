@@ -67,7 +67,7 @@ class AggregateRunSummary(BaseModel):
     )
 
     # Optional warnings summary
-    warnings_summary: Optional[dict[str, int]] = Field(
+    issues_summary: Optional[dict[str, int]] = Field(
         default=None,
         description="Aggregate count of warnings by type (e.g., {'tie': 5, 'no_votes': 2})"
     )

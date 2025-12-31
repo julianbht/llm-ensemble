@@ -67,7 +67,7 @@ class InferRunOutput(BaseModel):
         description="Average latency per judgement in milliseconds"
     )
 
-    warnings_summary: Optional[dict[str, int]] = Field(
+    issues_summary: Optional[dict[str, int]] = Field(
         default=None,
         description="Summary of warnings collected during inference (warning_type -> count)"
     )

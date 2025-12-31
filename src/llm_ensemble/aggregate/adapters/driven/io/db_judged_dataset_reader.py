@@ -195,7 +195,7 @@ class DbInferRunOutputReader(ForInput):
                         response_text=j_orm.llm_response_text.llm_response_text,
                         llm_invocation_metrics=invocation_metrics,
                         llm_score=llm_score,
-                        parser_warnings=j_orm.parser_warnings or [],
+                        parse_issues=j_orm.parse_issues or [],
                     )
 
                     llm_judgements.append(llm_judgement)

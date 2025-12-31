@@ -20,7 +20,7 @@ from __future__ import annotations
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.adapters.driven.io.db.orms import LLMCallORM
-from llm_ensemble.infer.domain.entities.warnings import BaseWarning
+from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue
 from llm_ensemble.ingest.adapters.driven.io.db.mappers_from_orm import judging_sample_from_orm
 
 
@@ -71,19 +71,19 @@ def llm_judgement_from_orm(call_orm: LLMCallORM) -> LLMJudgement:
     )
 
     # Reconstruct LLMScore from parsed score fields
-    parser_warnings = []
-    if score_orm.parser_warnings:
+    parse_issues = []
+    if score_orm.parse_issues:
         # Parser warnings stored as JSONB array of dicts
-        # Reconstruct as BaseWarning objects (polymorphic list)
-        parser_warnings = [
-            BaseWarning(**w) for w in score_orm.parser_warnings
+        # Reconstruct as ParserIssue objects (polymorphic list)
+        parse_issues = [
+            ParserIssue(**w) for w in score_orm.parse_issues
         ]
 
     llm_score = LLMScore(
         label=score_orm.label,
         confidence=score_orm.confidence,
         rationale=score_orm.rationale,
-        warnings=parser_warnings,
+        warnings=parse_issues,
     )
     
     # Reconstruct complete LLMJudgement

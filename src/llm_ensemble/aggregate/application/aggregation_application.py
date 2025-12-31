@@ -31,7 +31,7 @@ from llm_ensemble.aggregate.domain.aggregate_statistics import (
     count_total_judgements,
     count_ties,
     count_no_valid_votes,
-    build_warnings_summary,
+    build_issues_summary,
 )
 
 # Driving port (application implements this)
@@ -46,21 +46,6 @@ from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.logging.log_events import AggregateLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_manager import write_summary
-
-
-def _format_vote_breakdown(llm_judgements: list[LLMJudgement], final_label: Optional[int]) -> str:
-    """Format vote breakdown string for logging.
-
-    Shows individual votes and final result.
-    Example: "0 0 1 → 0" (votes were 0, 0, 1, final is 0)
-    """
-    input_labels = [
-        j.llm_score.label if j.llm_score and j.llm_score.label is not None else None
-        for j in llm_judgements
-    ]
-    votes_str = " ".join(str(label) for label in input_labels)
-    return f"{votes_str} → {final_label}"
-
 
 class AggregationApplication(ForRunningAggregation):
     """Application use case for coordinating ensemble aggregation pipeline.
@@ -245,7 +230,7 @@ class AggregationApplication(ForRunningAggregation):
         total_judgements = count_total_judgements(judged_datasets)
         tie_count = count_ties(aggregated_votes)
         no_valid_votes_count = count_no_valid_votes(aggregated_votes)
-        warnings_summary = build_warnings_summary(tie_count, no_valid_votes_count)
+        issues_summary = build_issues_summary(tie_count, no_valid_votes_count)
 
         return AggregateRunSummary(
             start_time=start_time,
@@ -255,6 +240,21 @@ class AggregationApplication(ForRunningAggregation):
             output_aggregated_count=len(aggregated_votes),
             tie_count=tie_count,
             no_valid_votes_count=no_valid_votes_count,
-            warnings_summary=warnings_summary,
+            issues_summary=issues_summary,
             write_summary=write_result,
         )
+
+
+
+def _format_vote_breakdown(llm_judgements: list[LLMJudgement], final_label: Optional[int]) -> str:
+    """Format vote breakdown string for logging.
+
+    Shows individual votes and final result.
+    Example: "0 0 1 → 0" (votes were 0, 0, 1, final is 0)
+    """
+    input_labels = [
+        j.llm_score.label if j.llm_score and j.llm_score.label is not None else None
+        for j in llm_judgements
+    ]
+    votes_str = " ".join(str(label) for label in input_labels)
+    return f"{votes_str} → {final_label}"

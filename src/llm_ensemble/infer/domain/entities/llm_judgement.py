@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
-from llm_ensemble.infer.domain.entities.warnings import BaseWarning
+from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue
 
 
 class LLMJudgement(BaseModel):
@@ -70,7 +70,7 @@ class LLMJudgement(BaseModel):
         )
     )
 
-    parser_warnings: list[BaseWarning] = Field(
+    parse_issues: list[ParserIssue] = Field(
         default_factory=list,
         description="Parser-level warnings: parse errors, missing fields, validation issues, etc."
     )

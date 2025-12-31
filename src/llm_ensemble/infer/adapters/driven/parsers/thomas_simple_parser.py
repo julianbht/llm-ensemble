@@ -13,7 +13,7 @@ from typing import Optional
 from llm_ensemble.infer.application.ports.driven.for_parsing_responses import ForParsingResponses
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
-from llm_ensemble.infer.domain.entities.warnings import ParserWarning, ParserWarningCode
+from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue, ParserIssueCode
 from llm_ensemble.libs.logging import get_logger
 from llm_ensemble.libs.schemas import RelevanceScore
 
@@ -37,7 +37,7 @@ class ThomasSimpleParser(ForParsingResponses):
         )
         self.logger = get_logger(component="thomas_simple_parser")
 
-    def parse(self, raw_text: str) -> tuple[LLMScore, list[ParserWarning]]:
+    def parse(self, raw_text: str) -> tuple[LLMScore, list[ParserIssue]]:
         """Parse JSON response and create LLMScore domain entity.
 
         Extracts the "O" field from JSON response and constructs an LLMScore
@@ -51,7 +51,7 @@ class ThomasSimpleParser(ForParsingResponses):
             - LLMScore: parsed fields (no parser metadata or response_text)
             - warnings: List of parser warnings from the parsing process
         """
-        warnings: list[ParserWarning] = []
+        warnings: list[ParserIssue] = []
         label: Optional[RelevanceScore] = None
 
         # Extract and validate score using testable helper methods
@@ -77,7 +77,7 @@ class ThomasSimpleParser(ForParsingResponses):
         """
         return self._parser
 
-    def _extract_json(self, raw_text: str, warnings: list[ParserWarning]) -> Optional[dict]:
+    def _extract_json(self, raw_text: str, warnings: list[ParserIssue]) -> Optional[dict]:
         """Extract JSON object with "O" field from raw text.
 
         Pure, testable function for JSON extraction logic.
@@ -93,8 +93,8 @@ class ThomasSimpleParser(ForParsingResponses):
         json_match = re.search(json_pattern, raw_text)
 
         if not json_match:
-            warning = ParserWarning(
-                code=ParserWarningCode.PARSE_ERROR,
+            warning = ParserIssue(
+                code=ParserIssueCode.PARSE_ERROR,
                 message="No JSON object with 'O' field found in response",
                 metadata={"expected_format": '{"O": N}'}
             )
@@ -107,8 +107,8 @@ class ThomasSimpleParser(ForParsingResponses):
         try:
             return json.loads(json_str)
         except json.JSONDecodeError as e:
-            warning = ParserWarning(
-                code=ParserWarningCode.PARSE_ERROR,
+            warning = ParserIssue(
+                code=ParserIssueCode.PARSE_ERROR,
                 message=f"Failed to parse JSON: {e}",
                 metadata={"error_type": type(e).__name__}
             )
@@ -116,7 +116,7 @@ class ThomasSimpleParser(ForParsingResponses):
             self.logger.warning("parser_warning", code=warning.code.value, message=warning.message)
             return None
 
-    def _extract_score_field(self, json_data: dict, warnings: list[ParserWarning]) -> Optional[int]:
+    def _extract_score_field(self, json_data: dict, warnings: list[ParserIssue]) -> Optional[int]:
         """Extract the "O" score field from parsed JSON.
 
         Pure, testable function for field extraction logic.
@@ -131,8 +131,8 @@ class ThomasSimpleParser(ForParsingResponses):
         score = json_data.get("O")
 
         if score is None:
-            warning = ParserWarning(
-                code=ParserWarningCode.FIELD_ERROR,
+            warning = ParserIssue(
+                code=ParserIssueCode.FIELD_ERROR,
                 message="Missing 'O' field in parsed JSON",
                 metadata={"field_name": "O"}
             )
@@ -142,7 +142,7 @@ class ThomasSimpleParser(ForParsingResponses):
 
         return score
 
-    def _validate_score(self, score_value: int, warnings: list[ParserWarning]) -> Optional[RelevanceScore]:
+    def _validate_score(self, score_value: int, warnings: list[ParserIssue]) -> Optional[RelevanceScore]:
         """Validate score value and convert to RelevanceScore enum.
 
         Pure, testable function for validation logic.
@@ -155,8 +155,8 @@ class ThomasSimpleParser(ForParsingResponses):
             RelevanceScore enum if valid, None otherwise
         """
         if not isinstance(score_value, int) or score_value not in [0, 1, 2, 3]:
-            warning = ParserWarning(
-                code=ParserWarningCode.VALIDATION_ERROR,
+            warning = ParserIssue(
+                code=ParserIssueCode.VALIDATION_ERROR,
                 message=f"Invalid O score: {score_value} (expected 0, 1, 2, or 3)",
                 metadata={"field_name": "O", "actual_value": str(score_value)}
             )
@@ -167,8 +167,8 @@ class ThomasSimpleParser(ForParsingResponses):
         try:
             return RelevanceScore(score_value)
         except ValueError:
-            warning = ParserWarning(
-                code=ParserWarningCode.VALIDATION_ERROR,
+            warning = ParserIssue(
+                code=ParserIssueCode.VALIDATION_ERROR,
                 message=f"Invalid score value: {score_value}",
                 metadata={"value": score_value}
             )

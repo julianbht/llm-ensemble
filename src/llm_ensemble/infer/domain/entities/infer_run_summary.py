@@ -53,11 +53,11 @@ class InferRunSummary(RunSummary):
         description="Average latency per judgement in milliseconds"
     )
 
-    warnings_summary: Optional[dict[str, int]] = Field(
+    issues_summary: Optional[dict[str, int]] = Field(
         default=None,
         description=(
             "Summary of warnings collected during inference run. "
-            "Maps warning type name to count (e.g., {'ParserWarning': 45, 'ProviderWarning': 12}). "
+            "Maps warning type name to count (e.g., {'ParserIssue': 45, 'ProviderWarning': 12}). "
             "Aggregated from all judgements at end of run."
         )
     )

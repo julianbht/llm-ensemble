@@ -64,7 +64,7 @@ def count_no_valid_votes(aggregated_votes: list[AggregatedVote]) -> int:
     )
 
 
-def build_warnings_summary(
+def build_issues_summary(
     tie_count: int,
     no_valid_votes_count: int,
 ) -> Optional[dict[str, int]]:
@@ -79,12 +79,12 @@ def build_warnings_summary(
     Returns:
         Dictionary of warning types and counts, or None if no warnings
     """
-    warnings_summary: dict[str, int] = {}
+    issues_summary: dict[str, int] = {}
 
     if tie_count > 0:
-        warnings_summary["tie"] = tie_count
+        issues_summary["tie"] = tie_count
 
     if no_valid_votes_count > 0:
-        warnings_summary["no_valid_votes"] = no_valid_votes_count
+        issues_summary["no_valid_votes"] = no_valid_votes_count
 
-    return warnings_summary if warnings_summary else None
+    return issues_summary if issues_summary else None

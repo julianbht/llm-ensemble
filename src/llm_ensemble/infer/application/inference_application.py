@@ -27,8 +27,9 @@ from llm_ensemble.infer.domain.metrics import (
     get_extracted_score,
     count_errors,
     calculate_average_latency,
-    aggregate_parser_warnings,
+    aggregate_parse_issues,
 )
+from llm_ensemble.infer.domain.entities.parse_issues import issue_to_string
 from llm_ensemble.infer.domain.entities.infer_run_summary import InferRunSummary
 from llm_ensemble.infer.application.write_summary import WriteSummary
 from llm_ensemble.infer.domain.infer_run_config_factory import InferRunConfigFactory
@@ -197,8 +198,13 @@ class InferenceApplication(ForRunningInference):
 
                 # Step 3: Parse response
                 logger.info(InferLogEvent.PARSING_REQUEST)
-                llm_score, parser_warnings = self.response_parser.parse(raw_response_text)
-                builder.with_parsed_score(llm_score, parser_warnings)
+                llm_score, parse_issues = self.response_parser.parse(raw_response_text)
+                builder.with_parsed_score(llm_score, parse_issues)
+
+                # Log parse issues if any occurred
+                if parse_issues:
+                    for issue in parse_issues:
+                        logger.warning(issue_to_string(issue))
 
                 # Build complete judgement
                 judgement = builder.build()
@@ -312,7 +318,7 @@ class InferenceApplication(ForRunningInference):
         error_count = count_errors(llm_judgements)
         total_latency_ms = sum(j.llm_invocation_metrics.latency_ms for j in llm_judgements)
         avg_latency_ms = calculate_average_latency(llm_judgements)
-        warnings_summary = aggregate_parser_warnings(llm_judgements)
+        issues_summary = aggregate_parse_issues(llm_judgements)
 
         # Construct Pydantic summary
         return InferRunSummary(
@@ -323,5 +329,5 @@ class InferenceApplication(ForRunningInference):
             error_count=error_count,
             total_latency_ms=total_latency_ms,
             avg_latency_ms=avg_latency_ms,
-            warnings_summary=warnings_summary,
+            issues_summary=issues_summary,
         )

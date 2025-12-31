@@ -13,7 +13,7 @@ from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.infer.domain.entities.warnings import BaseWarning
+from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue
 
 
 class LLMJudgementBuilder:
@@ -40,7 +40,7 @@ class LLMJudgementBuilder:
         self._response_text: Optional[str] = None
         self._llm_invocation_metrics: Optional[LLMInvocationMetrics] = None
         self._llm_score: Optional[LLMScore] = None
-        self._parser_warnings: list[BaseWarning] = []
+        self._parse_issues: list[ParserIssue] = []
 
     def with_prompt(self, prompt_text: str) -> "LLMJudgementBuilder":
         """Add the prompt text (called after prompt building).
@@ -75,19 +75,19 @@ class LLMJudgementBuilder:
     def with_parsed_score(
         self,
         llm_score: Optional[LLMScore],
-        parser_warnings: list[BaseWarning]
+        parse_issues: list[ParserIssue]
     ) -> "LLMJudgementBuilder":
         """Add the parsed score and warnings (called after parsing).
 
         Args:
             llm_score: Parsed score (may be None if parsing failed)
-            parser_warnings: Any warnings from the parsing process
+            parse_issues: Any warnings from the parsing process
 
         Returns:
             Self for method chaining
         """
         self._llm_score = llm_score
-        self._parser_warnings = parser_warnings
+        self._parse_issues = parse_issues
         return self
 
     def build(self) -> LLMJudgement:
@@ -112,5 +112,5 @@ class LLMJudgementBuilder:
             response_text=self._response_text,
             llm_invocation_metrics=self._llm_invocation_metrics,
             llm_score=self._llm_score,
-            parser_warnings=self._parser_warnings,
+            parse_issues=self._parse_issues,
         )

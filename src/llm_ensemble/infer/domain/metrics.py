@@ -86,21 +86,21 @@ def calculate_average_latency(judgements: list[LLMJudgement]) -> float:
     return total_latency_ms / count
 
 
-def aggregate_parser_warnings(judgements: list[LLMJudgement]) -> Optional[dict[str, int]]:
-    """Aggregate parser warnings by type across all judgements.
+def aggregate_parse_issues(judgements: list[LLMJudgement]) -> Optional[dict[str, int]]:
+    """Aggregate parse issues by code across all judgements.
 
-    Business rule: Count occurrences of each warning type by class name.
+    Business rule: Count occurrences of each issue code.
 
     Args:
         judgements: List of all LLM judgements produced
 
     Returns:
-        Dictionary mapping warning type to count, or None if no warnings
+        Dictionary mapping issue code to count, or None if no issues
     """
-    warnings_summary: dict[str, int] = {}
+    issues_summary: dict[str, int] = {}
     for judgement in judgements:
-        for warning in judgement.parser_warnings:
-            warning_type = warning.__class__.__name__
-            warnings_summary[warning_type] = warnings_summary.get(warning_type, 0) + 1
+        for issue in judgement.parse_issues:
+            code = issue.code.value
+            issues_summary[code] = issues_summary.get(code, 0) + 1
 
-    return warnings_summary if warnings_summary else None
+    return issues_summary if issues_summary else None

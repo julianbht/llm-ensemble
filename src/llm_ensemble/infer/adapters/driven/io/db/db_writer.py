@@ -123,8 +123,8 @@ class DBWriter(ForOutput):
         self._session = get_session(engine)
 
         # Upsert InferRunConfig components and create InferRunConfig
-        # This initializes _infer_run_config_id for use in write_one()
-        self._upsert_infer_run_config(infer_run.infer_run_config)
+        # Captures actual UUID from database for FK references
+        self._infer_run_config_id = self._upsert_infer_run_config(infer_run.infer_run_config)
 
         # Create InferRunOutput FIRST (before InferRun) so judgements can reference it
         # Use same ID as InferRun (1:1 relationship)
@@ -242,13 +242,14 @@ class DBWriter(ForOutput):
         self._write_summary = WriteSummary()
         return summary
 
-    def _upsert_infer_run_config(self, infer_run_config: InferRunConfig) -> None:
+    def _upsert_infer_run_config(self, infer_run_config: InferRunConfig) -> uuid.UUID:
         """Upsert InferRunConfig and all its components.
 
         Uses pre-query pattern for each entity (check exists, then insert if new).
-        Stores _infer_run_config_id (actual UUID from database) for use in write_one().
+        Returns actual _infer_run_config_id (UUID from database) for use in open().
 
-        IMPORTANT: Returns actual UUIDs from database to ensure correct FK references.
+        Returns:
+            UUID of InferRunConfig from database (ensures correct FK references)
         """
         # Upsert Provider and get actual UUID
         created, skipped, provider_id = self._upsert_provider(infer_run_config.provider)
@@ -296,8 +297,8 @@ class DBWriter(ForOutput):
         self._write_summary.add_infer_run_configs(created=created, skipped=skipped)
         if created > 0 or skipped > 0:
             self.logger.info(InferWriteEvent.WRITE_INFER_RUN_CONFIGS, created=created, skipped=skipped)
-        # CRITICAL: Use actual UUID from database, not random domain UUID
-        self._infer_run_config_id = infer_run_config_id
+        # Return actual UUID from database to ensure correct FK references
+        return infer_run_config_id
 
     def _upsert_provider(self, provider: Provider) -> Tuple[int, int, uuid.UUID]:
         """Upsert Provider entity and return actual database UUID.

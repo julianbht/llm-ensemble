@@ -45,7 +45,7 @@ class ParserIssue(BaseModel):
         description="Human-readable issue description with context"
     )
 
-    metadata: dict[str, str | int | float] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Optional metadata for analytics (e.g., field_name, attempted_value)"
     )

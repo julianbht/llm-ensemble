@@ -18,7 +18,6 @@ Architecture:
 
 from __future__ import annotations
 import uuid
-from pathlib import Path
 from typing import Optional, Tuple
 from datetime import datetime
 
@@ -53,7 +52,6 @@ from llm_ensemble.infer.adapters.driven.io.db.orms import (
     LLMPromptTextORM,
     LLMResponseTextORM,
     LLMScoreORM,
-    LLMJudgementORM,
 )
 from llm_ensemble.infer.adapters.driven.io.db.mappers_to_orm import (
     provider_to_orm,
@@ -170,6 +168,8 @@ class DBWriter(ForOutput):
         if self._infer_run_output_id is None:
             raise RuntimeError("InferRunOutput not initialized")
 
+        assert self._session is not None  # Type narrowing for type checker
+
         # Track dataset_sample ID for fingerprint computation in close()
         self._dataset_sample_ids.append(judgement.dataset_sample.id)
 
@@ -211,6 +211,7 @@ class DBWriter(ForOutput):
     def close(self) -> WriteSummary:
         """Close session and finalize InferRunOutput and end_time."""
         if self._session is not None:
+            assert self._session is not None  # Type narrowing for type checker
             # Capture end time
             end_time = datetime.now()
 
@@ -220,10 +221,12 @@ class DBWriter(ForOutput):
 
                 # Update existing InferRunOutput with computed fingerprint
                 infer_run_output_orm = self._session.get(InferRunOutputORM, self._infer_run_output_id)
+                assert infer_run_output_orm is not None  # Created in open()
                 infer_run_output_orm.sample_fingerprint = fingerprint
 
                 # Update InferRun end_time
                 infer_run_orm = self._session.get(InferRunORM, self._infer_run_id)
+                assert infer_run_orm is not None  # Created in open()
                 infer_run_orm.end_time = end_time
 
                 self._session.commit()
@@ -308,6 +311,8 @@ class DBWriter(ForOutput):
         Returns:
             Tuple of (created_count, skipped_count, actual_uuid)
         """
+        assert self._session is not None  # Type narrowing for type checker
+
         # Check if this provider already exists (by natural key)
         existing = self._session.query(ProviderORM).filter_by(
             name=provider.name,
@@ -315,13 +320,13 @@ class DBWriter(ForOutput):
         ).first()
 
         if existing:
-            return (0, 1, existing.id)
+            return (0, 1, uuid.UUID(str(existing.id)))
 
         # Insert new provider
         provider_orm = provider_to_orm(provider)
         self._session.add(provider_orm)
         self._session.flush()
-        return (1, 0, provider_orm.id)
+        return (1, 0, uuid.UUID(str(provider_orm.id)))
 
     def _upsert_model_config(self, model_cfg: ModelConfig) -> Tuple[int, int, uuid.UUID]:
         """Upsert ModelConfig entity and return actual database UUID.
@@ -331,19 +336,21 @@ class DBWriter(ForOutput):
         Returns:
             Tuple of (created_count, skipped_count, actual_uuid)
         """
+        assert self._session is not None  # Type narrowing for type checker
+
         # Check if this model config already exists (by natural key)
         existing = self._session.query(ModelConfigORM).filter_by(
             name=model_cfg.name,
         ).first()
 
         if existing:
-            return (0, 1, existing.id)
+            return (0, 1, uuid.UUID(str(existing.id)))
 
         # Insert new model config
         model_config_orm = model_config_to_orm(model_cfg)
         self._session.add(model_config_orm)
         self._session.flush()
-        return (1, 0, model_config_orm.id)
+        return (1, 0, uuid.UUID(str(model_config_orm.id)))
 
     def _upsert_prompt_builder(self, prompt_builder: PromptBuilder) -> Tuple[int, int, uuid.UUID]:
         """Upsert PromptBuilder entity and return actual database UUID.
@@ -353,6 +360,8 @@ class DBWriter(ForOutput):
         Returns:
             Tuple of (created_count, skipped_count, actual_uuid)
         """
+        assert self._session is not None  # Type narrowing for type checker
+
         # Check if this prompt builder already exists (by natural key)
         existing = self._session.query(PromptBuilderORM).filter_by(
             name=prompt_builder.name,
@@ -360,13 +369,13 @@ class DBWriter(ForOutput):
         ).first()
 
         if existing:
-            return (0, 1, existing.id)
+            return (0, 1, uuid.UUID(str(existing.id)))
 
         # Insert new prompt builder
         prompt_builder_orm = prompt_builder_to_orm(prompt_builder)
         self._session.add(prompt_builder_orm)
         self._session.flush()
-        return (1, 0, prompt_builder_orm.id)
+        return (1, 0, uuid.UUID(str(prompt_builder_orm.id)))
 
     def _upsert_parser(self, parser: ResponseParser) -> Tuple[int, int, uuid.UUID]:
         """Upsert Parser entity and return actual database UUID.
@@ -376,6 +385,8 @@ class DBWriter(ForOutput):
         Returns:
             Tuple of (created_count, skipped_count, actual_uuid)
         """
+        assert self._session is not None  # Type narrowing for type checker
+
         # Check if this parser already exists (by natural key)
         existing = self._session.query(ParserORM).filter_by(
             name=parser.name,
@@ -383,13 +394,13 @@ class DBWriter(ForOutput):
         ).first()
 
         if existing:
-            return (0, 1, existing.id)
+            return (0, 1, uuid.UUID(str(existing.id)))
 
         # Insert new parser
         parser_orm = parser_to_orm(parser)
         self._session.add(parser_orm)
         self._session.flush()
-        return (1, 0, parser_orm.id)
+        return (1, 0, uuid.UUID(str(parser_orm.id)))
 
     def _upsert_prompt_template(
         self,
@@ -409,13 +420,15 @@ class DBWriter(ForOutput):
         Returns:
             Tuple of (created_count, skipped_count, actual_uuid)
         """
+        assert self._session is not None  # Type narrowing for type checker
+
         # Check if this prompt template already exists (by natural key)
         existing = self._session.query(PromptTemplateORM).filter_by(
             name=prompt_template.name,
         ).first()
 
         if existing:
-            return (0, 1, existing.id)
+            return (0, 1, uuid.UUID(str(existing.id)))
 
         # Insert new prompt template
         prompt_template_orm = prompt_template_to_orm(prompt_template)
@@ -424,7 +437,7 @@ class DBWriter(ForOutput):
         prompt_template_orm.parser_id = parser_id
         self._session.add(prompt_template_orm)
         self._session.flush()
-        return (1, 0, prompt_template_orm.id)
+        return (1, 0, uuid.UUID(str(prompt_template_orm.id)))
 
     def _upsert_infer_run_config_entity(
         self,
@@ -446,6 +459,8 @@ class DBWriter(ForOutput):
         Returns:
             Tuple of (created_count, skipped_count, actual_uuid)
         """
+        assert self._session is not None  # Type narrowing for type checker
+
         # Check if this infer run config already exists (by natural key)
         # Natural key includes all the FK IDs plus execution context
         existing = self._session.query(InferRunConfigORM).filter_by(
@@ -459,7 +474,7 @@ class DBWriter(ForOutput):
         ).first()
 
         if existing:
-            return (0, 1, existing.id)
+            return (0, 1, uuid.UUID(str(existing.id)))
 
         # Insert new infer run config
         infer_run_config_orm = infer_run_config_to_orm(infer_run_config)
@@ -469,20 +484,22 @@ class DBWriter(ForOutput):
         infer_run_config_orm.prompt_template_id = prompt_template_id
         self._session.add(infer_run_config_orm)
         self._session.flush()
-        return (1, 0, infer_run_config_orm.id)
+        return (1, 0, uuid.UUID(str(infer_run_config_orm.id)))
 
     def _upsert_llm_prompt_text(self, judgement: LLMJudgement) -> Tuple[int, int, uuid.UUID]:
         """Upsert LLMPromptText and return (created, skipped, id).
 
         Uses pre-query pattern: check if exists by content_hash, insert if new.
         """
+        assert self._session is not None  # Type narrowing for type checker
+
         # Check if this prompt_text already exists (by content_hash)
         existing = self._session.query(LLMPromptTextORM).filter_by(
             content_hash=judgement.llm_prompt_text.content_hash
         ).first()
 
         if existing:
-            return (0, 1, existing.id)
+            return (0, 1, uuid.UUID(str(existing.id)))
 
         # Insert new prompt text
         prompt_text_id = uuid.uuid4()
@@ -500,13 +517,15 @@ class DBWriter(ForOutput):
 
         Uses pre-query pattern: check if exists by content_hash, insert if new.
         """
+        assert self._session is not None  # Type narrowing for type checker
+
         # Check if this response_text already exists (by content_hash)
         existing = self._session.query(LLMResponseTextORM).filter_by(
             content_hash=judgement.llm_response_text.content_hash
         ).first()
 
         if existing:
-            return (0, 1, existing.id)
+            return (0, 1, uuid.UUID(str(existing.id)))
 
         # Insert new response text
         response_text_id = uuid.uuid4()
@@ -519,11 +538,18 @@ class DBWriter(ForOutput):
         self._session.flush()
         return (1, 0, response_text_id)
 
-    def _upsert_llm_score(self, judgement: LLMJudgement) -> Tuple[int, int, uuid.UUID]:
+    def _upsert_llm_score(self, judgement: LLMJudgement) -> Tuple[int, int, uuid.UUID | None]:
         """Upsert LLMScore and return (created, skipped, id).
 
         Uses pre-query pattern: check if exists by natural key, insert if new.
+        Returns None as id if score is not available (parsing failed).
         """
+        assert self._session is not None  # Type narrowing for type checker
+
+        # Handle case where parsing failed and no score is available
+        if judgement.llm_score is None:
+            return (0, 0, None)
+
         # Check if this score already exists (by natural key)
         existing = self._session.query(LLMScoreORM).filter_by(
             label=judgement.llm_score.label,
@@ -532,10 +558,10 @@ class DBWriter(ForOutput):
         ).first()
 
         if existing:
-            return (0, 1, existing.id)
+            return (0, 1, uuid.UUID(str(existing.id)))
 
         # Insert new score
         llm_score_orm = llm_score_to_orm(judgement.llm_score)
         self._session.add(llm_score_orm)
         self._session.flush()
-        return (1, 0, llm_score_orm.id)
+        return (1, 0, uuid.UUID(str(llm_score_orm.id)))

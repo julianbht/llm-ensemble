@@ -308,7 +308,7 @@ def llm_judgement_to_orm(
     dataset_sample_id: UUID,
     llm_prompt_text_id: UUID,
     llm_response_text_id: UUID,
-    llm_score_id: UUID,
+    llm_score_id: UUID | None,
 ) -> LLMJudgementORM:
     """Convert LLMJudgement domain object to LLMJudgementORM.
 
@@ -320,7 +320,7 @@ def llm_judgement_to_orm(
         dataset_sample_id: DatasetSample UUID (cross-schema reference)
         llm_prompt_text_id: LLMPromptText UUID (for foreign key)
         llm_response_text_id: LLMResponseText UUID (for foreign key)
-        llm_score_id: LLMScore UUID (for foreign key)
+        llm_score_id: LLMScore UUID (for foreign key), None if parsing failed
 
     Returns:
         LLMJudgementORM model ready for persistence

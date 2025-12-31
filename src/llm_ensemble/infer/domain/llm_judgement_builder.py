@@ -14,6 +14,8 @@ from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocat
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue
+from llm_ensemble.infer.domain.entities.llm_prompt_text import LLMPromptText
+from llm_ensemble.infer.domain.entities.llm_response_text import LLMResponseText
 
 
 class LLMJudgementBuilder:
@@ -93,6 +95,9 @@ class LLMJudgementBuilder:
     def build(self) -> LLMJudgement:
         """Build the final LLMJudgement entity.
 
+        Creates LLMPromptText and LLMResponseText entities from raw strings.
+        Content hashes are computed automatically by these entities.
+
         Returns:
             Complete LLMJudgement entity
 
@@ -106,10 +111,14 @@ class LLMJudgementBuilder:
         if self._llm_invocation_metrics is None:
             raise ValueError("llm_invocation_metrics is required - call with_llm_response() first")
 
+        # Create deduplicated text entities with automatic hash computation
+        llm_prompt_text_entity = LLMPromptText(prompt_text=self._prompt_text)
+        llm_response_text_entity = LLMResponseText(llm_response_text=self._response_text)
+
         return LLMJudgement(
             dataset_sample=self._dataset_sample,
-            prompt_text=self._prompt_text,
-            response_text=self._response_text,
+            llm_prompt_text=llm_prompt_text_entity,
+            llm_response_text=llm_response_text_entity,
             llm_invocation_metrics=self._llm_invocation_metrics,
             llm_score=self._llm_score,
             parse_issues=self._parse_issues,

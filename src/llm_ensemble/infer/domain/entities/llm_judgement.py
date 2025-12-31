@@ -14,6 +14,8 @@ from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue
+from llm_ensemble.infer.domain.entities.llm_prompt_text import LLMPromptText
+from llm_ensemble.infer.domain.entities.llm_response_text import LLMResponseText
 
 
 class LLMJudgement(BaseModel):
@@ -21,18 +23,18 @@ class LLMJudgement(BaseModel):
 
     Mirrors LLMJudgementORM structure with embedded objects (not IDs):
     - dataset_sample: The query-document pair being judged
-    - prompt_text: The rendered prompt sent to the LLM
-    - response_text: The raw LLM response
+    - llm_prompt_text: The deduplicated prompt text entity sent to the LLM
+    - llm_response_text: The deduplicated response text entity from the LLM
     - llm_invocation_metrics: Performance data (latency, cost, tokens)
-    - llm_score: Parsed score (label, confidence, rationale, warnings)
+    - llm_score: Parsed score (label, confidence, rationale, parse_issues)
 
     Configurations (ModelConfig, AdapterConfig with PromptBuilder/Parser/Provider)
     are NOT stored here - they live at the JudgedDataset level.
 
     This captures the complete data for a single inference:
     - What was judged (dataset_sample)
-    - What prompt was sent (prompt_text)
-    - What response came back (response_text)
+    - What prompt was sent (llm_prompt_text)
+    - What response came back (llm_response_text)
     - How the call performed (llm_invocation_metrics)
     - What score was extracted (llm_score)
     """
@@ -47,14 +49,14 @@ class LLMJudgement(BaseModel):
         description="The query-document pair being judged"
     )
 
-    prompt_text: str = Field(
+    llm_prompt_text: LLMPromptText = Field(
         ...,
-        description="The rendered prompt text sent to the LLM"
+        description="The deduplicated prompt text entity sent to the LLM"
     )
 
-    response_text: str = Field(
+    llm_response_text: LLMResponseText = Field(
         ...,
-        description="The raw LLM response text"
+        description="The deduplicated response text entity from the LLM"
     )
 
     llm_invocation_metrics: LLMInvocationMetrics = Field(

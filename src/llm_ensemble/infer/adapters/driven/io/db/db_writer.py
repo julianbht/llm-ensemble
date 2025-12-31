@@ -26,7 +26,13 @@ from sqlalchemy.orm import Session
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.infer_run import InferRun
+from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
+from llm_ensemble.infer.domain.entities.provider import Provider
+from llm_ensemble.infer.domain.entities.model_config import ModelConfig
+from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
+from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
+from llm_ensemble.infer.domain.entities.prompt_template import PromptTemplate
 from llm_ensemble.infer.application.write_summary import WriteSummary
 from llm_ensemble.infer.application.ports.driven.for_output import ForOutput
 from llm_ensemble.libs.logging import get_logger
@@ -85,13 +91,12 @@ class DBWriter(ForOutput):
             io_name: Name of the IO format (e.g., 'db_to_json')
         """
         self._io_name: str = io_name
-        self._write_summary: Optional[WriteSummary] = None
         self._session: Optional[Session] = None
         self._infer_run_id: Optional[uuid.UUID] = None
         self._infer_run_config_id: Optional[uuid.UUID] = None
         self._infer_run_output_id: Optional[uuid.UUID] = None
         self._dataset_sample_ids: list[uuid.UUID] = []
-        self._write_summary = WriteSummary()
+        self._write_summary: WriteSummary = WriteSummary()
         self.logger = get_logger(component="db_writer")
 
     @property
@@ -294,7 +299,7 @@ class DBWriter(ForOutput):
         # CRITICAL: Use actual UUID from database, not random domain UUID
         self._infer_run_config_id = infer_run_config_id
 
-    def _upsert_provider(self, provider) -> Tuple[int, int, uuid.UUID]:
+    def _upsert_provider(self, provider: Provider) -> Tuple[int, int, uuid.UUID]:
         """Upsert Provider entity and return actual database UUID.
 
         Uses pre-query pattern: check if exists, insert if new.
@@ -317,7 +322,7 @@ class DBWriter(ForOutput):
         self._session.flush()
         return (1, 0, provider_orm.id)
 
-    def _upsert_model_config(self, model_cfg) -> Tuple[int, int, uuid.UUID]:
+    def _upsert_model_config(self, model_cfg: ModelConfig) -> Tuple[int, int, uuid.UUID]:
         """Upsert ModelConfig entity and return actual database UUID.
 
         Uses pre-query pattern: check if exists, insert if new.
@@ -339,7 +344,7 @@ class DBWriter(ForOutput):
         self._session.flush()
         return (1, 0, model_config_orm.id)
 
-    def _upsert_prompt_builder(self, prompt_builder) -> Tuple[int, int, uuid.UUID]:
+    def _upsert_prompt_builder(self, prompt_builder: PromptBuilder) -> Tuple[int, int, uuid.UUID]:
         """Upsert PromptBuilder entity and return actual database UUID.
 
         Uses pre-query pattern: check if exists, insert if new.
@@ -362,7 +367,7 @@ class DBWriter(ForOutput):
         self._session.flush()
         return (1, 0, prompt_builder_orm.id)
 
-    def _upsert_parser(self, parser) -> Tuple[int, int, uuid.UUID]:
+    def _upsert_parser(self, parser: ResponseParser) -> Tuple[int, int, uuid.UUID]:
         """Upsert Parser entity and return actual database UUID.
 
         Uses pre-query pattern: check if exists, insert if new.
@@ -387,7 +392,7 @@ class DBWriter(ForOutput):
 
     def _upsert_prompt_template(
         self,
-        prompt_template,
+        prompt_template: PromptTemplate,
         prompt_builder_id: uuid.UUID,
         parser_id: uuid.UUID,
     ) -> Tuple[int, int, uuid.UUID]:
@@ -422,7 +427,7 @@ class DBWriter(ForOutput):
 
     def _upsert_infer_run_config_entity(
         self,
-        infer_run_config,
+        infer_run_config: InferRunConfig,
         provider_id: uuid.UUID,
         model_config_id: uuid.UUID,
         prompt_template_id: uuid.UUID,
@@ -468,11 +473,11 @@ class DBWriter(ForOutput):
     def _upsert_llm_prompt_text(self, judgement: LLMJudgement) -> Tuple[int, int, uuid.UUID]:
         """Upsert LLMPromptText and return (created, skipped, id).
 
-        Uses pre-query pattern: check if exists, insert if new.
+        Uses pre-query pattern: check if exists by content_hash, insert if new.
         """
-        # Check if this prompt_text already exists
+        # Check if this prompt_text already exists (by content_hash)
         existing = self._session.query(LLMPromptTextORM).filter_by(
-            prompt_text=judgement.prompt_text
+            content_hash=judgement.llm_prompt_text.content_hash
         ).first()
 
         if existing:
@@ -481,7 +486,8 @@ class DBWriter(ForOutput):
         # Insert new prompt text
         prompt_text_id = uuid.uuid4()
         llm_prompt_text_orm = llm_prompt_text_to_orm(
-            judgement.prompt_text,
+            judgement.llm_prompt_text.prompt_text,
+            judgement.llm_prompt_text.content_hash,
             prompt_text_id,
         )
         self._session.add(llm_prompt_text_orm)
@@ -491,13 +497,11 @@ class DBWriter(ForOutput):
     def _upsert_llm_response_text(self, judgement: LLMJudgement) -> Tuple[int, int, uuid.UUID]:
         """Upsert LLMResponseText and return (created, skipped, id).
 
-        Uses pre-query pattern: check if exists, insert if new.
+        Uses pre-query pattern: check if exists by content_hash, insert if new.
         """
-        response_text = judgement.response_text
-
-        # Check if this response_text already exists
+        # Check if this response_text already exists (by content_hash)
         existing = self._session.query(LLMResponseTextORM).filter_by(
-            llm_response_text=response_text
+            content_hash=judgement.llm_response_text.content_hash
         ).first()
 
         if existing:
@@ -505,7 +509,11 @@ class DBWriter(ForOutput):
 
         # Insert new response text
         response_text_id = uuid.uuid4()
-        response_text_orm = llm_response_text_to_orm(response_text, response_text_id)
+        response_text_orm = llm_response_text_to_orm(
+            judgement.llm_response_text.llm_response_text,
+            judgement.llm_response_text.content_hash,
+            response_text_id,
+        )
         self._session.add(response_text_orm)
         self._session.flush()
         return (1, 0, response_text_id)

@@ -220,7 +220,7 @@ class InferenceApplication(ForRunningInference):
                 # Collect for summary statistics
                 llm_judgements.append(judgement)
 
-        # Retrieve aggregate write summary after context manager closes (writer logged directly)
+        # Retrieve aggregate write summary after context manager closes
         output_write_summary = self.output_port.get_summary()
 
         # Build summary

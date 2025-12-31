@@ -226,12 +226,14 @@ def infer_run_to_orm(
 
 def llm_prompt_text_to_orm(
     prompt_text: str,
+    content_hash: str,
     prompt_text_id: UUID,
 ) -> LLMPromptTextORM:
     """Convert prompt text string to LLMPromptTextORM.
 
     Args:
         prompt_text: Rendered prompt text string
+        content_hash: SHA256 hash of prompt text for deduplication
         prompt_text_id: Pre-computed UUID for this prompt text (from deduplication logic)
 
     Returns:
@@ -239,6 +241,7 @@ def llm_prompt_text_to_orm(
     """
     return LLMPromptTextORM(
         id=prompt_text_id,
+        content_hash=content_hash,
         prompt_text=prompt_text,
     )
 
@@ -249,12 +252,14 @@ def llm_prompt_text_to_orm(
 
 def llm_response_text_to_orm(
     response_text: str,
+    content_hash: str,
     response_text_id: UUID,
 ) -> LLMResponseTextORM:
     """Convert raw LLM response text to LLMResponseTextORM.
 
     Args:
         response_text: Raw LLM response text string
+        content_hash: SHA256 hash of response text for deduplication
         response_text_id: Pre-computed UUID for this response text (from deduplication logic)
 
     Returns:
@@ -262,6 +267,7 @@ def llm_response_text_to_orm(
     """
     return LLMResponseTextORM(
         id=response_text_id,
+        content_hash=content_hash,
         llm_response_text=response_text,
     )
 

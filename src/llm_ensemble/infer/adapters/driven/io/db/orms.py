@@ -329,13 +329,17 @@ class LLMPromptTextORM(Base):
 
     Stores unique prompt text values with no foreign keys.
     Multiple judgements can reference the same prompt text.
+
+    Uses SHA256 content_hash for uniqueness to avoid btree index size limits.
+    PostgreSQL btree indexes cannot handle values > ~2.7KB.
     """
     __tablename__ = "llm_prompt_texts"
-    __natural_key__ = ("prompt_text",)
+    __natural_key__ = ("content_hash",)
     __table_args__ = {"schema": "infer"}
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    prompt_text = Column(Text, nullable=False, unique=True)
+    content_hash = Column(CHAR(64), nullable=False, unique=True)
+    prompt_text = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
@@ -347,13 +351,17 @@ class LLMResponseTextORM(Base):
 
     Stores unique raw response text values.
     Multiple scores and judgements can reference the same response text.
+
+    Uses SHA256 content_hash for uniqueness to avoid btree index size limits.
+    PostgreSQL btree indexes cannot handle values > ~2.7KB.
     """
     __tablename__ = "llm_response_texts"
-    __natural_key__ = ("llm_response_text",)
+    __natural_key__ = ("content_hash",)
     __table_args__ = {"schema": "infer"}
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    llm_response_text = Column(Text, nullable=False, unique=True)
+    content_hash = Column(CHAR(64), nullable=False, unique=True)
+    llm_response_text = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships

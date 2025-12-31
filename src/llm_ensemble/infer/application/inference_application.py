@@ -17,7 +17,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
-import structlog
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.llm_judgement_builder import LLMJudgementBuilder
@@ -166,7 +165,7 @@ class InferenceApplication(ForRunningInference):
             run_name=self.run_name,
             official=official,
             notes=notes,
-            input_run_name=resolved_input_run_name,
+            input_run_name=input_run_name,
             start_idx=actual_start_idx,
             end_idx=actual_end_idx,
             start_time=start_time,
@@ -201,7 +200,6 @@ class InferenceApplication(ForRunningInference):
                 llm_score, parse_issues = self.response_parser.parse(raw_response_text)
                 builder.with_parsed_score(llm_score, parse_issues)
 
-                # Log parse issues if any occurred
                 if parse_issues:
                     for issue in parse_issues:
                         logger.warning(issue_to_string(issue))

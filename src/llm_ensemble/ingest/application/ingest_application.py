@@ -19,7 +19,6 @@ from typing import Optional
 from datetime import datetime
 
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
-from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
 from llm_ensemble.ingest.domain.entities.ingest_run_summary import IngestRunSummary
 from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
 from llm_ensemble.ingest.domain.ingest_run_factory import IngestRunFactory

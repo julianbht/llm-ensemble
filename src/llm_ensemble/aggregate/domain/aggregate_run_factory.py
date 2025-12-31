@@ -18,6 +18,7 @@ from typing import Optional
 from llm_ensemble.aggregate.domain.entities.aggregate_run import AggregateRun
 from llm_ensemble.aggregate.domain.entities.aggregate_run_config import AggregateRunConfig
 from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
+from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy
 from llm_ensemble.aggregate.domain.aggregated_dataset_builder import build_aggregated_dataset
 from llm_ensemble.libs.runtime.run_info import RunType
 
@@ -56,9 +57,12 @@ class AggregateRunFactory:
         Returns:
             Assembled AggregateRun aggregate root
         """
+        # Build AggregationStrategy entity
+        aggregation_strategy = AggregationStrategy(name=aggregation_strategy_name)
+
         # Build AggregateRunConfig entity
         run_config = AggregateRunConfig(
-            aggregation_strategy_name=aggregation_strategy_name,
+            aggregation_strategy=aggregation_strategy,
             io_config_name=io_config_name,
             input_run_names=input_run_names,
         )

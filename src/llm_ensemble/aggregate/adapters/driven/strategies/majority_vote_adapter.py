@@ -55,9 +55,7 @@ class MajorityVoteAdapter(ForAggregating):
 
         # Handle edge case: no valid votes
         if not valid_labels:
-            aggregation_strategy = self.get_strategy()
             return build_aggregated_vote(
-                aggregation_strategy=aggregation_strategy,
                 llm_judgements=judgements,
                 final_label=None,
                 final_confidence=0.0,
@@ -91,9 +89,7 @@ class MajorityVoteAdapter(ForAggregating):
             reasoning = f"{max_count}/{total_votes} models voted {final_label.label}"
 
         # Build AggregatedVote entity
-        aggregation_strategy = self.get_strategy()
         return build_aggregated_vote(
-            aggregation_strategy=aggregation_strategy,
             llm_judgements=judgements,
             final_label=final_label,
             final_confidence=final_confidence,

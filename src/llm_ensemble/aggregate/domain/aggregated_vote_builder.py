@@ -8,12 +8,10 @@ from typing import Optional
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
-from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy
 from llm_ensemble.libs.schemas import RelevanceScore
 
 
 def build_aggregated_vote(
-    aggregation_strategy: AggregationStrategy,
     llm_judgements: list[LLMJudgement],
     final_label: Optional[RelevanceScore] = None,
     final_confidence: Optional[float] = None,
@@ -26,7 +24,6 @@ def build_aggregated_vote(
     and validated once at the run level via validate_infer_run_outputs_for_aggregation().
 
     Args:
-        aggregation_strategy: Which aggregation strategy was used (full entity)
         llm_judgements: All LLM judgements that were aggregated (for same dataset_sample)
         final_label: Consensus label chosen by the strategy
         final_confidence: Confidence in the aggregated decision
@@ -36,7 +33,6 @@ def build_aggregated_vote(
         AggregatedVote with random UUID
     """
     return AggregatedVote(
-        aggregation_strategy=aggregation_strategy,
         llm_judgements=llm_judgements,
         final_label=final_label,
         final_confidence=final_confidence,

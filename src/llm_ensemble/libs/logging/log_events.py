@@ -54,11 +54,10 @@ class InferLogEvent(str, Enum):
     WARNINGS_COLLECTED = "warnings_collected"
     BUILDING_PROMPT = "building_prompt"
     PARSING_RESPONSE = "parsing_response"
+    JUDGEMENT_PROCESSED = "judgement_processed"
 
     # Debug-level events (file-only, not console)
-    PROMPT_BUILT = "prompt_built"
-    RAW_RESPONSE = "raw_response"
-    SCORE_EXTRACTED = "score_extracted"
+    JUDGEMENT_COMPLETE = "judgement_complete"
 
 
 class InferWriteEvent(str, Enum):

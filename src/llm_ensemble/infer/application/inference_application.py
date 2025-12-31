@@ -184,7 +184,6 @@ class InferenceApplication(ForRunningInference):
                 logger.info(InferLogEvent.BUILDING_PROMPT)
                 prompt_text = self.prompt_builder.build_prompt(dataset_sample)
                 builder.with_prompt(prompt_text)
-                logger.debug(InferLogEvent.PROMPT_BUILT, prompt_text=prompt_text)
 
                 # Step 2: Run inference
                 logger.info(InferLogEvent.SENDING_REQUEST)
@@ -192,13 +191,11 @@ class InferenceApplication(ForRunningInference):
                 builder.with_llm_response(raw_response_text, invocation_metrics)
                 logger.info(InferLogEvent.RESPONSE_RECEIVED, latency_s=round(invocation_metrics.latency_ms / 1000))
                 logger.info(InferLogEvent.COST_CALCULATED,cost_estimate_usd=invocation_metrics.cost_estimate_usd)
-                logger.debug(InferLogEvent.RAW_RESPONSE, raw_response=raw_response_text)
 
                 # Step 3: Parse response
                 logger.info(InferLogEvent.PARSING_RESPONSE)
                 llm_score, parse_issues = self.response_parser.parse(raw_response_text)
                 builder.with_parsed_score(llm_score, parse_issues)
-                logger.debug(InferLogEvent.SCORE_EXTRACTED, extracted_label=llm_score.label if llm_score else None)
                 if parse_issues:
                     for issue in parse_issues:
                         logger.warning(issue_to_string(issue))
@@ -207,7 +204,7 @@ class InferenceApplication(ForRunningInference):
                 judgement = builder.build()
 
                 logger.info(
-                    InferLogEvent.RESPONSE_PARSED,
+                    InferLogEvent.JUDGEMENT_PROCESSED,
                     extracted_score=get_extracted_score(judgement),
                     gold_score=judgement.dataset_sample.judging_sample.gold_score.value,
                     agreement=calculate_agreement(judgement),
@@ -216,8 +213,15 @@ class InferenceApplication(ForRunningInference):
                 # Write judgement immediately to disk (fault tolerance!)
                 writer.write_one(judgement)
 
+                logger.debug(
+                    InferLogEvent.JUDGEMENT_COMPLETE,
+                    prompt=judgement.llm_prompt_text.prompt_text,
+                    llm_response=judgement.llm_response_text.llm_response_text,
+                    llm_score=judgement.llm_score.model_dump() if judgement.llm_score else None,
+                )
                 # Collect for summary statistics
                 llm_judgements.append(judgement)
+
 
         # Retrieve aggregate write summary after context manager closes
         output_write_summary = self.output_port.get_summary()

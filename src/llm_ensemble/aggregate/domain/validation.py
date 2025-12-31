@@ -16,7 +16,7 @@ def validate_infer_run_outputs_for_aggregation(
 
     Business rules for valid aggregation inputs:
     1. At least one InferRunOutput must be provided
-    2. All InferRunOutputs must have completed successfully (non-null sample_fingerprints)
+    2. All InferRunOutputs must have completed successfully (finished=True)
     3. All sample_fingerprints must match (same samples were processed)
 
     Args:
@@ -29,12 +29,12 @@ def validate_infer_run_outputs_for_aggregation(
     if not judged_datasets:
         raise ValueError("No InferRunOutputs found. Cannot aggregate empty list.")
 
-    # Check for NULL sample_fingerprints (incomplete runs)
+    # Check for incomplete runs (finished=False)
     for dataset, run_name in zip(judged_datasets, run_names):
-        if dataset.sample_fingerprint is None:
+        if not dataset.finished:
             raise ValueError(
-                f"InferRunOutput for run '{run_name}' has NULL sample_fingerprint. "
-                f"This indicates the run did not complete successfully."
+                f"InferRunOutput for run '{run_name}' has finished=False. "
+                f"This indicates the run did not complete successfully and may be resumable."
             )
 
     # Check that all sample_fingerprints match

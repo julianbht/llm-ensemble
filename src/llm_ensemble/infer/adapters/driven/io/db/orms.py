@@ -266,6 +266,12 @@ class InferRunOutputORM(Base):
         nullable=True,
         comment="SHA256 of sorted dataset_sample IDs (identifies which samples were judged, for aggregation)"
     )
+    finished = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Whether the run completed successfully (enables resumability check)"
+    )
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships

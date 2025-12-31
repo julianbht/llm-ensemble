@@ -126,11 +126,12 @@ class DBWriter(ForOutput):
 
         # Create InferRunOutput FIRST (before InferRun) so judgements can reference it
         # Use same ID as InferRun (1:1 relationship)
-        # Start with NULL fingerprint - will be updated in close()
+        # Start with NULL fingerprint and finished=False - will be updated in close()
         infer_run_output = InferRunOutput(
             id=infer_run.id,  # Same ID as InferRun (1:1 relationship)
             llm_judgements=[],  # Judgements written individually via write_one()
             sample_fingerprint=None,  # Set in close() after all samples collected
+            finished=False,  # Set to True in close() when run completes
             judgement_count=0,  # Updated in close()
             error_count=0,  # Updated in close()
             avg_latency_ms=0.0,  # Updated in close()
@@ -215,14 +216,15 @@ class DBWriter(ForOutput):
             # Capture end time
             end_time = datetime.now()
 
-            # Update InferRunOutput with fingerprint (created in open())
+            # Update InferRunOutput with fingerprint and mark as finished
             if self._dataset_sample_ids:
                 fingerprint = compute_judged_dataset_fingerprint(self._dataset_sample_ids)
 
-                # Update existing InferRunOutput with computed fingerprint
+                # Update existing InferRunOutput with computed fingerprint and finished flag
                 infer_run_output_orm = self._session.get(InferRunOutputORM, self._infer_run_output_id)
                 assert infer_run_output_orm is not None  # Created in open()
                 setattr(infer_run_output_orm, "sample_fingerprint", fingerprint)
+                setattr(infer_run_output_orm, "finished", True)
 
                 # Update InferRun end_time
                 infer_run_orm = self._session.get(InferRunORM, self._infer_run_id)

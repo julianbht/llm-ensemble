@@ -51,6 +51,11 @@ class InferRunOutput(BaseModel):
         description="SHA256 hash of sorted dataset_sample IDs (deterministic identifier, NULL until finalized)"
     )
 
+    finished: bool = Field(
+        default=False,
+        description="Whether the run completed successfully (set to True in close())"
+    )
+
     # Aggregate metrics (computed after run completes)
     judgement_count: int = Field(
         ...,

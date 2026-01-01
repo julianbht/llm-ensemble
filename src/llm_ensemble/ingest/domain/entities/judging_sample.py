@@ -15,7 +15,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
-from llm_ensemble.libs.schemas import RelevanceScore
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 from llm_ensemble.ingest.domain.entities.query import Query
 from llm_ensemble.ingest.domain.entities.document import Document
 

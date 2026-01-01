@@ -15,7 +15,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
-from llm_ensemble.libs.schemas import RelevanceScore
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 
 

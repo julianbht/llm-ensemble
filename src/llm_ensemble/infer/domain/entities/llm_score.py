@@ -10,7 +10,7 @@ from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from llm_ensemble.libs.schemas import RelevanceScore
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 class LLMScore(BaseModel):

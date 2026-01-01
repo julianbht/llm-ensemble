@@ -8,7 +8,7 @@ from typing import Optional
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
-from llm_ensemble.libs.schemas import RelevanceScore
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 def build_aggregated_vote(

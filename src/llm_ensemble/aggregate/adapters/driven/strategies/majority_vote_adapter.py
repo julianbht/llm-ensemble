@@ -12,7 +12,7 @@ from llm_ensemble.aggregate.application.ports.driven.for_aggregating import ForA
 from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
 from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy
 from llm_ensemble.aggregate.domain.aggregated_vote_builder import build_aggregated_vote
-from llm_ensemble.libs.schemas import RelevanceScore
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 class MajorityVoteAdapter(ForAggregating):

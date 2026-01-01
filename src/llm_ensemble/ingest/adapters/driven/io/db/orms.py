@@ -26,7 +26,7 @@ from sqlalchemy.orm import relationship
 from llm_ensemble.libs.db import Base
 from llm_ensemble.libs.db.utcnow import utcnow
 from llm_ensemble.libs.runtime.run_info import RunType
-from llm_ensemble.libs.schemas import RelevanceScore
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 class QueryORM(Base):

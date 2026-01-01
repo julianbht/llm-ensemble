@@ -14,7 +14,7 @@ from llm_ensemble.infer.application.ports.driven.for_parsing_responses import Fo
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
 from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue, ParserIssueCode
-from llm_ensemble.libs.schemas import RelevanceScore
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 class ThomasAdvancedParser(ForParsingResponses):

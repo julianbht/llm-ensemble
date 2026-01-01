@@ -1,0 +1,1 @@
+jq -s -r '.[] | select(.event == "judgement_complete") | .llm_response' run.log

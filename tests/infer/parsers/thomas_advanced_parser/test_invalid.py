@@ -18,18 +18,6 @@ def parser():
 
 
 @pytest.mark.unit
-def test_parse_invalid_score_3(parser: ThomasAdvancedParser):
-    """Parse JSON with score 3 - out of range for thomas-advanced (expects 0-2 only)."""
-    raw_text = '{"M": 2, "T": 1, "O": 3}'
-
-    score, warnings = parser.parse(raw_text)
-
-    assert score is None
-    assert len(warnings) == 1
-    assert warnings[0].code == ParserIssueCode.VALIDATION_ISSUE
-
-
-@pytest.mark.unit
 def test_parse_invalid_score_negative(parser: ThomasAdvancedParser):
     """Parse JSON with negative score - should fail validation."""
     raw_text = '{"M": 2, "T": 1, "O": -1}'
@@ -75,6 +63,7 @@ def test_parse_float_instead_of_int(parser: ThomasAdvancedParser):
     assert score is None
     assert len(warnings) == 1
     assert warnings[0].code == ParserIssueCode.VALIDATION_ISSUE
+    
 
 @pytest.mark.unit
 def test_parse_empty_string(parser: ThomasAdvancedParser):

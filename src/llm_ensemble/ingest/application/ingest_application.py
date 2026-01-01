@@ -153,12 +153,12 @@ class IngestApplication(ForRunningIngest):
         write_summary = self.output_port.write(ingest_run)
         logger.info(IngestLogEvent.PERSISTENCE_COMPLETE)
 
-        # Build summary
-        run_summary = self._build_run_summary(
-            start_time,
-            end_time,
-            normalized_dataset,
-            write_summary,
+        # Build run summary
+        run_summary = IngestRunSummary(
+            start_time=start_time,
+            end_time=end_time,
+            sample_count=normalized_dataset.sample_count,
+            write_summary=write_summary,
         )
 
         # Write summary.json
@@ -166,30 +166,4 @@ class IngestApplication(ForRunningIngest):
         logger.info(IngestLogEvent.INGEST_RUN_SUMMARY_WRITTEN, path=str(run_summary_path))
 
         # Return summary
-        return run_summary
-
-    def _build_run_summary(
-        self,
-        start_time: datetime,
-        end_time: datetime,
-        normalized_dataset: NormalizedDataset,
-        write_result: WriteSummary,
-    ) -> IngestRunSummary:
-        """Build run summary from execution results.
-
-        Args:
-            start_time: Time when ingestion pipeline started
-            end_time: Time when ingestion pipeline completed
-            normalized_dataset: The normalized dataset entity produced
-            write_result: Write operation summary from output port
-
-        Returns:
-            Complete IngestRunSummary with all statistics
-        """
-        # Construct Pydantic summary
-        return IngestRunSummary(
-            start_time=start_time,
-            end_time=end_time,
-            sample_count=normalized_dataset.sample_count,
-            write_summary=write_result,
-        )
+        return run_summary 

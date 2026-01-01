@@ -26,7 +26,6 @@ class RunSummary(BaseModel):
     CLI-specific summaries should extend this class to add domain-specific metrics.
     """
 
-    # Timing (computed during/after run)
     start_time: datetime = Field(
         ...,
         description="Timestamp when the run started (captured at beginning of domain service execution)"

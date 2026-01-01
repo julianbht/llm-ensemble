@@ -29,11 +29,12 @@ class ThomasAdvancedPromptBuilder(ForBuildingPrompts):
     TEMPLATE_NAME = "thomas-advanced"
     TEMPLATE_ID = uuid.uuid5(uuid.NAMESPACE_DNS, "llm-ensemble.thomas-advanced-v1")
     TEMPLATE_TEXT = dedent("""\
-        You are a search quality rater evaluating the relevance of web pages.
         Given a query and a web page, you must provide a score on an integer scale of 0 to 2 with the following meanings:
+                           
         2 = highly relevant, very helpful for this query
         1 = relevant, may be partly helpful but might contain other irrelevant content
         0 = not relevant, should never be shown for this query
+                           
         Assume that you are writing a report on the subject of the topic. 
         If you would use any of the information contained in the web page in such a report, mark it 1.
         If the web page is primarily about the topic, or contains vital information about the topic, mark it 2.
@@ -50,13 +51,15 @@ class ThomasAdvancedPromptBuilder(ForBuildingPrompts):
 
         Instructions
         Split this problem into steps:
+                           
         Consider the underlying intent of the search.
+                           
         Measure how well the content matches a likely intent of the query (M).
         Measure how trustworthy the web page is (T).
         Consider the aspects above and the relative importance of each, and decide on a final score (O).
 
         Produce a JSON array of scores without providing any reasoning.
-         Example: {{"M": 2, "T": 1, "O": 1}}""")
+        Example: {{"M": 2, "T": 1, "O": 1}}""")
 
     def __init__(self):
         """Initialize builder and create cached PromptBuilder entity."""

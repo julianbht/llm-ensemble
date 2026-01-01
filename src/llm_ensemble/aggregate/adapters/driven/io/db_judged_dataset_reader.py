@@ -29,7 +29,8 @@ from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     DocumentORM,
 )
 from llm_ensemble.aggregate.application.ports.driven.for_input import ForInput
-from llm_ensemble.libs.db import get_engine, session_context
+from llm_ensemble.libs.db.base import get_engine
+from llm_ensemble.libs.db.session import session_context
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 

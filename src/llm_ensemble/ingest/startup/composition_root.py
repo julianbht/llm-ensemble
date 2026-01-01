@@ -30,7 +30,7 @@ from llm_ensemble.ingest.adapters.driven.io_factory import IOAdapterFactory
 
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.run_info import RunType
-from llm_ensemble.libs.logging import configure_logger
+from llm_ensemble.libs.logging.structlog_logger import configure_logger
 
 
 def build_application(

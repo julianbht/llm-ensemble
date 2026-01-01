@@ -44,7 +44,7 @@ from llm_ensemble.infer.application.ports.driven.for_output import ForOutput
 from llm_ensemble.infer.application.ports.driven.for_parsing_responses import ForParsingResponses
 from llm_ensemble.infer.application.ports.driven.for_building_prompts import ForBuildingPrompts
 
-from llm_ensemble.libs.logging import get_logger
+from llm_ensemble.libs.logging.structlog_logger import get_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_manager import write_summary

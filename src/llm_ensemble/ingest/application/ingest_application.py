@@ -30,7 +30,7 @@ from llm_ensemble.ingest.application.ports.driving.for_running_ingest import For
 from llm_ensemble.ingest.application.ports.driven.for_input import ForInput
 from llm_ensemble.ingest.application.ports.driven.for_output import ForOutput
 
-from llm_ensemble.libs.logging import get_logger
+from llm_ensemble.libs.logging.structlog_logger import get_logger
 from llm_ensemble.libs.logging.log_events import IngestLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.runtime.run_manager import write_summary

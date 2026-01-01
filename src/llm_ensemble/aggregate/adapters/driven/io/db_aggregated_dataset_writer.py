@@ -30,11 +30,9 @@ from llm_ensemble.aggregate.adapters.driven.io.orms import (
     AggregatedDatasetVoteORM,
 )
 from llm_ensemble.aggregate.application.ports.driven.for_output import ForOutput
-from llm_ensemble.libs.logging import get_logger
-from llm_ensemble.libs.db import (
-    get_engine,
-    session_context,
-)
+from llm_ensemble.libs.logging.structlog_logger import get_logger
+from llm_ensemble.libs.db.base import get_engine
+from llm_ensemble.libs.db.session import session_context
 from llm_ensemble.libs.logging.log_events import AggregateWriteEvent
 
 

@@ -37,7 +37,7 @@ from llm_ensemble.infer.adapters.driven.parser_factory import ParserAdapterFacto
 from llm_ensemble.infer.startup.config_loader import load_model_config, load_retry_config
 from llm_ensemble.libs.runtime.path_manager import PathManager
 from llm_ensemble.libs.runtime.run_info import RunType
-from llm_ensemble.libs.logging import configure_logger
+from llm_ensemble.libs.logging.structlog_logger import configure_logger
 
 
 def build_application(

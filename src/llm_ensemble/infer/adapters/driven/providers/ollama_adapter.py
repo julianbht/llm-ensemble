@@ -6,7 +6,7 @@ from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocat
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.domain.entities.retry_config_schema import RetryConfig
 from llm_ensemble.infer.application.ports.driven.for_invoking_llm import ForInvokingLLM
-from llm_ensemble.libs.logging import get_logger
+from llm_ensemble.libs.logging.structlog_logger import get_logger
 
 
 class OllamaAdapter(ForInvokingLLM):

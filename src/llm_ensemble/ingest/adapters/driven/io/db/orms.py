@@ -23,7 +23,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
 
-from llm_ensemble.libs.db import Base
+from llm_ensemble.libs.db.base import Base
 from llm_ensemble.libs.db.utcnow import utcnow
 from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore

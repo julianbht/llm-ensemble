@@ -37,7 +37,8 @@ from llm_ensemble.ingest.adapters.driven.io.db.mappers_from_orm import (
     normalized_dataset_from_orm,
 )
 from llm_ensemble.infer.application.ports.driven.for_input import ForInput
-from llm_ensemble.libs.db import get_engine, get_session
+from llm_ensemble.libs.db.base import get_engine
+from llm_ensemble.libs.db.session import get_session
 
 
 class DBReader(ForInput):

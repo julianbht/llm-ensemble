@@ -45,7 +45,7 @@ from llm_ensemble.aggregate.application.ports.driven.for_input import ForInput
 from llm_ensemble.libs.logging.structlog_logger import get_logger
 from llm_ensemble.libs.logging.log_events import AggregateLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
-from llm_ensemble.libs.runtime.run_manager import persist_write_summary
+from llm_ensemble.libs.runtime.run_manager import persist_run_summary
 
 class AggregationApplication(ForRunningAggregation):
     """Application use case for coordinating ensemble aggregation pipeline.
@@ -187,27 +187,27 @@ class AggregationApplication(ForRunningAggregation):
         )
 
         # Persist
-        write_result = self.output_port.write(aggregate_run)
+        write_summary = self.output_port.write(aggregate_run)
 
-        # Build summary
-        summary = self._build_summary(
+        # Build run summary
+        run_summary = self._build_run_summary(
             start_time,
             end_time,
             judged_datasets,
             aggregated_votes,
-            write_result,
+            write_summary,
         )
 
         # Write summary.json
-        summary_path = persist_write_summary(summary, self.run_dir)
+        run_summary_path = persist_run_summary(run_summary, self.run_dir)
         logger.info(
-                AggregateLogEvent.AGGREGATE_SUMMARY_WRITTEN,
-                summary_path=summary_path
+                AggregateLogEvent.AGGREGATE_RUN_SUMMARY_WRITTEN,
+                summary_path=run_summary_path
             )
 
-        return summary
+        return run_summary
 
-    def _build_summary(
+    def _build_run_summary(
         self,
         start_time: datetime,
         end_time: datetime,

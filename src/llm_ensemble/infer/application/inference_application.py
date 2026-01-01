@@ -51,7 +51,7 @@ from llm_ensemble.infer.application.ports.driven.for_building_prompts import For
 from llm_ensemble.libs.logging.structlog_logger import get_logger
 from llm_ensemble.libs.logging.log_events import InferLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
-from llm_ensemble.libs.runtime.run_manager import persist_write_summary
+from llm_ensemble.libs.runtime.run_manager import persist_run_summary
 
 
 class InferenceApplication(ForRunningInference):
@@ -234,8 +234,8 @@ class InferenceApplication(ForRunningInference):
         run_summary = self._build_run_summary(start_time, llm_judgements, write_summary)
 
         # Write run summary to disk and log completion
-        summary_path = persist_write_summary(run_summary, self.run_dir)
-        logger.info(InferLogEvent.INFER_SUMMARY_WRITTEN, path=str(summary_path))
+        run_summary_path = persist_run_summary(run_summary, self.run_dir)
+        logger.info(InferLogEvent.INFER_RUN_SUMMARY_WRITTEN, path=str(run_summary_path))
 
         # Return finalized run summary
         return run_summary

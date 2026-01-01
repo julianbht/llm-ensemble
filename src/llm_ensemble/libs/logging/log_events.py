@@ -12,7 +12,7 @@ class IngestLogEvent(str, Enum):
 
     INGEST_STARTED = "ingest_started"
     READ_COMPLETE = "dataset_read_complete"
-    INGEST_SUMMARY_WRITTEN = "ingest_summary_written"
+    INGEST_RUN_SUMMARY_WRITTEN = "ingest_run_summary_written"
     LOGS_SAVED = "logs_saved"
     PERSISTENCE_COMPLETE = "persistence_complete"
 
@@ -48,7 +48,7 @@ class InferLogEvent(str, Enum):
     RETRY_ATTEMPT = "retry_attempt"
     RETRY_EXHAUSTED = "retry_exhausted"
     ALL_SAMPLES_PROCESSED = "all_samples_processed"
-    INFER_SUMMARY_WRITTEN = "inference_summary_written"
+    INFER_RUN_SUMMARY_WRITTEN = "inference_run_summary_written"
     INFER_COMPLETE = "inference_complete"
     LOGS_SAVED = "logs_saved"
     WARNINGS_COLLECTED = "warnings_collected"
@@ -97,7 +97,7 @@ class AggregateLogEvent(str, Enum):
     APPLYING_STRATEGY = "applying_strategy"
     SAMPLE_AGGREGATED = "sample_aggregated"
     DATASET_CREATED = "aggregated_dataset_created"
-    AGGREGATE_SUMMARY_WRITTEN = "aggregation_summary_written"
+    AGGREGATE_RUN_SUMMARY_WRITTEN = "aggregation_run_summary_written"
     AGGREGATE_COMPLETE = "aggregation_complete"
     LOGS_SAVED = "logs_saved"
     WARNINGS_COLLECTED = "warnings_collected"

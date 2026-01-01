@@ -33,7 +33,7 @@ from llm_ensemble.ingest.application.ports.driven.for_output import ForOutput
 from llm_ensemble.libs.logging.structlog_logger import get_logger
 from llm_ensemble.libs.logging.log_events import IngestLogEvent
 from llm_ensemble.libs.runtime.run_info import RunType
-from llm_ensemble.libs.runtime.run_manager import persist_write_summary
+from llm_ensemble.libs.runtime.run_manager import persist_run_summary
 
 
 class IngestApplication(ForRunningIngest):
@@ -150,25 +150,25 @@ class IngestApplication(ForRunningIngest):
         )
 
         # Write output
-        write_result = self.output_port.write(ingest_run)
+        write_summary = self.output_port.write(ingest_run)
         logger.info(IngestLogEvent.PERSISTENCE_COMPLETE)
 
         # Build summary
-        summary = self._build_summary(
+        run_summary = self._build_run_summary(
             start_time,
             end_time,
             normalized_dataset,
-            write_result,
+            write_summary,
         )
 
         # Write summary.json
-        summary_path = persist_write_summary(summary, self.run_dir)
-        logger.info(IngestLogEvent.INGEST_SUMMARY_WRITTEN, path=str(summary_path))
+        run_summary_path = persist_run_summary(run_summary, self.run_dir)
+        logger.info(IngestLogEvent.INGEST_RUN_SUMMARY_WRITTEN, path=str(run_summary_path))
 
         # Return summary
-        return summary
+        return run_summary
 
-    def _build_summary(
+    def _build_run_summary(
         self,
         start_time: datetime,
         end_time: datetime,

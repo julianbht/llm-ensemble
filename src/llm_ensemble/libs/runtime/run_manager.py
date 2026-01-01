@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 from pydantic import BaseModel
 
-def persist_write_summary(summary: BaseModel, run_dir: Path) -> Path:
+def persist_run_summary(summary: BaseModel, run_dir: Path) -> Path:
     """Write a summary object to summary.json in the run directory.
 
     Args:

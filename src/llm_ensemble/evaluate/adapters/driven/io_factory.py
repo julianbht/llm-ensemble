@@ -11,10 +11,9 @@ To add a new I/O format:
 
 from __future__ import annotations
 
+from llm_ensemble.evaluate.adapters.driven.io.dummy_writer import DummyWriter
 from llm_ensemble.evaluate.application.ports.driven.for_input import ForInput
 from llm_ensemble.evaluate.application.ports.driven.for_output import ForOutput
-from llm_ensemble.evaluate.adapters.driven.io.dummy_reader import DummyReader
-from llm_ensemble.evaluate.adapters.driven.io.dummy_writer import DummyWriter
 from llm_ensemble.evaluate.adapters.driven.io.db_infer_reader import DBInferReader
 from llm_ensemble.evaluate.adapters.driven.io.db_aggregate_reader import DBAggregateReader
 
@@ -38,9 +37,7 @@ class IOAdapterFactory:
         Raises:
             ValueError: If I/O format not found
         """
-        if io_name == "dummy":
-            return DummyReader(io_name=io_name)
-        elif io_name == "db_infer":
+        if io_name == "db_infer":
             return DBInferReader(io_name=io_name)
         elif io_name == "db_aggregate":
             return DBAggregateReader(io_name=io_name)

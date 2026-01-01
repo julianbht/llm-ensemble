@@ -14,11 +14,13 @@ Reference: Cohen, J. (1960). A coefficient of agreement for nominal scales.
 """
 
 from __future__ import annotations
-from typing import Any
+from typing import Optional
 
 from sklearn.metrics import cohen_kappa_score
 
 from llm_ensemble.evaluate.application.ports.driven.for_computing_metrics import ForComputingMetrics
+from llm_ensemble.evaluate.domain.entities.metric_result import MetricResult
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 class CohensKappaAdapter(ForComputingMetrics):
@@ -27,19 +29,19 @@ class CohensKappaAdapter(ForComputingMetrics):
     Implements ForComputingMetrics port for computing inter-rater agreement.
     """
 
-    def compute(self, ground_truth: list[Any], predictions: list[Any]) -> dict[str, Any]:
+    def compute(
+        self,
+        ground_truth: list[RelevanceScore],
+        predictions: list[Optional[RelevanceScore]]
+    ) -> MetricResult:
         """Compute Cohen's Kappa coefficient.
 
         Args:
-            ground_truth: List of ground truth labels (reference rater)
-            predictions: List of predicted labels (second rater)
+            ground_truth: List of ground truth relevance labels
+            predictions: List of predicted relevance labels (None if parse failed)
 
         Returns:
-            Metric result dict with:
-            - name: "cohens_kappa"
-            - type: "scalar"
-            - value: Cohen's Kappa coefficient (-1 to 1)
-            - metadata: sample_size and interpretation guide
+            MetricResult entity with Cohen's Kappa value and interpretation
 
         Raises:
             ValueError: If inputs have different lengths or are empty
@@ -59,16 +61,13 @@ class CohensKappaAdapter(ForComputingMetrics):
         # Interpretation guide (Landis & Koch, 1977)
         interpretation = self._interpret_kappa(kappa_value)
 
-        return {
-            "name": "cohens_kappa",
-            "type": "scalar",
-            "value": kappa_value,
-            "metadata": {
-                "sample_size": len(ground_truth),
-                "interpretation": interpretation,
-                "description": "Cohen's Kappa coefficient measuring inter-rater agreement",
-            },
-        }
+        return MetricResult(
+            name="cohens_kappa",
+            value=kappa_value,
+            sample_size=len(ground_truth),
+            interpretation=interpretation,
+            description="Cohen's Kappa coefficient measuring inter-rater agreement",
+        )
 
     @staticmethod
     def _interpret_kappa(kappa: float) -> str:

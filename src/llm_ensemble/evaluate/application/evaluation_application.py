@@ -111,8 +111,8 @@ class EvaluationApplication(ForRunningEvaluation):
             metric_results.append(result)
             logger.info(
                 EvaluateLogEvent.METRIC_COMPUTED,
-                metric=result["name"],
-                value=result["value"]
+                metric=result.name,
+                value=result.value
             )
 
         # Build metadata from EvaluationData

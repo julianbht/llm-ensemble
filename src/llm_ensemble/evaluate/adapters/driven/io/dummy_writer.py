@@ -44,5 +44,10 @@ class DummyWriter(ForOutput):
         print(f"\nMetadata: {run_metadata}")
         print(f"\nMetric Results:")
         for result in metric_results:
-            print(f"  - {result}")
+            print(f"  - {result.name}: {result.value}")
+            if result.interpretation:
+                print(f"    interpretation: {result.interpretation}")
+            if result.description:
+                print(f"    description: {result.description}")
+            print(f"    sample_size: {result.sample_size}")
         print("=" * 60)

@@ -12,11 +12,10 @@ To add a new metric:
 from __future__ import annotations
 
 from llm_ensemble.evaluate.application.ports.driven.for_computing_metrics import ForComputingMetrics
-from llm_ensemble.evaluate.adapters.driven.metrics.dummy_metric import DummyMetricAdapter
 from llm_ensemble.evaluate.adapters.driven.metrics.cohens_kappa import CohensKappaAdapter
 
 
-AVAILABLE_METRICS = ["dummy", "cohens_kappa"]
+AVAILABLE_METRICS = ["cohens_kappa"]
 
 
 class MetricAdapterFactory:
@@ -35,9 +34,7 @@ class MetricAdapterFactory:
         Raises:
             ValueError: If metric not found
         """
-        if metric_name == "dummy":
-            return DummyMetricAdapter()
-        elif metric_name == "cohens_kappa":
+        if metric_name == "cohens_kappa":
             return CohensKappaAdapter()
         else:
             available = ", ".join(sorted(AVAILABLE_METRICS))

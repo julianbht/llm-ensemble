@@ -11,7 +11,10 @@ Metric adapters implement this port to provide different metrics
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional
+
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
+from llm_ensemble.evaluate.domain.entities.metric_result import MetricResult
 
 
 class ForComputingMetrics(ABC):
@@ -21,19 +24,23 @@ class ForComputingMetrics(ABC):
     Metric adapters implement this interface.
 
     Each metric adapter computes a specific metric (Cohen's Kappa, etc.)
-    and returns a standardized result structure.
+    and returns a standardized MetricResult entity.
     """
 
     @abstractmethod
-    def compute(self, ground_truth: list[Any], predictions: list[Any]) -> Any:
+    def compute(
+        self,
+        ground_truth: list[RelevanceScore],
+        predictions: list[Optional[RelevanceScore]]
+    ) -> MetricResult:
         """Compute metric from ground truth and predictions.
 
         Args:
-            ground_truth: List of ground truth labels
-            predictions: List of predicted labels
+            ground_truth: List of ground truth relevance labels
+            predictions: List of predicted relevance labels (None if parse failed)
 
         Returns:
-            Metric result (to be defined as MetricResult)
+            MetricResult entity with metric value and metadata
 
         Raises:
             ValueError: If inputs invalid or incompatible

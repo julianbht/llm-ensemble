@@ -31,7 +31,7 @@ def test_parse_string_score_converts_to_int(parser: ThomasAdvancedParser):
     assert score is not None
     assert score.label == RelevanceScore.RELEVANT
     assert len(warnings) == 1
-    assert warnings[0].code == ParserIssueCode.PARTIAL_PARSE
+    assert warnings[0].code == ParserIssueCode.PARTIAL_PARSE_ISSUE
 
 
 @pytest.mark.unit
@@ -44,7 +44,7 @@ def test_parse_malformed_json_missing_brace(parser: ThomasAdvancedParser):
     assert score is not None
     assert score.label == RelevanceScore.RELEVANT
     assert len(warnings) >= 1
-    assert any(w.code == ParserIssueCode.PARTIAL_PARSE for w in warnings)
+    assert any(w.code == ParserIssueCode.PARTIAL_PARSE_ISSUE for w in warnings)
 
 
 @pytest.mark.unit

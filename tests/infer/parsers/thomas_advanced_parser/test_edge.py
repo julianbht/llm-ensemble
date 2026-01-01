@@ -19,18 +19,6 @@ def parser():
 
 
 @pytest.mark.unit
-def test_parse_empty_string(parser: ThomasAdvancedParser):
-    """Parse empty string input."""
-    raw_text = ""
-
-    score, warnings = parser.parse(raw_text)
-
-    assert score is None
-    assert len(warnings) == 1
-    assert warnings[0].code == ParserIssueCode.PARSE_ERROR
-
-
-@pytest.mark.unit
 def test_parse_multiple_json_objects(parser: ThomasAdvancedParser):
     """Parse text with multiple JSON objects - should extract first match."""
     raw_text = '''

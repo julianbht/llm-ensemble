@@ -21,10 +21,10 @@ class ParserIssueCode(str, Enum):
     General categories to avoid taxonomy explosion. Use metadata for specifics.
     """
 
-    PARSE_ERROR = "parse_error"  # Malformed JSON/XML, invalid format
-    FIELD_ERROR = "field_error"  # Missing, wrong type, invalid value
-    VALIDATION_ERROR = "validation_error"  # Out of range, failed constraints
-    PARTIAL_PARSE = "partial_parse"  # Some fields extracted, others missing
+    PARSE_ISSUE = "parse_issue"  # Malformed JSON/XML, invalid format
+    FIELD_ISSUE = "field_issue"  # Missing, wrong type, invalid value
+    VALIDATION_ISSUE = "validation_issue"  # Out of range, failed constraints
+    PARTIAL_PARSE_ISSUE = "partial_parse_issue"  # Some fields extracted, others missing
     OTHER = "other"
 
 

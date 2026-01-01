@@ -107,7 +107,7 @@ class ThomasAdvancedParser(ForParsingResponses):
 
         if not json_match:
             warning = ParserIssue(
-                code=ParserIssueCode.PARSE_ERROR,
+                code=ParserIssueCode.PARSE_ISSUE,
                 message="No JSON object with 'M', 'T', 'O' fields found in response",
                 metadata={"expected_format": '{"M": N, "T": N, "O": N}'}
             )
@@ -120,7 +120,7 @@ class ThomasAdvancedParser(ForParsingResponses):
             return json.loads(json_str)
         except json.JSONDecodeError as e:
             warning = ParserIssue(
-                code=ParserIssueCode.PARSE_ERROR,
+                code=ParserIssueCode.PARSE_ISSUE,
                 message=f"Failed to parse JSON: {e}",
                 metadata={"error_type": type(e).__name__}
             )
@@ -143,7 +143,7 @@ class ThomasAdvancedParser(ForParsingResponses):
 
         if score is None:
             warning = ParserIssue(
-                code=ParserIssueCode.FIELD_ERROR,
+                code=ParserIssueCode.FIELD_ISSUE,
                 message="Missing 'O' field in parsed JSON",
                 metadata={"field_name": "O"}
             )
@@ -168,7 +168,7 @@ class ThomasAdvancedParser(ForParsingResponses):
         """
         if not isinstance(score_value, int) or score_value not in [0, 1, 2]:
             warning = ParserIssue(
-                code=ParserIssueCode.VALIDATION_ERROR,
+                code=ParserIssueCode.VALIDATION_ISSUE,
                 message=f"Invalid O score: {score_value} (expected 0, 1, or 2)",
                 metadata={"field_name": "O", "actual_value": str(score_value)}
             )

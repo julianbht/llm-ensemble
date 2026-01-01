@@ -26,7 +26,7 @@ def test_parse_invalid_score_3(parser: ThomasAdvancedParser):
 
     assert score is None
     assert len(warnings) == 1
-    assert warnings[0].code == ParserIssueCode.VALIDATION_ERROR
+    assert warnings[0].code == ParserIssueCode.VALIDATION_ISSUE
 
 
 @pytest.mark.unit
@@ -38,7 +38,7 @@ def test_parse_invalid_score_negative(parser: ThomasAdvancedParser):
 
     assert score is None
     assert len(warnings) == 1
-    assert warnings[0].code == ParserIssueCode.VALIDATION_ERROR
+    assert warnings[0].code == ParserIssueCode.VALIDATION_ISSUE
 
 
 @pytest.mark.unit
@@ -50,7 +50,7 @@ def test_parse_invalid_score_out_of_range(parser: ThomasAdvancedParser):
 
     assert score is None
     assert len(warnings) == 1
-    assert warnings[0].code == ParserIssueCode.VALIDATION_ERROR
+    assert warnings[0].code == ParserIssueCode.VALIDATION_ISSUE
 
 
 @pytest.mark.unit
@@ -62,7 +62,7 @@ def test_parse_no_json_found(parser: ThomasAdvancedParser):
 
     assert score is None
     assert len(warnings) == 1
-    assert warnings[0].code == ParserIssueCode.PARSE_ERROR
+    assert warnings[0].code == ParserIssueCode.PARSE_ISSUE
 
 
 @pytest.mark.unit
@@ -74,4 +74,15 @@ def test_parse_float_instead_of_int(parser: ThomasAdvancedParser):
 
     assert score is None
     assert len(warnings) == 1
-    assert warnings[0].code == ParserIssueCode.VALIDATION_ERROR
+    assert warnings[0].code == ParserIssueCode.VALIDATION_ISSUE
+
+@pytest.mark.unit
+def test_parse_empty_string(parser: ThomasAdvancedParser):
+    """Parse empty string input."""
+    raw_text = ""
+
+    score, warnings = parser.parse(raw_text)
+
+    assert score is None
+    assert len(warnings) == 1
+    assert warnings[0].code == ParserIssueCode.PARSE_ISSUE

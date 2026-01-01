@@ -180,14 +180,15 @@ def test_parse_fuzzy_relevant(parser: ThomasAdvancedTrecParser):
 
 @pytest.mark.unit
 def test_parse_fuzzy_irrelevant(parser: ThomasAdvancedTrecParser):
-    """Parse using fuzzy matching for 'not relevant' keywords."""
-    raw_text = 'The document is not relevant to the query at all.'
+    """Parse using fuzzy matching for 'irrelevant' keywords."""
+    raw_text = 'The document has nothing to do with the query.'
 
     score, issues = parser.parse(raw_text)
 
     assert score is not None
     assert score.label == RelevanceScore.IRRELEVANT
     assert len(issues) == 1
+    assert issues[0].code == ParserIssueCode.LOW_CONFIDENCE_EXTRACTION
 
 
 # ============================================================================

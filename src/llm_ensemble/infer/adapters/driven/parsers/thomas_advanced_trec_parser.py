@@ -55,6 +55,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
 
         Tries multiple extraction strategies in order of reliability.
         Returns None if all strategies fail.
+        Stops at first successful extraction (early return).
 
         Args:
             raw_text: Raw text response from the LLM
@@ -75,9 +76,14 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
         ]
 
         for strategy in strategies:
-            score = strategy(raw_text, issues)
+            # Each strategy gets its own issue list to avoid accumulation
+            strategy_issues: list[ParserIssue] = []
+            score = strategy(raw_text, strategy_issues)
             if score is not None:
+                # Success - return with only this strategy's issues
+                issues.extend(strategy_issues)
                 return score, issues
+            # Strategy failed - continue to next strategy without accumulating issues
 
         # All strategies failed
         issues.append(ParserIssue(
@@ -329,7 +335,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
             issues.append(ParserIssue(
                 code=ParserIssueCode.INVALID_FIELD_VALUE,
                 message=f"Invalid O score: {score_value} (expected 0, 1, 2, or 3)",
-                metadata={"field_name": "O", "actual_value": str(score_value), "valid_range": "0-3"}
+                metadata={"field_name": "O", "actual_value": str(score_value), "valid_range": "0-3", "actual_type": type(score_value).__name__}
             ))
             return None
 

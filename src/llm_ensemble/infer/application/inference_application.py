@@ -33,7 +33,15 @@ from llm_ensemble.infer.domain.metrics import (
     calculate_total_tokens,
 )
 from llm_ensemble.infer.domain.entities.parse_issues import issue_to_string
-from llm_ensemble.infer.domain.entities.infer_run_summary import InferRunSummary
+from llm_ensemble.infer.domain.entities.infer_run_summary import (
+    InferRunSummary,
+    JudgementsSummary,
+    LatencySummary,
+    CostSummary,
+    TokensSummary,
+    PerformanceSummary,
+    PersistenceSummary,
+)
 from llm_ensemble.infer.application.write_summary import WriteSummary
 from llm_ensemble.infer.domain.infer_run_config_factory import InferRunConfigFactory
 from llm_ensemble.infer.domain.dataset_utils import resolve_slice_indices
@@ -329,18 +337,39 @@ class InferenceApplication(ForRunningInference):
         total_completion_tokens = calculate_total_completion_tokens(llm_judgements)
         total_tokens = calculate_total_tokens(llm_judgements)
 
+        # Construct nested summary structure
+        judgements_summary = JudgementsSummary(
+            total_count=len(llm_judgements),
+            failed_parses_count=failed_parses_count,
+        )
+
+        performance_summary = PerformanceSummary(
+            latency=LatencySummary(
+                total_ms=total_latency_ms,
+                avg_ms=avg_latency_ms,
+            ),
+            cost=CostSummary(
+                total_usd=total_cost_usd,
+            ),
+            tokens=TokensSummary(
+                total_prompt=total_prompt_tokens,
+                total_completion=total_completion_tokens,
+                total=total_tokens,
+            ),
+        )
+
+        persistence_summary = PersistenceSummary(
+            total_created=write_summary.total_created,
+            total_skipped=write_summary.total_skipped,
+            details=write_summary,
+        )
+
         # Construct Pydantic summary
         return InferRunSummary(
             start_time=start_time,
             end_time=datetime.now(),
-            write_summary=write_summary,
-            judgement_count=len(llm_judgements),
-            failed_parses_count=failed_parses_count,
-            total_latency_ms=total_latency_ms,
-            avg_latency_ms=avg_latency_ms,
-            total_cost_usd=total_cost_usd,
-            total_prompt_tokens=total_prompt_tokens,
-            total_completion_tokens=total_completion_tokens,
-            total_tokens=total_tokens,
-            issues_summary=issues_summary,
+            judgements=judgements_summary,
+            performance=performance_summary,
+            persistence=persistence_summary,
+            issues=issues_summary,
         )

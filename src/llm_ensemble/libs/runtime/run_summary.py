@@ -39,17 +39,17 @@ class RunSummary(BaseModel):
     @computed_field
     @property
     def duration_seconds(self) -> float:
-        """Duration of the run in seconds (precise measurement)."""
-        return (self.end_time - self.start_time).total_seconds()
+        """Duration of the run in seconds (precise measurement, rounded to 2 decimals)."""
+        return round((self.end_time - self.start_time).total_seconds(), 2)
 
     @computed_field
     @property
     def duration_minutes(self) -> float:
-        """Duration of the run in minutes (for medium-length runs)."""
-        return self.duration_seconds / 60.0
+        """Duration of the run in minutes (for medium-length runs, rounded to 2 decimals)."""
+        return round(self.duration_seconds / 60.0, 2)
 
     @computed_field
     @property
     def duration_hours(self) -> float:
-        """Duration of the run in hours (for long-running jobs)."""
-        return self.duration_seconds / 3600.0
+        """Duration of the run in hours (for long-running jobs, rounded to 2 decimals)."""
+        return round(self.duration_seconds / 3600.0, 2)

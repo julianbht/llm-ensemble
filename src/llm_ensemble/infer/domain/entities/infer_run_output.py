@@ -62,9 +62,9 @@ class InferRunOutput(BaseModel):
         description="Total number of judgements produced"
     )
 
-    error_count: int = Field(
+    failed_parses_count: int = Field(
         default=0,
-        description="Number of parsing failures or errors"
+        description="Number of judgements where parsing failed (llm_score is None or label is None)"
     )
 
     avg_latency_ms: float = Field(

@@ -132,7 +132,7 @@ class DBWriter(ForOutput):
             sample_fingerprint=None,  # Set in close() after all samples collected
             finished=False,  # Set to True in close() when run completes
             judgement_count=0,  # Updated in close()
-            error_count=0,  # Updated in close()
+            failed_parses_count=0,  # Updated in close()
             avg_latency_ms=0.0,  # Updated in close()
         )
         infer_run_output_orm = infer_run_output_to_orm(infer_run_output)

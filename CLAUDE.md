@@ -13,7 +13,7 @@ The project follows a 4-stage pipeline architecture with shared libraries and he
 1. **ingest** — Normalize raw IR datasets into `JudgingExample` records
 2. **infer** — Run LLM judges over samples, writing per-model judgements
 3. **aggregate** — Combine judgements using ensemble strategies (weighted majority vote, etc.)
-4. **evaluate** — Compute metrics and generate HTML reports
+4. **evaluate** — Compute metrics and generate reports
 
 All artifacts are managed by the **run manager** (`libs/runtime/run_manager.py`), which creates run directories, generates IDs, and writes manifests. Outputs are organized under `artifacts/runs/<cli_name>/<run_name>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
 
@@ -32,9 +32,6 @@ infer --model gpt-oss-20b --prompt thomas-et-al-prompt --io json --input artifac
 
 # Aggregate - Combine model judgements using ensemble strategies
 aggregate --ensemble weighted_majority --io json --input artifacts/runs/infer/<run_name>/judgements.json
-
-# Evaluate - Compute metrics and generate reports
-evaluate --io json --input artifacts/runs/aggregate/<run_name>/ensemble.json
 
 # Alternative: run via python module
 python3 -m llm_ensemble.ingest_cli --help

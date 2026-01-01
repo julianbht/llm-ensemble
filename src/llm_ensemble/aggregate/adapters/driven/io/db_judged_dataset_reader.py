@@ -7,12 +7,17 @@ objects for use in the aggregation pipeline.
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from sqlalchemy.orm import joinedload
 
 from llm_ensemble.infer.domain.entities.infer_run_output import InferRunOutput
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
+from llm_ensemble.infer.domain.entities.llm_prompt_text import LLMPromptText
+from llm_ensemble.infer.domain.entities.llm_response_text import LLMResponseText
+from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue, ParserIssueCode
 from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.query import Query
@@ -128,7 +133,7 @@ class DbInferRunOutputReader(ForInput):
                 )
 
                 # Build mapping of dataset_sample_id -> DatasetSample domain object
-                dataset_sample_map = {}
+                dataset_sample_map: dict[UUID, DatasetSample] = {}
                 for ds_orm, js_orm, query_orm, doc_orm in dataset_samples_orms:
                     # Build Query domain object
                     query = Query(
@@ -163,7 +168,7 @@ class DbInferRunOutputReader(ForInput):
                     dataset_sample_map[ds_orm.id] = dataset_sample
 
                 # Convert LLMJudgementORMs to domain objects
-                llm_judgements = []
+                llm_judgements: list[LLMJudgement] = []
                 for j_orm in llm_judgement_orms:
                     # Get dataset_sample from map
                     dataset_sample = dataset_sample_map[j_orm.dataset_sample_id]
@@ -190,20 +195,33 @@ class DbInferRunOutputReader(ForInput):
 
                     # Reconstruct parser issue if present
                     parser_issue = None
-                    if j_orm.parser_issue_code:
-                        from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue, ParserIssueCode
+                    if j_orm.parser_issue_code is not None:
                         parser_issue = ParserIssue(
                             code=ParserIssueCode(j_orm.parser_issue_code),
                             message=j_orm.parser_issue_message or "",
                             metadata=j_orm.parser_issue_metadata or {}
                         )
 
+                    # Build LLMPromptText entity
+                    llm_prompt_text = LLMPromptText(
+                        id=j_orm.llm_prompt_text.id,
+                        prompt_text=j_orm.llm_prompt_text.prompt_text,
+                        content_hash=j_orm.llm_prompt_text.content_hash,
+                    )
+
+                    # Build LLMResponseText entity
+                    llm_response_text = LLMResponseText(
+                        id=j_orm.llm_response_text.id,
+                        llm_response_text=j_orm.llm_response_text.llm_response_text,
+                        content_hash=j_orm.llm_response_text.content_hash,
+                    )
+
                     # Build LLMJudgement
                     llm_judgement = LLMJudgement(
                         id=j_orm.id,
                         dataset_sample=dataset_sample,
-                        prompt_text=j_orm.llm_prompt_text.prompt_text,
-                        response_text=j_orm.llm_response_text.llm_response_text,
+                        llm_prompt_text=llm_prompt_text,
+                        llm_response_text=llm_response_text,
                         llm_invocation_metrics=invocation_metrics,
                         llm_score=llm_score,
                         parser_issue=parser_issue,

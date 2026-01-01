@@ -11,7 +11,8 @@ Adapters implement this port to provide different input sources
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Any
+
+from llm_ensemble.evaluate.domain.entities.evaluation_data import EvaluationData
 
 
 class ForInput(ABC):
@@ -22,22 +23,22 @@ class ForInput(ABC):
 
     Responsibilities:
     - Read judgements from infer or aggregate runs
-    - Normalize to a common format (ground_truth vs predicted)
-    - Extract relevant metadata
+    - Normalize to EvaluationData entity (ground_truth vs predictions)
+    - Validate data via domain builder
     """
 
     @abstractmethod
-    def read(self, input_run_name: str) -> Any:
+    def read(self, input_run_name: str) -> EvaluationData:
         """Read and normalize evaluation data from input run.
 
         Args:
             input_run_name: Run name to read from (infer or aggregate run)
 
         Returns:
-            Normalized evaluation data (to be defined)
+            EvaluationData entity with validated ground truth and predictions
 
         Raises:
             FileNotFoundError: If input run not found
-            ValueError: If input format invalid
+            ValueError: If input format invalid or violates business rules
         """
         pass

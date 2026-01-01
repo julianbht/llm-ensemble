@@ -8,9 +8,11 @@ replaced with real implementations that read from infer/aggregate runs.
 """
 
 from __future__ import annotations
-from typing import Any
 
 from llm_ensemble.evaluate.application.ports.driven.for_input import ForInput
+from llm_ensemble.evaluate.domain.entities.evaluation_data import EvaluationData
+from llm_ensemble.evaluate.domain.evaluation_data_builder import build_evaluation_data
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 class DummyReader(ForInput):
@@ -28,24 +30,34 @@ class DummyReader(ForInput):
         """
         self.io_name = io_name
 
-    def read(self, input_run_name: str) -> Any:
+    def read(self, input_run_name: str) -> EvaluationData:
         """Read placeholder evaluation data.
 
         Args:
             input_run_name: Run name to read from (ignored for dummy)
 
         Returns:
-            Placeholder data structure
+            EvaluationData entity with placeholder data
 
         Raises:
             FileNotFoundError: If input run not found (not implemented)
         """
-        # Return placeholder data for testing
-        return {
-            "ground_truth": [1, 2, 3, 1, 2],
-            "predictions": [1, 2, 2, 1, 3],
-            "metadata": {
-                "input_run_name": input_run_name,
-                "sample_count": 5,
-            },
-        }
+        # Create placeholder data using domain builder
+        return build_evaluation_data(
+            ground_truth=[
+                RelevanceScore.RELEVANT,
+                RelevanceScore.HIGHLY_RELEVANT,
+                RelevanceScore.PERFECTLY_RELEVANT,
+                RelevanceScore.RELEVANT,
+                RelevanceScore.HIGHLY_RELEVANT,
+            ],
+            predictions=[
+                RelevanceScore.RELEVANT,
+                RelevanceScore.HIGHLY_RELEVANT,
+                RelevanceScore.HIGHLY_RELEVANT,
+                RelevanceScore.RELEVANT,
+                RelevanceScore.PERFECTLY_RELEVANT,
+            ],
+            run_name=input_run_name,
+            run_type="dummy",
+        )

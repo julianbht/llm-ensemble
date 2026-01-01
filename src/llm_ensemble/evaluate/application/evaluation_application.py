@@ -21,6 +21,7 @@ from llm_ensemble.evaluate.application.ports.driven.for_output import ForOutput
 from llm_ensemble.evaluate.application.ports.driven.for_computing_metrics import ForComputingMetrics
 
 from llm_ensemble.libs.logging.structlog_logger import get_logger
+from llm_ensemble.libs.logging.log_events import EvaluateLogEvent
 
 
 class EvaluationApplication(ForRunningEvaluation):
@@ -89,32 +90,41 @@ class EvaluationApplication(ForRunningEvaluation):
             Exception: If any step in the pipeline fails
         """
         logger = get_logger()
-        logger.info("evaluation_started", name=self.run_name)
+        logger.info(EvaluateLogEvent.EVALUATE_STARTED, name=self.run_name)
 
-        # Read evaluation data
+        # Read evaluation data (returns EvaluationData entity)
         evaluation_data = self.input_port.read(input_run_name)
-        logger.info("input_read", input_run_name=input_run_name)
-
-        # Extract ground truth and predictions
-        ground_truth = evaluation_data["ground_truth"]
-        predictions = evaluation_data["predictions"]
+        logger.info(
+            EvaluateLogEvent.INPUT_READ,
+            input_run_name=evaluation_data.run_name,
+            run_type=evaluation_data.run_type,
+            sample_count=evaluation_data.sample_count,
+        )
 
         # Compute metrics
         metric_results = []
         for metric_adapter in self.metric_adapters:
-            result = metric_adapter.compute(ground_truth, predictions)
+            result = metric_adapter.compute(
+                evaluation_data.ground_truth,
+                evaluation_data.predictions
+            )
             metric_results.append(result)
-            logger.info("metric_computed", metric=result["name"], value=result["value"])
+            logger.info(
+                EvaluateLogEvent.METRIC_COMPUTED,
+                metric=result["name"],
+                value=result["value"]
+            )
 
-        # Build metadata
+        # Build metadata from EvaluationData
         run_metadata = {
             "run_name": self.run_name,
-            "input_run_name": input_run_name,
+            "input_run_name": evaluation_data.run_name,
+            "input_run_type": evaluation_data.run_type,
+            "sample_count": evaluation_data.sample_count,
             "official": official,
             "notes": notes,
-            **evaluation_data["metadata"],
         }
 
         # Write report
         self.output_port.write(metric_results, run_metadata)
-        logger.info("evaluation_complete", run_name=self.run_name)
+        logger.info(EvaluateLogEvent.EVALUATE_COMPLETE, run_name=self.run_name)

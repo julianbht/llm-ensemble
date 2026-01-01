@@ -114,3 +114,13 @@ class AggregateWriteEvent(str, Enum):
     WRITE_DATASET_VOTES = "write_dataset_votes"
     WRITE_RUNS = "write_aggregate_runs"
     WRITE_COMPLETE = "write_complete"
+
+
+class EvaluateLogEvent(str, Enum):
+    """Log events for evaluate orchestrator."""
+
+    EVALUATE_STARTED = "evaluation_started"
+    INPUT_READ = "input_read"
+    METRIC_COMPUTED = "metric_computed"
+    REPORT_WRITTEN = "report_written"
+    EVALUATE_COMPLETE = "evaluation_complete"

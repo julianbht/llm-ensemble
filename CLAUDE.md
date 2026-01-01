@@ -85,7 +85,6 @@ The project uses pytest for testing. Tests are organized in the `tests/` directo
 make test              # Run all tests
 make test-ingest       # Run ingest tests only
 make test-infer        # Run infer tests only
-make test-schema       # Run schema validation tests only
 
 # Using pytest directly
 pytest                 # Run all tests

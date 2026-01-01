@@ -51,16 +51,16 @@ def calculate_agreement(judgement: LLMJudgement) -> int:
                  judgement.llm_score.label.value == judgement.dataset_sample.judging_sample.gold_score.value) else 0
 
 
-def count_errors(judgements: list[LLMJudgement]) -> int:
-    """Count judgements with parsing errors.
+def count_failed_parses(judgements: list[LLMJudgement]) -> int:
+    """Count judgements where parsing failed.
 
-    Business rule: Error when llm_score is None or label is None.
+    Business rule: Parsing failed when llm_score is None or label is None.
 
     Args:
         judgements: List of all LLM judgements produced
 
     Returns:
-        Number of judgements with errors
+        Number of judgements where parsing failed
     """
     return sum(
         1 for j in judgements
@@ -104,3 +104,79 @@ def aggregate_parse_issues(judgements: list[LLMJudgement]) -> Optional[dict[str,
             issues_summary[code] = issues_summary.get(code, 0) + 1
 
     return issues_summary if issues_summary else None
+
+
+def calculate_total_cost(judgements: list[LLMJudgement]) -> Optional[float]:
+    """Calculate total estimated cost across all judgements.
+
+    Business rule: Sum cost estimates where available, return None if no costs tracked.
+
+    Args:
+        judgements: List of all LLM judgements produced
+
+    Returns:
+        Total cost in USD, or None if no cost data available
+    """
+    total = sum(
+        j.llm_invocation_metrics.cost_estimate_usd
+        for j in judgements
+        if j.llm_invocation_metrics.cost_estimate_usd is not None
+    )
+    return total if total > 0 else None
+
+
+def calculate_total_prompt_tokens(judgements: list[LLMJudgement]) -> Optional[int]:
+    """Calculate total prompt tokens across all judgements.
+
+    Business rule: Sum prompt tokens where available, return None if no tokens tracked.
+
+    Args:
+        judgements: List of all LLM judgements produced
+
+    Returns:
+        Total prompt tokens, or None if no token data available
+    """
+    total = sum(
+        j.llm_invocation_metrics.prompt_tokens
+        for j in judgements
+        if j.llm_invocation_metrics.prompt_tokens is not None
+    )
+    return total if total > 0 else None
+
+
+def calculate_total_completion_tokens(judgements: list[LLMJudgement]) -> Optional[int]:
+    """Calculate total completion tokens across all judgements.
+
+    Business rule: Sum completion tokens where available, return None if no tokens tracked.
+
+    Args:
+        judgements: List of all LLM judgements produced
+
+    Returns:
+        Total completion tokens, or None if no token data available
+    """
+    total = sum(
+        j.llm_invocation_metrics.completion_tokens
+        for j in judgements
+        if j.llm_invocation_metrics.completion_tokens is not None
+    )
+    return total if total > 0 else None
+
+
+def calculate_total_tokens(judgements: list[LLMJudgement]) -> Optional[int]:
+    """Calculate total tokens across all judgements.
+
+    Business rule: Sum total tokens where available, return None if no tokens tracked.
+
+    Args:
+        judgements: List of all LLM judgements produced
+
+    Returns:
+        Total tokens (prompt + completion), or None if no token data available
+    """
+    total = sum(
+        j.llm_invocation_metrics.total_tokens
+        for j in judgements
+        if j.llm_invocation_metrics.total_tokens is not None
+    )
+    return total if total > 0 else None

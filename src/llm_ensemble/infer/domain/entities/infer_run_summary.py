@@ -18,8 +18,10 @@ class InferRunSummary(RunSummary):
 
     Extends the base RunSummary with inference-specific aggregate statistics:
     - Write summary (files written, records persisted)
-    - Judgement counts (total, errors)
+    - Judgement counts (total, failed parses)
     - Latency statistics (total, average)
+    - Cost statistics (total cost estimate in USD)
+    - Token statistics (total prompt, completion, and combined tokens)
     - Warnings summary (counts by warning type)
 
     This is separate from InferRunInfo which contains immutable configuration.
@@ -38,9 +40,9 @@ class InferRunSummary(RunSummary):
         description="Number of judgements produced"
     )
 
-    error_count: int = Field(
+    failed_parses_count: int = Field(
         ...,
-        description="Number of failed judgements (label=None)"
+        description="Number of judgements where parsing failed (llm_score is None or label is None)"
     )
 
     total_latency_ms: float = Field(
@@ -51,6 +53,30 @@ class InferRunSummary(RunSummary):
     avg_latency_ms: float = Field(
         ...,
         description="Average latency per judgement in milliseconds"
+    )
+
+    total_cost_usd: Optional[float] = Field(
+        None,
+        ge=0.0,
+        description="Total estimated cost in USD for all LLM inference calls"
+    )
+
+    total_prompt_tokens: Optional[int] = Field(
+        None,
+        ge=0,
+        description="Total number of prompt tokens across all inference calls"
+    )
+
+    total_completion_tokens: Optional[int] = Field(
+        None,
+        ge=0,
+        description="Total number of completion tokens across all inference calls"
+    )
+
+    total_tokens: Optional[int] = Field(
+        None,
+        ge=0,
+        description="Total number of tokens (prompt + completion) across all inference calls"
     )
 
     issues_summary: Optional[dict[str, int]] = Field(

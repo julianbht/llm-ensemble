@@ -8,7 +8,7 @@ provenance without waiting for aggregate metrics.
 
 from __future__ import annotations
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class RunSummary(BaseModel):
@@ -35,3 +35,21 @@ class RunSummary(BaseModel):
         ...,
         description="Timestamp when the run completed (captured at end)"
     )
+
+    @computed_field
+    @property
+    def duration_seconds(self) -> float:
+        """Duration of the run in seconds (precise measurement)."""
+        return (self.end_time - self.start_time).total_seconds()
+
+    @computed_field
+    @property
+    def duration_minutes(self) -> float:
+        """Duration of the run in minutes (for medium-length runs)."""
+        return self.duration_seconds / 60.0
+
+    @computed_field
+    @property
+    def duration_hours(self) -> float:
+        """Duration of the run in hours (for long-running jobs)."""
+        return self.duration_seconds / 3600.0

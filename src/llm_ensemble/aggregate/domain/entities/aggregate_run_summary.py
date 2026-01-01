@@ -4,35 +4,25 @@ Contains aggregate metrics and statistics computed AFTER the aggregation run fin
 """
 
 from __future__ import annotations
-from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import Field
 
+from llm_ensemble.libs.runtime.run_summary import RunSummary
 from llm_ensemble.aggregate.domain.entities.write_summary import WriteSummary
 
 
-class AggregateRunSummary(BaseModel):
+class AggregateRunSummary(RunSummary):
     """Summary of aggregate run with timing and statistics.
 
-    Contains:
-    - Timing: start_time, end_time
-    - Statistics: counts, aggregation metrics
-    - Metadata: warnings summary, tie statistics
-    - Write summary: persistence statistics from writer port
+    Extends the base RunSummary with aggregation-specific aggregate statistics:
+    - Input/output counts (judgements read, unique pairs, aggregated votes)
+    - Aggregation statistics (ties, no valid votes)
+    - Write summary (persistence statistics from writer port)
+    - Warnings summary (counts by warning type)
 
-    This is the final summary object created after the run completes.
+    This is separate from AggregateRunInfo which contains immutable configuration.
     Written to summary.json for provenance tracking.
     """
-
-    start_time: datetime = Field(
-        ...,
-        description="When aggregation processing started"
-    )
-
-    end_time: datetime = Field(
-        ...,
-        description="When aggregation processing completed"
-    )
 
     # Core statistics
     input_judgement_count: int = Field(

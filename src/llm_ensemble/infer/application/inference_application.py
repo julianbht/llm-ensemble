@@ -24,9 +24,13 @@ from llm_ensemble.infer.domain.entities.infer_run import InferRun
 from llm_ensemble.infer.domain.metrics import (
     calculate_agreement,
     get_extracted_score,
-    count_errors,
+    count_failed_parses,
     calculate_average_latency,
     aggregate_parse_issues,
+    calculate_total_cost,
+    calculate_total_prompt_tokens,
+    calculate_total_completion_tokens,
+    calculate_total_tokens,
 )
 from llm_ensemble.infer.domain.entities.parse_issues import issue_to_string
 from llm_ensemble.infer.domain.entities.infer_run_summary import InferRunSummary
@@ -316,10 +320,14 @@ class InferenceApplication(ForRunningInference):
             Complete InferRunSummary with all statistics
         """
         # Calculate domain statistics using focused functions
-        error_count = count_errors(llm_judgements)
+        failed_parses_count = count_failed_parses(llm_judgements)
         total_latency_ms = sum(j.llm_invocation_metrics.latency_ms for j in llm_judgements)
         avg_latency_ms = calculate_average_latency(llm_judgements)
         issues_summary = aggregate_parse_issues(llm_judgements)
+        total_cost_usd = calculate_total_cost(llm_judgements)
+        total_prompt_tokens = calculate_total_prompt_tokens(llm_judgements)
+        total_completion_tokens = calculate_total_completion_tokens(llm_judgements)
+        total_tokens = calculate_total_tokens(llm_judgements)
 
         # Construct Pydantic summary
         return InferRunSummary(
@@ -327,8 +335,12 @@ class InferenceApplication(ForRunningInference):
             end_time=datetime.now(),
             write_summary=write_summary,
             judgement_count=len(llm_judgements),
-            error_count=error_count,
+            failed_parses_count=failed_parses_count,
             total_latency_ms=total_latency_ms,
             avg_latency_ms=avg_latency_ms,
+            total_cost_usd=total_cost_usd,
+            total_prompt_tokens=total_prompt_tokens,
+            total_completion_tokens=total_completion_tokens,
+            total_tokens=total_tokens,
             issues_summary=issues_summary,
         )

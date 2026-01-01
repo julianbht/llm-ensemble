@@ -125,7 +125,7 @@ class ForOutput(ABC):
         """
         self._write_summary = self.close()
 
-    def get_persistence_summary(self) -> WriteSummary:
+    def get_write_summary(self) -> WriteSummary:
         """Get the write summary after the writer has been closed.
 
         Must be called after the context manager exits.

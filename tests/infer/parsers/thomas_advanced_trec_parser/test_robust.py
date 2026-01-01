@@ -206,3 +206,17 @@ def test_parse_string_score_converts_to_int(parser: ThomasAdvancedTrecParser):
     assert score.label == RelevanceScore.HIGHLY_RELEVANT
     assert len(issues) == 1
     assert issues[0].code == ParserIssueCode.TYPE_COERCION_APPLIED
+    
+
+@pytest.mark.unit
+def test_parse_float_instead_of_int(parser: ThomasAdvancedTrecParser):
+    """Parse JSON with float value - regex extracts integer part."""
+    raw_text = '{"M": 2, "T": 1, "O": 2.5}'
+
+    score, issues = parser.parse(raw_text)
+
+    # Regex strategy extracts "2" from "2.5"
+    assert score is not None
+    assert score.label == RelevanceScore.HIGHLY_RELEVANT
+    assert len(issues) == 1
+    assert issues[0].code == ParserIssueCode.NON_STANDARD_FORMAT

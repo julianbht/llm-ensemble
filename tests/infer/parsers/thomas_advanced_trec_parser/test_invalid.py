@@ -8,8 +8,6 @@ from __future__ import annotations
 import pytest
 
 from llm_ensemble.infer.adapters.driven.parsers.thomas_advanced_trec_parser import ThomasAdvancedTrecParser
-from llm_ensemble.infer.domain.entities.parse_issues import ParserIssueCode
-from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 @pytest.fixture
@@ -77,19 +75,6 @@ def test_parse_no_json_found(parser: ThomasAdvancedTrecParser):
 
     assert score is None
 
-
-@pytest.mark.unit
-def test_parse_float_instead_of_int(parser: ThomasAdvancedTrecParser):
-    """Parse JSON with float value - regex extracts integer part."""
-    raw_text = '{"M": 2, "T": 1, "O": 2.5}'
-
-    score, issues = parser.parse(raw_text)
-
-    # Regex strategy extracts "2" from "2.5"
-    assert score is not None
-    assert score.label == RelevanceScore.HIGHLY_RELEVANT
-    assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.NON_STANDARD_FORMAT
 
 
 @pytest.mark.unit

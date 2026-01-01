@@ -467,8 +467,10 @@ class LLMJudgementORM(Base):
     completion_tokens = Column(Integer, nullable=True)
     total_tokens = Column(Integer, nullable=True)
 
-    # Parser warnings as JSONB array (data quality issues during parsing)
-    parse_issues = Column(ARRAY(JSONB), nullable=False, default=[])
+    # Parser issue (single, nullable)
+    parser_issue_code = Column(String(50), nullable=True, comment="Primary parser issue code if encountered")
+    parser_issue_message = Column(Text, nullable=True, comment="Human-readable issue description")
+    parser_issue_metadata = Column(JSONB, nullable=True, comment="Optional metadata for the parser issue")
 
     created_at = Column(DateTime, nullable=False, default=utcnow)
 

@@ -206,11 +206,10 @@ class InferenceApplication(ForRunningInference):
 
                 # Step 3: Parse response
                 logger.info(InferLogEvent.PARSING_RESPONSE)
-                llm_score, parse_issues = self.response_parser.parse(raw_response_text)
-                builder.with_parsed_score(llm_score, parse_issues)
-                if parse_issues:
-                    for issue in parse_issues:
-                        logger.warning(issue_to_string(issue))
+                llm_score, parser_issue = self.response_parser.parse(raw_response_text)
+                builder.with_parsed_score(llm_score, parser_issue)
+                if parser_issue:
+                    logger.warning(issue_to_string(parser_issue))
 
                 # Build complete judgement
                 judgement = builder.build()

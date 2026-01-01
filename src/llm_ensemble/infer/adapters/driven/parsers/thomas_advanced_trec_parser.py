@@ -50,7 +50,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
             version="1.0"
         )
 
-    def parse(self, raw_text: str) -> tuple[Optional[LLMScore], list[ParserIssue]]:
+    def parse(self, raw_text: str) -> tuple[Optional[LLMScore], Optional[ParserIssue]]:
         """Parse JSON response using cascading strategy.
 
         Tries multiple extraction strategies in order of reliability.
@@ -61,12 +61,10 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
             raw_text: Raw text response from the LLM
 
         Returns:
-            Tuple of (LLMScore or None, issues):
+            Tuple of (LLMScore or None, parser_issue):
             - LLMScore: parsed score, or None if extraction failed
-            - issues: List of parser issues encountered
+            - parser_issue: Primary parser issue if encountered, None if clean parse
         """
-        issues: list[ParserIssue] = []
-
         # Cascading strategy: try each method until one succeeds
         strategies = [
             self._try_clean_json,
@@ -76,22 +74,16 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
         ]
 
         for strategy in strategies:
-            # Each strategy gets its own issue list to avoid accumulation
-            strategy_issues: list[ParserIssue] = []
-            score = strategy(raw_text, strategy_issues)
+            score, issue = strategy(raw_text)
             if score is not None:
-                # Success - return with only this strategy's issues
-                issues.extend(strategy_issues)
-                return score, issues
-            # Strategy failed - continue to next strategy without accumulating issues
+                return score, issue
 
         # All strategies failed
-        issues.append(ParserIssue(
-            code=ParserIssueCode.MALFORMED_RESPONSE,
+        return None, ParserIssue(
+            code=ParserIssueCode.PARSE_FAILED,
             message="All parsing strategies failed to extract score",
             metadata={"strategies_tried": len(strategies)}
-        ))
-        return None, issues
+        )
 
     def get_parser(self) -> ResponseParser:
         """Get Parser metadata for this adapter.
@@ -105,25 +97,24 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
     # Cascading parsing strategies
     # ========================================================================
 
-    def _try_clean_json(self, raw_text: str, issues: list[ParserIssue]) -> Optional[LLMScore]:
+    def _try_clean_json(self, raw_text: str) -> tuple[Optional[LLMScore], Optional[ParserIssue]]:
         """Strategy 1: Try parsing response as clean JSON at root level.
 
         Args:
             raw_text: Raw LLM response
-            issues: List to append issues to
 
         Returns:
-            LLMScore if successful, None otherwise
+            Tuple of (LLMScore or None, parser_issue)
         """
         try:
             data = json.loads(raw_text.strip())
             if isinstance(data, dict):
-                return self._extract_score_from_dict(data, issues)
+                return self._extract_score_from_dict(data)
         except (json.JSONDecodeError, ValueError):
             pass
-        return None
+        return None, None
 
-    def _try_embedded_json(self, raw_text: str, issues: list[ParserIssue]) -> Optional[LLMScore]:
+    def _try_embedded_json(self, raw_text: str) -> tuple[Optional[LLMScore], Optional[ParserIssue]]:
         """Strategy 2: Try extracting JSON from markdown blocks or embedded text.
 
         Looks for:
@@ -133,10 +124,9 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
 
         Args:
             raw_text: Raw LLM response
-            issues: List to append issues to
 
         Returns:
-            LLMScore if successful, None otherwise
+            Tuple of (LLMScore or None, parser_issue)
         """
         # Try markdown code blocks first
         markdown_patterns = [
@@ -150,14 +140,13 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
                 try:
                     data = json.loads(match.group(1))
                     if isinstance(data, dict):
-                        score = self._extract_score_from_dict(data, issues)
+                        score, issue = self._extract_score_from_dict(data)
                         if score:
-                            issues.append(ParserIssue(
+                            return score, ParserIssue(
                                 code=ParserIssueCode.NON_STANDARD_FORMAT,
                                 message="Extracted JSON from markdown code block",
                                 metadata={"extraction_method": "markdown"}
-                            ))
-                            return score
+                            )
                 except (json.JSONDecodeError, ValueError):
                     continue
 
@@ -168,20 +157,19 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
             try:
                 data = json.loads(match.group(0))
                 if isinstance(data, dict):
-                    score = self._extract_score_from_dict(data, issues)
+                    score, issue = self._extract_score_from_dict(data)
                     if score:
-                        issues.append(ParserIssue(
+                        return score, ParserIssue(
                             code=ParserIssueCode.NON_STANDARD_FORMAT,
                             message="Extracted JSON object from text",
                             metadata={"extraction_method": "embedded_json"}
-                        ))
-                        return score
+                        )
             except (json.JSONDecodeError, ValueError):
                 pass
 
-        return None
+        return None, None
 
-    def _try_regex_extract(self, raw_text: str, issues: list[ParserIssue]) -> Optional[LLMScore]:
+    def _try_regex_extract(self, raw_text: str) -> tuple[Optional[LLMScore], Optional[ParserIssue]]:
         """Strategy 3: Try extracting score using regex patterns.
 
         Looks for patterns like:
@@ -191,10 +179,9 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
 
         Args:
             raw_text: Raw LLM response
-            issues: List to append issues to
 
         Returns:
-            LLMScore if successful, None otherwise
+            Tuple of (LLMScore or None, parser_issue)
         """
         patterns = [
             r'"O"\s*:\s*(\d+)',
@@ -208,143 +195,100 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
             if match:
                 try:
                     score_value = int(match.group(1))
-                    label = self._validate_score_value(score_value, issues)
+                    label = self._validate_score_value(score_value)
                     if label is not None:
-                        issues.append(ParserIssue(
+                        return LLMScore(label=label, confidence=None, rationale=None), ParserIssue(
                             code=ParserIssueCode.NON_STANDARD_FORMAT,
                             message="Extracted score using regex pattern matching",
                             metadata={"extraction_method": "regex", "pattern": pattern}
-                        ))
-                        return LLMScore(label=label, confidence=None, rationale=None)
+                        )
                 except ValueError:
                     continue
 
-        return None
+        return None, None
 
-    def _try_fuzzy_extract(self, raw_text: str, issues: list[ParserIssue]) -> Optional[LLMScore]:
+    def _try_fuzzy_extract(self, raw_text: str) -> tuple[Optional[LLMScore], Optional[ParserIssue]]:
         """Strategy 4: Try fuzzy matching based on keywords.
 
         Last resort strategy looking for relevance keywords in text.
-        Records PARTIAL_PARSE_ISSUE as this is least reliable.
 
         Args:
             raw_text: Raw LLM response
-            issues: List to append issues to
 
         Returns:
-            LLMScore if successful, None otherwise
+            Tuple of (LLMScore or None, parser_issue)
         """
         text_lower = raw_text.lower()
 
+        issue = ParserIssue(
+            code=ParserIssueCode.LOW_CONFIDENCE_EXTRACTION,
+            message="Extracted score using fuzzy keyword matching",
+            metadata={"extraction_method": "fuzzy", "confidence": "low"}
+        )
+
         # Check for explicit relevance keywords
         if any(word in text_lower for word in ["perfectly relevant", "perfect match", "exact answer"]):
-            issues.append(ParserIssue(
-                code=ParserIssueCode.LOW_CONFIDENCE_EXTRACTION,
-                message="Extracted score using fuzzy keyword matching (perfectly relevant)",
-                metadata={"extraction_method": "fuzzy", "confidence": "low"}
-            ))
-            return LLMScore(label=RelevanceScore.PERFECTLY_RELEVANT, confidence=None, rationale=None)
+            return LLMScore(label=RelevanceScore.PERFECTLY_RELEVANT, confidence=None, rationale=None), issue
 
         if any(word in text_lower for word in ["highly relevant", "very helpful", "vital information"]):
-            issues.append(ParserIssue(
-                code=ParserIssueCode.LOW_CONFIDENCE_EXTRACTION,
-                message="Extracted score using fuzzy keyword matching (highly relevant)",
-                metadata={"extraction_method": "fuzzy", "confidence": "low"}
-            ))
-            return LLMScore(label=RelevanceScore.HIGHLY_RELEVANT, confidence=None, rationale=None)
+            return LLMScore(label=RelevanceScore.HIGHLY_RELEVANT, confidence=None, rationale=None), issue
 
         if any(word in text_lower for word in ["relevant", "related", "partly helpful"]):
-            issues.append(ParserIssue(
-                code=ParserIssueCode.LOW_CONFIDENCE_EXTRACTION,
-                message="Extracted score using fuzzy keyword matching (relevant)",
-                metadata={"extraction_method": "fuzzy", "confidence": "low"}
-            ))
-            return LLMScore(label=RelevanceScore.RELEVANT, confidence=None, rationale=None)
+            return LLMScore(label=RelevanceScore.RELEVANT, confidence=None, rationale=None), issue
 
         if any(word in text_lower for word in ["not relevant", "irrelevant", "nothing to do"]):
-            issues.append(ParserIssue(
-                code=ParserIssueCode.LOW_CONFIDENCE_EXTRACTION,
-                message="Extracted score using fuzzy keyword matching (irrelevant)",
-                metadata={"extraction_method": "fuzzy", "confidence": "low"}
-            ))
-            return LLMScore(label=RelevanceScore.IRRELEVANT, confidence=None, rationale=None)
+            return LLMScore(label=RelevanceScore.IRRELEVANT, confidence=None, rationale=None), issue
 
-        return None
+        return None, None
 
     # ========================================================================
     # Helper methods for extraction and validation
     # ========================================================================
 
-    def _extract_score_from_dict(self, data: dict, issues: list[ParserIssue]) -> Optional[LLMScore]:
+    def _extract_score_from_dict(self, data: dict) -> tuple[Optional[LLMScore], Optional[ParserIssue]]:
         """Extract and validate O field from parsed JSON dict.
 
         Args:
             data: Parsed JSON dictionary
-            issues: List to append issues to
 
         Returns:
-            LLMScore if valid O field found, None otherwise
+            Tuple of (LLMScore or None, parser_issue)
         """
         if "O" not in data:
-            issues.append(ParserIssue(
+            return None, ParserIssue(
                 code=ParserIssueCode.MISSING_REQUIRED_FIELD,
                 message="Missing 'O' field in parsed JSON",
                 metadata={"field_name": "O", "available_fields": list(data.keys())}
-            ))
-            return None
+            )
 
         score_value = data["O"]
-        label = self._validate_score_value(score_value, issues)
+        label = self._validate_score_value(score_value)
         if label is None:
-            return None
+            return None, ParserIssue(
+                code=ParserIssueCode.INVALID_FIELD_VALUE,
+                message=f"Invalid O score: {score_value}",
+                metadata={"field_name": "O", "actual_value": str(score_value)}
+            )
 
-        return LLMScore(label=label, confidence=None, rationale=None)
+        return LLMScore(label=label, confidence=None, rationale=None), None
 
-    def _validate_score_value(self, score_value: any, issues: list[ParserIssue]) -> Optional[RelevanceScore]:
+    def _validate_score_value(self, score_value: any) -> Optional[RelevanceScore]:
         """Validate score value and convert to RelevanceScore enum.
 
-        Handles type conversion (string to int) and range validation.
+        Handles range validation only (no type coercion).
         Valid range: 0-3 (4-level TREC scale).
 
         Args:
             score_value: Raw score value from JSON or text
-            issues: List to append issues to
 
         Returns:
             RelevanceScore enum if valid, None otherwise
         """
-        # Try to convert to int if it's a string
-        if isinstance(score_value, str):
-            try:
-                score_value = int(score_value)
-                issues.append(ParserIssue(
-                    code=ParserIssueCode.TYPE_COERCION_APPLIED,
-                    message="Converted string score to integer",
-                    metadata={"original_type": "str", "converted_value": score_value}
-                ))
-            except ValueError:
-                issues.append(ParserIssue(
-                    code=ParserIssueCode.INVALID_FIELD_VALUE,
-                    message=f"Score value is not a valid integer: {score_value}",
-                    metadata={"field_name": "O", "actual_value": str(score_value)}
-                ))
-                return None
-
         # Validate type and range
         if not isinstance(score_value, int) or score_value not in [0, 1, 2, 3]:
-            issues.append(ParserIssue(
-                code=ParserIssueCode.INVALID_FIELD_VALUE,
-                message=f"Invalid O score: {score_value} (expected 0, 1, 2, or 3)",
-                metadata={"field_name": "O", "actual_value": str(score_value), "valid_range": "0-3", "actual_type": type(score_value).__name__}
-            ))
             return None
 
         try:
             return RelevanceScore(score_value)
         except ValueError:
-            issues.append(ParserIssue(
-                code=ParserIssueCode.INVALID_FIELD_VALUE,
-                message=f"Failed to convert to RelevanceScore: {score_value}",
-                metadata={"value": score_value}
-            ))
             return None

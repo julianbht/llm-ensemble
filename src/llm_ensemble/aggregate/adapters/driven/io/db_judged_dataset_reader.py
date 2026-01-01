@@ -188,6 +188,16 @@ class DbInferRunOutputReader(ForInput):
                             rationale=j_orm.llm_score.rationale,
                         )
 
+                    # Reconstruct parser issue if present
+                    parser_issue = None
+                    if j_orm.parser_issue_code:
+                        from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue, ParserIssueCode
+                        parser_issue = ParserIssue(
+                            code=ParserIssueCode(j_orm.parser_issue_code),
+                            message=j_orm.parser_issue_message or "",
+                            metadata=j_orm.parser_issue_metadata or {}
+                        )
+
                     # Build LLMJudgement
                     llm_judgement = LLMJudgement(
                         id=j_orm.id,
@@ -196,7 +206,7 @@ class DbInferRunOutputReader(ForInput):
                         response_text=j_orm.llm_response_text.llm_response_text,
                         llm_invocation_metrics=invocation_metrics,
                         llm_score=llm_score,
-                        parse_issues=j_orm.parse_issues or [],
+                        parser_issue=parser_issue,
                     )
 
                     llm_judgements.append(llm_judgement)

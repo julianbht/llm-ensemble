@@ -22,8 +22,8 @@ class ParserIssueCode(str, Enum):
     Use metadata for additional context (field names, attempted values, etc.).
     """
 
-    MALFORMED_RESPONSE = "malformed_response"
-    """Response format is malformed or unparseable (e.g., invalid JSON, no recognizable structure)."""
+    PARSE_FAILED = "parse_failed"
+    """All parsing strategies failed - no score could be extracted from response."""
 
     MISSING_REQUIRED_FIELD = "missing_required_field"
     """Required field is missing from response (e.g., missing 'O' score field)."""
@@ -33,9 +33,6 @@ class ParserIssueCode(str, Enum):
 
     NON_STANDARD_FORMAT = "non_standard_format"
     """Response uses non-standard format requiring extraction (e.g., markdown, embedded JSON, regex patterns)."""
-
-    TYPE_COERCION_APPLIED = "type_coercion_applied"
-    """Value type was coerced to expected type (e.g., string "2" converted to int 2)."""
 
     LOW_CONFIDENCE_EXTRACTION = "low_confidence_extraction"
     """Score extracted using fuzzy/heuristic matching (e.g., keyword matching, low reliability)."""

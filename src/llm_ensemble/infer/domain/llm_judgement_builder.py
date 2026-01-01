@@ -42,7 +42,7 @@ class LLMJudgementBuilder:
         self._response_text: Optional[str] = None
         self._llm_invocation_metrics: Optional[LLMInvocationMetrics] = None
         self._llm_score: Optional[LLMScore] = None
-        self._parse_issues: list[ParserIssue] = []
+        self._parser_issue: Optional[ParserIssue] = None
 
     def with_prompt(self, prompt_text: str) -> "LLMJudgementBuilder":
         """Add the prompt text (called after prompt building).
@@ -77,19 +77,19 @@ class LLMJudgementBuilder:
     def with_parsed_score(
         self,
         llm_score: Optional[LLMScore],
-        parse_issues: list[ParserIssue]
+        parser_issue: Optional[ParserIssue]
     ) -> "LLMJudgementBuilder":
-        """Add the parsed score and warnings (called after parsing).
+        """Add the parsed score and issue (called after parsing).
 
         Args:
             llm_score: Parsed score (may be None if parsing failed)
-            parse_issues: Any warnings from the parsing process
+            parser_issue: Primary parser issue if encountered, None if clean parse
 
         Returns:
             Self for method chaining
         """
         self._llm_score = llm_score
-        self._parse_issues = parse_issues
+        self._parser_issue = parser_issue
         return self
 
     def build(self) -> LLMJudgement:
@@ -121,5 +121,5 @@ class LLMJudgementBuilder:
             llm_response_text=llm_response_text_entity,
             llm_invocation_metrics=self._llm_invocation_metrics,
             llm_score=self._llm_score,
-            parse_issues=self._parse_issues,
+            parser_issue=self._parser_issue,
         )

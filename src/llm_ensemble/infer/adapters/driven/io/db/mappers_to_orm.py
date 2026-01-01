@@ -325,8 +325,10 @@ def llm_judgement_to_orm(
     Returns:
         LLMJudgementORM model ready for persistence
     """
-    # Extract parser warnings from judgement (not from llm_score)
-    parse_issues = [w.to_dict() for w in judgement.parse_issues] if judgement.parse_issues else []
+    # Extract parser issue from judgement
+    parser_issue_code = judgement.parser_issue.code.value if judgement.parser_issue else None
+    parser_issue_message = judgement.parser_issue.message if judgement.parser_issue else None
+    parser_issue_metadata = judgement.parser_issue.metadata if judgement.parser_issue else None
 
     return LLMJudgementORM(
         id=judgement.id,
@@ -343,7 +345,9 @@ def llm_judgement_to_orm(
         prompt_tokens=judgement.llm_invocation_metrics.prompt_tokens,
         completion_tokens=judgement.llm_invocation_metrics.completion_tokens,
         total_tokens=judgement.llm_invocation_metrics.total_tokens,
-        parse_issues=parse_issues,
+        parser_issue_code=parser_issue_code,
+        parser_issue_message=parser_issue_message,
+        parser_issue_metadata=parser_issue_metadata,
     )
 
 

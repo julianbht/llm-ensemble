@@ -72,7 +72,7 @@ class LLMJudgement(BaseModel):
         )
     )
 
-    parse_issues: list[ParserIssue] = Field(
-        default_factory=list,
-        description="Parser-level warnings: parse errors, missing fields, validation issues, etc."
+    parser_issue: Optional[ParserIssue] = Field(
+        default=None,
+        description="Primary parser issue if parsing encountered problems, None if clean parse."
     )

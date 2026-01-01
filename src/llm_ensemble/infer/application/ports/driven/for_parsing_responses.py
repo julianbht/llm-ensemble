@@ -28,7 +28,7 @@ class ForParsingResponses(ABC):
     """
 
     @abstractmethod
-    def parse(self, raw_text: str) -> tuple[Optional[LLMScore], list[ParserIssue]]:
+    def parse(self, raw_text: str) -> tuple[Optional[LLMScore], Optional[ParserIssue]]:
         """Parse LLM response and create LLMScore domain entity.
 
         Extracts structured data from the raw response text and constructs
@@ -38,10 +38,10 @@ class ForParsingResponses(ABC):
             raw_text: Raw text response from the LLM
 
         Returns:
-            Tuple of (LLMScore or None, parse_issues):
+            Tuple of (LLMScore or None, parser_issue):
             - LLMScore: domain entity with parsed fields, or None if no label could be extracted
-            - parse_issues: List of parser issues encountered during parsing
-            Never raises exceptions - always returns a result with issues list.
+            - parser_issue: Primary parser issue if encountered, None if clean parse
+            Never raises exceptions - always returns a result.
         """
         pass
 

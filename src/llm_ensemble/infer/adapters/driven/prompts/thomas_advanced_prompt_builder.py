@@ -93,14 +93,6 @@ class ThomasAdvancedPromptBuilder(ForBuildingPrompts):
         """
         return self._builder
 
-    def get_template_text(self) -> str:
-        """Get the raw template text for this builder.
-
-        Returns:
-            Raw template string (unrendered)
-        """
-        return self.TEMPLATE_TEXT
-
     def _render(self, dataset_sample: DatasetSample) -> str:
         """Render prompt text from dataset sample.
 

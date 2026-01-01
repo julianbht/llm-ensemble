@@ -20,6 +20,7 @@ from llm_ensemble.evaluate.application.ports.driven.for_input import ForInput
 from llm_ensemble.evaluate.application.ports.driven.for_output import ForOutput
 from llm_ensemble.evaluate.application.ports.driven.for_computing_metrics import ForComputingMetrics
 
+from llm_ensemble.evaluate.domain.entities.metric_result import MetricResult
 from llm_ensemble.libs.logging.structlog_logger import get_logger
 from llm_ensemble.libs.logging.log_events import EvaluateLogEvent
 
@@ -92,17 +93,16 @@ class EvaluationApplication(ForRunningEvaluation):
         logger = get_logger()
         logger.info(EvaluateLogEvent.EVALUATE_STARTED, name=self.run_name)
 
-        # Read evaluation data (returns EvaluationData entity)
+        # Read evaluation data
         evaluation_data = self.input_port.read(input_run_name)
         logger.info(
             EvaluateLogEvent.INPUT_READ,
             input_run_name=evaluation_data.run_name,
             run_type=evaluation_data.run_type,
-            sample_count=evaluation_data.sample_count,
         )
 
         # Compute metrics
-        metric_results = []
+        metric_results : list[MetricResult] = []
         for metric_adapter in self.metric_adapters:
             result = metric_adapter.compute(
                 evaluation_data.ground_truth,
@@ -127,4 +127,4 @@ class EvaluationApplication(ForRunningEvaluation):
 
         # Write report
         self.output_port.write(metric_results, run_metadata)
-        logger.info(EvaluateLogEvent.EVALUATE_COMPLETE, run_name=self.run_name)
+        logger.info(EvaluateLogEvent.EVALUATE_COMPLETE)

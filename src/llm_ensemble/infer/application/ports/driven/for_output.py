@@ -125,7 +125,7 @@ class ForOutput(ABC):
         """
         self._write_summary = self.close()
 
-    def get_summary(self) -> WriteSummary:
+    def get_persistence_summary(self) -> WriteSummary:
         """Get the write summary after the writer has been closed.
 
         Must be called after the context manager exits.
@@ -136,6 +136,4 @@ class ForOutput(ABC):
         Raises:
             RuntimeError: If called before writer is closed
         """
-        if self._write_summary is None:
-            raise RuntimeError("Writer has not been closed yet - must call after context manager exits")
         return self._write_summary

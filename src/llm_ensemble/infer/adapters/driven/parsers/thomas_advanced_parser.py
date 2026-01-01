@@ -14,6 +14,7 @@ from llm_ensemble.infer.application.ports.driven.for_parsing_responses import Fo
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.reponse_parser import ResponseParser
 from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue, ParserIssueCode
+from llm_ensemble.infer.domain.score_mappings import map_thomas_advanced_score
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
@@ -23,9 +24,15 @@ class ThomasAdvancedParser(ForParsingResponses):
     Expects JSON output: {"M": N, "T": N, "O": N} where:
     - M: Match score (how well content matches query intent)
     - T: Trust score (trustworthiness of the web page)
-    - O: Overall relevance score (0, 1, 2, or 3)
+    - O: Overall relevance score (0, 1, or 2)
 
-    The "O" field is the final relevance score that we extract.
+    The "O" field is the final relevance score that we extract and map
+    to the standard RelevanceScore scale.
+
+    Mapping:
+    - 0 (not relevant) → IRRELEVANT (0)
+    - 1 (relevant, partly helpful) → RELEVANT (1)
+    - 2 (highly relevant, very helpful) → HIGHLY_RELEVANT (2)
     """
 
     PARSER_NAME = "thomas-advanced"
@@ -149,30 +156,23 @@ class ThomasAdvancedParser(ForParsingResponses):
         """Validate score value and convert to RelevanceScore enum.
 
         Pure, testable function for validation logic.
+        Validates score is in thomas-advanced range (0-2) then maps to standard scale
+        using domain mapping function.
 
         Args:
-            score_value: Raw score value from JSON
+            score_value: Raw score value from JSON (expected 0, 1, or 2)
             warnings: List to append warnings to
 
         Returns:
             RelevanceScore enum if valid, None otherwise
         """
-        if not isinstance(score_value, int) or score_value not in [0, 1, 2, 3]:
+        if not isinstance(score_value, int) or score_value not in [0, 1, 2]:
             warning = ParserIssue(
                 code=ParserIssueCode.VALIDATION_ERROR,
-                message=f"Invalid O score: {score_value} (expected 0, 1, 2, or 3)",
+                message=f"Invalid O score: {score_value} (expected 0, 1, or 2)",
                 metadata={"field_name": "O", "actual_value": str(score_value)}
             )
             warnings.append(warning)
             return None
 
-        try:
-            return RelevanceScore(score_value)
-        except ValueError:
-            warning = ParserIssue(
-                code=ParserIssueCode.VALIDATION_ERROR,
-                message=f"Invalid score value: {score_value}",
-                metadata={"value": score_value}
-            )
-            warnings.append(warning)
-            return None
+        return map_thomas_advanced_score(score_value)

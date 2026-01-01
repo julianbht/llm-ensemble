@@ -9,7 +9,6 @@ import pytest
 
 from llm_ensemble.infer.adapters.driven.parsers.thomas_advanced_parser import ThomasAdvancedParser
 from llm_ensemble.infer.domain.entities.parse_issues import ParserIssueCode
-from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 @pytest.fixture
@@ -20,19 +19,15 @@ def parser():
 
 @pytest.mark.unit
 def test_parse_invalid_score_3(parser: ThomasAdvancedParser):
-    """Parse JSON with score 3 - out of range per prompt (expects 0-2 only).
-
-    NOTE: This currently passes because parser validates 0-3, but prompt only outputs 0-2.
-    This is a known inconsistency that should be addressed.
-    """
+    """Parse JSON with score 3 - out of range for thomas-advanced (expects 0-2 only)."""
     raw_text = '{"M": 2, "T": 1, "O": 3}'
 
     score, warnings = parser.parse(raw_text)
 
-    # Current behavior: accepts 3 (should be rejected based on prompt)
-    assert score is not None
-    assert score.label == RelevanceScore.PERFECTLY_RELEVANT
-    assert len(warnings) == 0
+    assert score is None
+    assert len(warnings) == 1
+    assert warnings[0].code == ParserIssueCode.VALIDATION_ERROR
+    assert "expected 0, 1, or 2" in warnings[0].message
 
 
 @pytest.mark.unit
@@ -59,7 +54,7 @@ def test_parse_invalid_score_out_of_range(parser: ThomasAdvancedParser):
     assert score is None
     assert len(warnings) == 1
     assert warnings[0].code == ParserIssueCode.VALIDATION_ERROR
-    assert "Invalid O score" in warnings[0].message
+    assert "expected 0, 1, or 2" in warnings[0].message
 
 
 @pytest.mark.unit

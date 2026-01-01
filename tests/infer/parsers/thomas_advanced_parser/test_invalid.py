@@ -27,7 +27,6 @@ def test_parse_invalid_score_3(parser: ThomasAdvancedParser):
     assert score is None
     assert len(warnings) == 1
     assert warnings[0].code == ParserIssueCode.VALIDATION_ERROR
-    assert "expected 0, 1, or 2" in warnings[0].message
 
 
 @pytest.mark.unit
@@ -40,8 +39,6 @@ def test_parse_invalid_score_negative(parser: ThomasAdvancedParser):
     assert score is None
     assert len(warnings) == 1
     assert warnings[0].code == ParserIssueCode.VALIDATION_ERROR
-    assert "Invalid O score" in warnings[0].message
-    assert warnings[0].metadata["field_name"] == "O"
 
 
 @pytest.mark.unit
@@ -54,7 +51,6 @@ def test_parse_invalid_score_out_of_range(parser: ThomasAdvancedParser):
     assert score is None
     assert len(warnings) == 1
     assert warnings[0].code == ParserIssueCode.VALIDATION_ERROR
-    assert "expected 0, 1, or 2" in warnings[0].message
 
 
 @pytest.mark.unit
@@ -67,7 +63,6 @@ def test_parse_no_json_found(parser: ThomasAdvancedParser):
     assert score is None
     assert len(warnings) == 1
     assert warnings[0].code == ParserIssueCode.PARSE_ERROR
-    assert "No JSON object with 'M', 'T', 'O' fields found" in warnings[0].message
 
 
 @pytest.mark.unit

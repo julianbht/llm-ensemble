@@ -108,10 +108,10 @@ def _build_application_hexagon(
     input_port = IOAdapterFactory.create_reader(io_name)
     output_port = IOAdapterFactory.create_writer(io_name)
 
-    # For now, hardcode a single dummy metric
+    # For now, hardcode Cohen's Kappa metric
     # Future: load metric list from config
     metric_adapters = [
-        MetricAdapterFactory.create("dummy"),
+        MetricAdapterFactory.create("cohens_kappa"),
     ]
 
     # Assemble application hexagon (use case with driven ports)

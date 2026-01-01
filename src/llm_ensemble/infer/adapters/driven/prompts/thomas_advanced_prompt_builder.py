@@ -59,7 +59,7 @@ class ThomasAdvancedPromptBuilder(ForBuildingPrompts):
         Consider the aspects above and the relative importance of each, and decide on a final score (O).
 
         Produce a JSON object scores without providing any reasoning.
-        Example: {"M": 2, "T": 1, "O": 1}""")
+        Example: {{"M": 2, "T": 1, "O": 1}}""")
 
     def __init__(self):
         """Initialize builder and create cached PromptBuilder entity."""

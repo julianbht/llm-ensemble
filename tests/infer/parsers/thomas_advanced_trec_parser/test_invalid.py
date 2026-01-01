@@ -26,7 +26,7 @@ def test_parse_invalid_score_negative(parser: ThomasAdvancedTrecParser):
 
     assert score is None
     assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.VALIDATION_ISSUE
+    assert issues[0].code == ParserIssueCode.INVALID_FIELD_VALUE
 
 
 @pytest.mark.unit
@@ -38,7 +38,7 @@ def test_parse_invalid_score_out_of_range(parser: ThomasAdvancedTrecParser):
 
     assert score is None
     assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.VALIDATION_ISSUE
+    assert issues[0].code == ParserIssueCode.INVALID_FIELD_VALUE
 
 
 @pytest.mark.unit
@@ -50,7 +50,7 @@ def test_parse_invalid_score_too_high(parser: ThomasAdvancedTrecParser):
 
     assert score is None
     assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.VALIDATION_ISSUE
+    assert issues[0].code == ParserIssueCode.INVALID_FIELD_VALUE
 
 
 @pytest.mark.unit
@@ -62,7 +62,7 @@ def test_parse_missing_o_field(parser: ThomasAdvancedTrecParser):
 
     assert score is None
     assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.FIELD_ISSUE
+    assert issues[0].code == ParserIssueCode.MISSING_REQUIRED_FIELD
 
 
 @pytest.mark.unit
@@ -74,7 +74,7 @@ def test_parse_null_o_field(parser: ThomasAdvancedTrecParser):
 
     assert score is None
     assert len(issues) >= 1
-    assert any(i.code == ParserIssueCode.VALIDATION_ISSUE for i in issues)
+    assert any(i.code == ParserIssueCode.INVALID_FIELD_VALUE for i in issues)
 
 
 @pytest.mark.unit
@@ -86,7 +86,7 @@ def test_parse_no_json_found(parser: ThomasAdvancedTrecParser):
 
     assert score is None
     assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.PARSE_ISSUE
+    assert issues[0].code == ParserIssueCode.MALFORMED_RESPONSE
 
 
 @pytest.mark.unit
@@ -98,7 +98,7 @@ def test_parse_float_instead_of_int(parser: ThomasAdvancedTrecParser):
 
     assert score is None
     assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.VALIDATION_ISSUE
+    assert issues[0].code == ParserIssueCode.INVALID_FIELD_VALUE
 
 
 @pytest.mark.unit
@@ -110,7 +110,7 @@ def test_parse_empty_string(parser: ThomasAdvancedTrecParser):
 
     assert score is None
     assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.PARSE_ISSUE
+    assert issues[0].code == ParserIssueCode.MALFORMED_RESPONSE
 
 
 @pytest.mark.unit
@@ -122,4 +122,4 @@ def test_parse_string_score_invalid(parser: ThomasAdvancedTrecParser):
 
     assert score is None
     assert len(issues) >= 1
-    assert any(i.code == ParserIssueCode.VALIDATION_ISSUE for i in issues)
+    assert any(i.code == ParserIssueCode.INVALID_FIELD_VALUE for i in issues)

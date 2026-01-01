@@ -81,7 +81,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
 
         # All strategies failed
         issues.append(ParserIssue(
-            code=ParserIssueCode.PARSE_ISSUE,
+            code=ParserIssueCode.MALFORMED_RESPONSE,
             message="All parsing strategies failed to extract score",
             metadata={"strategies_tried": len(strategies)}
         ))
@@ -147,7 +147,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
                         score = self._extract_score_from_dict(data, issues)
                         if score:
                             issues.append(ParserIssue(
-                                code=ParserIssueCode.PARTIAL_PARSE_ISSUE,
+                                code=ParserIssueCode.NON_STANDARD_FORMAT,
                                 message="Extracted JSON from markdown code block",
                                 metadata={"extraction_method": "markdown"}
                             ))
@@ -165,7 +165,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
                     score = self._extract_score_from_dict(data, issues)
                     if score:
                         issues.append(ParserIssue(
-                            code=ParserIssueCode.PARTIAL_PARSE_ISSUE,
+                            code=ParserIssueCode.NON_STANDARD_FORMAT,
                             message="Extracted JSON object from text",
                             metadata={"extraction_method": "embedded_json"}
                         ))
@@ -205,7 +205,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
                     label = self._validate_score_value(score_value, issues)
                     if label is not None:
                         issues.append(ParserIssue(
-                            code=ParserIssueCode.PARTIAL_PARSE_ISSUE,
+                            code=ParserIssueCode.NON_STANDARD_FORMAT,
                             message="Extracted score using regex pattern matching",
                             metadata={"extraction_method": "regex", "pattern": pattern}
                         ))
@@ -233,7 +233,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
         # Check for explicit relevance keywords
         if any(word in text_lower for word in ["perfectly relevant", "perfect match", "exact answer"]):
             issues.append(ParserIssue(
-                code=ParserIssueCode.PARTIAL_PARSE_ISSUE,
+                code=ParserIssueCode.LOW_CONFIDENCE_EXTRACTION,
                 message="Extracted score using fuzzy keyword matching (perfectly relevant)",
                 metadata={"extraction_method": "fuzzy", "confidence": "low"}
             ))
@@ -241,7 +241,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
 
         if any(word in text_lower for word in ["highly relevant", "very helpful", "vital information"]):
             issues.append(ParserIssue(
-                code=ParserIssueCode.PARTIAL_PARSE_ISSUE,
+                code=ParserIssueCode.LOW_CONFIDENCE_EXTRACTION,
                 message="Extracted score using fuzzy keyword matching (highly relevant)",
                 metadata={"extraction_method": "fuzzy", "confidence": "low"}
             ))
@@ -249,7 +249,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
 
         if any(word in text_lower for word in ["relevant", "related", "partly helpful"]):
             issues.append(ParserIssue(
-                code=ParserIssueCode.PARTIAL_PARSE_ISSUE,
+                code=ParserIssueCode.LOW_CONFIDENCE_EXTRACTION,
                 message="Extracted score using fuzzy keyword matching (relevant)",
                 metadata={"extraction_method": "fuzzy", "confidence": "low"}
             ))
@@ -257,7 +257,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
 
         if any(word in text_lower for word in ["not relevant", "irrelevant", "nothing to do"]):
             issues.append(ParserIssue(
-                code=ParserIssueCode.PARTIAL_PARSE_ISSUE,
+                code=ParserIssueCode.LOW_CONFIDENCE_EXTRACTION,
                 message="Extracted score using fuzzy keyword matching (irrelevant)",
                 metadata={"extraction_method": "fuzzy", "confidence": "low"}
             ))
@@ -281,7 +281,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
         """
         if "O" not in data:
             issues.append(ParserIssue(
-                code=ParserIssueCode.FIELD_ISSUE,
+                code=ParserIssueCode.MISSING_REQUIRED_FIELD,
                 message="Missing 'O' field in parsed JSON",
                 metadata={"field_name": "O", "available_fields": list(data.keys())}
             ))
@@ -312,13 +312,13 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
             try:
                 score_value = int(score_value)
                 issues.append(ParserIssue(
-                    code=ParserIssueCode.PARTIAL_PARSE_ISSUE,
+                    code=ParserIssueCode.TYPE_COERCION_APPLIED,
                     message="Converted string score to integer",
                     metadata={"original_type": "str", "converted_value": score_value}
                 ))
             except ValueError:
                 issues.append(ParserIssue(
-                    code=ParserIssueCode.VALIDATION_ISSUE,
+                    code=ParserIssueCode.INVALID_FIELD_VALUE,
                     message=f"Score value is not a valid integer: {score_value}",
                     metadata={"field_name": "O", "actual_value": str(score_value)}
                 ))
@@ -327,7 +327,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
         # Validate type and range
         if not isinstance(score_value, int) or score_value not in [0, 1, 2, 3]:
             issues.append(ParserIssue(
-                code=ParserIssueCode.VALIDATION_ISSUE,
+                code=ParserIssueCode.INVALID_FIELD_VALUE,
                 message=f"Invalid O score: {score_value} (expected 0, 1, 2, or 3)",
                 metadata={"field_name": "O", "actual_value": str(score_value), "valid_range": "0-3"}
             ))
@@ -337,7 +337,7 @@ class ThomasAdvancedTrecParser(ForParsingResponses):
             return RelevanceScore(score_value)
         except ValueError:
             issues.append(ParserIssue(
-                code=ParserIssueCode.VALIDATION_ISSUE,
+                code=ParserIssueCode.INVALID_FIELD_VALUE,
                 message=f"Failed to convert to RelevanceScore: {score_value}",
                 metadata={"value": score_value}
             ))

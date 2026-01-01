@@ -36,7 +36,7 @@ def test_parse_markdown_json_block(parser: ThomasAdvancedTrecParser):
     assert score is not None
     assert score.label == RelevanceScore.HIGHLY_RELEVANT
     assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.PARTIAL_PARSE_ISSUE
+    assert issues[0].code == ParserIssueCode.NON_STANDARD_FORMAT
     assert "markdown" in issues[0].metadata["extraction_method"]
 
 
@@ -55,7 +55,7 @@ def test_parse_generic_code_block(parser: ThomasAdvancedTrecParser):
     assert score is not None
     assert score.label == RelevanceScore.PERFECTLY_RELEVANT
     assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.PARTIAL_PARSE_ISSUE
+    assert issues[0].code == ParserIssueCode.NON_STANDARD_FORMAT
 
 
 @pytest.mark.unit
@@ -106,7 +106,7 @@ def test_parse_regex_colon_format(parser: ThomasAdvancedTrecParser):
     assert score is not None
     assert score.label == RelevanceScore.HIGHLY_RELEVANT
     assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.PARTIAL_PARSE_ISSUE
+    assert issues[0].code == ParserIssueCode.NON_STANDARD_FORMAT
     assert "regex" in issues[0].metadata["extraction_method"]
 
 
@@ -149,7 +149,7 @@ def test_parse_fuzzy_perfectly_relevant(parser: ThomasAdvancedTrecParser):
     assert score is not None
     assert score.label == RelevanceScore.PERFECTLY_RELEVANT
     assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.PARTIAL_PARSE_ISSUE
+    assert issues[0].code == ParserIssueCode.LOW_CONFIDENCE_EXTRACTION
     assert "fuzzy" in issues[0].metadata["extraction_method"]
 
 
@@ -204,4 +204,4 @@ def test_parse_string_score_converts_to_int(parser: ThomasAdvancedTrecParser):
     assert score is not None
     assert score.label == RelevanceScore.HIGHLY_RELEVANT
     assert len(issues) == 1
-    assert issues[0].code == ParserIssueCode.PARTIAL_PARSE_ISSUE
+    assert issues[0].code == ParserIssueCode.TYPE_COERCION_APPLIED

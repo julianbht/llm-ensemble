@@ -18,14 +18,30 @@ from pydantic import BaseModel, Field
 class ParserIssueCode(str, Enum):
     """Issue codes for response parser problems.
 
-    General categories to avoid taxonomy explosion. Use metadata for specifics.
+    Codes are verbose and specific to make analytics and debugging clear.
+    Use metadata for additional context (field names, attempted values, etc.).
     """
 
-    PARSE_ISSUE = "parse_issue"  # Malformed JSON/XML, invalid format
-    FIELD_ISSUE = "field_issue"  # Missing, wrong type, invalid value
-    VALIDATION_ISSUE = "validation_issue"  # Out of range, failed constraints
-    PARTIAL_PARSE_ISSUE = "partial_parse_issue"  # Some fields extracted, others missing
+    MALFORMED_RESPONSE = "malformed_response"
+    """Response format is malformed or unparseable (e.g., invalid JSON, no recognizable structure)."""
+
+    MISSING_REQUIRED_FIELD = "missing_required_field"
+    """Required field is missing from response (e.g., missing 'O' score field)."""
+
+    INVALID_FIELD_VALUE = "invalid_field_value"
+    """Field value is invalid (e.g., out of range, wrong type, null when required)."""
+
+    NON_STANDARD_FORMAT = "non_standard_format"
+    """Response uses non-standard format requiring extraction (e.g., markdown, embedded JSON, regex patterns)."""
+
+    TYPE_COERCION_APPLIED = "type_coercion_applied"
+    """Value type was coerced to expected type (e.g., string "2" converted to int 2)."""
+
+    LOW_CONFIDENCE_EXTRACTION = "low_confidence_extraction"
+    """Score extracted using fuzzy/heuristic matching (e.g., keyword matching, low reliability)."""
+
     OTHER = "other"
+    """Uncategorized issue."""
 
 
 class ParserIssue(BaseModel):

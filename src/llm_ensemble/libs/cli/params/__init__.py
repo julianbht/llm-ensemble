@@ -16,6 +16,7 @@ from .shared_params import (
 from .aggregate import AggregationStrategy, AggregateIoCfg, InferRunInput
 from .ingest import IngestIoCfg, Limit
 from .infer import InferIoCfg, IngestRunInput as InferIngestRunInput, Provider
+from .evaluate import EvaluateIoCfg, EvaluateRunInput
 
 __all__ = [
     "InputPath",
@@ -37,4 +38,6 @@ __all__ = [
     "InferIoCfg",
     "InferIngestRunInput",
     "InferRunInput",
+    "EvaluateIoCfg",
+    "EvaluateRunInput",
 ]

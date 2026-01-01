@@ -29,7 +29,7 @@ dev = [
 ingest = "llm_ensemble.ingest.adapters.driving.ingest_cli:app"
 infer = "llm_ensemble.infer.adapters.driving.infer_cli:app"
 aggregate = "llm_ensemble.aggregate.adapters.driving.aggregate_cli:app"
-evaluate = "llm_ensemble.evaluate_cli:app"
+evaluate = "llm_ensemble.evaluate.adapters.driving.evaluate_cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]          # only ships code from src/

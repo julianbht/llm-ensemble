@@ -93,10 +93,6 @@ class WriteSummary(BaseModel):
         self.llm_responses_created += created
         self.llm_responses_skipped += skipped
 
-    def add_llm_invocation_metrics(self, created: int = 0, skipped: int = 0) -> None:
-        """Increment LLM invocation metrics counts."""
-        self.llm_invocation_metrics_created += created
-        self.llm_invocation_metrics_skipped += skipped
 
     def add_llm_scores(self, created: int = 0, skipped: int = 0) -> None:
         """Increment LLM score counts."""

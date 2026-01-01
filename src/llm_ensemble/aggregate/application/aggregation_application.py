@@ -173,7 +173,7 @@ class AggregationApplication(ForRunningAggregation):
         # Track end time
         end_time = datetime.now()
 
-        # Build complete aggregate root via factory
+        # Build run entity that captures all we produced
         aggregate_run = AggregateRunFactory.create(
             aggregation_strategy_name=self.strategy.get_strategy().name,
             io_config_name=self.output_port.io_name,

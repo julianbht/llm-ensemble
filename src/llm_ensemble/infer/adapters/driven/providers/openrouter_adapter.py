@@ -208,11 +208,17 @@ class OpenRouterAdapter(ForInvokingLLM):
             completion_cost = (completion_tokens / 1_000_000) * self.model_config.pricing.completion_cost_per_1m_tokens
             cost_estimate_usd = prompt_cost + completion_cost
 
-        # Create metrics
+        # Fetch actual cost from OpenRouter API if generation_id available
+        actual_cost_usd = None
+        if generation_id:
+            actual_cost_usd = self._fetch_generation_cost(generation_id)
+
+        # Create metrics with both estimate and actual cost
         metrics = LLMInvocationMetrics(
             latency_ms=latency_ms,
             retries=retry_attempt,
             cost_estimate_usd=cost_estimate_usd,
+            actual_cost_usd=actual_cost_usd,
             generation_id=generation_id,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
@@ -220,3 +226,72 @@ class OpenRouterAdapter(ForInvokingLLM):
         )
 
         return raw_response_text, metrics
+
+    def _fetch_generation_cost(
+        self,
+        generation_id: str,
+    ) -> Optional[float]:
+        """Fetch actual cost from OpenRouter generation cost API.
+
+        Makes a GET request to OpenRouter's generation endpoint to retrieve
+        the precise cost for a completed inference.
+
+        Args:
+            generation_id: Generation ID from inference response (e.g., "gen-xxx")
+
+        Returns:
+            Actual cost in USD, or None if API call fails
+
+        API Endpoint:
+            GET https://openrouter.ai/api/v1/generation?id={generation_id}
+
+        Response Format:
+            {
+                "data": {
+                    "id": "gen-xxx",
+                    "model": "openai/gpt-4",
+                    "total_cost": 0.00123
+                }
+            }
+        """
+        if not generation_id:
+            return None
+
+        try:
+            # Use requests for simple GET call
+            import requests
+
+            url = f"https://openrouter.ai/api/v1/generation?id={generation_id}"
+            headers = {
+                "Authorization": f"Bearer {self.api_key}"
+            }
+
+            response = requests.get(url, headers=headers, timeout=self.timeout)
+            response.raise_for_status()
+
+            data = response.json()
+            total_cost = data.get("data", {}).get("total_cost")
+
+            if total_cost is not None:
+                self.logger.info(
+                    InferLogEvent.ACTUAL_COST_FETCHED,
+                    generation_id=generation_id,
+                    actual_cost_usd=total_cost,
+                )
+                return float(total_cost)
+            else:
+                self.logger.warning(
+                    InferLogEvent.ACTUAL_COST_FETCH_FAILED,
+                    generation_id=generation_id,
+                    reason="total_cost field missing in response",
+                )
+                return None
+
+        except Exception as e:
+            self.logger.warning(
+                InferLogEvent.ACTUAL_COST_FETCH_FAILED,
+                generation_id=generation_id,
+                error_type=type(e).__name__,
+                error_message=str(e),
+            )
+            return None

@@ -39,6 +39,12 @@ class LLMInvocationMetrics(BaseModel):
         description="Estimated cost in USD for this inference call"
     )
 
+    actual_cost_usd: Optional[float] = Field(
+        None,
+        ge=0.0,
+        description="Actual cost in USD from provider's generation cost API"
+    )
+
     generation_id: Optional[str] = Field(
         None,
         description="Provider-specific generation ID (e.g., OpenRouter gen-xxx) for async cost queries"

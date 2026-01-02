@@ -178,6 +178,7 @@ class DBReader(ForInput):
                         latency_ms=j_orm.latency_ms,
                         retries=j_orm.retries,
                         cost_estimate_usd=j_orm.cost_estimate_usd,
+                        actual_cost_usd=j_orm.actual_cost_usd,
                         generation_id=j_orm.generation_id,
                         prompt_tokens=j_orm.prompt_tokens,
                         completion_tokens=j_orm.completion_tokens,

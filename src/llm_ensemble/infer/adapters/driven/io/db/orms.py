@@ -462,6 +462,7 @@ class LLMJudgementORM(Base):
     latency_ms = Column(Float, nullable=False)
     retries = Column(Integer, nullable=False, default=0)
     cost_estimate_usd = Column(Float, nullable=True)
+    actual_cost_usd = Column(Float, nullable=True, comment="Actual cost in USD from OpenRouter generation cost API")
     generation_id = Column(String(255), nullable=True, comment="Provider-specific generation/request ID")
     prompt_tokens = Column(Integer, nullable=True)
     completion_tokens = Column(Integer, nullable=True)

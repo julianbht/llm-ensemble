@@ -341,6 +341,7 @@ def llm_judgement_to_orm(
         latency_ms=judgement.llm_invocation_metrics.latency_ms,
         retries=judgement.llm_invocation_metrics.retries,
         cost_estimate_usd=judgement.llm_invocation_metrics.cost_estimate_usd,
+        actual_cost_usd=judgement.llm_invocation_metrics.actual_cost_usd,
         generation_id=judgement.llm_invocation_metrics.generation_id,
         prompt_tokens=judgement.llm_invocation_metrics.prompt_tokens,
         completion_tokens=judgement.llm_invocation_metrics.completion_tokens,

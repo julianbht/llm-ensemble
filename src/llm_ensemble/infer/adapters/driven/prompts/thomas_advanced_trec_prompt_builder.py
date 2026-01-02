@@ -13,7 +13,7 @@ from llm_ensemble.infer.application.ports.driven.for_building_prompts import For
 from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
 
 
-class ThomasAdvancedPromptBuilder(ForBuildingPrompts):
+class ThomasAdvancedTrecPromptBuilder(ForBuildingPrompts):
     """Thomas et al. advanced prompt with role description and multi-aspect scoring.
 
     Includes:

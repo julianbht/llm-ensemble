@@ -46,7 +46,7 @@ class ThomasAdvancedParser(ForParsingResponses):
             version="1.0"
         )
 
-    def parse(self, raw_text: str) -> tuple[Optional[LLMScore], list[ParserIssue]]:
+    def parse(self, raw_text: str) -> tuple[Optional[LLMScore], Optional[ParserIssue]]:
         """Parse JSON response and create LLMScore domain entity.
 
         Extracts the "O" field from JSON response (with M, T, O fields)
@@ -56,9 +56,9 @@ class ThomasAdvancedParser(ForParsingResponses):
             raw_text: Raw text response from the LLM
 
         Returns:
-            Tuple of (LLMScore or None, warnings):
+            Tuple of (LLMScore or None, parser_issue):
             - LLMScore: parsed fields, or None if no label could be extracted
-            - warnings: List of parser warnings from the parsing process
+            - parser_issue: First parser issue encountered, or None if successful
         """
         warnings: list[ParserIssue] = []
         label: Optional[RelevanceScore] = None
@@ -72,7 +72,7 @@ class ThomasAdvancedParser(ForParsingResponses):
 
         # Only create LLMScore if we successfully extracted a label
         if label is None:
-            return None, warnings
+            return None, warnings[0] if warnings else None
 
         score = LLMScore(
             label=label,
@@ -80,7 +80,7 @@ class ThomasAdvancedParser(ForParsingResponses):
             rationale=None,
         )
 
-        return score, warnings
+        return score, warnings[0] if warnings else None
 
     def get_parser(self) -> ResponseParser:
         """Get Parser metadata for this adapter.

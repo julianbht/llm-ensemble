@@ -11,6 +11,7 @@ To add a new parser:
 
 from __future__ import annotations
 
+from llm_ensemble.infer.adapters.driven.parsers.thomas_advanced_trec_parser import ThomasAdvancedTrecParser
 from llm_ensemble.infer.application.ports.driven.for_parsing_responses import ForParsingResponses
 from llm_ensemble.infer.adapters.driven.parsers.thomas_simple_parser import ThomasSimpleParser
 from llm_ensemble.infer.adapters.driven.parsers.thomas_advanced_parser import ThomasAdvancedParser
@@ -39,6 +40,8 @@ class ParserAdapterFactory:
             return ThomasSimpleParser()
         elif parser_name == "thomas-advanced":
             return ThomasAdvancedParser()
+        elif parser_name == "thomas-advanced-trec":
+            return ThomasAdvancedTrecParser()
         else:
             available = ", ".join(sorted(["thomas-simple", "thomas-advanced"]))
             raise ValueError(

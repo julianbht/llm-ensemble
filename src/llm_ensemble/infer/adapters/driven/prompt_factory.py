@@ -11,6 +11,7 @@ To add a new prompt:
 
 from __future__ import annotations
 
+from llm_ensemble.infer.adapters.driven.prompts.thomas_advanced_trec_prompt_builder import ThomasAdvancedTrecPromptBuilder
 from llm_ensemble.infer.application.ports.driven.for_building_prompts import ForBuildingPrompts
 from llm_ensemble.infer.adapters.driven.prompts.thomas_simple_prompt_builder import ThomasSimplePromptBuilder
 from llm_ensemble.infer.adapters.driven.prompts.thomas_advanced_prompt_builder import ThomasAdvancedPromptBuilder
@@ -39,6 +40,8 @@ class PromptAdapterFactory:
             return ThomasSimplePromptBuilder()
         elif prompt_name == "thomas-advanced":
             return ThomasAdvancedPromptBuilder()
+        elif prompt_name == "thomas-advanced-trec":
+            return ThomasAdvancedTrecPromptBuilder()
         else:
             available = ", ".join(sorted(["thomas-simple", "thomas-advanced"]))
             raise ValueError(
@@ -53,7 +56,7 @@ class PromptAdapterFactory:
         Returns:
             Sorted list of prompt names
         """
-        return sorted(["thomas-simple", "thomas-advanced"])
+        return sorted(["thomas-simple", "thomas-advanced", "thomas-advanced-trec"])
 
     @staticmethod
     def has_prompt(prompt_name: str) -> bool:
@@ -65,33 +68,4 @@ class PromptAdapterFactory:
         Returns:
             True if prompt exists
         """
-        return prompt_name in ["thomas-simple", "thomas-advanced"]
-
-    @staticmethod
-    def get_description(prompt_name: str) -> str:
-        """Get description for a prompt.
-
-        Args:
-            prompt_name: Name of the prompt
-
-        Returns:
-            Description string from adapter's docstring
-
-        Raises:
-            ValueError: If prompt not found
-        """
-        # Map prompt names to adapter classes for descriptions
-        prompt_classes = {
-            "thomas-simple": ThomasSimplePromptBuilder,
-            "thomas-advanced": ThomasAdvancedPromptBuilder,
-        }
-
-        if prompt_name not in prompt_classes:
-            available = ", ".join(sorted(["thomas-simple", "thomas-advanced"]))
-            raise ValueError(
-                f"Prompt '{prompt_name}' not found. "
-                f"Available: {available}"
-            )
-
-        adapter_class = prompt_classes[prompt_name]
-        return adapter_class.__doc__.strip().split('\n')[0] if adapter_class.__doc__ else prompt_name
+        return prompt_name in ["thomas-simple", "thomas-advanced", "thomas-advanced-trec"]

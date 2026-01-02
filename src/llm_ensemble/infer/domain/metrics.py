@@ -99,8 +99,8 @@ def aggregate_parse_issues(judgements: list[LLMJudgement]) -> Optional[dict[str,
     """
     issues_summary: dict[str, int] = {}
     for judgement in judgements:
-        for issue in judgement.parse_issues:
-            code = issue.code.value
+        if judgement.parser_issue:
+            code = judgement.parser_issue.code.value
             issues_summary[code] = issues_summary.get(code, 0) + 1
 
     return issues_summary if issues_summary else None

@@ -211,8 +211,8 @@ class InferenceApplication(ForRunningInference):
                 builder.with_llm_response(raw_response_text, invocation_metrics)
                 logger.info(
                     InferLogEvent.RESPONSE_RECEIVED,
-                    cost_estimate_usd=invocation_metrics.cost_estimate_usd,
-                    actual_cost_usd=invocation_metrics.actual_cost_usd,
+                    cost_estimate_usd=round(invocation_metrics.cost_estimate_usd, 6) if invocation_metrics.cost_estimate_usd is not None else None,
+                    actual_cost_usd=round(invocation_metrics.actual_cost_usd, 6) if invocation_metrics.actual_cost_usd is not None else None,
                     latency_s=round(invocation_metrics.latency_ms / 1000)
                 )
 

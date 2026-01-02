@@ -201,8 +201,12 @@ class InferenceApplication(ForRunningInference):
                 logger.info(InferLogEvent.SENDING_REQUEST)
                 raw_response_text, invocation_metrics = self.llm_provider.infer(prompt_text)
                 builder.with_llm_response(raw_response_text, invocation_metrics)
-                logger.info(InferLogEvent.RESPONSE_RECEIVED, latency_s=round(invocation_metrics.latency_ms / 1000))
-                logger.info(InferLogEvent.COST_CALCULATED,cost_estimate_usd=invocation_metrics.cost_estimate_usd)
+                logger.info(
+                    InferLogEvent.RESPONSE_RECEIVED,
+                    cost_estimate_usd=invocation_metrics.cost_estimate_usd,
+                    actual_cost_usd=invocation_metrics.actual_cost_usd,
+                    latency_s=round(invocation_metrics.latency_ms / 1000)
+                )
 
                 # Step 3: Parse response
                 logger.info(InferLogEvent.PARSING_RESPONSE)

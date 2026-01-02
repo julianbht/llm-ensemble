@@ -44,8 +44,6 @@ class InferLogEvent(str, Enum):
     RESPONSE_PARSED = "response_parsed"
     AGREEMENT_CHECKED = "agreement_checked"
     COST_CALCULATED = "cost_calculated"
-    ACTUAL_COST_FETCHED = "actual_cost_fetched"
-    ACTUAL_COST_FETCH_FAILED = "actual_cost_fetch_failed"
     TOKENS_COUNTED = "tokens_counted"
     RETRY_ATTEMPT = "retry_attempt"
     RETRY_EXHAUSTED = "retry_exhausted"

@@ -205,12 +205,6 @@ class OpenRouterAdapter(ForInvokingLLM):
             total_tokens = getattr(response.usage, "total_tokens", None)
             # Extract actual cost from OpenRouter's usage accounting (in USD/credits)
             actual_cost_usd = getattr(response.usage, "cost", None)
-            if actual_cost_usd is not None:
-                self.logger.info(
-                    InferLogEvent.ACTUAL_COST_FETCHED,
-                    generation_id=generation_id,
-                    actual_cost_usd=actual_cost_usd,
-                )
 
         # Calculate cost estimate as fallback
         cost_estimate_usd = None

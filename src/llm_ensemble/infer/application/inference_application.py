@@ -17,6 +17,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
+import time
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.infer.domain.llm_judgement_builder import LLMJudgementBuilder
@@ -31,6 +32,8 @@ from llm_ensemble.infer.domain.metrics import (
     calculate_total_prompt_tokens,
     calculate_total_completion_tokens,
     calculate_total_tokens,
+    calculate_eta_seconds,
+    format_eta,
 )
 from llm_ensemble.infer.domain.entities.parse_issues import issue_to_string
 from llm_ensemble.infer.domain.entities.infer_run_summary import (
@@ -172,6 +175,11 @@ class InferenceApplication(ForRunningInference):
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
+        # Track progress and ETA
+        total_samples = len(samples_to_process)
+        samples_processed = 0
+        loop_start_time = time.time()
+
         # Build InferRun for early persistence
         infer_run = self._build_infer_run(
             run_name=self.run_name,
@@ -227,6 +235,19 @@ class InferenceApplication(ForRunningInference):
 
                 # Write judgement immediately to disk (fault tolerance!)
                 writer.write_one(judgement)
+
+                # Track progress and calculate ETA using domain functions
+                samples_processed += 1
+                elapsed_seconds = time.time() - loop_start_time
+                eta_seconds = calculate_eta_seconds(samples_processed, total_samples, elapsed_seconds)
+                eta_formatted = format_eta(eta_seconds)
+
+                logger.info(
+                    InferLogEvent.PROGRESS,
+                    processed=samples_processed,
+                    total=total_samples,
+                    eta=eta_formatted,
+                )
 
                 logger.debug(
                     InferLogEvent.JUDGEMENT_COMPLETE,

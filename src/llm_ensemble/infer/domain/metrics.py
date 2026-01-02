@@ -180,3 +180,59 @@ def calculate_total_tokens(judgements: list[LLMJudgement]) -> Optional[int]:
         if j.llm_invocation_metrics.total_tokens is not None
     )
     return total if total > 0 else None
+
+
+def calculate_eta_seconds(
+    samples_processed: int,
+    total_samples: int,
+    elapsed_seconds: float,
+) -> float:
+    """Calculate estimated time remaining for processing samples.
+
+    Business rule: ETA is based on average time per sample multiplied by remaining samples.
+    If no samples processed yet, returns 0.0.
+
+    Args:
+        samples_processed: Number of samples completed so far
+        total_samples: Total number of samples to process
+        elapsed_seconds: Time elapsed since processing started
+
+    Returns:
+        Estimated seconds remaining to complete all samples
+    """
+    if samples_processed == 0:
+        return 0.0
+
+    avg_time_per_sample = elapsed_seconds / samples_processed
+    remaining_samples = total_samples - samples_processed
+    return avg_time_per_sample * remaining_samples
+
+
+def format_eta(seconds: float) -> str:
+    """Format ETA seconds into human-readable string.
+
+    Business rule: Display hours, minutes, and seconds for readability.
+    Format: "Xh Ym Zs" (omit zero components except when total is 0s).
+
+    Args:
+        seconds: Time in seconds
+
+    Returns:
+        Formatted time string (e.g., "2h 15m 30s", "45m 12s", "5s", "0s")
+    """
+    if seconds < 0:
+        seconds = 0
+
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+
+    parts = []
+    if hours > 0:
+        parts.append(f"{hours}h")
+    if minutes > 0:
+        parts.append(f"{minutes}m")
+    if secs > 0 or not parts:  # Always show seconds if no other units
+        parts.append(f"{secs}s")
+
+    return " ".join(parts)

@@ -237,6 +237,7 @@ class DBReader(ForInput):
                     sample_fingerprint=infer_run_output_orm.sample_fingerprint or "",
                     llm_judgements=llm_judgements,
                     judgement_count=len(llm_judgements),
+                    finished=infer_run_output_orm.finished,
                 )
 
                 infer_run_outputs.append(infer_run_output)

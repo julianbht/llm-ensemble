@@ -35,7 +35,7 @@ class ThomasSimpleParser(ForParsingResponses):
             version="1.0"
         )
 
-    def parse(self, raw_text: str) -> tuple[Optional[LLMScore], list[ParserIssue]]:
+    def parse(self, raw_text: str) -> tuple[Optional[LLMScore], Optional[ParserIssue]]:
         """Parse JSON response and create LLMScore domain entity.
 
         Extracts the "O" field from JSON response and constructs an LLMScore
@@ -45,23 +45,27 @@ class ThomasSimpleParser(ForParsingResponses):
             raw_text: Raw text response from the LLM
 
         Returns:
-            Tuple of (LLMScore or None, warnings):
+            Tuple of (LLMScore or None, parser_issue):
             - LLMScore: parsed fields, or None if no label could be extracted
-            - warnings: List of parser warnings from the parsing process
+            - parser_issue: Parser issue if encountered, None if successful
         """
-        warnings: list[ParserIssue] = []
         label: Optional[RelevanceScore] = None
+        issue: Optional[ParserIssue] = None
 
         # Extract and validate score using testable helper methods
-        json_data = self._extract_json(raw_text, warnings)
+        json_data, issue = self._extract_json(raw_text)
         if json_data is not None:
-            score_value = self._extract_score_field(json_data, warnings)
+            score_value, field_issue = self._extract_score_field(json_data)
+            if field_issue:
+                issue = field_issue
             if score_value is not None:
-                label = self._validate_score(score_value, warnings)
+                label, validation_issue = self._validate_score(score_value)
+                if validation_issue and not issue:
+                    issue = validation_issue
 
         # Only create LLMScore if we successfully extracted a label
         if label is None:
-            return None, warnings
+            return None, issue
 
         score = LLMScore(
             label=label,
@@ -69,7 +73,7 @@ class ThomasSimpleParser(ForParsingResponses):
             rationale=None,
         )
 
-        return score, warnings
+        return score, None
 
     def get_parser(self) -> ResponseParser:
         """Get Parser metadata for this adapter.
@@ -79,96 +83,88 @@ class ThomasSimpleParser(ForParsingResponses):
         """
         return self._parser
 
-    def _extract_json(self, raw_text: str, warnings: list[ParserIssue]) -> Optional[dict]:
+    def _extract_json(self, raw_text: str) -> tuple[Optional[dict], Optional[ParserIssue]]:
         """Extract JSON object with "O" field from raw text.
 
         Pure, testable function for JSON extraction logic.
 
         Args:
             raw_text: Raw text response from the LLM
-            warnings: List to append warnings to
 
         Returns:
-            Parsed JSON dict if successful, None otherwise
+            Tuple of (parsed JSON dict or None, parser issue or None)
         """
         json_pattern = r'\{[^}]*"O"\s*:\s*\d+[^}]*\}'
         json_match = re.search(json_pattern, raw_text)
 
         if not json_match:
-            warning = ParserIssue(
+            issue = ParserIssue(
                 code=ParserIssueCode.PARSE_ISSUE,
                 message="No JSON object with 'O' field found in response",
                 metadata={"expected_format": '{"O": N}'}
             )
-            warnings.append(warning)
-            return None
+            return None, issue
 
         json_str = json_match.group(0)
 
         try:
-            return json.loads(json_str)
+            return json.loads(json_str), None
         except json.JSONDecodeError as e:
-            warning = ParserIssue(
+            issue = ParserIssue(
                 code=ParserIssueCode.PARSE_ISSUE,
                 message=f"Failed to parse JSON: {e}",
                 metadata={"error_type": type(e).__name__}
             )
-            warnings.append(warning)
-            return None
+            return None, issue
 
-    def _extract_score_field(self, json_data: dict, warnings: list[ParserIssue]) -> Optional[int]:
+    def _extract_score_field(self, json_data: dict) -> tuple[Optional[int], Optional[ParserIssue]]:
         """Extract the "O" score field from parsed JSON.
 
         Pure, testable function for field extraction logic.
 
         Args:
             json_data: Parsed JSON dict
-            warnings: List to append warnings to
 
         Returns:
-            Score value if present, None otherwise
+            Tuple of (score value or None, parser issue or None)
         """
         score = json_data.get("O")
 
         if score is None:
-            warning = ParserIssue(
+            issue = ParserIssue(
                 code=ParserIssueCode.FIELD_ISSUE,
                 message="Missing 'O' field in parsed JSON",
                 metadata={"field_name": "O"}
             )
-            warnings.append(warning)
-            return None
+            return None, issue
 
-        return score
+        return score, None
 
-    def _validate_score(self, score_value: int, warnings: list[ParserIssue]) -> Optional[RelevanceScore]:
+    def _validate_score(self, score_value: int) -> tuple[Optional[RelevanceScore], Optional[ParserIssue]]:
         """Validate score value and convert to RelevanceScore enum.
 
         Pure, testable function for validation logic.
 
         Args:
             score_value: Raw score value from JSON
-            warnings: List to append warnings to
 
         Returns:
-            RelevanceScore enum if valid, None otherwise
+            Tuple of (RelevanceScore enum or None, parser issue or None)
         """
         if not isinstance(score_value, int) or score_value not in [0, 1, 2, 3]:
-            warning = ParserIssue(
+            issue = ParserIssue(
                 code=ParserIssueCode.VALIDATION_ISSUE,
                 message=f"Invalid O score: {score_value} (expected 0, 1, 2, or 3)",
                 metadata={"field_name": "O", "actual_value": str(score_value)}
             )
-            warnings.append(warning)
-            return None
+            return None, issue
 
         try:
-            return RelevanceScore(score_value)
+            return RelevanceScore(score_value), None
         except ValueError:
-            warning = ParserIssue(
+            issue = ParserIssue(
                 code=ParserIssueCode.VALIDATION_ISSUE,
                 message=f"Invalid score value: {score_value}",
                 metadata={"value": score_value}
             )
-            warnings.append(warning)
-            return None
+            return None, issue

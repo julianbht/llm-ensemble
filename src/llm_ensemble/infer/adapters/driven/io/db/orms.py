@@ -479,3 +479,9 @@ class LLMJudgementORM(Base):
     llm_prompt_text = relationship("LLMPromptTextORM", back_populates="llm_judgements")
     llm_response_text = relationship("LLMResponseTextORM", back_populates="llm_judgements")
     llm_score = relationship("LLMScoreORM", back_populates="llm_judgements")
+    # Cross-schema relationship to aggregate schema
+    aggregation_votes = relationship(
+        "AggregationVoteORM",
+        foreign_keys="[AggregationVoteORM.llm_judgement_id]",
+        back_populates="llm_judgement"
+    )

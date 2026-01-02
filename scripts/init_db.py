@@ -21,7 +21,7 @@ need to run this once unless you:
 from collections import defaultdict
 from typing import DefaultDict
 from llm_ensemble.libs.runtime.env import load_runtime_config
-from llm_ensemble.libs.db import get_engine, create_schemas, create_all_tables, Base
+from llm_ensemble.libs.db.base import get_engine, create_schemas, create_all_tables, Base
 
 # Load runtime configuration (reads .env and runtime configs)
 load_runtime_config()

@@ -237,4 +237,9 @@ class AggregationVoteORM(Base):
 
     # Relationships
     aggregated_vote = relationship("AggregatedVoteORM", back_populates="aggregation_votes")
-    # Note: llm_judgement relationship defined in infer schema (cross-schema)
+    # Cross-schema relationship to infer schema
+    llm_judgement = relationship(
+        "LLMJudgementORM",
+        foreign_keys=[llm_judgement_id],
+        back_populates="aggregation_votes"
+    )

@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from llm_ensemble.aggregate.application.ports.driven.for_input import ForInput
 from llm_ensemble.aggregate.application.ports.driven.for_output import ForOutput
-from llm_ensemble.aggregate.adapters.driven.io.db_judged_dataset_reader import DbInferRunOutputReader
-from llm_ensemble.aggregate.adapters.driven.io.db_aggregated_dataset_writer import DbAggregatedDatasetWriter
+from llm_ensemble.aggregate.adapters.driven.io.db_reader import DBReader
+from llm_ensemble.aggregate.adapters.driven.io.db_writer import DBWriter
 
 
 AVAILABLE_FORMATS = ["db_to_db"]
@@ -40,7 +40,7 @@ class IOAdapterFactory:
             ValueError: If IO format not found
         """
         if io_name == "db_to_db":
-            return DbInferRunOutputReader()
+            return DBReader()
         else:
             available = ", ".join(sorted(AVAILABLE_FORMATS))
             raise ValueError(
@@ -62,7 +62,7 @@ class IOAdapterFactory:
             ValueError: If IO format not found
         """
         if io_name == "db_to_db":
-            return DbAggregatedDatasetWriter(io_name=io_name)
+            return DBWriter(io_name=io_name)
         else:
             available = ", ".join(sorted(AVAILABLE_FORMATS))
             raise ValueError(

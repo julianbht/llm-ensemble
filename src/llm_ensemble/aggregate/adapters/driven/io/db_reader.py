@@ -39,7 +39,7 @@ from llm_ensemble.libs.db.session import session_context
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
-class DbInferRunOutputReader(ForInput):
+class DBReader(ForInput):
     """Read InferRunOutput records from database by infer run name(s).
 
     This adapter implements the ForInput port by loading InferRunOutputs

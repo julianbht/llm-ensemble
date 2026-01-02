@@ -36,7 +36,7 @@ from llm_ensemble.libs.db.session import session_context
 from llm_ensemble.libs.logging.log_events import AggregateWriteEvent
 
 
-class DbAggregatedDatasetWriter(ForOutput):
+class DBWriter(ForOutput):
     """SQL writer adapter for aggregate runs - handles ORM mapping.
 
     Writes aggregate runs to SQL database using pure SQLAlchemy ORM.

@@ -25,7 +25,7 @@ from llm_ensemble.infer.adapters.driven.io.db.orms import (
     LLMJudgementORM,
 )
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
-    NormalizedDatasetJudgingSample,
+    NormalizedDatasetJudgingSampleORM,
 )
 
 
@@ -89,7 +89,7 @@ class DBInferReader(ForInput):
             for judgement in judgements:
                 # Load dataset_sample separately (cross-schema join)
                 dataset_sample = (
-                    session.query(NormalizedDatasetJudgingSample)
+                    session.query(NormalizedDatasetJudgingSampleORM)
                     .filter_by(id=judgement.dataset_sample_id)
                     .first()
                 )

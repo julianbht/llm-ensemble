@@ -70,12 +70,12 @@ class NormalizedDatasetORM(Base):
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    dataset_samples = relationship("DatasetSampleORM", back_populates="normalized_dataset", order_by="DatasetSampleORM.sequence_number")
+    dataset_samples = relationship("NormalizedDatasetJudgingSampleORM", back_populates="normalized_dataset", order_by="NormalizedDatasetJudgingSampleORM.sequence_number")
     ingest_runs = relationship("IngestRunORM", back_populates="normalized_dataset")
 
 
-class NormalizedDatasetJudgingSample(Base):
-    __tablename__ = "dataset_sample"
+class NormalizedDatasetJudgingSampleORM(Base):
+    __tablename__ = "normalized_dataset_judging_sample"
     __natural_key__ = ("normalized_dataset_id", "judging_sample_id")
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
@@ -97,7 +97,7 @@ class NormalizedDatasetJudgingSample(Base):
     judging_sample = relationship("JudgingSampleORM", back_populates="dataset_samples")
 
     __table_args__ = (
-        UniqueConstraint("normalized_dataset_id", "judging_sample_id", name="uq_dataset_sample"),
+        UniqueConstraint("normalized_dataset_id", "judging_sample_id", name="uq_normalized_dataset_judging_sample"),
         {"schema": "ingest"},
     )
 
@@ -185,7 +185,7 @@ class JudgingSampleORM(Base):
     # Relationships
     query = relationship("QueryORM", back_populates="judging_samples")
     document = relationship("DocumentORM", back_populates="judging_samples")
-    dataset_samples = relationship("DatasetSampleORM", back_populates="judging_sample")
+    dataset_samples = relationship("NormalizedDatasetJudgingSampleORM", back_populates="judging_sample")
 
     __table_args__ = (
         UniqueConstraint("query_id", "document_id", name="uq_query_doc"),

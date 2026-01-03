@@ -28,7 +28,7 @@ from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     DocumentORM,
     JudgingSampleORM,
     NormalizedDatasetORM,
-    NormalizedDatasetJudgingSample,
+    NormalizedDatasetJudgingSampleORM,
     IngestRunORM,
     IngestRunConfigORM,
 )
@@ -112,17 +112,17 @@ def judging_sample_from_orm(
 # ============================================================================
 
 def dataset_sample_from_orm(
-    dataset_sample_orm: NormalizedDatasetJudgingSample,
+    dataset_sample_orm: NormalizedDatasetJudgingSampleORM,
     judging_sample: JudgingSample,
 ) -> NormalizedDatasetJudgingSample:
-    """Convert DatasetSampleORM to DatasetSample domain object.
+    """Convert NormalizedDatasetJudgingSampleORM to NormalizedDatasetJudgingSample domain object.
 
     Args:
-        dataset_sample_orm: DatasetSampleORM model from database
+        dataset_sample_orm: NormalizedDatasetJudgingSampleORM model from database
         judging_sample: JudgingSample domain object (already converted from ORM)
 
     Returns:
-        DatasetSample domain object with embedded judging_sample
+        NormalizedDatasetJudgingSample domain object with embedded judging_sample
     """
     return NormalizedDatasetJudgingSample(
         id=dataset_sample_orm.id,

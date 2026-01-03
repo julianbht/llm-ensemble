@@ -437,7 +437,7 @@ class LLMJudgementORM(Base):
     )
     dataset_sample_id = Column(
         PG_UUID(as_uuid=True),
-        ForeignKey("ingest.dataset_sample.id"),
+        ForeignKey("ingest.normalized_dataset_judging_sample.id"),
         nullable=False,
         comment="Which sample from the ingest dataset was judged"
     )

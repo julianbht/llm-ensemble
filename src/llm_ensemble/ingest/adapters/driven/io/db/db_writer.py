@@ -20,7 +20,7 @@ from llm_ensemble.ingest.domain.entities.document import Document
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
-from llm_ensemble.ingest.domain.entities.dataset_sample import NormalizedDatasetJudgingSample
+from llm_ensemble.ingest.adapters.driven.io.db.orms import NormalizedDatasetJudgingSampleORM
 from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
 from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
@@ -561,7 +561,7 @@ class DbWriter(ForOutput):
             doc_uuid = document_uuid_map[sample.judging_sample.document.content_hash]
             judging_sample_uuid = sample_uuid_map[(query_uuid, doc_uuid)]
 
-            dataset_sample = NormalizedDatasetJudgingSample(
+            dataset_sample = NormalizedDatasetJudgingSampleORM(
                 id=sample.id,
                 normalized_dataset_id=dataset_uuid,  # Use actual UUID from DB
                 judging_sample_id=judging_sample_uuid,

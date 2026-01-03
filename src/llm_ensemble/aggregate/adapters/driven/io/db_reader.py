@@ -28,7 +28,7 @@ from llm_ensemble.infer.adapters.driven.io.db.orms import (
     LLMJudgementORM,
 )
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
-    NormalizedDatasetJudgingSample,
+    NormalizedDatasetJudgingSampleORM,
     JudgingSampleORM,
     QueryORM,
     DocumentORM,
@@ -55,7 +55,7 @@ class DBReader(ForInput):
     - For each run_name, find InferRunORM
     - Load linked InferRunOutputORM via FK
     - Query LLMJudgementORM records with eager loading of related entities:
-      - dataset_sample (via DatasetSampleORM)
+      - dataset_sample (via NormalizedDatasetJudgingSampleORM)
       - judging_sample (via JudgingSampleORM)
       - query and document (via QueryORM, DocumentORM)
       - llm_prompt_text, llm_response_text, llm_score
@@ -121,14 +121,14 @@ class DBReader(ForInput):
                 )
 
                 # Load dataset_sample data for all judgements
-                # Need to query DatasetSampleORM and join to JudgingSampleORM
+                # Need to query NormalizedDatasetJudgingSampleORM and join to JudgingSampleORM
                 dataset_sample_ids = [j.dataset_sample_id for j in llm_judgement_orms]
                 dataset_samples_orms = (
-                    session.query(NormalizedDatasetJudgingSample, JudgingSampleORM, QueryORM, DocumentORM)
-                    .join(JudgingSampleORM, NormalizedDatasetJudgingSample.judging_sample_id == JudgingSampleORM.id)
+                    session.query(NormalizedDatasetJudgingSampleORM, JudgingSampleORM, QueryORM, DocumentORM)
+                    .join(JudgingSampleORM, NormalizedDatasetJudgingSampleORM.judging_sample_id == JudgingSampleORM.id)
                     .join(QueryORM, JudgingSampleORM.query_id == QueryORM.id)
                     .join(DocumentORM, JudgingSampleORM.document_id == DocumentORM.id)
-                    .filter(NormalizedDatasetJudgingSample.id.in_(dataset_sample_ids))
+                    .filter(NormalizedDatasetJudgingSampleORM.id.in_(dataset_sample_ids))
                     .all()
                 )
 

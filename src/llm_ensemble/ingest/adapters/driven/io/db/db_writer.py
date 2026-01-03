@@ -20,14 +20,14 @@ from llm_ensemble.ingest.domain.entities.document import Document
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
-from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import NormalizedDatasetJudgingSample
 from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
 from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     QueryORM,
     DocumentORM,
     JudgingSampleORM,
-    DatasetSampleORM,
+    NormalizedDatasetJudgingSample,
     NormalizedDatasetORM,
     IngestRunConfigORM,
     IngestRunORM,
@@ -185,7 +185,7 @@ class DbWriter(ForOutput):
             raise IOError(f"Failed to write samples to database: {e}") from e
         
     def _collect_unique_entities(
-        self, samples: List[DatasetSample]
+        self, samples: List[NormalizedDatasetJudgingSample]
     ) -> Tuple[Dict[str, Query], Dict[str, Document]]:
         """Collect unique queries and documents from dataset samples batch.
 
@@ -561,7 +561,7 @@ class DbWriter(ForOutput):
             doc_uuid = document_uuid_map[sample.judging_sample.document.content_hash]
             judging_sample_uuid = sample_uuid_map[(query_uuid, doc_uuid)]
 
-            dataset_sample = DatasetSampleORM(
+            dataset_sample = NormalizedDatasetJudgingSample(
                 id=sample.id,
                 normalized_dataset_id=dataset_uuid,  # Use actual UUID from DB
                 judging_sample_id=judging_sample_uuid,
@@ -573,8 +573,8 @@ class DbWriter(ForOutput):
         # Since all samples belong to the same dataset_uuid, we can query efficiently
         existing_sample_ids = {
             str(sample_id) for (sample_id,) in
-            session.query(DatasetSampleORM.judging_sample_id)
-            .filter(DatasetSampleORM.normalized_dataset_id == dataset_uuid)
+            session.query(NormalizedDatasetJudgingSample.judging_sample_id)
+            .filter(NormalizedDatasetJudgingSample.normalized_dataset_id == dataset_uuid)
         }
 
         # Filter to only new dataset samples

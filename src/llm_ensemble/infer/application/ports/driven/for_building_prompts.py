@@ -7,7 +7,7 @@ Adapters translate template rendering concerns into prompt text strings.
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
-from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import NormalizedDatasetJudgingSample
 from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
 
 
@@ -25,7 +25,7 @@ class ForBuildingPrompts(ABC):
     """
 
     @abstractmethod
-    def build_prompt(self, dataset_sample: DatasetSample) -> str:
+    def build_prompt(self, dataset_sample: NormalizedDatasetJudgingSample) -> str:
         """Render prompt text from dataset sample.
 
         Renders the prompt text using the internal template.

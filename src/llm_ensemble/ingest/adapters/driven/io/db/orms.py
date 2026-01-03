@@ -74,7 +74,7 @@ class NormalizedDatasetORM(Base):
     ingest_runs = relationship("IngestRunORM", back_populates="normalized_dataset")
 
 
-class DatasetSampleORM(Base):
+class NormalizedDatasetJudgingSample(Base):
     __tablename__ = "dataset_sample"
     __natural_key__ = ("normalized_dataset_id", "judging_sample_id")
 

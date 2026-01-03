@@ -9,7 +9,7 @@ from uuid import uuid4
 from typing import Optional
 
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
-from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import NormalizedDatasetJudgingSample
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 
 
@@ -50,7 +50,7 @@ def build_normalized_dataset(
 
     # Wrap each JudgingSample in a DatasetSample with sequence number
     dataset_samples = [
-        DatasetSample(
+        NormalizedDatasetJudgingSample(
             normalized_dataset_id=dataset_id,
             judging_sample=sample,
             sequence_number=idx,

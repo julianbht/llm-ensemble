@@ -27,7 +27,7 @@ from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     JudgingSampleORM,
     IngestRunORM,
     NormalizedDatasetORM,
-    DatasetSampleORM,
+    NormalizedDatasetJudgingSample,
 )
 from llm_ensemble.ingest.adapters.driven.io.db.mappers_from_orm import (
     query_from_orm,
@@ -113,13 +113,13 @@ class DBReader(ForInput):
             # Uses association object pattern with proper relationships
             # Order by sequence_number for deterministic ordering
             query = (
-                session.query(DatasetSampleORM)
-                .filter(DatasetSampleORM.normalized_dataset_id == ingest_run.normalized_dataset_id)
+                session.query(NormalizedDatasetJudgingSample)
+                .filter(NormalizedDatasetJudgingSample.normalized_dataset_id == ingest_run.normalized_dataset_id)
                 .options(
-                    joinedload(DatasetSampleORM.judging_sample).joinedload(JudgingSampleORM.query),
-                    joinedload(DatasetSampleORM.judging_sample).joinedload(JudgingSampleORM.document),
+                    joinedload(NormalizedDatasetJudgingSample.judging_sample).joinedload(JudgingSampleORM.query),
+                    joinedload(NormalizedDatasetJudgingSample.judging_sample).joinedload(JudgingSampleORM.document),
                 )
-                .order_by(DatasetSampleORM.sequence_number)
+                .order_by(NormalizedDatasetJudgingSample.sequence_number)
             )
 
             # Apply limit if specified

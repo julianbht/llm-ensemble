@@ -19,7 +19,7 @@ from __future__ import annotations
 from llm_ensemble.ingest.domain.entities.query import Query
 from llm_ensemble.ingest.domain.entities.document import Document
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
-from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import NormalizedDatasetJudgingSample
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
 from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
@@ -28,7 +28,7 @@ from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     DocumentORM,
     JudgingSampleORM,
     NormalizedDatasetORM,
-    DatasetSampleORM,
+    NormalizedDatasetJudgingSample,
     IngestRunORM,
     IngestRunConfigORM,
 )
@@ -112,9 +112,9 @@ def judging_sample_from_orm(
 # ============================================================================
 
 def dataset_sample_from_orm(
-    dataset_sample_orm: DatasetSampleORM,
+    dataset_sample_orm: NormalizedDatasetJudgingSample,
     judging_sample: JudgingSample,
-) -> DatasetSample:
+) -> NormalizedDatasetJudgingSample:
     """Convert DatasetSampleORM to DatasetSample domain object.
 
     Args:
@@ -124,7 +124,7 @@ def dataset_sample_from_orm(
     Returns:
         DatasetSample domain object with embedded judging_sample
     """
-    return DatasetSample(
+    return NormalizedDatasetJudgingSample(
         id=dataset_sample_orm.id,
         normalized_dataset_id=dataset_sample_orm.normalized_dataset_id,
         judging_sample=judging_sample,
@@ -138,7 +138,7 @@ def dataset_sample_from_orm(
 
 def normalized_dataset_from_orm(
     normalized_dataset_orm: NormalizedDatasetORM,
-    dataset_samples: list[DatasetSample],
+    dataset_samples: list[NormalizedDatasetJudgingSample],
 ) -> NormalizedDataset:
     """Convert NormalizedDatasetORM to NormalizedDataset domain object.
 

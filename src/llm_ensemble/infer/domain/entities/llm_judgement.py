@@ -10,7 +10,7 @@ from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import NormalizedDatasetJudgingSample
 from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue
@@ -44,7 +44,7 @@ class LLMJudgement(BaseModel):
         description="Random UUID for this judgement"
     )
 
-    dataset_sample: DatasetSample = Field(
+    dataset_sample: NormalizedDatasetJudgingSample = Field(
         ...,
         description="The query-document pair being judged"
     )

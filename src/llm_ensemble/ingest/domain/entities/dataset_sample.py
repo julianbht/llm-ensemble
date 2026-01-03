@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 
 
-class DatasetSample(BaseModel):
+class NormalizedDatasetJudgingSample(BaseModel):
     """A judging sample in a specific dataset context.
 
     Links a JudgingSample to a NormalizedDataset with its position.

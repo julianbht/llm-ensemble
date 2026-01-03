@@ -16,7 +16,7 @@ from uuid import UUID, uuid4
 from typing import Optional
 from pydantic import BaseModel, Field
 
-from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import NormalizedDatasetJudgingSample
 
 
 class NormalizedDataset(BaseModel):
@@ -46,7 +46,7 @@ class NormalizedDataset(BaseModel):
         None,
         description="Name of the external source dataset (e.g., 'msmarco', 'llmjudge')"
     )
-    samples: list[DatasetSample] = Field(
+    samples: list[NormalizedDatasetJudgingSample] = Field(
         ...,
         description="Dataset samples with sequence numbers, sorted by content for reproducibility"
     )

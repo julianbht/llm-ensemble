@@ -18,7 +18,7 @@ from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.llm_prompt_text import LLMPromptText
 from llm_ensemble.infer.domain.entities.llm_response_text import LLMResponseText
 from llm_ensemble.infer.domain.entities.parse_issues import ParserIssue, ParserIssueCode
-from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import NormalizedDatasetJudgingSample
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.query import Query
 from llm_ensemble.ingest.domain.entities.document import Document
@@ -28,7 +28,7 @@ from llm_ensemble.infer.adapters.driven.io.db.orms import (
     LLMJudgementORM,
 )
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
-    DatasetSampleORM,
+    NormalizedDatasetJudgingSample,
     JudgingSampleORM,
     QueryORM,
     DocumentORM,
@@ -124,16 +124,16 @@ class DBReader(ForInput):
                 # Need to query DatasetSampleORM and join to JudgingSampleORM
                 dataset_sample_ids = [j.dataset_sample_id for j in llm_judgement_orms]
                 dataset_samples_orms = (
-                    session.query(DatasetSampleORM, JudgingSampleORM, QueryORM, DocumentORM)
-                    .join(JudgingSampleORM, DatasetSampleORM.judging_sample_id == JudgingSampleORM.id)
+                    session.query(NormalizedDatasetJudgingSample, JudgingSampleORM, QueryORM, DocumentORM)
+                    .join(JudgingSampleORM, NormalizedDatasetJudgingSample.judging_sample_id == JudgingSampleORM.id)
                     .join(QueryORM, JudgingSampleORM.query_id == QueryORM.id)
                     .join(DocumentORM, JudgingSampleORM.document_id == DocumentORM.id)
-                    .filter(DatasetSampleORM.id.in_(dataset_sample_ids))
+                    .filter(NormalizedDatasetJudgingSample.id.in_(dataset_sample_ids))
                     .all()
                 )
 
                 # Build mapping of dataset_sample_id -> DatasetSample domain object
-                dataset_sample_map: dict[UUID, DatasetSample] = {}
+                dataset_sample_map: dict[UUID, NormalizedDatasetJudgingSample] = {}
                 for ds_orm, js_orm, query_orm, doc_orm in dataset_samples_orms:
                     # Build Query domain object
                     query = Query(
@@ -158,7 +158,7 @@ class DBReader(ForInput):
                     )
 
                     # Build DatasetSample domain object
-                    dataset_sample = DatasetSample(
+                    dataset_sample = NormalizedDatasetJudgingSample(
                         id=ds_orm.id,
                         normalized_dataset_id=ds_orm.normalized_dataset_id,
                         judging_sample=judging_sample,

@@ -9,7 +9,7 @@ Each builder method corresponds to a pipeline step, making the flow explicit.
 from __future__ import annotations
 from typing import Optional
 
-from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import NormalizedDatasetJudgingSample
 from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
 from llm_ensemble.infer.domain.entities.llm_score import LLMScore
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
@@ -31,7 +31,7 @@ class LLMJudgementBuilder:
     This makes the pipeline flow explicit in the code.
     """
 
-    def __init__(self, dataset_sample: DatasetSample):
+    def __init__(self, dataset_sample: NormalizedDatasetJudgingSample):
         """Initialize builder with the sample being judged.
 
         Args:

@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from textwrap import dedent
 
-from llm_ensemble.ingest.domain.entities.dataset_sample import DatasetSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import NormalizedDatasetJudgingSample
 from llm_ensemble.infer.application.ports.driven.for_building_prompts import ForBuildingPrompts
 from llm_ensemble.infer.domain.entities.prompt_builder import PromptBuilder
 
@@ -69,7 +69,7 @@ class ThomasAdvancedPromptBuilder(ForBuildingPrompts):
             version="1.0"
         )
 
-    def build_prompt(self, dataset_sample: DatasetSample) -> str:
+    def build_prompt(self, dataset_sample: NormalizedDatasetJudgingSample) -> str:
         """Render prompt text from dataset sample.
 
         Renders the prompt text using the internal template.
@@ -93,7 +93,7 @@ class ThomasAdvancedPromptBuilder(ForBuildingPrompts):
         """
         return self._builder
 
-    def _render(self, dataset_sample: DatasetSample) -> str:
+    def _render(self, dataset_sample: NormalizedDatasetJudgingSample) -> str:
         """Render prompt text from dataset sample.
 
         Pure, testable rendering function with no domain dependencies.

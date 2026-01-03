@@ -25,7 +25,7 @@ from llm_ensemble.aggregate.adapters.driven.io.orms import (
     AggregatedVoteORM,
 )
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
-    DatasetSampleORM,
+    NormalizedDatasetJudgingSample,
 )
 
 
@@ -100,7 +100,7 @@ class DBAggregateReader(ForInput):
 
                 # Load dataset_sample separately (cross-schema join)
                 dataset_sample = (
-                    session.query(DatasetSampleORM)
+                    session.query(NormalizedDatasetJudgingSample)
                     .filter_by(id=first_dataset_sample_id)
                     .first()
                 )

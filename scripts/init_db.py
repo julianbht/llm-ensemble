@@ -35,7 +35,7 @@ from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     QueryORM,
     DocumentORM,
     NormalizedDatasetORM,
-    NormalizedDatasetJudgingSample,
+    NormalizedDatasetJudgingSampleORM,
     IngestRunConfigORM,
     IngestRunORM,
     JudgingSampleORM,

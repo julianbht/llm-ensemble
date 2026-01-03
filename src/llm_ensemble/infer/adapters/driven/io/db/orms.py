@@ -264,7 +264,7 @@ class InferRunOutputORM(Base):
     sample_fingerprint = Column(
         CHAR(64),
         nullable=True,
-        comment="SHA256 of sorted dataset_sample IDs (identifies which samples were judged, for aggregation)"
+        comment="SHA256 of sorted normalized_dataset_judging_sample IDs (identifies which samples were judged, for aggregation)"
     )
     finished = Column(
         Boolean,
@@ -406,11 +406,11 @@ class LLMScoreORM(Base):
 
 
 class LLMJudgementORM(Base):
-    """Single LLM judgement on a dataset sample.
+    """Single LLM judgement on a normalized dataset judging sample.
 
     Central fact table connecting:
     - infer_run_output (which run produced this)
-    - dataset_sample (what was judged)
+    - normalized_dataset_judging_sample (what was judged)
     - llm_prompt_text (what was asked)
     - llm_response_text (what was returned)
     - llm_score (parsed result)
@@ -418,11 +418,11 @@ class LLMJudgementORM(Base):
     Includes inlined invocation metrics (latency, tokens, cost, etc.).
     """
     __tablename__ = "llm_judgements"
-    __natural_key__ = ("infer_run_output_id", "dataset_sample_id")
+    __natural_key__ = ("infer_run_output_id", "normalized_dataset_judging_sample_id")
     __table_args__ = (
         UniqueConstraint(
             "infer_run_output_id",
-            "dataset_sample_id",
+            "normalized_dataset_judging_sample_id",
             name="uq_judgement_output_sample",
         ),
         {"schema": "infer"},
@@ -435,11 +435,11 @@ class LLMJudgementORM(Base):
         ForeignKey("infer.infer_run_outputs.id", ondelete="CASCADE"),
         nullable=False,
     )
-    dataset_sample_id = Column(
+    normalized_dataset_judging_sample_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("ingest.normalized_dataset_judging_sample.id"),
         nullable=False,
-        comment="Which sample from the ingest dataset was judged"
+        comment="Which normalized dataset judging sample was judged"
     )
     llm_prompt_text_id = Column(
         PG_UUID(as_uuid=True),

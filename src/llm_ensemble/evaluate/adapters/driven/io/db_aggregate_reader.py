@@ -91,14 +91,14 @@ class DBAggregateReader(ForInput):
                 if len(vote.llm_judgements) == 0:
                     raise ValueError(f"AggregatedVote {vote.id} has no judgements")
 
-                first_dataset_sample_id = vote.llm_judgements[0].dataset_sample_id
+                first_dataset_sample_id = vote.llm_judgements[0].normalized_dataset_judging_sample_id
                 for judgement in vote.llm_judgements:
-                    assert judgement.dataset_sample_id == first_dataset_sample_id, (
+                    assert judgement.normalized_dataset_judging_sample_id == first_dataset_sample_id, (
                         f"Business rule violation: All judgements in vote {vote.id} "
-                        f"must judge the same dataset sample"
+                        f"must judge the same normalized_dataset_judging_sample"
                     )
 
-                # Load dataset_sample separately (cross-schema join)
+                # Load normalized_dataset_judging_sample separately (cross-schema join)
                 dataset_sample = (
                     session.query(NormalizedDatasetJudgingSampleORM)
                     .filter_by(id=first_dataset_sample_id)

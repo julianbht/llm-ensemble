@@ -120,9 +120,9 @@ class DBReader(ForInput):
                     .all()
                 )
 
-                # Load dataset_sample data for all judgements
+                # Load normalized_dataset_judging_sample data for all judgements
                 # Need to query NormalizedDatasetJudgingSampleORM and join to JudgingSampleORM
-                dataset_sample_ids = [j.dataset_sample_id for j in llm_judgement_orms]
+                dataset_sample_ids = [j.normalized_dataset_judging_sample_id for j in llm_judgement_orms]
                 dataset_samples_orms = (
                     session.query(NormalizedDatasetJudgingSampleORM, JudgingSampleORM, QueryORM, DocumentORM)
                     .join(JudgingSampleORM, NormalizedDatasetJudgingSampleORM.judging_sample_id == JudgingSampleORM.id)
@@ -170,8 +170,8 @@ class DBReader(ForInput):
                 # Convert LLMJudgementORMs to domain objects
                 llm_judgements: list[LLMJudgement] = []
                 for j_orm in llm_judgement_orms:
-                    # Get dataset_sample from map
-                    dataset_sample = dataset_sample_map[j_orm.dataset_sample_id]
+                    # Get normalized_dataset_judging_sample from map
+                    dataset_sample = dataset_sample_map[j_orm.normalized_dataset_judging_sample_id]
 
                     # Build LLMInvocationMetrics
                     invocation_metrics = LLMInvocationMetrics(

@@ -305,7 +305,7 @@ def llm_score_to_orm(
 def llm_judgement_to_orm(
     judgement: LLMJudgement,
     infer_run_output_id: UUID,
-    dataset_sample_id: UUID,
+    normalized_dataset_judging_sample_id: UUID,
     llm_prompt_text_id: UUID,
     llm_response_text_id: UUID,
     llm_score_id: UUID | None,
@@ -317,7 +317,7 @@ def llm_judgement_to_orm(
     Args:
         judgement: LLMJudgement domain object (already has UUID)
         infer_run_output_id: InferRunOutput UUID (for foreign key)
-        dataset_sample_id: DatasetSample UUID (cross-schema reference)
+        normalized_dataset_judging_sample_id: NormalizedDatasetJudgingSample UUID (cross-schema reference)
         llm_prompt_text_id: LLMPromptText UUID (for foreign key)
         llm_response_text_id: LLMResponseText UUID (for foreign key)
         llm_score_id: LLMScore UUID (for foreign key), None if parsing failed
@@ -333,7 +333,7 @@ def llm_judgement_to_orm(
     return LLMJudgementORM(
         id=judgement.id,
         infer_run_output_id=infer_run_output_id,
-        dataset_sample_id=dataset_sample_id,
+        normalized_dataset_judging_sample_id=normalized_dataset_judging_sample_id,
         llm_prompt_text_id=llm_prompt_text_id,
         llm_response_text_id=llm_response_text_id,
         llm_score_id=llm_score_id,

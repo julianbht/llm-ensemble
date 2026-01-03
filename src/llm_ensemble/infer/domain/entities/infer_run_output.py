@@ -43,12 +43,12 @@ class InferRunOutput(BaseModel):
 
     llm_judgements: list[LLMJudgement] = Field(
         ...,
-        description="LLM judgements, one per dataset_sample"
+        description="LLM judgements, one per normalized_dataset_judging_sample"
     )
 
     sample_fingerprint: Optional[str] = Field(
         default=None,
-        description="SHA256 hash of sorted dataset_sample IDs (deterministic identifier, NULL until finalized)"
+        description="SHA256 hash of sorted normalized_dataset_judging_sample IDs (deterministic identifier, NULL until finalized)"
     )
 
     finished: bool = Field(

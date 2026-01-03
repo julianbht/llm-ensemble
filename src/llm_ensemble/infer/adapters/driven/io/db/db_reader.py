@@ -8,7 +8,7 @@ Read Strategy:
     Queries samples via NormalizedDataset for deterministic ordering:
     1. Find IngestRun by run_name
     2. Get IngestRun.normalized_dataset_id
-    3. Join through NormalizedDatasetJudgingSample junction table
+    3. Join through NormalizedDatasetJudgingSampleORM junction table
     4. Order by sequence_number (ensures reproducible ordering)
     5. Eager load Query -> Dataset and Document -> Dataset
     6. Reconstruct domain objects with embedded datasets
@@ -22,12 +22,13 @@ from typing import Optional
 
 from sqlalchemy.orm import joinedload
 
+from llm_ensemble.ingest.domain.entities.dataset_sample import NormalizedDatasetJudgingSample
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     JudgingSampleORM,
     IngestRunORM,
     NormalizedDatasetORM,
-    NormalizedDatasetJudgingSample,
+    NormalizedDatasetJudgingSampleORM,
 )
 from llm_ensemble.ingest.adapters.driven.io.db.mappers_from_orm import (
     query_from_orm,
@@ -113,13 +114,13 @@ class DBReader(ForInput):
             # Uses association object pattern with proper relationships
             # Order by sequence_number for deterministic ordering
             query = (
-                session.query(NormalizedDatasetJudgingSample)
-                .filter(NormalizedDatasetJudgingSample.normalized_dataset_id == ingest_run.normalized_dataset_id)
+                session.query(NormalizedDatasetJudgingSampleORM)
+                .filter(NormalizedDatasetJudgingSampleORM.normalized_dataset_id == ingest_run.normalized_dataset_id)
                 .options(
-                    joinedload(NormalizedDatasetJudgingSample.judging_sample).joinedload(JudgingSampleORM.query),
-                    joinedload(NormalizedDatasetJudgingSample.judging_sample).joinedload(JudgingSampleORM.document),
+                    joinedload(NormalizedDatasetJudgingSampleORM.judging_sample).joinedload(JudgingSampleORM.query),
+                    joinedload(NormalizedDatasetJudgingSampleORM.judging_sample).joinedload(JudgingSampleORM.document),
                 )
-                .order_by(NormalizedDatasetJudgingSample.sequence_number)
+                .order_by(NormalizedDatasetJudgingSampleORM.sequence_number)
             )
 
             # Apply limit if specified
@@ -137,7 +138,7 @@ class DBReader(ForInput):
 
             # 4. Convert ORM entities to Pydantic domain models using mappers
             # All relationships are already loaded via eager loading (no additional queries)
-            dataset_samples = []
+            dataset_samples : list[NormalizedDatasetJudgingSample] = []
             for ds_orm in dataset_sample_orms:
                 # Access pre-loaded relationships (no additional queries)
                 judging_sample_orm = ds_orm.judging_sample

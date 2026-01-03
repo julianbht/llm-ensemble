@@ -87,10 +87,10 @@ class DBInferReader(ForInput):
             predictions = []
 
             for judgement in judgements:
-                # Load dataset_sample separately (cross-schema join)
+                # Load normalized_dataset_judging_sample separately (cross-schema join)
                 dataset_sample = (
                     session.query(NormalizedDatasetJudgingSampleORM)
-                    .filter_by(id=judgement.dataset_sample_id)
+                    .filter_by(id=judgement.normalized_dataset_judging_sample_id)
                     .first()
                 )
 

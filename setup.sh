@@ -14,3 +14,9 @@ nvm install --lts
 # claude code
 npm install -g @anthropic-ai/claude-code
 
+# stuff:
+# - python
+# - nvm, npm
+#   - claude
+# - drawio
+# - 

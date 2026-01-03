@@ -258,7 +258,6 @@ class InferRunOutputORM(Base):
     """
     __tablename__ = "infer_run_outputs"
     __table_args__ = {"schema": "infer"}
-    __natural_key__ = None  # 1:1 with InferRun, uses same ID
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True, comment="Same as InferRun.id (1:1 relationship)")
 

@@ -16,9 +16,9 @@ def build_aggregated_dataset(
 ) -> AggregatedDataset:
     """Build AggregatedDataset with content-based fingerprint.
 
-    Computes fingerprint from sorted dataset_sample IDs to enable deduplication
-    across runs. The fingerprint identifies which query-document pairs were aggregated,
-    independent of which aggregation strategy was used.
+    Computes fingerprint from sorted aggregated vote IDs to enable deduplication
+    across runs. The fingerprint identifies which specific votes were produced,
+    ensuring different aggregation runs with different judgements produce distinct datasets.
 
     Args:
         aggregated_votes: List of aggregated votes
@@ -29,20 +29,12 @@ def build_aggregated_dataset(
     # Generate random UUID for this dataset
     dataset_id = uuid4()
 
-    # Extract unique dataset_sample IDs from aggregated votes
-    dataset_sample_ids = set()
-    for vote in aggregated_votes:
-        if vote.llm_judgements:
-            # All judgements in a vote are for the same sample, so take first
-            dataset_sample_id = vote.llm_judgements[0].dataset_sample.id
-            dataset_sample_ids.add(dataset_sample_id)
+    # Sort vote IDs for deterministic fingerprint
+    sorted_vote_ids = sorted(str(vote.id) for vote in aggregated_votes)
 
-    # Sort for deterministic fingerprint
-    sorted_sample_ids = sorted(dataset_sample_ids)
-
-    # Compute fingerprint from sorted dataset_sample IDs
-    sample_ids_str = ":".join(str(sid) for sid in sorted_sample_ids)
-    fingerprint = hashlib.sha256(sample_ids_str.encode()).hexdigest()
+    # Compute fingerprint from sorted aggregated vote IDs
+    vote_ids_str = ":".join(sorted_vote_ids)
+    fingerprint = hashlib.sha256(vote_ids_str.encode()).hexdigest()
 
     return AggregatedDataset(
         id=dataset_id,

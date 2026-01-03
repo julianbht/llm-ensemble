@@ -133,7 +133,7 @@ class AggregatedDatasetORM(Base):
         CHAR(64),
         nullable=False,
         unique=True,
-        comment="SHA256 of sorted dataset_sample IDs (identifies which samples were aggregated)"
+        comment="SHA256 of sorted aggregated vote IDs (identifies which specific votes were produced)"
     )
     created_at = Column(DateTime, nullable=False, default=utcnow)
 

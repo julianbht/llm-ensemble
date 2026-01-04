@@ -16,7 +16,7 @@ Tested via CLI integration tests.
 from __future__ import annotations
 import typer
 
-from llm_ensemble.infer.startup.composition_root import build_application
+from llm_ensemble.infer.startup.dependency_configurator import build_application
 from llm_ensemble.libs.runtime.run_name import generate_run_name
 
 from llm_ensemble.libs.cli.params import (

@@ -60,6 +60,71 @@ def sample_dataset() -> NormalizedDataset:
 
 
 @pytest.fixture
+def sample_dataset_five() -> NormalizedDataset:
+    """Create a test dataset with five samples for slicing tests.
+
+    Returns:
+        NormalizedDataset with 5 judging samples with varied queries
+    """
+    dataset_id = uuid4()
+
+    samples = [
+        NormalizedDatasetJudgingSample(
+            normalized_dataset_id=dataset_id,
+            judging_sample=JudgingSample(
+                query=Query(query_text="What is Python?"),
+                document=Document(doc_text="Python is a programming language."),
+                gold_score=RelevanceScore.RELEVANT
+            ),
+            sequence_number=0
+        ),
+        NormalizedDatasetJudgingSample(
+            normalized_dataset_id=dataset_id,
+            judging_sample=JudgingSample(
+                query=Query(query_text="How to install packages?"),
+                document=Document(doc_text="Use pip install to add Python packages."),
+                gold_score=RelevanceScore.HIGHLY_RELEVANT
+            ),
+            sequence_number=1
+        ),
+        NormalizedDatasetJudgingSample(
+            normalized_dataset_id=dataset_id,
+            judging_sample=JudgingSample(
+                query=Query(query_text="What is machine learning?"),
+                document=Document(doc_text="Machine learning is a subset of artificial intelligence."),
+                gold_score=RelevanceScore.RELEVANT
+            ),
+            sequence_number=2
+        ),
+        NormalizedDatasetJudgingSample(
+            normalized_dataset_id=dataset_id,
+            judging_sample=JudgingSample(
+                query=Query(query_text="Python data structures"),
+                document=Document(doc_text="Python has built-in data structures like lists and dictionaries."),
+                gold_score=RelevanceScore.HIGHLY_RELEVANT
+            ),
+            sequence_number=3
+        ),
+        NormalizedDatasetJudgingSample(
+            normalized_dataset_id=dataset_id,
+            judging_sample=JudgingSample(
+                query=Query(query_text="Best IDE for Python"),
+                document=Document(doc_text="Popular Python IDEs include PyCharm and VS Code."),
+                gold_score=RelevanceScore.RELEVANT
+            ),
+            sequence_number=4
+        ),
+    ]
+
+    return NormalizedDataset(
+        id=dataset_id,
+        fingerprint="mock-fingerprint-456",
+        external_dataset_name="test-dataset-five",
+        samples=samples
+    )
+
+
+@pytest.fixture
 def temp_run_dir(tmp_path: Path) -> Path:
     """Create temporary run directory for testing.
 

@@ -37,7 +37,7 @@ def test_inference_pipeline_slice(
     sample_dataset_five: NormalizedDataset,
     temp_run_dir: Path
 ):
-    """Test end-to-end inference pipeline with real domain adapters and dataset slicing.
+    """Test end-to-end inference pipeline with real adapters and dataset slicing.
 
     This demonstrates the testing benefits of Ports & Adapters architecture:
     - REAL domain logic (ThomasAdvancedPromptBuilder, ThomasAdvancedParser)
@@ -47,10 +47,10 @@ def test_inference_pipeline_slice(
     Tests application business logic:
     - Dataset slicing: only samples [2:4) are processed
     - Metric aggregation: counts, latencies, costs, tokens
-    - Pipeline integration: real parser + real builder work together
+    - Pipeline integration: real parser + real prompt builder work together
     - Data flow: correct samples flow through all pipeline stages
     """
-    # Arrange: Real domain adapters + mock infrastructure
+    # Arrange: Real adapters + mock infrastructure
     output_adapter = MockOutputAdapter()
     app = InferenceApplication(
         input_port=MockInputAdapter(sample_dataset_five),
@@ -90,7 +90,7 @@ def test_inference_pipeline_slice(
     assert second_judgement.llm_score is not None
     assert second_judgement.llm_score.label == RelevanceScore.RELEVANT
 
-    # Assert: Application calculated metrics exist (business logic aggregation)
+    # Assert: Application calculated metrics exist
     assert summary.performance.latency.total_ms is not None
     assert summary.performance.latency.avg_ms is not None
     assert summary.judgements.total_count is not None

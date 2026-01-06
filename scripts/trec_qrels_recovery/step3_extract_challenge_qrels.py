@@ -23,7 +23,9 @@ def load_query_ids(filepath: Path) -> set:
 
 
 def main():
-    data_dir = Path(__file__).parent.parent / 'data'
+    base_dir = Path(__file__).parent.parent.parent / 'data'
+    challenge_dir = base_dir / 'llm_judge_challenge'
+    test_dir = base_dir / 'llm_judge_challenge_test'
 
     print("=" * 80)
     print("STEP 3: EXTRACT CHALLENGE QRELS")
@@ -32,14 +34,14 @@ def main():
 
     # Load challenge query IDs
     print("Loading challenge query IDs...")
-    qid_file = data_dir / 'qid_to_qidx.txt'
+    qid_file = challenge_dir / 'qid_to_qidx.txt'
     challenge_qids = load_query_ids(qid_file)
     print(f"  Found {len(challenge_qids)} queries")
     print()
 
     # Load full TREC qrels
     print("Loading full TREC 2023 qrels...")
-    qrels_file = data_dir / 'trec_2023_passage_qrels_official.txt'
+    qrels_file = test_dir / 'trec_2023_passage_qrels_official.txt'
 
     if not qrels_file.exists():
         print(f"✗ ERROR: {qrels_file} not found")
@@ -90,7 +92,7 @@ def main():
     print()
 
     # Write filtered qrels
-    output_file = data_dir / 'llm4eval_official_qrels_2023.txt'
+    output_file = test_dir / 'llm4eval_official_qrels_2023.txt'
     with open(output_file, 'w') as f:
         for qid, iteration, doc_id, grade in sorted(challenge_qrels):
             f.write(f"{qid} {iteration} {doc_id} {grade}\n")

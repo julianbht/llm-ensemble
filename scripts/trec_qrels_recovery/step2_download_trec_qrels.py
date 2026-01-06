@@ -13,7 +13,7 @@ TREC_QRELS_URL = "https://trec.nist.gov/data/deep/2023.qrels.pass.withDupes.txt"
 
 
 def main():
-    data_dir = Path(__file__).parent.parent / 'data'
+    data_dir = Path(__file__).parent.parent.parent / 'data' / 'llm_judge_challenge_test'
     output_file = data_dir / 'trec_2023_passage_qrels_official.txt'
 
     print("=" * 80)

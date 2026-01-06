@@ -17,7 +17,7 @@ fi
 
 # Step 1: Verify data source
 echo "Running Step 1: Verify data source..."
-python3 scripts/step1_verify_data_source.py
+python3 scripts/trec_qrels_recovery/step1_verify_data_source.py
 if [ $? -ne 0 ]; then
     echo "✗ Step 1 failed"
     exit 1
@@ -26,7 +26,7 @@ echo ""
 
 # Step 2: Download TREC qrels
 echo "Running Step 2: Download TREC qrels..."
-python3 scripts/step2_download_trec_qrels.py
+python3 scripts/trec_qrels_recovery/step2_download_trec_qrels.py
 if [ $? -ne 0 ]; then
     echo "✗ Step 2 failed"
     exit 1
@@ -35,7 +35,7 @@ echo ""
 
 # Step 3: Extract challenge qrels
 echo "Running Step 3: Extract challenge qrels..."
-python3 scripts/step3_extract_challenge_qrels.py
+python3 scripts/trec_qrels_recovery/step3_extract_challenge_qrels.py
 if [ $? -ne 0 ]; then
     echo "✗ Step 3 failed"
     exit 1
@@ -44,7 +44,7 @@ echo ""
 
 # Step 4: Compute agreement metrics
 echo "Running Step 4: Compute agreement metrics..."
-python3 scripts/step4_compute_agreement_metrics.py
+python3 scripts/trec_qrels_recovery/step4_compute_agreement_metrics.py
 if [ $? -ne 0 ]; then
     echo "✗ Step 4 failed"
     exit 1

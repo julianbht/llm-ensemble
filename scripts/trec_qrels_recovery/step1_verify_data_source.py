@@ -22,7 +22,7 @@ def load_query_ids(filepath: Path) -> set:
 
 
 def main():
-    data_dir = Path(__file__).parent.parent / 'data'
+    data_dir = Path(__file__).parent.parent.parent / 'data' / 'llm_judge_challenge'
 
     print("=" * 80)
     print("STEP 1: VERIFY DATA SOURCE")

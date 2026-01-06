@@ -13,8 +13,8 @@ to recover the gold labels from the official TREC qrels.
 **Goal**: Confirm that the challenge test queries come from TREC 2023 DL Track
 
 **Input**:
-- `data/qid_to_qidx.txt` - Mapping from actual query IDs to anonymized indices (q0, q1, ...)
-- `data/docid_to_docidx.txt` - Mapping from actual doc IDs to anonymized indices (p0, p1, ...)
+- `data/llm_judge_challenge/qid_to_qidx.txt` - Mapping from actual query IDs to anonymized indices (q0, q1, ...)
+- `data/llm_judge_challenge/docid_to_docidx.txt` - Mapping from actual doc IDs to anonymized indices (p0, p1, ...)
 
 **Process**:
 - Loaded 50 query IDs from the mapping file
@@ -24,7 +24,7 @@ to recover the gold labels from the official TREC qrels.
 **Result**:
 - **50/50 queries matched (100%)** → Strong evidence data comes from TREC 2023 DL Track
 
-**Script**: `scripts/step1_verify_data_source.py`
+**Script**: `scripts/trec_qrels_recovery/step1_verify_data_source.py`
 
 ---
 
@@ -47,10 +47,10 @@ to recover the gold labels from the official TREC qrels.
 - 2: Highly relevant
 - 3: Perfectly relevant
 
-**Output**: `data/trec_2023_passage_qrels_official.txt`
+**Output**: `data/llm_judge_challenge_test/trec_2023_passage_qrels_official.txt`
 - Total: 22,327 judgments across 700 queries (full TREC 2023 set)
 
-**Script**: `scripts/step2_download_trec_qrels.py`
+**Script**: `scripts/trec_qrels_recovery/step2_download_trec_qrels.py`
 
 ---
 
@@ -59,8 +59,8 @@ to recover the gold labels from the official TREC qrels.
 **Goal**: Filter TREC qrels to only include the 50 challenge queries
 
 **Input**:
-- `data/trec_2023_passage_qrels_official.txt` - Full TREC 2023 qrels
-- `data/qid_to_qidx.txt` - Challenge query mapping
+- `data/llm_judge_challenge_test/trec_2023_passage_qrels_official.txt` - Full TREC 2023 qrels
+- `data/llm_judge_challenge/qid_to_qidx.txt` - Challenge query mapping
 
 **Process**:
 - Extracted all qrels where query_id matches one of the 50 challenge queries
@@ -71,9 +71,9 @@ to recover the gold labels from the official TREC qrels.
 - All 50 challenge queries have gold labels
 - Grade distribution: 62.4% grade 0, 19.3% grade 1, 10.5% grade 2, 7.8% grade 3
 
-**Output**: `data/llm4eval_official_qrels_2023.txt`
+**Output**: `data/llm_judge_challenge_test/llm4eval_official_qrels_2023.txt`
 
-**Script**: `scripts/step3_extract_challenge_qrels.py`
+**Script**: `scripts/trec_qrels_recovery/step3_extract_challenge_qrels.py`
 
 ---
 
@@ -82,9 +82,9 @@ to recover the gold labels from the official TREC qrels.
 **Goal**: Validate our qrels by computing agreement metrics with a published submission
 
 **Input**:
-- `data/NISTRetrieval-instruct0.txt` - LLM judge submission (anonymized format: q0, p0, etc.)
-- `data/llm4eval_official_qrels_2023.txt` - Our extracted gold labels
-- `data/qid_to_qidx.txt`, `data/docid_to_docidx.txt` - ID mappings
+- `data/llm_judge_challenge/NISTRetrieval-instruct0.txt` - LLM judge submission (anonymized format: q0, p0, etc.)
+- `data/llm_judge_challenge_test/llm4eval_official_qrels_2023.txt` - Our extracted gold labels
+- `data/llm_judge_challenge/qid_to_qidx.txt`, `data/llm_judge_challenge/docid_to_docidx.txt` - ID mappings
 
 **Process**:
 1. Load submission predictions (4,423 query-document-grade triplets)
@@ -106,7 +106,7 @@ Exact agreement:                42.8% (1895/4423)
 - This is reasonable for LLM-as-judge tasks (not expected to be perfect)
 - These metrics are computed at the **instance level** (query-document pairs)
 
-**Script**: `scripts/step4_compute_agreement_metrics.py`
+**Script**: `scripts/trec_qrels_recovery/step4_compute_agreement_metrics.py`
 
 ---
 
@@ -143,14 +143,22 @@ However, we **cannot be 100% certain** without:
 
 ```
 data/
-├── trec_2023_passage_qrels_official.txt    # Full TREC 2023 qrels (22,327 judgments)
-└── llm4eval_official_qrels_2023.txt        # Challenge subset (13,690 judgments)
+├── llm_judge_challenge/                    # Original challenge files (read-only)
+│   ├── docid_to_docidx.txt
+│   ├── qid_to_qidx.txt
+│   ├── llm4eval_*_2024.txt
+│   └── NISTRetrieval-instruct0.txt
+└── llm_judge_challenge_test/               # Challenge files + recovered qrels
+    ├── [all files from llm_judge_challenge/]
+    ├── trec_2023_passage_qrels_official.txt    # Full TREC 2023 qrels (22,327)
+    └── llm4eval_official_qrels_2023.txt        # Challenge subset (13,690)
 
-scripts/
+scripts/trec_qrels_recovery/
 ├── step1_verify_data_source.py             # Verify queries match TREC 2023
 ├── step2_download_trec_qrels.py            # Download official qrels
 ├── step3_extract_challenge_qrels.py        # Filter to challenge queries
-└── step4_compute_agreement_metrics.py      # Compute κ and α
+├── step4_compute_agreement_metrics.py      # Compute κ and α
+└── run_all_verification_steps.sh           # Master script
 ```
 
 ---
@@ -160,19 +168,17 @@ scripts/
 To reproduce this analysis:
 
 ```bash
-# Step 1: Verify data source (requires ir_datasets)
-pip install ir-datasets
-python3 scripts/step1_verify_data_source.py
+# Install dependencies
+pip install -r scripts/trec_qrels_recovery/requirements_verification.txt
 
-# Step 2: Download official qrels
-python3 scripts/step2_download_trec_qrels.py
+# Run all steps
+./scripts/trec_qrels_recovery/run_all_verification_steps.sh
 
-# Step 3: Extract challenge qrels
-python3 scripts/step3_extract_challenge_qrels.py
-
-# Step 4: Compute agreement metrics (requires sklearn, scipy, krippendorff)
-pip install numpy scipy scikit-learn krippendorff
-python3 scripts/step4_compute_agreement_metrics.py
+# Or run individually
+python3 scripts/trec_qrels_recovery/step1_verify_data_source.py
+python3 scripts/trec_qrels_recovery/step2_download_trec_qrels.py
+python3 scripts/trec_qrels_recovery/step3_extract_challenge_qrels.py
+python3 scripts/trec_qrels_recovery/step4_compute_agreement_metrics.py
 ```
 
 ---

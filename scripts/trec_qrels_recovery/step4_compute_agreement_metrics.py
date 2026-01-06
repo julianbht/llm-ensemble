@@ -71,7 +71,9 @@ def compute_krippendorff_alpha(y_pred, y_true):
 
 
 def main():
-    data_dir = Path(__file__).parent.parent / 'data'
+    base_dir = Path(__file__).parent.parent.parent / 'data'
+    challenge_dir = base_dir / 'llm_judge_challenge'
+    test_dir = base_dir / 'llm_judge_challenge_test'
 
     print("=" * 80)
     print("STEP 4: COMPUTE AGREEMENT METRICS")
@@ -80,14 +82,14 @@ def main():
 
     # Load mappings
     print("Loading ID mappings...")
-    qid_map = load_mapping(data_dir / 'qid_to_qidx.txt', reverse=True)
-    docid_map = load_mapping(data_dir / 'docid_to_docidx.txt', reverse=True)
+    qid_map = load_mapping(challenge_dir / 'qid_to_qidx.txt', reverse=True)
+    docid_map = load_mapping(challenge_dir / 'docid_to_docidx.txt', reverse=True)
     print(f"  Queries: {len(qid_map)}, Documents: {len(docid_map)}")
     print()
 
     # Load submission
     print("Loading submission...")
-    submission_file = data_dir / 'NISTRetrieval-instruct0.txt'
+    submission_file = challenge_dir / 'NISTRetrieval-instruct0.txt'
     if not submission_file.exists():
         print(f"✗ ERROR: {submission_file} not found")
         return 1
@@ -98,7 +100,7 @@ def main():
 
     # Load gold labels
     print("Loading gold labels...")
-    qrels_file = data_dir / 'llm4eval_official_qrels_2023.txt'
+    qrels_file = test_dir / 'llm4eval_official_qrels_2023.txt'
     if not qrels_file.exists():
         print(f"✗ ERROR: {qrels_file} not found")
         print("  Run step3_extract_challenge_qrels.py first")

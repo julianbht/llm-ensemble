@@ -157,26 +157,88 @@ def verify_qrels(original: dict, recovered: dict):
 def main():
     base_dir = Path(__file__).parent.parent / 'data'
     original_file = base_dir / 'llm_judge_challenge' / 'llm4eval_test_qrel_2024.txt'
-    recovered_file = base_dir / 'llm_judge_challenge_qrels_recovered' / 'llm4eval_test_qrel_2024_recovered.txt'
+    recovered_dir = base_dir / 'llm_judge_challenge_qrels_recovered'
     
-    # Check files exist
+    # Check original exists
     if not original_file.exists():
         print(f"✗ ERROR: Original file not found: {original_file}")
         return 1
     
-    if not recovered_file.exists():
-        print(f"✗ ERROR: Recovered file not found: {recovered_file}")
-        return 1
-    
-    # Load and verify
-    print("Loading qrels...")
+    # Load original once
+    print("Loading original qrels...")
     original = load_original_qrels(original_file)
-    recovered = load_recovered_qrels(recovered_file)
+    print(f"  Loaded {len(original):,} pairs")
     print()
     
-    success = verify_qrels(original, recovered)
+    all_success = True
     
-    return 0 if success else 1
+    # Verify main recovered file (exact match with original)
+    recovered_file = recovered_dir / 'llm4eval_test_qrel_2024_recovered.txt'
+    if recovered_file.exists():
+        print("=" * 80)
+        print("VERIFYING: llm4eval_test_qrel_2024_recovered.txt")
+        print("=" * 80)
+        print("(Should be exact match with original withheld test set)")
+        print()
+        
+        recovered = load_recovered_qrels(recovered_file)
+        
+        if len(recovered) != len(original):
+            print(f"✗ FAILED: Size mismatch")
+            print(f"  Original:  {len(original):,}")
+            print(f"  Recovered: {len(recovered):,}")
+            all_success = False
+        else:
+            print(f"✓ Size matches: {len(recovered):,} pairs")
+        
+        # Verify exact match
+        missing = []
+        for key in original.keys():
+            if key not in recovered:
+                missing.append(key)
+        
+        if missing:
+            print(f"✗ FAILED: {len(missing)} pairs missing")
+            all_success = False
+        else:
+            print(f"✓ All pairs present")
+        
+        # Grade distribution
+        grade_dist = defaultdict(int)
+        for key in original.keys():
+            grade = recovered[key]['grade']
+            grade_dist[grade] += 1
+        
+        print()
+        print("Grade distribution:")
+        for grade in sorted(grade_dist.keys()):
+            count = grade_dist[grade]
+            pct = count / len(original) * 100 if original else 0
+            print(f"  Grade {grade}: {count:>5} ({pct:>5.1f}%)")
+        
+        print()
+    else:
+        print(f"✗ ERROR: Main recovered file not found: {recovered_file.name}")
+        all_success = False
+        print()
+    
+    # Verify superset (contains all original plus extras)
+    superset_file = recovered_dir / 'llm4eval_test_qrel_2024_recovered_superset.txt'
+    if superset_file.exists():
+        print("=" * 80)
+        print("VERIFYING: llm4eval_test_qrel_2024_recovered_superset.txt")
+        print("=" * 80)
+        print("(Should be superset of original)")
+        print()
+        
+        superset = load_recovered_qrels(superset_file)
+        success = verify_qrels(original, superset)
+        all_success = all_success and success
+    else:
+        print(f"ℹ Superset file not found: {superset_file.name}")
+        print()
+    
+    return 0 if all_success else 1
 
 
 if __name__ == '__main__':

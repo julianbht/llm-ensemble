@@ -103,18 +103,8 @@ def main():
         print(f"  Grade {grade}: {count:>5} ({pct:>5.1f}%)")
     print()
 
-    # Write full challenge format qrels (all recovered judgments)
-    output_file = recovered_dir / 'llm4eval_test_qrel_2024_recovered.txt'
-    with open(output_file, 'w') as f:
-        for qidx, iteration, docidx, grade in sorted(challenge_qrels):
-            f.write(f"{qidx} {iteration} {docidx} {grade}\n")
-
-    print(f"✓ Challenge format qrels written to: {output_file.name}")
-    print(f"  Total judgments: {len(challenge_qrels):,}")
-    print()
-
-    # Also create challenge subset (only pairs from original withheld file)
-    print("Creating challenge subset (original withheld pairs only)...")
+    # First create the main recovered file (original withheld pairs only)
+    print("Creating recovered qrels (original withheld pairs only)...")
     original_withheld = challenge_dir / 'llm4eval_test_qrel_2024.txt'
     
     if original_withheld.exists():
@@ -130,22 +120,35 @@ def main():
         challenge_qrels_dict = {(qidx, docidx): (iteration, grade) 
                                 for qidx, iteration, docidx, grade in challenge_qrels}
         
-        subset_qrels = []
+        recovered_qrels = []
         for qidx, iteration, docidx in original_pairs:
             key = (qidx, docidx)
             if key in challenge_qrels_dict:
                 _, grade = challenge_qrels_dict[key]
-                subset_qrels.append(f"{qidx} {iteration} {docidx} {grade}\n")
+                recovered_qrels.append(f"{qidx} {iteration} {docidx} {grade}\n")
         
-        subset_file = recovered_dir / 'llm4eval_test_qrel_2024_challenge_subset.txt'
-        with open(subset_file, 'w') as f:
-            f.writelines(subset_qrels)
+        output_file = recovered_dir / 'llm4eval_test_qrel_2024_recovered.txt'
+        with open(output_file, 'w') as f:
+            f.writelines(recovered_qrels)
         
-        print(f"✓ Challenge subset written to: {subset_file.name}")
-        print(f"  Total judgments: {len(subset_qrels):,}")
-        print(f"  (Filtered to match original withheld test set)")
+        print(f"✓ Recovered qrels written to: {output_file.name}")
+        print(f"  Total judgments: {len(recovered_qrels):,}")
+        print(f"  (Matches original withheld test set)")
     else:
-        print(f"⚠ Skipping subset creation: {original_withheld} not found")
+        print(f"⚠ Warning: {original_withheld} not found")
+        print(f"  Cannot create filtered recovered file")
+    
+    print()
+
+    # Also write superset with all recovered judgments
+    superset_file = recovered_dir / 'llm4eval_test_qrel_2024_recovered_superset.txt'
+    with open(superset_file, 'w') as f:
+        for qidx, iteration, docidx, grade in sorted(challenge_qrels):
+            f.write(f"{qidx} {iteration} {docidx} {grade}\n")
+
+    print(f"✓ Recovered superset written to: {superset_file.name}")
+    print(f"  Total judgments: {len(challenge_qrels):,}")
+    print(f"  (Contains additional queries from TREC 2023)")
     
     print()
 
@@ -161,14 +164,15 @@ def main():
     print()
     print("Two files created:")
     print()
-    print("1. llm4eval_test_qrel_2024_recovered.txt (ALL recovered judgments)")
-    print("   - 13,690 judgments for 50 queries")
-    print("   - Complete TREC 2023 subset")
-    print()
-    print("2. llm4eval_test_qrel_2024_challenge_subset.txt (CHALLENGE SUBSET)")
+    print("1. llm4eval_test_qrel_2024_recovered.txt (MAIN FILE)")
     print("   - 4,423 judgments for 25 queries")
     print("   - Exact same pairs as original withheld test set")
     print("   - **Use this for fair comparison with LLM Judge Challenge**")
+    print()
+    print("2. llm4eval_test_qrel_2024_recovered_superset.txt (OPTIONAL)")
+    print("   - 11,718 judgments for 50 queries")
+    print("   - Contains additional queries from TREC 2023")
+    print("   - Use if you want more test data")
     print()
     print("Both use with:")
     print("  - llm4eval_query_2024.txt")

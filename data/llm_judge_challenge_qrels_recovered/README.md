@@ -7,16 +7,23 @@ For original challenge files, see `../llm_judge_challenge/`.
 ## Key Files
 
 ### **USE THIS:** Challenge Format (Anonymized Indices)
-- **llm4eval_test_qrel_2024_recovered.txt** - **Drop-in replacement for test qrels**
+- **llm4eval_test_qrel_2024_recovered.txt** - **Main recovered qrels file**
   - Format: `query_idx iteration doc_idx grade` (e.g., `q0 0 p123 2`)
-  - 13,690 judgments with actual grades (0-3)
+  - 4,423 judgments with actual grades (0-3)
+  - Exact same query-doc pairs as original withheld test set
   - Use with `llm4eval_query_2024.txt` and `llm4eval_document_2024.jsonl`
-  - **This is what you want for evaluation!**
+  - **This is what you want for fair comparison with LLM Judge Challenge!**
+
+- **llm4eval_test_qrel_2024_recovered_superset.txt** - **Optional extended test set**
+  - Format: `query_idx iteration doc_idx grade`
+  - 11,718 judgments for 50 queries
+  - Contains all original pairs plus additional queries from TREC 2023
+  - Use if you want more test data
 
 ### TREC Format (Real IDs)
 - **trec_2023_challenge_subset.txt**
   - Format: `query_id iteration doc_id grade` (e.g., `2001459 0 msmarco_passage_00_168095376 2`)
-  - Same 13,690 judgments but with real TREC IDs
+  - 13,690 judgments with real TREC IDs
   - Used for validation against paper
 
 - **trec_2023_passage_qrels_official.txt**
@@ -26,7 +33,7 @@ For original challenge files, see `../llm_judge_challenge/`.
 
 ## How to Use
 
-### Option 1: Direct Replacement (Recommended)
+### Recommended: Use Main Recovered File
 Replace the withheld test qrels file:
 ```python
 # Load challenge format qrels (anonymized indices)
@@ -38,7 +45,17 @@ with open('data/llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_reco
 # Now use with llm4eval_query_2024.txt and llm4eval_document_2024.jsonl
 ```
 
-### Option 2: TREC Format (Real IDs)
+### Optional: Use Extended Superset
+If you want more test data (50 queries instead of 25):
+```python
+qrels = {}
+with open('data/llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_recovered_superset.txt') as f:
+    for line in f:
+        query_idx, iteration, doc_idx, grade = line.strip().split()
+        qrels[(query_idx, doc_idx)] = int(grade)
+```
+
+### Alternative: TREC Format (Real IDs)
 If you need real TREC IDs instead of anonymized indices:
 ```python
 qrels = {}

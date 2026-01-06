@@ -23,7 +23,7 @@ All files from `../llm_judge_challenge/` are also present here.
 ```python
 # Load recovered qrels for evaluation
 qrels = {}
-with open('data/llm_judge_challenge_test/llm4eval_official_qrels_2023.txt') as f:
+with open('data/llm_judge_challenge_qrels_recovered/llm4eval_official_qrels_2023.txt') as f:
     for line in f:
         qid, _, doc_id, grade = line.strip().split()
         qrels[(qid, doc_id)] = int(grade)

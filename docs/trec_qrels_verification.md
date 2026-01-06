@@ -47,7 +47,7 @@ to recover the gold labels from the official TREC qrels.
 - 2: Highly relevant
 - 3: Perfectly relevant
 
-**Output**: `data/llm_judge_challenge_test/trec_2023_passage_qrels_official.txt`
+**Output**: `data/llm_judge_challenge_qrels_recovered/trec_2023_passage_qrels_official.txt`
 - Total: 22,327 judgments across 700 queries (full TREC 2023 set)
 
 **Script**: `scripts/trec_qrels_recovery/step2_download_trec_qrels.py`
@@ -59,7 +59,7 @@ to recover the gold labels from the official TREC qrels.
 **Goal**: Filter TREC qrels to only include the 50 challenge queries
 
 **Input**:
-- `data/llm_judge_challenge_test/trec_2023_passage_qrels_official.txt` - Full TREC 2023 qrels
+- `data/llm_judge_challenge_qrels_recovered/trec_2023_passage_qrels_official.txt` - Full TREC 2023 qrels
 - `data/llm_judge_challenge/qid_to_qidx.txt` - Challenge query mapping
 
 **Process**:
@@ -71,7 +71,7 @@ to recover the gold labels from the official TREC qrels.
 - All 50 challenge queries have gold labels
 - Grade distribution: 62.4% grade 0, 19.3% grade 1, 10.5% grade 2, 7.8% grade 3
 
-**Output**: `data/llm_judge_challenge_test/llm4eval_official_qrels_2023.txt`
+**Output**: `data/llm_judge_challenge_qrels_recovered/llm4eval_official_qrels_2023.txt`
 
 **Script**: `scripts/trec_qrels_recovery/step3_extract_challenge_qrels.py`
 
@@ -83,7 +83,7 @@ to recover the gold labels from the official TREC qrels.
 
 **Input**:
 - `data/llm_judge_challenge/NISTRetrieval-instruct0.txt` - LLM judge submission (anonymized format: q0, p0, etc.)
-- `data/llm_judge_challenge_test/llm4eval_official_qrels_2023.txt` - Our extracted gold labels
+- `data/llm_judge_challenge_qrels_recovered/llm4eval_official_qrels_2023.txt` - Our extracted gold labels
 - `data/llm_judge_challenge/qid_to_qidx.txt`, `data/llm_judge_challenge/docid_to_docidx.txt` - ID mappings
 
 **Process**:
@@ -148,7 +148,7 @@ data/
 │   ├── qid_to_qidx.txt
 │   ├── llm4eval_*_2024.txt
 │   └── NISTRetrieval-instruct0.txt
-└── llm_judge_challenge_test/               # Challenge files + recovered qrels
+└── llm_judge_challenge_qrels_recovered/    # Challenge files + recovered qrels
     ├── [all files from llm_judge_challenge/]
     ├── trec_2023_passage_qrels_official.txt    # Full TREC 2023 qrels (22,327)
     └── llm4eval_official_qrels_2023.txt        # Challenge subset (13,690)

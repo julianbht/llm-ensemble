@@ -73,7 +73,7 @@ def compute_krippendorff_alpha(y_pred, y_true):
 def main():
     base_dir = Path(__file__).parent.parent.parent / 'data'
     challenge_dir = base_dir / 'llm_judge_challenge'
-    test_dir = base_dir / 'llm_judge_challenge_test'
+    test_dir = base_dir / 'llm_judge_challenge_qrels_recovered'
 
     print("=" * 80)
     print("STEP 4: COMPUTE AGREEMENT METRICS")

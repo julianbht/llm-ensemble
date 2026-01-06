@@ -16,4 +16,4 @@ This directory contains the **original, unmodified files** from the LLM4Eval cha
 
 ## Usage
 
-For work involving the recovered ground truth labels, use `../llm_judge_challenge_test/` instead.
+For work involving the recovered ground truth labels, use `../llm_judge_challenge_qrels_recovered/` instead.

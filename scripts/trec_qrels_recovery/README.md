@@ -36,12 +36,16 @@ pip install -r requirements_verification.txt
 - Reads from: `../../data/llm_judge_challenge/`
 - Writes to: `../../data/llm_judge_challenge_qrels_recovered/`
 
-## Results
+## Expected Results
 
 - **Step 1**: 100% query match with TREC 2023 DL
 - **Step 2**: Downloads 22,327 qrels
 - **Step 3**: Extracts 13,690 qrels for 50 queries
-- **Step 4**: Cohen's κ ≈ 0.19, Krippendorff's α ≈ 0.38
+- **Step 4**: Validates against paper (page 6 of llm-judge-challenge.pdf)
+  - Cohen's κ = **0.1877**
+  - Krippendorff's α = **0.3819**
+
+If Step 4 metrics match these values, the recovered qrels are verified as correct.
 
 ## Documentation
 

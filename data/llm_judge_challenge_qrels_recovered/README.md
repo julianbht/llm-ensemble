@@ -29,9 +29,17 @@ with open('data/llm_judge_challenge_qrels_recovered/llm4eval_official_qrels_2023
         qrels[(qid, doc_id)] = int(grade)
 ```
 
+## Verification
+
+These qrels have been validated against the LLM Judge Challenge paper (page 6):
+- Cohen's κ = 0.1877 ✓
+- Krippendorff's α = 0.3819 ✓
+
+The agreement metrics match, confirming these are the correct gold labels.
+
 ## Regenerating
 
-To regenerate the recovered qrels:
+To regenerate and re-verify the recovered qrels:
 ```bash
 ./scripts/trec_qrels_recovery/run_all_verification_steps.sh
 ```

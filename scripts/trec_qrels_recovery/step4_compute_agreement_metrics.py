@@ -4,6 +4,10 @@ Step 4: Compute agreement metrics between LLM submission and gold labels.
 
 Computes Cohen's Kappa and Krippendorff's Alpha to validate that we have
 the correct gold labels.
+
+Validates against expected values from llm-judge-challenge.pdf (page 6):
+- Cohen's κ = 0.1877
+- Krippendorff's α = 0.3819
 """
 
 from pathlib import Path
@@ -166,6 +170,34 @@ def main():
     print(f"Cohen's κ:       {kappa:>6.4f}")
     if alpha is not None:
         print(f"Krippendorff α:  {alpha:>6.4f}")
+
+    print()
+    print("=" * 80)
+    print("VALIDATION AGAINST PAPER")
+    print("=" * 80)
+
+    # Expected values from llm-judge-challenge.pdf (page 6)
+    EXPECTED_KAPPA = 0.1877
+    EXPECTED_ALPHA = 0.3819
+
+    kappa_match = abs(kappa - EXPECTED_KAPPA) < 0.0001
+    alpha_match = abs(alpha - EXPECTED_ALPHA) < 0.0001 if alpha is not None else False
+
+    print(f"Expected Cohen's κ:       {EXPECTED_KAPPA:.4f}")
+    print(f"Computed Cohen's κ:       {kappa:.4f}")
+    print(f"Match: {'✓ YES' if kappa_match else '✗ NO'}")
+    print()
+
+    if alpha is not None:
+        print(f"Expected Krippendorff α:  {EXPECTED_ALPHA:.4f}")
+        print(f"Computed Krippendorff α:  {alpha:.4f}")
+        print(f"Match: {'✓ YES' if alpha_match else '✗ NO'}")
+
+    print()
+    if kappa_match and alpha_match:
+        print("✓ VERIFIED: Metrics match paper - we have the correct gold labels!")
+    else:
+        print("⚠ WARNING: Metrics don't match paper - data may differ")
 
     print()
     print("✓ Agreement metrics computed successfully")

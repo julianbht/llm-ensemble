@@ -101,10 +101,14 @@ Krippendorff's α (Alpha):       0.3819
 Exact agreement:                42.8% (1895/4423)
 ```
 
+**Validation**:
+These metrics match the published values from the LLM Judge Challenge paper (page 6), confirming we have the correct gold labels.
+
 **Interpretation**:
 - Metrics show **fair to moderate agreement** between LLM judge and human gold labels
 - This is reasonable for LLM-as-judge tasks (not expected to be perfect)
 - These metrics are computed at the **instance level** (query-document pairs)
+- **Matching these values validates** that our recovered qrels are correct
 
 **Script**: `scripts/trec_qrels_recovery/step4_compute_agreement_metrics.py`
 
@@ -183,10 +187,13 @@ python3 scripts/trec_qrels_recovery/step4_compute_agreement_metrics.py
 
 ---
 
-## Citation
+## References
 
-If using this methodology, cite:
+**LLM Judge Challenge Paper**:
+- Source: `scripts/trec_qrels_recovery/llm-judge-challenge.pdf` (page 6)
+- Contains the validation metrics (Cohen's κ = 0.1877, Krippendorff's α = 0.3819)
 
+**Citations**:
 - **TREC 2023 Deep Learning Track**: Craswell et al., TREC 2023
 - **MS MARCO v2 Dataset**: Bajaj et al.
 - **LLM4Eval Challenge**: [Challenge organizers]

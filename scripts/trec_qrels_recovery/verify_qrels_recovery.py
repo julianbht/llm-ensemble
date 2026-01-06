@@ -155,7 +155,7 @@ def verify_qrels(original: dict, recovered: dict):
 
 
 def main():
-    base_dir = Path(__file__).parent.parent / 'data'
+    base_dir = Path(__file__).parent.parent.parent / 'data'
     original_file = base_dir / 'llm_judge_challenge' / 'llm4eval_test_qrel_2024.txt'
     recovered_dir = base_dir / 'llm_judge_challenge_qrels_recovered'
     

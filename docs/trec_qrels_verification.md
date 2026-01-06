@@ -171,13 +171,12 @@ However, we **cannot be 100% certain** without:
 
 ```
 data/
-├── llm_judge_challenge/                    # Original challenge files (read-only)
+├── llm_judge_challenge/                    # Original challenge files ONLY
 │   ├── docid_to_docidx.txt
 │   ├── qid_to_qidx.txt
 │   ├── llm4eval_*_2024.txt
 │   └── NISTRetrieval-instruct0.txt
-└── llm_judge_challenge_qrels_recovered/    # Recovered qrels (multiple formats)
-    ├── [all files from llm_judge_challenge/]
+└── llm_judge_challenge_qrels_recovered/    # Generated files ONLY
     ├── trec_2023_passage_qrels_official.txt         # Full TREC 2023 (22,327, real IDs)
     ├── trec_2023_challenge_subset.txt               # Challenge subset (13,690, real IDs)
     └── llm4eval_test_qrel_2024_recovered.txt        # Challenge format (13,690, q/p indices) ⭐

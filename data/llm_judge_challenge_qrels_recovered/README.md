@@ -1,6 +1,8 @@
 # LLM Judge Challenge - Recovered Qrels
 
-This directory contains recovered ground truth labels from TREC 2023 Deep Learning Track in multiple formats.
+This directory contains **ONLY generated files** from the TREC qrels recovery pipeline.
+
+For original challenge files, see `../llm_judge_challenge/`.
 
 ## Key Files
 
@@ -21,8 +23,6 @@ This directory contains recovered ground truth labels from TREC 2023 Deep Learni
   - Complete TREC 2023 qrels (22,327 judgments for 700 queries)
   - Superset containing all challenge queries plus additional queries
 
-### Original Challenge Files
-Also contains copies of files from `../llm_judge_challenge/` for convenience.
 
 ## How to Use
 
@@ -47,6 +47,24 @@ with open('data/llm_judge_challenge_qrels_recovered/trec_2023_challenge_subset.t
         qid, _, doc_id, grade = line.strip().split()
         qrels[(qid, doc_id)] = int(grade)
 ```
+
+## Using With Your System
+
+If your ingest expects all files in one directory:
+
+**Option A: Copy the recovered qrels**
+```bash
+cp data/llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_recovered.txt \
+   data/llm_judge_challenge/
+```
+
+**Option B: Symlink**
+```bash
+ln -s ../llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_recovered.txt \
+      data/llm_judge_challenge/
+```
+
+Then point your ingest to `data/llm_judge_challenge/`.
 
 ## Verification
 

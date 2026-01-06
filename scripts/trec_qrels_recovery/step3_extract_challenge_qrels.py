@@ -92,13 +92,14 @@ def main():
     print()
 
     # Write filtered qrels
-    output_file = test_dir / 'llm4eval_official_qrels_2023.txt'
+    output_file = test_dir / 'trec_2023_challenge_subset.txt'
     with open(output_file, 'w') as f:
         for qid, iteration, doc_id, grade in sorted(challenge_qrels):
             f.write(f"{qid} {iteration} {doc_id} {grade}\n")
 
-    print(f"✓ Challenge qrels written to: {output_file.name}")
+    print(f"✓ Challenge subset qrels written to: {output_file.name}")
     print(f"  Total judgments: {len(challenge_qrels):,}")
+    print(f"  Format: TREC (real IDs, not anonymized)")
 
     return 0
 

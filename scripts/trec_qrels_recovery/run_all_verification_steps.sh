@@ -51,6 +51,15 @@ if [ $? -ne 0 ]; then
 fi
 echo ""
 
+# Step 5: Convert to challenge format
+echo "Running Step 5: Convert to challenge format..."
+python3 scripts/trec_qrels_recovery/step5_convert_to_challenge_format.py
+if [ $? -ne 0 ]; then
+    echo "✗ Step 5 failed"
+    exit 1
+fi
+echo ""
+
 echo "=========================================="
 echo "✓ All verification steps completed"
 echo "=========================================="

@@ -71,7 +71,7 @@ to recover the gold labels from the official TREC qrels.
 - All 50 challenge queries have gold labels
 - Grade distribution: 62.4% grade 0, 19.3% grade 1, 10.5% grade 2, 7.8% grade 3
 
-**Output**: `data/llm_judge_challenge_qrels_recovered/llm4eval_official_qrels_2023.txt`
+**Output**: `data/llm_judge_challenge_qrels_recovered/trec_2023_challenge_subset.txt`
 
 **Script**: `scripts/trec_qrels_recovery/step3_extract_challenge_qrels.py`
 
@@ -83,7 +83,7 @@ to recover the gold labels from the official TREC qrels.
 
 **Input**:
 - `data/llm_judge_challenge/NISTRetrieval-instruct0.txt` - LLM judge submission (anonymized format: q0, p0, etc.)
-- `data/llm_judge_challenge_qrels_recovered/llm4eval_official_qrels_2023.txt` - Our extracted gold labels
+- `data/llm_judge_challenge_qrels_recovered/trec_2023_challenge_subset.txt` - Our extracted gold labels
 - `data/llm_judge_challenge/qid_to_qidx.txt`, `data/llm_judge_challenge/docid_to_docidx.txt` - ID mappings
 
 **Process**:
@@ -111,6 +111,30 @@ These metrics match the published values from the LLM Judge Challenge paper (pag
 - **Matching these values validates** that our recovered qrels are correct
 
 **Script**: `scripts/trec_qrels_recovery/step4_compute_agreement_metrics.py`
+
+---
+
+### Step 5: Convert to Challenge Format
+
+**Goal**: Convert TREC format qrels (real IDs) to challenge format (anonymized indices)
+
+**Input**:
+- `data/llm_judge_challenge_qrels_recovered/trec_2023_challenge_subset.txt` - Qrels with real IDs
+- `data/llm_judge_challenge/qid_to_qidx.txt`, `data/llm_judge_challenge/docid_to_docidx.txt` - ID mappings
+
+**Process**:
+1. Load TREC format qrels with real query and document IDs
+2. Map each ID to its anonymized index (qX, pX)
+3. Output in challenge format: `query_idx iteration doc_idx grade`
+
+**Result**:
+- **13,690 judgments** in challenge format
+- Compatible with `llm4eval_query_2024.txt` and `llm4eval_document_2024.jsonl`
+- Drop-in replacement for `llm4eval_test_qrel_2024.txt`
+
+**Output**: `data/llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_recovered.txt`
+
+**Script**: `scripts/trec_qrels_recovery/step5_convert_to_challenge_format.py`
 
 ---
 
@@ -152,18 +176,22 @@ data/
 │   ├── qid_to_qidx.txt
 │   ├── llm4eval_*_2024.txt
 │   └── NISTRetrieval-instruct0.txt
-└── llm_judge_challenge_qrels_recovered/    # Challenge files + recovered qrels
+└── llm_judge_challenge_qrels_recovered/    # Recovered qrels (multiple formats)
     ├── [all files from llm_judge_challenge/]
-    ├── trec_2023_passage_qrels_official.txt    # Full TREC 2023 qrels (22,327)
-    └── llm4eval_official_qrels_2023.txt        # Challenge subset (13,690)
+    ├── trec_2023_passage_qrels_official.txt         # Full TREC 2023 (22,327, real IDs)
+    ├── trec_2023_challenge_subset.txt               # Challenge subset (13,690, real IDs)
+    └── llm4eval_test_qrel_2024_recovered.txt        # Challenge format (13,690, q/p indices) ⭐
 
 scripts/trec_qrels_recovery/
 ├── step1_verify_data_source.py             # Verify queries match TREC 2023
 ├── step2_download_trec_qrels.py            # Download official qrels
 ├── step3_extract_challenge_qrels.py        # Filter to challenge queries
-├── step4_compute_agreement_metrics.py      # Compute κ and α
+├── step4_compute_agreement_metrics.py      # Compute κ and α (validation)
+├── step5_convert_to_challenge_format.py    # Convert to anonymized format
 └── run_all_verification_steps.sh           # Master script
 ```
+
+⭐ **Use this file** for evaluation - it's the drop-in replacement for the withheld test qrels.
 
 ---
 
@@ -183,6 +211,7 @@ python3 scripts/trec_qrels_recovery/step1_verify_data_source.py
 python3 scripts/trec_qrels_recovery/step2_download_trec_qrels.py
 python3 scripts/trec_qrels_recovery/step3_extract_challenge_qrels.py
 python3 scripts/trec_qrels_recovery/step4_compute_agreement_metrics.py
+python3 scripts/trec_qrels_recovery/step5_convert_to_challenge_format.py
 ```
 
 ---

@@ -23,6 +23,9 @@ python3 step3_extract_challenge_qrels.py
 
 # 4. Compute agreement metrics
 python3 step4_compute_agreement_metrics.py
+
+# 5. Convert to challenge format
+python3 step5_convert_to_challenge_format.py
 ```
 
 ## Dependencies
@@ -39,13 +42,14 @@ pip install -r requirements_verification.txt
 ## Expected Results
 
 - **Step 1**: 100% query match with TREC 2023 DL
-- **Step 2**: Downloads 22,327 qrels
-- **Step 3**: Extracts 13,690 qrels for 50 queries
+- **Step 2**: Downloads 22,327 qrels (TREC format, real IDs)
+- **Step 3**: Extracts 13,690 qrels for 50 queries (TREC format, real IDs)
 - **Step 4**: Validates against paper (page 6 of llm-judge-challenge.pdf)
   - Cohen's κ = **0.1877**
   - Krippendorff's α = **0.3819**
+- **Step 5**: Converts to challenge format (13,690 qrels with q/p indices)
 
-If Step 4 metrics match these values, the recovered qrels are verified as correct.
+If Step 4 metrics match, the recovered qrels are verified. Step 5 creates the usable file.
 
 ## Documentation
 

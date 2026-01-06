@@ -104,7 +104,7 @@ def main():
 
     # Load gold labels
     print("Loading gold labels...")
-    qrels_file = test_dir / 'llm4eval_official_qrels_2023.txt'
+    qrels_file = test_dir / 'trec_2023_challenge_subset.txt'
     if not qrels_file.exists():
         print(f"✗ ERROR: {qrels_file} not found")
         print("  Run step3_extract_challenge_qrels.py first")

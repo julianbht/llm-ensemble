@@ -1,0 +1,8 @@
+# Dependencies for TREC qrels verification scripts
+# Install with: pip install -r scripts/requirements_verification.txt
+
+ir-datasets>=0.5.0       # For step 1: TREC dataset access
+numpy>=1.20.0            # For step 4: numerical operations
+scipy>=1.7.0             # For step 4: statistics
+scikit-learn>=1.0.0      # For step 4: Cohen's Kappa
+krippendorff>=0.6.0      # For step 4: Krippendorff's Alpha

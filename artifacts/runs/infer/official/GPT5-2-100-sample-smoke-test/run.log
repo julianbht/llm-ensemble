@@ -1,4 +1,0 @@
-{"name": "GPT5-2-100-sample-smoke-test", "event": "inference_started", "run_name": "GPT5-2-100-sample-smoke-test", "cli": "infer", "run_type": "official", "level": "info", "timestamp": "2026-01-07T15:21:17.443255Z"}
-{"name": "GPT5-2-100-sample-smoke-test", "event": "inference_started", "cli": "infer", "run_type": "official", "run_name": "GPT5-2-100-sample-smoke-test", "level": "info", "timestamp": "2026-01-07T15:21:39.402376Z"}
-{"event": "input_read", "cli": "infer", "run_type": "official", "run_name": "GPT5-2-100-sample-smoke-test", "level": "info", "timestamp": "2026-01-07T15:21:39.698942Z"}
-{"component": "db_writer", "created": 1, "skipped": 0, "event": "write_providers", "cli": "infer", "run_type": "official", "run_name": "GPT5-2-100-sample-smoke-test", "level": "info", "timestamp": "2026-01-07T15:21:39.719359Z"}

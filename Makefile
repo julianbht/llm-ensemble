@@ -61,6 +61,14 @@ autocomplete:
 		evaluate --install-completion 2>/dev/null && \
 		echo "" && \
 		echo "Autocomplete installed! Restart your shell or run 'source ~/.bashrc' (or ~/.zshrc)"; \
+	elif [ -d venv ]; then \
+		. venv/bin/activate && \
+		ingest --install-completion 2>/dev/null && \
+		infer --install-completion 2>/dev/null && \
+		aggregate --install-completion 2>/dev/null && \
+		evaluate --install-completion 2>/dev/null && \
+		echo "" && \
+		echo "Autocomplete installed! Restart your shell or run 'source ~/.bashrc' (or ~/.zshrc)"; \
 	else \
 		echo "Virtual environment not found. Run 'make install-dev' first."; \
 		exit 1; \
@@ -101,6 +109,8 @@ db-init:
 	@echo "Initializing database schema..."
 	@if [ -d .venv ]; then \
 		. .venv/bin/activate && python scripts/init_db.py; \
+	elif [ -d venv ]; then \
+		. venv/bin/activate && python scripts/init_db.py; \
 	else \
 		python3 scripts/init_db.py; \
 	fi
@@ -188,6 +198,8 @@ infra-down:
 schemas:
 	@if [ -d .venv ]; then \
 		. .venv/bin/activate && python scripts/generate_schemas.py; \
+	elif [ -d venv ]; then \
+		. venv/bin/activate && python scripts/generate_schemas.py; \
 	else \
 		python3 scripts/generate_schemas.py; \
 	fi
@@ -195,6 +207,8 @@ schemas:
 update-pricing:
 	@if [ -d .venv ]; then \
 		. .venv/bin/activate && python scripts/update_model_pricing.py $(ARGS); \
+	elif [ -d venv ]; then \
+		. venv/bin/activate && python scripts/update_model_pricing.py $(ARGS); \
 	else \
 		python3 scripts/update_model_pricing.py $(ARGS); \
 	fi

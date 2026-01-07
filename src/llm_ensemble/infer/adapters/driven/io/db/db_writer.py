@@ -544,12 +544,20 @@ class DBWriter(ForOutput):
 
         Uses pre-query pattern: check if exists by natural key, insert if new.
         Returns None as id if score is not available (parsing failed).
+
+        Contract: Parsers must return (None, ParserIssue) on ANY failure.
         """
         assert self._session is not None  # Type narrowing for type checker
 
         # Handle case where parsing failed and no score is available
         if judgement.llm_score is None:
             return (0, 0, None)
+
+        # Enforce parser contract: if score exists, label MUST be present
+        assert judgement.llm_score.label is not None, (
+            "Parser contract violation: LLMScore.label cannot be None. "
+            "Parsers must return (None, ParserIssue) on ANY failure, not LLMScore(label=None, ...)."
+        )
 
         # Check if this score already exists (by natural key)
         existing = self._session.query(LLMScoreORM).filter_by(

@@ -282,17 +282,23 @@ def llm_score_to_orm(
     """Convert LLMScore domain object to LLMScoreORM.
 
     Args:
-        llm_score: LLMScore domain object (already has UUID)
+        llm_score: LLMScore domain object (already has UUID and non-null label)
 
     Returns:
         LLMScoreORM model ready for persistence
+
+    Raises:
+        ValueError: If label is None (should be handled by caller - don't persist score)
     """
-    # Handle case where label is None (parsing failed) - need default for non-nullable column
-    label = llm_score.label if llm_score.label is not None else RelevanceScore.NOT_RELEVANT
+    if llm_score.label is None:
+        raise ValueError(
+            "Cannot persist LLMScore with label=None. "
+            "Caller should check label and skip score persistence for failed parses."
+        )
 
     return LLMScoreORM(
         id=llm_score.id,
-        label=label,
+        label=llm_score.label,
         confidence=llm_score.confidence,
         rationale=llm_score.rationale,
     )

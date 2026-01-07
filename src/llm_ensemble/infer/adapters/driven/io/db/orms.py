@@ -454,7 +454,8 @@ class LLMJudgementORM(Base):
     llm_score_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("infer.llm_scores.id"),
-        nullable=False,
+        nullable=True,
+        comment="Parsed score (NULL if parsing failed)"
     )
 
     # Inlined invocation metrics (previously separate table)

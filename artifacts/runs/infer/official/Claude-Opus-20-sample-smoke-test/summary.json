@@ -1,0 +1,54 @@
+{
+  "start_time": "2026-01-07T09:47:37.165649",
+  "end_time": "2026-01-07T09:52:03.935397",
+  "judgements": {
+    "total_count": 100,
+    "failed_parses_count": 0
+  },
+  "performance": {
+    "latency": {
+      "total_ms": 263304.6679496765,
+      "avg_ms": 2633.046679496765
+    },
+    "cost": {
+      "total_usd": 1.8038649999999998
+    },
+    "tokens": {
+      "total_prompt": 350273,
+      "total_completion": 2100,
+      "total": 352373
+    }
+  },
+  "persistence": {
+    "total_created": 104,
+    "total_skipped": 303,
+    "details": {
+      "providers_created": 0,
+      "providers_skipped": 1,
+      "model_configs_created": 1,
+      "model_configs_skipped": 0,
+      "prompt_templates_created": 0,
+      "prompt_templates_skipped": 1,
+      "parser_created": 0,
+      "parser_skipped": 1,
+      "infer_run_configs_created": 1,
+      "infer_run_configs_skipped": 0,
+      "infer_runs_created": 1,
+      "infer_runs_skipped": 0,
+      "infer_run_outputs_created": 1,
+      "infer_run_outputs_skipped": 0,
+      "llm_prompts_created": 0,
+      "llm_prompts_skipped": 100,
+      "llm_responses_created": 0,
+      "llm_responses_skipped": 100,
+      "llm_scores_created": 0,
+      "llm_scores_skipped": 100,
+      "llm_judgements_created": 100,
+      "llm_judgements_skipped": 0
+    }
+  },
+  "issues": null,
+  "duration_seconds": 266.77,
+  "duration_minutes": 4.45,
+  "duration_hours": 0.07
+}

@@ -1,5 +1,5 @@
 # Short name for run ID generation
-name_hint: gpt-5.1
+name_hint: gpt-5.2
 
 # Model identifier (passed directly to provider API)
 model_id: openai/gpt-5.2

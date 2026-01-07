@@ -1,11 +1,11 @@
 # Short name for run ID generation
-name_hint: nemotron-nano-9b-v2
+name_hint: anthropic/claude-opus-4.5
 
 # Model identifier (passed directly to provider API)
-model_id: nvidia/nemotron-nano-9b-v2:free
+model_id: anthropic/claude-opus-4.5
 
 # Model capabilities
-context_window: 8192
+context_window: null
 capabilities: {}
 
 # Core inference parameters
@@ -20,6 +20,6 @@ seed: null
 additional_params: {}
 # Pricing information (auto-updated from OpenRouter API)
 pricing:
-  prompt_cost_per_1m_tokens: 0.0
-  completion_cost_per_1m_tokens: 0.0
-  last_updated: "2026-01-07T17:44:47.883367+00:00"
+  prompt_cost_per_1m_tokens: 5.0
+  completion_cost_per_1m_tokens: 25.0
+  last_updated: "2026-01-07T17:44:47.882520+00:00"

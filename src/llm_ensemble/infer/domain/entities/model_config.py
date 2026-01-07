@@ -65,8 +65,8 @@ class ModelConfig(BaseConfig):
     )
 
     # Model capabilities
-    context_window: int = Field(
-        ...,
+    context_window: Optional[int] = Field(
+        default=None,
         gt=0,
         description="Maximum context window size in tokens"
     )

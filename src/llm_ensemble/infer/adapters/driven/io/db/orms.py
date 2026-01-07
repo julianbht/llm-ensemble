@@ -148,7 +148,7 @@ class ModelConfigORM(Base):
     model_id = Column(String(255), nullable=False, comment="Model identifier (e.g., 'gpt-4', 'llama-3-70b')")
 
     # Model capabilities (from model_specs in config)
-    context_window = Column(Integer, nullable=False)
+    context_window = Column(Integer, nullable=True, comment="Maximum context window size in tokens (optional)")
     capabilities = Column(JSONB, nullable=True, comment="Model capabilities (e.g., multilingual, function_calling)")
 
     # Inference parameters (from model_specs in config)

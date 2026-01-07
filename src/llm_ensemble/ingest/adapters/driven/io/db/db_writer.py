@@ -573,8 +573,8 @@ class DbWriter(ForOutput):
         # Since all samples belong to the same dataset_uuid, we can query efficiently
         existing_sample_ids = {
             str(sample_id) for (sample_id,) in
-            session.query(NormalizedDatasetJudgingSample.judging_sample_id)
-            .filter(NormalizedDatasetJudgingSample.normalized_dataset_id == dataset_uuid)
+            session.query(NormalizedDatasetJudgingSampleORM.judging_sample_id)
+            .filter(NormalizedDatasetJudgingSampleORM.normalized_dataset_id == dataset_uuid)
         }
 
         # Filter to only new dataset samples

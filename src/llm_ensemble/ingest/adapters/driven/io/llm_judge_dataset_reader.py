@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional
 
+from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.domain.entities.query import Query
 from llm_ensemble.ingest.domain.entities.document import Document
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
@@ -34,10 +35,21 @@ class LlmJudgePaths:
 
     @property
     def qrels(self) -> Path:
-        """Prefer qrels file that actually includes relevance labels."""
+        """Prefer qrels file that actually includes relevance labels.
+
+        Priority order:
+        1. Recovered test labels (reverse-engineered from TREC 2023)
+        2. Dev labels (original development set)
+        3. Original test labels (fallback, may not have labels)
+        """
+        recovered_test_path = self.base_dir / "llm4eval_test_qrel_2024_recovered.txt"
+        if recovered_test_path.exists():
+            return recovered_test_path
+
         dev_path = self.base_dir / "llm4eval_dev_qrel_2024.txt"
         if dev_path.exists():
             return dev_path
+
         return self.base_dir / "llm4eval_test_qrel_2024.txt"
 
 

@@ -19,7 +19,13 @@ def get_extracted_score(judgement: LLMJudgement) -> Optional[int]:
     Returns:
         Extracted score value (0-3) or None if unavailable
     """
-    return judgement.llm_score.label.value if (judgement.llm_score and judgement.llm_score.label) else None
+    if judgement.llm_score is None:
+        return None
+
+    if judgement.llm_score.label is None:
+        return None
+
+    return judgement.llm_score.label.value
 
 
 def calculate_latency_seconds(judgement: LLMJudgement) -> float:
@@ -47,8 +53,16 @@ def calculate_agreement(judgement: LLMJudgement) -> int:
     Returns:
         1 if extracted score matches gold score, 0 otherwise (including parse failures)
     """
-    return 1 if (judgement.llm_score and judgement.llm_score.label and
-                 judgement.llm_score.label.value == judgement.dataset_sample.judging_sample.gold_score.value) else 0
+    if judgement.llm_score is None:
+        return 0
+
+    if judgement.llm_score.label is None:
+        return 0
+
+    extracted = judgement.llm_score.label.value
+    gold = judgement.dataset_sample.judging_sample.gold_score.value
+
+    return 1 if extracted == gold else 0
 
 
 def count_failed_parses(judgements: list[LLMJudgement]) -> int:

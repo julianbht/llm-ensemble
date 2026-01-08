@@ -208,22 +208,28 @@ class DBWriter(ForOutput):
 
         self._session.commit()
 
-    def close(self) -> WriteSummary:
-        """Close session and finalize InferRunOutput and end_time."""
+    def close(self, success: bool = True) -> WriteSummary:
+        """Close session and finalize InferRunOutput and end_time.
+
+        Args:
+            success: Whether the run completed successfully without exceptions.
+                     If False, finished flag remains False (run is incomplete).
+        """
         if self._session is not None:
             assert self._session is not None  # Type narrowing for type checker
             # Capture end time
             end_time = datetime.now()
 
-            # Update InferRunOutput with fingerprint and mark as finished
+            # Update InferRunOutput with fingerprint and finished flag
             if self._dataset_sample_ids:
                 fingerprint = compute_judged_dataset_fingerprint(self._dataset_sample_ids)
 
-                # Update existing InferRunOutput with computed fingerprint and finished flag
+                # Update existing InferRunOutput with computed fingerprint
                 infer_run_output_orm = self._session.get(InferRunOutputORM, self._infer_run_output_id)
                 assert infer_run_output_orm is not None  # Created in open()
                 setattr(infer_run_output_orm, "sample_fingerprint", fingerprint)
-                setattr(infer_run_output_orm, "finished", True)
+                # Only mark as finished if run completed successfully
+                setattr(infer_run_output_orm, "finished", success)
 
                 # Update InferRun end_time
                 infer_run_orm = self._session.get(InferRunORM, self._infer_run_id)
@@ -237,6 +243,7 @@ class DBWriter(ForOutput):
                 InferWriteEvent.WRITE_COMPLETE,
                 total_created=self._write_summary.total_created,
                 total_skipped=self._write_summary.total_skipped,
+                finished=success,
             )
 
             self._session.close()

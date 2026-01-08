@@ -256,10 +256,19 @@ def perform_merge(
         fingerprint=new_fingerprint[:16] + "...",
     )
 
-    # Step 3: Update target's end_time from source
-    setattr(target_run, "end_time", source_run.end_time)
+    # Step 3: Recompute target's end_time by adding source run duration
+    # This ensures accurate timing by excluding the gap between runs
+    # Formula: new_end_time = target_end_time + (source_end_time - source_start_time)
+    source_duration = source_run.end_time - source_run.start_time
+    new_end_time = target_run.end_time + source_duration
+    setattr(target_run, "end_time", new_end_time)
 
-    logger.info("target_end_time_updated", end_time=str(source_run.end_time))
+    logger.info(
+        "target_end_time_recomputed",
+        original_end_time=str(target_run.end_time),
+        source_duration_seconds=source_duration.total_seconds(),
+        new_end_time=str(new_end_time),
+    )
 
     # Step 4: Delete source run (CASCADE will delete source output)
     session.delete(source_run)

@@ -87,7 +87,7 @@ class MockOutputAdapter(ForOutput):
         self.written_judgements.append(judgement)
         self._write_summary.add_llm_judgements(created=1)
 
-    def close(self) -> WriteSummary:
+    def close(self, success: bool = True) -> WriteSummary:
         """Mark as closed and return summary."""
         self.is_open = False
         return self._write_summary

@@ -91,11 +91,15 @@ class ForOutput(ABC):
         pass
 
     @abstractmethod
-    def close(self) -> WriteSummary:
+    def close(self, success: bool = True) -> WriteSummary:
         """Close writer and finalize output.
 
         Ensures all buffered data is flushed and resources are released.
         Called automatically by context manager __exit__.
+
+        Args:
+            success: Whether the run completed successfully without exceptions.
+                     If False, the run will be marked as incomplete (finished=False).
 
         Returns:
             WriteSummary tracking write operations performed during streaming
@@ -117,13 +121,15 @@ class ForOutput(ABC):
         """Exit context manager and ensure cleanup.
 
         Calls close() and stores the returned WriteSummary for later retrieval.
+        Passes success=False to close() if an exception occurred.
 
         Args:
             exc_type: Exception type if an error occurred
             exc_val: Exception value if an error occurred
             exc_tb: Exception traceback if an error occurred
         """
-        self._write_summary = self.close()
+        success = exc_type is None
+        self._write_summary = self.close(success=success)
 
     def get_write_summary(self) -> WriteSummary:
         """Get the write summary after the writer has been closed.

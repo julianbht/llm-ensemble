@@ -27,6 +27,10 @@ import shutil
 import typer
 from sqlalchemy.orm import Session
 
+# Load runtime env configuration (DATABASE_URL, API keys, etc.)
+from llm_ensemble.libs.runtime.env import load_runtime_config
+load_runtime_config()
+
 from llm_ensemble.infer.adapters.driven.io.db.orms import (
     InferRunORM,
     InferRunOutputORM,
@@ -37,7 +41,7 @@ from llm_ensemble.libs.db.base import get_engine
 from llm_ensemble.libs.db.session import get_session
 from llm_ensemble.libs.db.uuid_helpers import compute_judged_dataset_fingerprint
 from llm_ensemble.libs.logging.structlog_logger import get_logger
-from llm_ensemble.libs.runtime.path_manager import get_run_dir
+from llm_ensemble.libs.runtime.path_manager import PathManager
 
 app = typer.Typer(
     add_completion=True,
@@ -203,7 +207,7 @@ def perform_merge(
     session: Session,
     source_run: InferRunORM,
     target_run: InferRunORM,
-    delete_artifacts: bool = True,
+    delete_artifacts: bool = False,
 ) -> dict[str, int]:
     """Perform the actual merge operation.
 
@@ -274,14 +278,19 @@ def perform_merge(
     session.delete(source_run)
     logger.info("source_run_deleted", run_name=source_run.run_name)
 
-    # Step 5: Delete source run artifacts
+    # Step 5: Optionally delete source run artifacts
     if delete_artifacts:
-        source_run_dir = get_run_dir("infer", source_run.run_name, source_run.run_type.value)
-        if source_run_dir.exists():
-            shutil.rmtree(source_run_dir)
-            logger.info("source_artifacts_deleted", path=str(source_run_dir))
-        else:
-            logger.warning("source_artifacts_not_found", path=str(source_run_dir))
+        try:
+            source_run_dir = PathManager.resolve_run_dir("infer", str(source_run.run_name))
+            if source_run_dir.exists():
+                shutil.rmtree(source_run_dir)
+                logger.info("source_artifacts_deleted", path=str(source_run_dir))
+            else:
+                logger.warning("source_artifacts_not_found", path=str(source_run_dir))
+        except FileNotFoundError:
+            logger.warning("source_artifacts_not_found", run_name=str(source_run.run_name))
+    else:
+        logger.info("source_artifacts_kept", run_name=str(source_run.run_name))
 
     # Verify final state
     target_judgement_count_after = session.query(LLMJudgementORM).filter_by(
@@ -301,7 +310,7 @@ def merge(
     source: str = typer.Option(..., "--source", help="Name of continuation run to merge FROM"),
     target: str = typer.Option(..., "--target", help="Name of incomplete run to merge INTO"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Validate without making changes"),
-    keep_artifacts: bool = typer.Option(False, "--keep-artifacts", help="Keep source run artifacts"),
+    delete_artifacts: bool = typer.Option(False, "--delete-artifacts", help="Delete source run artifacts after merge"),
 ):
     """Merge continuation run into incomplete run.
 
@@ -332,7 +341,7 @@ def merge(
             session,
             source_run,
             target_run,
-            delete_artifacts=not keep_artifacts,
+            delete_artifacts=delete_artifacts,
         )
         session.commit()
         logger.info("merge_phase_complete", **stats)

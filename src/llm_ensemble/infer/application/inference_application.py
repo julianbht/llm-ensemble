@@ -175,10 +175,10 @@ class InferenceApplication(ForRunningInference):
         # Collect judgements for summary statistics
         llm_judgements: list[LLMJudgement] = []
 
-        # Track progress and ETA
+        # Track progress and ETA (using perf_counter for monotonic timing)
         total_samples = len(samples_to_process)
         samples_processed = 0
-        loop_start_time = time.time()
+        loop_start_time = time.perf_counter()
 
         # Build InferRun for early persistence
         infer_run = self._build_infer_run(
@@ -238,7 +238,7 @@ class InferenceApplication(ForRunningInference):
 
                 # Track progress and calculate ETA using domain functions
                 samples_processed += 1
-                elapsed_seconds = time.time() - loop_start_time
+                elapsed_seconds = time.perf_counter() - loop_start_time
                 eta_seconds = calculate_eta_seconds(samples_processed, total_samples, elapsed_seconds)
                 eta_formatted = format_eta(eta_seconds)
 

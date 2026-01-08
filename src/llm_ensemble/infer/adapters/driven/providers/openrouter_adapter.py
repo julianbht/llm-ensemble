@@ -177,8 +177,8 @@ class OpenRouterAdapter(ForInvokingLLM):
             timeout=self.timeout,
         )
 
-        # Track timing
-        start_time = time.time()
+        # Track timing (using perf_counter for monotonic timing)
+        start_time = time.perf_counter()
 
         # Send request with usage accounting enabled via extra_body
         response = client.chat.completions.create(
@@ -187,7 +187,7 @@ class OpenRouterAdapter(ForInvokingLLM):
             **api_params
         )
 
-        latency_ms = (time.time() - start_time) * 1000
+        latency_ms = (time.perf_counter() - start_time) * 1000
 
         # Extract response text
         raw_response_text = response.choices[0].message.content

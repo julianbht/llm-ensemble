@@ -38,19 +38,16 @@ app = typer.Typer(
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
 
-def fetch_openrouter_pricing(debug: bool = False) -> dict[str, dict[str, float]]:
+def fetch_openrouter_pricing(debug: bool = False) -> tuple[dict[str, dict[str, float]], dict[str, int]]:
     """Fetch current pricing from OpenRouter API.
 
     Args:
         debug: Whether to print debug information
 
     Returns:
-        Dict mapping model IDs to pricing info: {
-            "openai/gpt-4": {
-                "prompt": 0.03,      # per 1M tokens
-                "completion": 0.06,  # per 1M tokens
-            }
-        }
+        Tuple of (pricing_map, stats) where:
+        - pricing_map: Dict mapping model IDs to pricing info
+        - stats: Dict with 'total_models' and 'free_models' counts
     """
     print(f"Fetching pricing from {OPENROUTER_MODELS_URL}...")
 
@@ -65,6 +62,8 @@ def fetch_openrouter_pricing(debug: bool = False) -> dict[str, dict[str, float]]
     # Extract pricing from response
     # OpenRouter returns {"data": [{"id": "...", "pricing": {"prompt": "...", "completion": "..."}}, ...]}
     pricing_map = {}
+    free_models_count = 0
+    total_models_count = 0
 
     if "data" not in data:
         print("Error: Invalid API response (missing 'data' key)", file=sys.stderr)
@@ -76,6 +75,8 @@ def fetch_openrouter_pricing(debug: bool = False) -> dict[str, dict[str, float]]
 
         if not model_id or not pricing:
             continue
+
+        total_models_count += 1
 
         # Debug: log first model's pricing structure
         if debug and len(pricing_map) == 0:
@@ -93,13 +94,26 @@ def fetch_openrouter_pricing(debug: bool = False) -> dict[str, dict[str, float]]
                 "prompt": prompt_price * 1_000_000,
                 "completion": completion_price * 1_000_000,
             }
+
+            # Count free models (both prompt and completion cost are 0)
+            if prompt_price == 0 and completion_price == 0:
+                free_models_count += 1
+
         except (ValueError, TypeError) as e:
             if debug:
                 print(f"Warning: Could not parse pricing for {model_id}: {e}", file=sys.stderr)
             continue
 
-    print(f"Fetched pricing for {len(pricing_map)} models\n")
-    return pricing_map
+    stats = {
+        "total_models": total_models_count,
+        "free_models": free_models_count,
+    }
+
+    print(f"Fetched pricing for {len(pricing_map)} models")
+    print(f"  - Total models: {total_models_count}")
+    print(f"  - Free models: {free_models_count}\n")
+
+    return pricing_map, stats
 
 
 def load_yaml_preserving_structure(path: Path) -> tuple[dict, str]:
@@ -116,6 +130,56 @@ def load_yaml_preserving_structure(path: Path) -> tuple[dict, str]:
 
     parsed = yaml.safe_load(content)
     return parsed, content
+
+
+def generate_free_model_config(model_id: str, pricing: dict[str, float]) -> str:
+    """Generate a minimal config for a free model.
+
+    Args:
+        model_id: OpenRouter model ID (e.g., "nvidia/nemotron-nano-9b-v2:free")
+        pricing: Pricing info dict with 'prompt' and 'completion' keys
+
+    Returns:
+        YAML config string
+    """
+    # Extract name_hint from model_id (part after "/" and before ":")
+    # Example: "nvidia/nemotron-nano-9b-v2:free" -> "nemotron-nano-9b-v2"
+    name_parts = model_id.split("/")
+    if len(name_parts) > 1:
+        name_hint = name_parts[1].split(":")[0]
+    else:
+        name_hint = model_id.split(":")[0]
+
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    config = f"""# Short name for run ID generation
+name_hint: {name_hint}
+
+# Model identifier (passed directly to provider API)
+model_id: {model_id}
+
+# Model capabilities
+context_window: null
+capabilities: {{}}
+
+# Core inference parameters
+temperature: 0.01
+max_tokens: null
+top_p: null
+frequency_penalty: null
+presence_penalty: null
+seed: null
+
+# Additional provider-specific parameters (stop sequences, response_format, etc.)
+additional_params: {{}}
+
+# Pricing information (auto-updated from OpenRouter API)
+pricing:
+  prompt_cost_per_1m_tokens: {pricing['prompt']}
+  completion_cost_per_1m_tokens: {pricing['completion']}
+  last_updated: "{timestamp}"
+"""
+    return config
 
 
 def update_config_with_pricing(
@@ -260,7 +324,7 @@ def update_pricing(
     print(f"Target: {model_name or 'all models'}\n")
 
     # Fetch pricing from OpenRouter
-    pricing_map = fetch_openrouter_pricing(debug)
+    pricing_map, api_stats = fetch_openrouter_pricing(debug)
 
     # Get model configs directory
     models_dir = PathManager.get_model_configs_dir()
@@ -298,11 +362,101 @@ def update_pricing(
     # Summary
     print(f"\n{'=' * 50}")
     print(f"Summary:")
-    print(f"  Total configs: {len(config_files)}")
-    print(f"  Updated: {updated_count}")
-    print(f"  Skipped: {skipped_count}")
+    print(f"  API Statistics:")
+    print(f"    - Total models available: {api_stats['total_models']}")
+    print(f"    - Free models available: {api_stats['free_models']}")
+    print(f"  Local configs:")
+    print(f"    - Total configs: {len(config_files)}")
+    print(f"    - Updated: {updated_count}")
+    print(f"    - Skipped: {skipped_count}")
     if dry_run:
         print(f"\nRun without --dry-run to apply changes")
+
+
+@app.command()
+def generate_free_configs(
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run",
+            help="Preview which configs would be generated without writing files",
+        ),
+    ] = False,
+    debug: Annotated[
+        bool,
+        typer.Option(
+            "--debug",
+            help="Show debug information",
+        ),
+    ] = False,
+) -> None:
+    """Generate config files for all free models from OpenRouter.
+
+    Creates a configs/models/generated_free_models/ directory with a config
+    file for each free model available on OpenRouter.
+
+    Examples:
+
+        # Preview which free model configs would be generated
+        python scripts/update_model_pricing.py generate-free-configs --dry-run
+
+        # Generate all free model configs
+        python scripts/update_model_pricing.py generate-free-configs
+    """
+    print(f"Generate Free Model Configs")
+    print(f"===========================")
+    print(f"Mode: {'DRY RUN' if dry_run else 'LIVE'}\n")
+
+    # Fetch pricing from OpenRouter
+    pricing_map, api_stats = fetch_openrouter_pricing(debug)
+
+    # Create output directory
+    models_dir = PathManager.get_model_configs_dir()
+    free_models_dir = models_dir / "generated_free_models"
+
+    if not dry_run:
+        free_models_dir.mkdir(exist_ok=True)
+        print(f"Output directory: {free_models_dir.relative_to(PathManager.get_project_root())}\n")
+    else:
+        print(f"Output directory (dry-run): {free_models_dir.relative_to(PathManager.get_project_root())}\n")
+
+    # Filter free models
+    free_models = {
+        model_id: pricing
+        for model_id, pricing in pricing_map.items()
+        if pricing["prompt"] == 0 and pricing["completion"] == 0
+    }
+
+    print(f"Found {len(free_models)} free models\n")
+
+    # Generate configs
+    generated_count = 0
+
+    for model_id, pricing in sorted(free_models.items()):
+        # Generate filename from model_id
+        # Example: "nvidia/nemotron-nano-9b-v2:free" -> "nvidia-nemotron-nano-9b-v2-free.yaml"
+        filename = model_id.replace("/", "-").replace(":", "-") + ".yaml"
+        config_path = free_models_dir / filename
+
+        # Generate config content
+        config_content = generate_free_model_config(model_id, pricing)
+
+        if dry_run:
+            print(f"Would generate: {filename}")
+        else:
+            with open(config_path, "w", encoding="utf-8") as f:
+                f.write(config_content)
+            print(f"Generated: {filename}")
+
+        generated_count += 1
+
+    # Summary
+    print(f"\n{'=' * 50}")
+    print(f"Summary:")
+    print(f"  Free models from API: {api_stats['free_models']}")
+    print(f"  Configs generated: {generated_count}")
+    if dry_run:
+        print(f"\nRun without --dry-run to generate files")
 
 
 if __name__ == "__main__":

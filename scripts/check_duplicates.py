@@ -41,9 +41,16 @@ def check_content_duplicates(data_dir: Path):
 
     queries_path = data_dir / "llm4eval_query_2024.txt"
     docs_path = data_dir / "llm4eval_document_2024.jsonl"
-    qrels_path = data_dir / "llm4eval_dev_qrel_2024.txt"
+
+    # Prefer recovered test qrels (same logic as ingest reader)
+    qrels_path = data_dir / "llm4eval_test_qrel_2024_recovered.txt"
+    if not qrels_path.exists():
+        qrels_path = data_dir / "llm4eval_dev_qrel_2024.txt"
+    if not qrels_path.exists():
+        qrels_path = data_dir / "llm4eval_test_qrel_2024.txt"
 
     # Load queries and documents
+    print(f"Using qrels file: {qrels_path.name}")
     print("Loading queries and documents...")
     queries = read_queries(queries_path)
     docs = read_documents(docs_path)
@@ -120,6 +127,11 @@ def check_content_duplicates(data_dir: Path):
                 print(f"     Line {line_num}: query={qid}, doc={docid}, score={rel}")
 
 if __name__ == "__main__":
-    data_dir = Path("data")
+    import sys
+
+    if len(sys.argv) > 1:
+        data_dir = Path(sys.argv[1])
+    else:
+        data_dir = Path("data")
 
     check_content_duplicates(data_dir)

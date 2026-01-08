@@ -9,7 +9,7 @@ context_window: 8192
 capabilities: {}
 
 # Core inference parameters
-temperature: null
+temperature: 0.01
 max_tokens: null
 top_p: null
 frequency_penalty: null

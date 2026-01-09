@@ -339,7 +339,7 @@ class DBWriter(ForOutput):
     def _upsert_model_config(self, model_cfg: ModelConfig) -> Tuple[int, int, uuid.UUID]:
         """Upsert ModelConfig entity and return actual database UUID.
 
-        Uses pre-query pattern: check if exists, insert if new.
+        Uses pre-query pattern: check if exists, update if changed, insert if new.
 
         Returns:
             Tuple of (created_count, skipped_count, actual_uuid)
@@ -352,6 +352,19 @@ class DBWriter(ForOutput):
         ).first()
 
         if existing:
+            # Update all mutable fields from the config
+            setattr(existing, "name_hint", model_cfg.name_hint)
+            setattr(existing, "model_id", model_cfg.model_id)
+            setattr(existing, "context_window", model_cfg.context_window)
+            setattr(existing, "capabilities", model_cfg.capabilities)
+            setattr(existing, "temperature", model_cfg.temperature)
+            setattr(existing, "max_tokens", model_cfg.max_tokens)
+            setattr(existing, "top_p", model_cfg.top_p)
+            setattr(existing, "frequency_penalty", model_cfg.frequency_penalty)
+            setattr(existing, "presence_penalty", model_cfg.presence_penalty)
+            setattr(existing, "seed", model_cfg.seed)
+            setattr(existing, "additional_params", model_cfg.additional_params)
+            self._session.flush()
             return (0, 1, uuid.UUID(str(existing.id)))
 
         # Insert new model config
@@ -418,7 +431,7 @@ class DBWriter(ForOutput):
     ) -> Tuple[int, int, uuid.UUID]:
         """Upsert PromptTemplate entity and return actual database UUID.
 
-        Uses pre-query pattern: check if exists, insert if new.
+        Uses pre-query pattern: check if exists, update if changed, insert if new.
 
         Args:
             prompt_template: PromptTemplate domain object
@@ -436,6 +449,11 @@ class DBWriter(ForOutput):
         ).first()
 
         if existing:
+            # Update mutable fields
+            setattr(existing, "template_text", prompt_template.template_text)
+            setattr(existing, "prompt_builder_id", prompt_builder_id)
+            setattr(existing, "parser_id", parser_id)
+            self._session.flush()
             return (0, 1, uuid.UUID(str(existing.id)))
 
         # Insert new prompt template

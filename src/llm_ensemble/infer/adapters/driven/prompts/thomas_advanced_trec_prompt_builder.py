@@ -35,10 +35,11 @@ class ThomasAdvancedTrecPromptBuilder(ForBuildingPrompts):
         2 = Highly relevant: The passage has some answers for the query, but the answer may be a bit unclear, or hidden amongst extraneous information
         1 = Related: The passage seems related to the query but does not answer it.
         0 = Irrelevant: The passage has nothing to do with the query.
-                           
-        Assume that you are writing a report on the subject of the topic. 
-        If you would use any of the information contained in the web page in such a report, mark it 1.
-        If the web page is primarily about the topic, or contains vital information about the topic, mark it 2.
+
+        Assume that you are writing a report on the subject of the topic.
+        If the passage directly and clearly answers the query, mark it 3.
+        If it is primarily about the topic but the answer is partial or indirect, mark it 2.
+        If it is only loosely related but might provide minor context, mark it 1.
         Otherwise, mark it 0.
 
         Query

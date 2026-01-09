@@ -5,7 +5,7 @@ name_hint: mai-ds-r1
 model_id: microsoft/mai-ds-r1:free
 
 # Model capabilities
-context_window: 8192
+context_window: null
 capabilities: {}
 
 # Core inference parameters

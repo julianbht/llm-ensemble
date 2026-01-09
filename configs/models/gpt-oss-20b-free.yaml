@@ -5,7 +5,7 @@ name_hint: gpt-oss-20b
 model_id: openai/gpt-oss-20b:free
 
 # Model capabilities
-context_window: 8192
+context_window: null
 capabilities: {}
 
 # Core inference parameters

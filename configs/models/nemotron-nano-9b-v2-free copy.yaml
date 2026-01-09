@@ -1,8 +1,8 @@
 # Short name for run ID generation
-name_hint: nemotron-nano-9b-v2
+name_hint: gemma-3n-e4b-it
 
 # Model identifier (passed directly to provider API)
-model_id: nvidia/nemotron-nano-9b-v2:free
+model_id: google/gemma-3n-e4b-it
 
 # Model capabilities
 context_window: null

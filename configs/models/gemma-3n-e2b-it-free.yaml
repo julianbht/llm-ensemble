@@ -5,7 +5,7 @@ name_hint: nemotron-nano-9b-v2
 model_id: nvidia/nemotron-nano-9b-v2:free
 
 # Model capabilities
-context_window: 8192
+context_window: null
 capabilities: {}
 
 # Core inference parameters

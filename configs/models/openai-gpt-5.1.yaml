@@ -22,4 +22,4 @@ additional_params: {}
 pricing:
   prompt_cost_per_1m_tokens: 1.25
   completion_cost_per_1m_tokens: 10.0
-  last_updated: "2026-01-09T16:38:10.934076+00:00"
+  last_updated: "2026-01-09T16:57:57.786384+00:00"

@@ -13,9 +13,10 @@ from __future__ import annotations
 
 from llm_ensemble.evaluate.application.ports.driven.for_computing_metrics import ForComputingMetrics
 from llm_ensemble.evaluate.adapters.driven.metrics.cohens_kappa import CohensKappaAdapter
+from llm_ensemble.evaluate.adapters.driven.metrics.krippendorffs_alpha import KrippendorffsAlphaAdapter
 
 
-AVAILABLE_METRICS = ["cohens_kappa"]
+AVAILABLE_METRICS = ["cohens_kappa", "krippendorffs_alpha"]
 
 
 class MetricAdapterFactory:
@@ -36,6 +37,8 @@ class MetricAdapterFactory:
         """
         if metric_name == "cohens_kappa":
             return CohensKappaAdapter()
+        elif metric_name == "krippendorffs_alpha":
+            return KrippendorffsAlphaAdapter()
         else:
             available = ", ".join(sorted(AVAILABLE_METRICS))
             raise ValueError(

@@ -1,8 +1,8 @@
 # Short name for run ID generation
-name_hint: qwen3-vl-8b-instruct
+name_hint: ministral-3b-2512
 
 # Model identifier (passed directly to provider API)
-model_id: qwen/qwen3-vl-8b-instruct
+model_id: mistralai/ministral-3b-2512
 
 # Model capabilities
 context_window: null
@@ -20,6 +20,6 @@ seed: null
 additional_params: {}
 # Pricing information (auto-updated from OpenRouter API)
 pricing:
-  prompt_cost_per_1m_tokens: 0.08
-  completion_cost_per_1m_tokens: 0.5
-  last_updated: "2026-01-09T16:57:57.785482+00:00"
+  prompt_cost_per_1m_tokens: 0.09999999999999999
+  completion_cost_per_1m_tokens: 0.09999999999999999
+  last_updated: "2026-01-09T17:10:04.186915+00:00"

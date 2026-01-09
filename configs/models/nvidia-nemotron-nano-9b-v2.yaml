@@ -2,7 +2,7 @@
 name_hint: nemotron-nano-9b-v2
 
 # Model identifier (passed directly to provider API)
-model_id: nvidia/nemotron-nano-9b-v2:free
+model_id: nvidia/nemotron-nano-9b-v2
 
 # Model capabilities
 context_window: null
@@ -20,6 +20,6 @@ seed: null
 additional_params: {}
 # Pricing information (auto-updated from OpenRouter API)
 pricing:
-  prompt_cost_per_1m_tokens: 0.0
-  completion_cost_per_1m_tokens: 0.0
-  last_updated: "2026-01-09T16:57:57.784475+00:00"
+  prompt_cost_per_1m_tokens: 0.04
+  completion_cost_per_1m_tokens: 0.16
+  last_updated: "2026-01-09T17:10:04.187637+00:00"

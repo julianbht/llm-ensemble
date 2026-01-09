@@ -18,12 +18,32 @@ EXCLUDED_COLUMNS = [
     # Add column names to exclude from LaTeX output
     # "Unnamed: 0",
     # "Notes",
-    "openrouter_link",
+    "openrouter link",
     "other links",
     "note",
     "Output modalities",
-    "release"
+    "release",
+    "Cost",
+    "Ctx",
+    "Reasoning"
 ]
+
+# Columns that should wrap text with specified width (in cm)
+WRAPPED_COLUMNS = {
+    "Use Case" : "7cm",
+    "Model" : "2cm",
+    "Size" : "1cm",
+    "Training Data" : "7cm",
+    "Input" : "3cm",
+    # "Column Name": "3cm",
+    # "Long Description": "5cm",
+}
+
+# Columns to apply specific transformations
+COLUMN_TRANSFORMS = {
+    "Model": lambda x: x.split("/")[-1] if isinstance(x, str) and "/" in x else x,
+    "Cost": lambda x: round(x, 3) if pd.notna(x) and isinstance(x, (int, float)) else x,
+}
 
 
 def excel_to_latex(
@@ -33,7 +53,13 @@ def excel_to_latex(
     **latex_kwargs
 ) -> str:
     """
-    Convert Excel file to LaTeX table.
+    Convert Excel file to LaTeX table with formatting.
+
+    Features:
+    - Excludes columns listed in EXCLUDED_COLUMNS
+    - Applies transformations from COLUMN_TRANSFORMS (e.g., strip provider from Model)
+    - Makes all headers bold
+    - Supports column wrapping via WRAPPED_COLUMNS (e.g., {"Column": "3cm"})
 
     Args:
         excel_path: Path to Excel file
@@ -51,12 +77,33 @@ def excel_to_latex(
     if columns_to_drop:
         df = df.drop(columns=columns_to_drop)
 
+    # Apply column transformations
+    for col, transform in COLUMN_TRANSFORMS.items():
+        if col in df.columns:
+            df[col] = df[col].apply(transform)
+
+    # Build column format with wrapped columns
+    if 'column_format' not in latex_kwargs or latex_kwargs['column_format'] is None:
+        col_format = []
+        for col in df.columns:
+            if col in WRAPPED_COLUMNS:
+                col_format.append(f"p{{{WRAPPED_COLUMNS[col]}}}")
+            else:
+                col_format.append("l")
+        column_format_str = "".join(col_format)
+    else:
+        column_format_str = latex_kwargs['column_format']
+
+    # Make headers bold by temporarily renaming columns
+    original_columns = df.columns.tolist()
+    df.columns = [f"\\textbf{{{col}}}" for col in df.columns]
+
     # Convert to LaTeX with sensible defaults
     # Note: pandas 2.x always uses booktabs style (requires \usepackage{booktabs})
     latex_defaults = {
         'index': False,
-        'escape': True,
-        'column_format': None,
+        'escape': False,  # Disable escape to allow \textbf{} in headers
+        'column_format': column_format_str,
         'longtable': False,
         'caption': None,
         'label': None,
@@ -64,6 +111,9 @@ def excel_to_latex(
     latex_defaults.update(latex_kwargs)
 
     latex_str = df.to_latex(**latex_defaults)
+
+    # Restore original column names
+    df.columns = original_columns
 
     if output_path:
         Path(output_path).write_text(latex_str)

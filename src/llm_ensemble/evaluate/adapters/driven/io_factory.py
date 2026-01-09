@@ -10,15 +10,17 @@ To add a new I/O format:
 """
 
 from __future__ import annotations
+from pathlib import Path
 
 from llm_ensemble.evaluate.adapters.driven.io.dummy_writer import DummyWriter
+from llm_ensemble.evaluate.adapters.driven.io.json_writer import JSONWriter
 from llm_ensemble.evaluate.application.ports.driven.for_input import ForInput
 from llm_ensemble.evaluate.application.ports.driven.for_output import ForOutput
 from llm_ensemble.evaluate.adapters.driven.io.db_infer_reader import DBInferReader
 from llm_ensemble.evaluate.adapters.driven.io.db_aggregate_reader import DBAggregateReader
 
 
-AVAILABLE_FORMATS = ["dummy", "db_infer", "db_aggregate"]
+AVAILABLE_FORMATS = ["dummy", "json", "db_infer", "db_aggregate"]
 
 
 class IOAdapterFactory:
@@ -49,21 +51,31 @@ class IOAdapterFactory:
             )
 
     @staticmethod
-    def create_writer(io_name: str) -> ForOutput:
+    def create_writer(io_name: str, run_dir: Path = None) -> ForOutput:
         """Build and return a writer adapter instance.
 
         Args:
-            io_name: Name of the I/O format (e.g., 'db_to_html')
+            io_name: Name of the I/O format (e.g., 'json', 'dummy')
+            run_dir: Run directory path (required for file-based writers like json)
 
         Returns:
             Instantiated writer adapter
 
         Raises:
-            ValueError: If I/O format not found
+            ValueError: If I/O format not found or required parameters missing
         """
-        # For now, all formats use dummy writer
-        # Future: implement HTML, JSON, etc. writers
-        return DummyWriter(io_name=io_name)
+        if io_name == "json":
+            if run_dir is None:
+                raise ValueError("run_dir is required for json output format")
+            return JSONWriter(io_name=io_name, run_dir=run_dir)
+        elif io_name == "dummy":
+            return DummyWriter(io_name=io_name)
+        else:
+            available = ", ".join(sorted(AVAILABLE_FORMATS))
+            raise ValueError(
+                f"I/O format '{io_name}' not found. "
+                f"Available: {available}"
+            )
 
     @staticmethod
     def list_available() -> list[str]:

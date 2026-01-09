@@ -26,8 +26,8 @@ class ThomasAdvancedTrecPromptBuilder(ForBuildingPrompts):
     - {document} - The document text
     """
 
-    TEMPLATE_NAME = "thomas-advanced-trec"
-    TEMPLATE_ID = uuid.uuid5(uuid.NAMESPACE_DNS, "llm-ensemble.thomas-advanced-trec-v1")
+    TEMPLATE_NAME = "thomas-advanced-trec-v2"
+    TEMPLATE_ID = uuid.uuid5(uuid.NAMESPACE_DNS, "llm-ensemble.thomas-advanced-trec-v2")
     TEMPLATE_TEXT = dedent("""\
         Given a query and a web page, you must provide a score on an integer scale of 0 to 3 with the following meanings:
 

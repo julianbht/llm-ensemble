@@ -14,6 +14,7 @@ Usage:
 
 import sys
 import re
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
@@ -48,13 +49,23 @@ CREATE SCHEMA IF NOT EXISTS openrouter;
 
 CREATE TABLE IF NOT EXISTS openrouter.models (
     model_id TEXT PRIMARY KEY,
+    canonical_slug TEXT,
     model_name TEXT NOT NULL,
+    description TEXT,
+    created BIGINT,  -- Unix timestamp from API
     prompt_cost_per_1m DECIMAL(20, 10),
     completion_cost_per_1m DECIMAL(20, 10),
     avg_cost_per_1m DECIMAL(20, 10),
+    request_cost DECIMAL(20, 10),
+    image_cost DECIMAL(20, 10),
     is_free BOOLEAN NOT NULL,
     param_size DECIMAL(10, 2),  -- in billions, NULL if not detected
     context_length INTEGER,
+    architecture JSONB,  -- Full architecture object
+    top_provider JSONB,  -- Full top_provider object
+    per_request_limits JSONB,
+    supported_parameters JSONB,  -- Array of supported parameters
+    default_parameters JSONB,
     last_updated TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -63,33 +74,63 @@ CREATE TABLE IF NOT EXISTS openrouter.models (
 UPSERT_MODEL_SQL = """
 INSERT INTO openrouter.models (
     model_id,
+    canonical_slug,
     model_name,
+    description,
+    created,
     prompt_cost_per_1m,
     completion_cost_per_1m,
     avg_cost_per_1m,
+    request_cost,
+    image_cost,
     is_free,
     param_size,
     context_length,
+    architecture,
+    top_provider,
+    per_request_limits,
+    supported_parameters,
+    default_parameters,
     last_updated
 ) VALUES (
     :model_id,
+    :canonical_slug,
     :model_name,
+    :description,
+    :created,
     :prompt_cost_per_1m,
     :completion_cost_per_1m,
     :avg_cost_per_1m,
+    :request_cost,
+    :image_cost,
     :is_free,
     :param_size,
     :context_length,
+    :architecture,
+    :top_provider,
+    :per_request_limits,
+    :supported_parameters,
+    :default_parameters,
     :last_updated
 )
 ON CONFLICT (model_id) DO UPDATE SET
+    canonical_slug = EXCLUDED.canonical_slug,
     model_name = EXCLUDED.model_name,
+    description = EXCLUDED.description,
+    created = EXCLUDED.created,
     prompt_cost_per_1m = EXCLUDED.prompt_cost_per_1m,
     completion_cost_per_1m = EXCLUDED.completion_cost_per_1m,
     avg_cost_per_1m = EXCLUDED.avg_cost_per_1m,
+    request_cost = EXCLUDED.request_cost,
+    image_cost = EXCLUDED.image_cost,
     is_free = EXCLUDED.is_free,
     param_size = EXCLUDED.param_size,
     context_length = EXCLUDED.context_length,
+    architecture = EXCLUDED.architecture,
+    top_provider = EXCLUDED.top_provider,
+    per_request_limits = EXCLUDED.per_request_limits,
+    supported_parameters = EXCLUDED.supported_parameters,
+    default_parameters = EXCLUDED.default_parameters,
     last_updated = EXCLUDED.last_updated;
 """
 
@@ -125,8 +166,16 @@ def fetch_openrouter_models(debug: bool = False) -> list[dict]:
     for model in data["data"]:
         model_id = model.get("id")
         model_name = model.get("name", "")
+        description = model.get("description", "")
+        canonical_slug = model.get("canonical_slug")
+        created = model.get("created")
         pricing = model.get("pricing", {})
         context_length = model.get("context_length")
+        architecture = model.get("architecture")
+        top_provider = model.get("top_provider")
+        per_request_limits = model.get("per_request_limits")
+        supported_parameters = model.get("supported_parameters")
+        default_parameters = model.get("default_parameters")
 
         if not model_id or not pricing:
             continue
@@ -137,6 +186,8 @@ def fetch_openrouter_models(debug: bool = False) -> list[dict]:
         try:
             prompt_price = float(pricing.get("prompt", "0"))
             completion_price = float(pricing.get("completion", "0"))
+            request_price = float(pricing.get("request", "0"))
+            image_price = float(pricing.get("image", "0"))
 
             # Scale to per-1M tokens
             prompt_cost_per_1m = prompt_price * 1_000_000
@@ -149,7 +200,9 @@ def fetch_openrouter_models(debug: bool = False) -> list[dict]:
 
             # Extract parameter size using regex heuristic
             # Pattern: (\d+(?:\.\d+)?)[bB] matches "7b", "70B", "1.5b", etc.
-            param_match = re.search(r'(\d+(?:\.\d+)?)[bB]', model_id + " " + model_name)
+            # Search in model_id, model_name, and description
+            search_text = f"{model_id} {model_name} {description}"
+            param_match = re.search(r'(\d+(?:\.\d+)?)[bB]', search_text)
             param_size = None
             if param_match:
                 param_size = float(param_match.group(1))
@@ -157,13 +210,23 @@ def fetch_openrouter_models(debug: bool = False) -> list[dict]:
 
             models.append({
                 "model_id": model_id,
+                "canonical_slug": canonical_slug,
                 "model_name": model_name,
+                "description": description,
+                "created": created,
                 "prompt_cost_per_1m": prompt_cost_per_1m,
                 "completion_cost_per_1m": completion_cost_per_1m,
                 "avg_cost_per_1m": avg_cost_per_1m,
+                "request_cost": request_price,
+                "image_cost": image_price,
                 "is_free": is_free,
                 "param_size": param_size,
                 "context_length": context_length,
+                "architecture": json.dumps(architecture) if architecture else None,
+                "top_provider": json.dumps(top_provider) if top_provider else None,
+                "per_request_limits": json.dumps(per_request_limits) if per_request_limits else None,
+                "supported_parameters": json.dumps(supported_parameters) if supported_parameters else None,
+                "default_parameters": json.dumps(default_parameters) if default_parameters else None,
             })
 
             if debug and len(models) <= 3:

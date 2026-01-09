@@ -39,6 +39,19 @@ WRAPPED_COLUMNS = {
     # "Long Description": "5cm",
 }
 
+# Columns that should auto-size with tabularx (uses X column type)
+# These will share remaining space equally and wrap text automatically
+AUTO_WIDTH_COLUMNS = [
+    # "Use Case",
+    # "Training Data",
+]
+
+# Use tabularx environment instead of tabular
+USE_TABULARX = False
+
+# Split table into two equal parts (by rows)
+SPLIT_TABLE = True
+
 # Columns to apply specific transformations
 COLUMN_TRANSFORMS = {
     "Model": lambda x: x.split("/")[-1] if isinstance(x, str) and "/" in x else x,
@@ -46,47 +59,15 @@ COLUMN_TRANSFORMS = {
 }
 
 
-def excel_to_latex(
-    excel_path: str,
-    output_path: str | None = None,
-    sheet_name: str | int = 0,
-    **latex_kwargs
-) -> str:
-    """
-    Convert Excel file to LaTeX table with formatting.
-
-    Features:
-    - Excludes columns listed in EXCLUDED_COLUMNS
-    - Applies transformations from COLUMN_TRANSFORMS (e.g., strip provider from Model)
-    - Makes all headers bold
-    - Supports column wrapping via WRAPPED_COLUMNS (e.g., {"Column": "3cm"})
-
-    Args:
-        excel_path: Path to Excel file
-        output_path: Optional path to write LaTeX output (if None, prints to stdout)
-        sheet_name: Sheet name or index to convert (default: first sheet)
-        **latex_kwargs: Additional arguments passed to DataFrame.to_latex()
-
-    Returns:
-        LaTeX table string
-    """
-    df = pd.read_excel(excel_path, sheet_name=sheet_name)
-
-    # Filter out excluded columns (only if they exist)
-    columns_to_drop = [col for col in EXCLUDED_COLUMNS if col in df.columns]
-    if columns_to_drop:
-        df = df.drop(columns=columns_to_drop)
-
-    # Apply column transformations
-    for col, transform in COLUMN_TRANSFORMS.items():
-        if col in df.columns:
-            df[col] = df[col].apply(transform)
-
-    # Build column format with wrapped columns
+def _df_to_latex(df: pd.DataFrame, latex_kwargs: dict) -> str:
+    """Helper to convert a single DataFrame to LaTeX."""
+    # Build column format with wrapped columns and X columns
     if 'column_format' not in latex_kwargs or latex_kwargs['column_format'] is None:
         col_format = []
         for col in df.columns:
-            if col in WRAPPED_COLUMNS:
+            if USE_TABULARX and col in AUTO_WIDTH_COLUMNS:
+                col_format.append("X")
+            elif col in WRAPPED_COLUMNS:
                 col_format.append(f"p{{{WRAPPED_COLUMNS[col]}}}")
             else:
                 col_format.append("l")
@@ -114,6 +95,72 @@ def excel_to_latex(
 
     # Restore original column names
     df.columns = original_columns
+
+    # Convert tabular to tabularx if enabled
+    if USE_TABULARX:
+        latex_str = latex_str.replace(
+            r'\begin{tabular}',
+            r'\begin{tabularx}{\textwidth}'
+        )
+        latex_str = latex_str.replace(
+            r'\end{tabular}',
+            r'\end{tabularx}'
+        )
+
+    return latex_str
+
+
+def excel_to_latex(
+    excel_path: str,
+    output_path: str | None = None,
+    sheet_name: str | int = 0,
+    **latex_kwargs
+) -> str:
+    """
+    Convert Excel file to LaTeX table with formatting.
+
+    Features:
+    - Excludes columns listed in EXCLUDED_COLUMNS
+    - Applies transformations from COLUMN_TRANSFORMS (e.g., strip provider from Model)
+    - Makes all headers bold
+    - Supports fixed-width columns via WRAPPED_COLUMNS (e.g., {"Column": "3cm"})
+    - Supports auto-width columns via AUTO_WIDTH_COLUMNS + USE_TABULARX=True (uses X type)
+    - Can split into two tables via SPLIT_TABLE=True
+
+    Args:
+        excel_path: Path to Excel file
+        output_path: Optional path to write LaTeX output (if None, prints to stdout)
+        sheet_name: Sheet name or index to convert (default: first sheet)
+        **latex_kwargs: Additional arguments passed to DataFrame.to_latex()
+
+    Returns:
+        LaTeX table string
+    """
+    df = pd.read_excel(excel_path, sheet_name=sheet_name)
+
+    # Filter out excluded columns (only if they exist)
+    columns_to_drop = [col for col in EXCLUDED_COLUMNS if col in df.columns]
+    if columns_to_drop:
+        df = df.drop(columns=columns_to_drop)
+
+    # Apply column transformations
+    for col, transform in COLUMN_TRANSFORMS.items():
+        if col in df.columns:
+            df[col] = df[col].apply(transform)
+
+    # Split table if enabled
+    if SPLIT_TABLE:
+        mid = len(df) // 2
+        df1 = df.iloc[:mid].copy()
+        df2 = df.iloc[mid:].copy()
+
+        latex_str1 = _df_to_latex(df1, latex_kwargs)
+        latex_str2 = _df_to_latex(df2, latex_kwargs)
+
+        # Combine with spacing
+        latex_str = f"{latex_str1}\n\n\\vspace{{1em}}\n\n{latex_str2}"
+    else:
+        latex_str = _df_to_latex(df, latex_kwargs)
 
     if output_path:
         Path(output_path).write_text(latex_str)

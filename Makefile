@@ -206,11 +206,11 @@ schemas:
 
 update-pricing:
 	@if [ -d .venv ]; then \
-		. .venv/bin/activate && python scripts/update_model_pricing.py $(ARGS); \
+		. .venv/bin/activate && python scripts/update_model_pricing.py update-pricing $(ARGS); \
 	elif [ -d venv ]; then \
-		. venv/bin/activate && python scripts/update_model_pricing.py $(ARGS); \
+		. venv/bin/activate && python scripts/update_model_pricing.py update-pricing $(ARGS); \
 	else \
-		python3 scripts/update_model_pricing.py $(ARGS); \
+		python3 scripts/update_model_pricing.py update-pricing $(ARGS); \
 	fi
 
 clean:

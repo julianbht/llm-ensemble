@@ -28,6 +28,14 @@ class JudgementsSummary(BaseModel):
         description="Number of judgements where parsing failed (llm_score is None or label is None)"
     )
 
+    vote_breakdown: dict[str, int] = Field(
+        ...,
+        description=(
+            "Count of judgements per relevance label "
+            "(derived from RelevanceScore enum, excludes failed parses)"
+        )
+    )
+
 
 class LatencySummary(BaseModel):
     """Summary of latency metrics."""

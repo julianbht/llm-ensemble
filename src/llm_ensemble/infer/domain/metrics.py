@@ -6,6 +6,7 @@ Only contains functions with non-trivial business logic.
 
 from typing import Optional
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
+from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
 def get_extracted_score(judgement: LLMJudgement) -> Optional[int]:
@@ -80,6 +81,34 @@ def count_failed_parses(judgements: list[LLMJudgement]) -> int:
         1 for j in judgements
         if j.llm_score is None or j.llm_score.label is None
     )
+
+
+def calculate_vote_breakdown(judgements: list[LLMJudgement]) -> dict[str, int]:
+    """Calculate count of judgements per relevance label.
+
+    Business rule: Count how many judgements fall into each relevance score.
+    Failed parses are tracked separately and not included in label counts.
+    Uses RelevanceScore enum to ensure all possible labels are initialized.
+
+    Args:
+        judgements: List of all LLM judgements produced
+
+    Returns:
+        Dictionary mapping label name to count (e.g., {"Irrelevant": 120, "Relevant": 45, ...})
+    """
+    # Initialize counts for all possible relevance scores from enum
+    vote_counts: dict[str, int] = {
+        score.label: 0
+        for score in RelevanceScore
+    }
+
+    # Count occurrences of each label
+    for judgement in judgements:
+        if judgement.llm_score and judgement.llm_score.label is not None:
+            label_name = judgement.llm_score.label.label
+            vote_counts[label_name] += 1
+
+    return vote_counts
 
 
 def calculate_average_latency(judgements: list[LLMJudgement]) -> float:

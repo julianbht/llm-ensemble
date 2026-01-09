@@ -26,6 +26,7 @@ from llm_ensemble.infer.domain.metrics import (
     calculate_agreement,
     get_extracted_score,
     count_failed_parses,
+    calculate_vote_breakdown,
     calculate_average_latency,
     aggregate_parse_issues,
     calculate_total_cost,
@@ -353,6 +354,7 @@ class InferenceApplication(ForRunningInference):
         """
         # Calculate domain statistics using focused functions
         failed_parses_count = count_failed_parses(llm_judgements)
+        vote_breakdown = calculate_vote_breakdown(llm_judgements)
         total_latency_ms = sum(j.llm_invocation_metrics.latency_ms for j in llm_judgements)
         avg_latency_ms = calculate_average_latency(llm_judgements)
         issues_summary = aggregate_parse_issues(llm_judgements)
@@ -365,6 +367,7 @@ class InferenceApplication(ForRunningInference):
         judgements_summary = JudgementsSummary(
             total_count=len(llm_judgements),
             failed_parses_count=failed_parses_count,
+            vote_breakdown=vote_breakdown,
         )
 
         performance_summary = PerformanceSummary(

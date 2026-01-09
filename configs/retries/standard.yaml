@@ -1,7 +1,7 @@
 # Standard retry configuration for LLM provider API calls
 #
-# This configuration defines exponential backoff behavior for retrying
-# failed API calls to LLM providers (e.g., OpenRouter, Ollama, HuggingFace).
+# This configuration defines exponential backoff behavior, request timeouts,
+# and retryable errors for LLM providers (e.g., OpenRouter, Ollama, HuggingFace).
 #
 # Retry Strategy:
 # - Delay increases exponentially: base_delay × 2^attempt
@@ -21,6 +21,11 @@ base_delay_seconds: 1.0
 # Maximum delay cap in seconds
 # Prevents excessively long waits in later retries
 max_delay_seconds: 60.0
+
+# Maximum time to wait for a single API request (in seconds)
+# If a request takes longer than this, it will timeout and potentially retry
+# Note: This is per-request timeout, not total timeout for all retries
+request_timeout_seconds: 120
 
 # HTTP status codes that trigger retries
 # 429: Rate Limit Exceeded (most common)

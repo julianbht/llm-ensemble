@@ -30,20 +30,17 @@ class OpenRouterAdapter(ForInvokingLLM):
         model_config: ModelConfig,
         retry_config: RetryConfig,
         api_key: Optional[str] = None,
-        timeout: int = 30,
     ):
         """Initialize OpenRouter adapter.
 
         Args:
             model_config: Complete model configuration
-            retry_config: Retry configuration for exponential backoff
+            retry_config: Retry configuration for exponential backoff and timeouts
             api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
-            timeout: Request timeout in seconds (default: 30)
         """
         self.model_config = model_config
         self.retry_config = retry_config
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
-        self.timeout = timeout
         self.logger = get_logger(component=f"{self.PROVIDER_NAME}_provider")
 
         if not self.api_key:
@@ -174,7 +171,7 @@ class OpenRouterAdapter(ForInvokingLLM):
         client = OpenAI(
             api_key=self.api_key,
             base_url="https://openrouter.ai/api/v1",
-            timeout=self.timeout,
+            timeout=self.retry_config.request_timeout_seconds,
         )
 
         # Track timing (using perf_counter for monotonic timing)

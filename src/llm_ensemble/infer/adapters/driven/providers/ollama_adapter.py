@@ -20,20 +20,17 @@ class OllamaAdapter(ForInvokingLLM):
         model_config: ModelConfig,
         retry_config: RetryConfig,
         base_url: str = "http://localhost:11434",
-        timeout: int = 60,
     ):
         """Initialize Ollama adapter.
 
         Args:
             model_config: Complete model configuration
-            retry_config: Retry configuration for exponential backoff
+            retry_config: Retry configuration for exponential backoff and timeouts
             base_url: Ollama server URL (default: http://localhost:11434)
-            timeout: Request timeout in seconds (default: 60)
         """
         self.model_config = model_config
         self.retry_config = retry_config
         self.base_url = base_url
-        self.timeout = timeout
         self.logger = get_logger(component=f"{self.PROVIDER_NAME}_provider")
 
     def get_provider(self):

@@ -1,0 +1,121 @@
+{
+  "start_time": "2026-01-09T10:06:07.109677",
+  "end_time": "2026-01-09T11:13:11.001322",
+  "config": {
+    "id": "5cb17d79-ab76-48d9-88b3-0106174caa45",
+    "model_cfg": {
+      "id": "d38808d8-422b-4b92-975f-2d0ee33ad637",
+      "name": "phi-4-multimodal-instruct",
+      "name_hint": "phi-4-multimodal-instruct",
+      "model_id": "microsoft/phi-4-multimodal-instruct",
+      "context_window": null,
+      "capabilities": {},
+      "temperature": 0.01,
+      "max_tokens": null,
+      "top_p": null,
+      "frequency_penalty": null,
+      "presence_penalty": null,
+      "seed": null,
+      "additional_params": {},
+      "pricing": {
+        "prompt_cost_per_1m_tokens": 0.049999999999999996,
+        "completion_cost_per_1m_tokens": 0.09999999999999999
+      }
+    },
+    "provider": {
+      "id": "2640cff4-2313-45c5-b55f-a6918caf11e0",
+      "name": "openrouter",
+      "version": "1.0"
+    },
+    "prompt_template": {
+      "id": "3a48dac9-26ee-4969-b4e4-65f94692d5d9",
+      "name": "thomas-advanced-trec-v2",
+      "template_text": "Given a query and a web page, you must provide a score on an integer scale of 0 to 3 with the following meanings:\n\n3 = Perfectly relevant: The passage is dedicated to the query and contains the exact answer.\n2 = Highly relevant: The passage has some answers for the query, but the answer may be a bit unclear, or hidden amongst extraneous information\n1 = Related: The passage seems related to the query but does not answer it.\n0 = Irrelevant: The passage has nothing to do with the query.\n\nAssume that you are writing a report on the subject of the topic.\nIf the passage directly and clearly answers the query, mark it 3.\nIf it is primarily about the topic but the answer is partial or indirect, mark it 2.\nIf it is only loosely related but might provide minor context, mark it 1.\nOtherwise, mark it 0.\n\nQuery\nA person has typed [{query}] into a search engine.\n\nResult\nConsider the following web page.\n—BEGIN WEB PAGE CONTENT—\n{document}\n—END WEB PAGE CONTENT—\n\nInstructions\nSplit this problem into steps:\n\nConsider the underlying intent of the search.\n\nMeasure how well the content matches a likely intent of the query (M).\nMeasure how trustworthy the web page is (T).\nConsider the aspects above and the relative importance of each, and decide on a final score (O).\n\nProduce a JSON object scores without providing any reasoning.\nExample: {{\"M\": 2, \"T\": 1, \"O\": 1}}",
+      "prompt_builder": {
+        "id": "6cd726de-6102-5810-a21d-4f21f16083fb",
+        "name": "thomas-advanced-trec-v2",
+        "version": "1.0"
+      },
+      "response_parser": {
+        "id": "f44d8c88-8f27-56e3-9ea5-9980e071256c",
+        "name": "thomas-advanced-trec",
+        "version": "1.0"
+      }
+    },
+    "retry_config": {
+      "id": "92486001-62d9-4c8c-b714-99430eed775b",
+      "name": "standard",
+      "max_retries": 5,
+      "base_delay_seconds": 1.0,
+      "max_delay_seconds": 60.0,
+      "request_timeout_seconds": 120,
+      "retryable_status_codes": [
+        429,
+        503,
+        504
+      ]
+    },
+    "input_run_name": "20260107_014749",
+    "start_idx": 0,
+    "end_idx": 3918,
+    "io_name": "db_to_db"
+  },
+  "judgements": {
+    "total_count": 3918,
+    "failed_parses_count": 0,
+    "vote_breakdown": {
+      "Irrelevant": 1655,
+      "Relevant": 1388,
+      "Highly Relevant": 396,
+      "Perfectly Relevant": 479
+    }
+  },
+  "performance": {
+    "latency": {
+      "total_ms": 3918132.1449009227,
+      "avg_ms": 1000.0337276418894
+    },
+    "cost": {
+      "total_usd": 0.1410783
+    },
+    "tokens": {
+      "total_prompt": 2672502,
+      "total_completion": 74532,
+      "total": 2747034
+    }
+  },
+  "persistence": {
+    "total_created": 3921,
+    "total_skipped": 11758,
+    "details": {
+      "providers_created": 0,
+      "providers_skipped": 1,
+      "model_configs_created": 0,
+      "model_configs_skipped": 1,
+      "prompt_templates_created": 0,
+      "prompt_templates_skipped": 1,
+      "parser_created": 0,
+      "parser_skipped": 1,
+      "infer_run_configs_created": 0,
+      "infer_run_configs_skipped": 1,
+      "infer_runs_created": 1,
+      "infer_runs_skipped": 0,
+      "infer_run_outputs_created": 1,
+      "infer_run_outputs_skipped": 0,
+      "llm_prompts_created": 0,
+      "llm_prompts_skipped": 3918,
+      "llm_responses_created": 1,
+      "llm_responses_skipped": 3917,
+      "llm_scores_created": 0,
+      "llm_scores_skipped": 3918,
+      "llm_judgements_created": 3918,
+      "llm_judgements_skipped": 0
+    }
+  },
+  "issues": {
+    "non_standard_format": 18
+  },
+  "duration_seconds": 4023.89,
+  "duration_minutes": 67.06,
+  "duration_hours": 1.12
+}

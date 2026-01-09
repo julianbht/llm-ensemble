@@ -13,6 +13,7 @@ Depends only on port abstractions for testability.
 """
 
 from __future__ import annotations
+from datetime import datetime
 from typing import Optional
 
 from llm_ensemble.evaluate.application.ports.driving.for_running_evaluation import ForRunningEvaluation
@@ -21,6 +22,8 @@ from llm_ensemble.evaluate.application.ports.driven.for_output import ForOutput
 from llm_ensemble.evaluate.application.ports.driven.for_computing_metrics import ForComputingMetrics
 
 from llm_ensemble.evaluate.domain.entities.metric_result import MetricResult
+from llm_ensemble.evaluate.domain.evaluate_run_factory import EvaluateRunFactory
+from llm_ensemble.libs.runtime.run_info import RunType
 from llm_ensemble.libs.logging.structlog_logger import get_logger
 from llm_ensemble.libs.logging.log_events import EvaluateLogEvent
 
@@ -80,7 +83,8 @@ class EvaluationApplication(ForRunningEvaluation):
         Backend workflow:
         - Read evaluation data via InputPort
         - For each metric: compute metric via MetricPort
-        - Write report via OutputPort
+        - Build EvaluateRun entity via factory
+        - Write EvaluateRun via OutputPort
 
         Args:
             input_run_name: Run name to evaluate (infer or aggregate run)
@@ -92,6 +96,8 @@ class EvaluationApplication(ForRunningEvaluation):
         """
         logger = get_logger()
         logger.info(EvaluateLogEvent.EVALUATE_STARTED, name=self.run_name)
+
+        start_time = datetime.now()
 
         # Read evaluation data
         evaluation_data = self.input_port.read(input_run_name)
@@ -115,16 +121,24 @@ class EvaluationApplication(ForRunningEvaluation):
                 value=result.value
             )
 
-        # Build metadata from EvaluationData
-        run_metadata = {
-            "run_name": self.run_name,
-            "input_run_name": evaluation_data.run_name,
-            "input_run_type": evaluation_data.run_type,
-            "sample_count": evaluation_data.sample_count,
-            "official": official,
-            "notes": notes,
-        }
+        end_time = datetime.now()
 
-        # Write report
-        self.output_port.write(metric_results, run_metadata)
+        # Build EvaluateRun entity
+        metric_names = [m.name for m in metric_results]
+        evaluate_run = EvaluateRunFactory.create(
+            io_config_name=self.output_port.io_name,
+            input_run_name=evaluation_data.run_name,
+            metric_names=metric_names,
+            run_name=self.run_name,
+            run_type=RunType.OFFICIAL if official else RunType.TEST,
+            metric_results=metric_results,
+            evaluated_run_type=evaluation_data.run_type,
+            evaluated_sample_count=evaluation_data.sample_count,
+            start_time=start_time,
+            end_time=end_time,
+            notes=notes,
+        )
+
+        # Write EvaluateRun
+        self.output_port.write(evaluate_run)
         logger.info(EvaluateLogEvent.EVALUATE_COMPLETE)

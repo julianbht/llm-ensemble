@@ -1,39 +1,41 @@
-"""Driven port for writing evaluation outputs.
+"""Port interface for evaluation output writers.
 
-Driven Port Interface (Hexagonal Architecture)
-
-This port abstracts output writing from infrastructure details.
-The application depends on this abstraction, not concrete implementations.
-
-Adapters implement this port to provide different output formats
-(HTML reports, JSON, etc.).
+Defines the abstract contract for writing EvaluateRun records to storage.
 """
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Any
+
+from llm_ensemble.evaluate.domain.entities.evaluate_run import EvaluateRun
 
 
 class ForOutput(ABC):
-    """Driven port for writing evaluation reports.
+    """Abstract base class for writing EvaluateRun records.
 
-    The application depends on this abstraction.
-    IO adapters implement this interface.
+    Implementations can write to different formats (Database, JSON, etc.)
+    while providing a consistent interface.
 
-    Responsibilities:
-    - Write evaluation report to disk
-    - Format metric results appropriately
+    Supports batch writing of entire evaluate run (config + metrics + metadata).
     """
 
+    @property
     @abstractmethod
-    def write(self, metric_results: list[Any], run_metadata: Any) -> None:
-        """Write evaluation report.
+    def io_name(self) -> str:
+        """Get I/O adapter name for this output port.
+
+        Returns:
+            I/O adapter name (e.g., 'json', 'dummy', 'db_evaluate')
+        """
+        pass
+
+    @abstractmethod
+    def write(self, evaluate_run: EvaluateRun) -> None:
+        """Write entire evaluate run in one batch.
 
         Args:
-            metric_results: List of metric computation results
-            run_metadata: Metadata about the evaluation run
+            evaluate_run: The complete evaluate run entity with config, metrics, and metadata
 
         Raises:
-            IOError: If writing fails
+            IOError: If write operation fails
         """
         pass

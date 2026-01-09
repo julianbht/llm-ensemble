@@ -1,0 +1,56 @@
+{
+  "start_time": "2026-01-09T01:21:13.469812",
+  "end_time": "2026-01-09T02:24:22.239050",
+  "judgements": {
+    "total_count": 3918,
+    "failed_parses_count": 0
+  },
+  "performance": {
+    "latency": {
+      "total_ms": 3641169.458910983,
+      "avg_ms": 929.343914984937
+    },
+    "cost": {
+      "total_usd": 0.05721012
+    },
+    "tokens": {
+      "total_prompt": 2672502,
+      "total_completion": 94002,
+      "total": 2766504
+    }
+  },
+  "persistence": {
+    "total_created": 7861,
+    "total_skipped": 7818,
+    "details": {
+      "providers_created": 0,
+      "providers_skipped": 1,
+      "model_configs_created": 1,
+      "model_configs_skipped": 0,
+      "prompt_templates_created": 0,
+      "prompt_templates_skipped": 1,
+      "parser_created": 0,
+      "parser_skipped": 1,
+      "infer_run_configs_created": 1,
+      "infer_run_configs_skipped": 0,
+      "infer_runs_created": 1,
+      "infer_runs_skipped": 0,
+      "infer_run_outputs_created": 1,
+      "infer_run_outputs_skipped": 0,
+      "llm_prompts_created": 3916,
+      "llm_prompts_skipped": 2,
+      "llm_responses_created": 23,
+      "llm_responses_skipped": 3895,
+      "llm_scores_created": 0,
+      "llm_scores_skipped": 3918,
+      "llm_judgements_created": 3918,
+      "llm_judgements_skipped": 0
+    }
+  },
+  "issues": {
+    "non_standard_format": 3900
+  },
+  "duration_seconds": 3788.77,
+  "duration_minutes": 63.15,
+  "duration_hours": 1.05
+}

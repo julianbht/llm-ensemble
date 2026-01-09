@@ -38,7 +38,7 @@ Replace the withheld test qrels file:
 ```python
 # Load challenge format qrels (anonymized indices)
 qrels = {}
-with open('data/llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_recovered.txt') as f:
+with open('datasets/llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_recovered.txt') as f:
     for line in f:
         query_idx, iteration, doc_idx, grade = line.strip().split()
         qrels[(query_idx, doc_idx)] = int(grade)
@@ -49,7 +49,7 @@ with open('data/llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_reco
 If you want more test data (50 queries instead of 25):
 ```python
 qrels = {}
-with open('data/llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_recovered_superset.txt') as f:
+with open('datasets/llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_recovered_superset.txt') as f:
     for line in f:
         query_idx, iteration, doc_idx, grade = line.strip().split()
         qrels[(query_idx, doc_idx)] = int(grade)
@@ -59,7 +59,7 @@ with open('data/llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_reco
 If you need real TREC IDs instead of anonymized indices:
 ```python
 qrels = {}
-with open('data/llm_judge_challenge_qrels_recovered/trec_2023_challenge_subset.txt') as f:
+with open('datasets/llm_judge_challenge_qrels_recovered/trec_2023_challenge_subset.txt') as f:
     for line in f:
         qid, _, doc_id, grade = line.strip().split()
         qrels[(qid, doc_id)] = int(grade)
@@ -71,17 +71,17 @@ If your ingest expects all files in one directory:
 
 **Option A: Copy the recovered qrels**
 ```bash
-cp data/llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_recovered.txt \
-   data/llm_judge_challenge/
+cp datasets/llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_recovered.txt \
+   datasets/llm_judge_challenge/
 ```
 
 **Option B: Symlink**
 ```bash
 ln -s ../llm_judge_challenge_qrels_recovered/llm4eval_test_qrel_2024_recovered.txt \
-      data/llm_judge_challenge/
+      datasets/llm_judge_challenge/
 ```
 
-Then point your ingest to `data/llm_judge_challenge/`.
+Then point your ingest to `datasets/llm_judge_challenge/`.
 
 ## Verification
 

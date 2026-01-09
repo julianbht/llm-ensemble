@@ -7,7 +7,7 @@ from collections import Counter
 
 
 def main():
-    base_dir = Path("/home/jn/dev/llm-ensemble/data/llm_judge_challenge_experiment")
+    base_dir = Path("/home/jn/dev/llm-ensemble/datasets/llm_judge_challenge_experiment")
     qrels_path = base_dir / "llm4eval_test_qrel_2024_recovered.txt"
 
     # Track unique queries and documents referenced in qrels

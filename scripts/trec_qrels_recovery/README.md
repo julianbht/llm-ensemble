@@ -36,8 +36,8 @@ pip install -r requirements_verification.txt
 
 ## Output
 
-- Reads from: `../../data/llm_judge_challenge/`
-- Writes to: `../../data/llm_judge_challenge_qrels_recovered/`
+- Reads from: `../../datasets/llm_judge_challenge/`
+- Writes to: `../../datasets/llm_judge_challenge_qrels_recovered/`
 
 ## Expected Results
 

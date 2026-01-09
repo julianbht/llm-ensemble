@@ -24,8 +24,8 @@ All artifacts are managed by the **run manager** (`libs/runtime/run_manager.py`)
 # Uses config file: configs/io/llm_judge_ingest.yaml
 ingest --io llm_judge_ingest --limit 100
 
-# Override data directory if needed
-ingest --io llm_judge_ingest --override data_dir=/custom/path --limit 100
+# Override dataset directory if needed
+ingest --io llm_judge_ingest --override datasets_dir=/custom/path --limit 100
 
 # Infer - Run LLM judge inference
 infer --model gpt-oss-20b --prompt thomas-et-al-prompt --io json --input artifacts/runs/ingest/<run_name>/samples.json

@@ -60,18 +60,6 @@ Notes = Annotated[
     ),
 ]
 
-Override = Annotated[
-    list[str],
-    typer.Option(
-        "--override",
-        "-O",
-        help=(
-            "Override config values (format: key=value, e.g., 'data_dir=/custom/path'). "
-            "Can be specified multiple times."
-        ),
-    ),
-]
-
 StartIdx = Annotated[
     Optional[int],
     typer.Option(

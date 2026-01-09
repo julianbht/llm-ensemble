@@ -3,6 +3,10 @@
 Explicit instantiation of I/O adapters with format-specific constructors.
 Each adapter defines its own constructor signature and configuration needs.
 
+I/O formats use explicit read→write naming to show the full pipeline:
+- db_infer_to_json: Read from PostgreSQL (infer runs), write to JSON
+- db_aggregate_to_json: Read from PostgreSQL (aggregate runs), write to JSON
+
 To add a new I/O format:
 1. Create adapter classes that extend ForInput/ForOutput
 2. Import them here
@@ -19,7 +23,7 @@ from llm_ensemble.evaluate.adapters.driven.io.db_infer_reader import DBInferRead
 from llm_ensemble.evaluate.adapters.driven.io.db_aggregate_reader import DBAggregateReader
 
 
-AVAILABLE_FORMATS = ["json", "db_infer", "db_aggregate"]
+AVAILABLE_FORMATS = ["db_infer_to_json", "db_aggregate_to_json"]
 
 
 class IOAdapterFactory:
@@ -30,7 +34,7 @@ class IOAdapterFactory:
         """Build and return a reader adapter instance.
 
         Args:
-            io_name: Name of the I/O format (e.g., 'db_to_html')
+            io_name: Name of the I/O format (e.g., 'db_infer_to_json')
 
         Returns:
             Instantiated reader adapter
@@ -38,9 +42,9 @@ class IOAdapterFactory:
         Raises:
             ValueError: If I/O format not found
         """
-        if io_name == "db_infer":
+        if io_name == "db_infer_to_json":
             return DBInferReader(io_name=io_name)
-        elif io_name == "db_aggregate":
+        elif io_name == "db_aggregate_to_json":
             return DBAggregateReader(io_name=io_name)
         else:
             available = ", ".join(sorted(AVAILABLE_FORMATS))
@@ -54,7 +58,7 @@ class IOAdapterFactory:
         """Build and return a writer adapter instance.
 
         Args:
-            io_name: Name of the I/O format (e.g., 'json')
+            io_name: Name of the I/O format (e.g., 'db_infer_to_json')
             run_dir: Run directory path (required for file-based writers like json)
 
         Returns:
@@ -63,7 +67,7 @@ class IOAdapterFactory:
         Raises:
             ValueError: If I/O format not found or required parameters missing
         """
-        if io_name == "json":
+        if io_name in ["db_infer_to_json", "db_aggregate_to_json"]:
             if run_dir is None:
                 raise ValueError("run_dir is required for json output format")
             return JSONWriter(io_name=io_name, run_dir=run_dir)

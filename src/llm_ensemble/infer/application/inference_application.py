@@ -46,6 +46,7 @@ from llm_ensemble.infer.domain.entities.infer_run_summary import (
     PerformanceSummary,
     PersistenceSummary,
 )
+from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
 from llm_ensemble.infer.application.write_summary import WriteSummary
 from llm_ensemble.infer.domain.infer_run_config_factory import InferRunConfigFactory
 from llm_ensemble.infer.domain.dataset_utils import resolve_slice_indices
@@ -264,7 +265,12 @@ class InferenceApplication(ForRunningInference):
         write_summary = self.output_port.get_write_summary()
 
         # Build run summary
-        run_summary = self._build_run_summary(start_time, llm_judgements, write_summary)
+        run_summary = self._build_run_summary(
+            start_time=start_time,
+            llm_judgements=llm_judgements,
+            write_summary=write_summary,
+            infer_run_config=infer_run.infer_run_config,
+        )
 
         # Write run summary to disk and log completion
         run_summary_path = persist_run_summary(run_summary, self.run_dir)
@@ -341,6 +347,7 @@ class InferenceApplication(ForRunningInference):
         start_time: datetime,
         llm_judgements: list[LLMJudgement],
         write_summary: WriteSummary,
+        infer_run_config: InferRunConfig,
     ) -> InferRunSummary:
         """Build run summary from execution results.
 
@@ -348,6 +355,7 @@ class InferenceApplication(ForRunningInference):
             start_time: Time when inference pipeline started
             llm_judgements: List of all judgements produced
             write_summary: Write operation summary from output port
+            infer_run_config: Complete run configuration for reproducibility
 
         Returns:
             Complete InferRunSummary with all statistics
@@ -395,6 +403,7 @@ class InferenceApplication(ForRunningInference):
         return InferRunSummary(
             start_time=start_time,
             end_time=datetime.now(),
+            config=infer_run_config,
             judgements=judgements_summary,
             performance=performance_summary,
             persistence=persistence_summary,

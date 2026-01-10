@@ -235,6 +235,9 @@ class AggregationApplication(ForRunningAggregation):
         no_valid_votes_count = count_no_valid_votes(aggregated_votes)
         issues_summary = build_issues_summary(tie_count, no_valid_votes_count)
 
+        # Clear dataset from run to avoid duplication in summary
+        aggregate_run.aggregated_dataset = None  # Dataset stats already in summary metrics
+
         return AggregateRunSummary(
             start_time=start_time,
             end_time=end_time,

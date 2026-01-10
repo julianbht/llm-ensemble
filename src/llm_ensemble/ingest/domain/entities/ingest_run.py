@@ -5,6 +5,7 @@ This is the aggregate root that represents a complete ingest run.
 """
 
 from __future__ import annotations
+from typing import Optional
 from datetime import datetime
 from pydantic import Field
 
@@ -41,9 +42,9 @@ class IngestRun(RunInfo):
     )
 
     # What was produced (output)
-    normalized_dataset: NormalizedDataset = Field(
+    normalized_dataset: Optional[NormalizedDataset] = Field(
         ...,
-        description="Dataset produced by this run"
+        description="Dataset produced by this run (None when included in summary to avoid duplication)"
     )
 
     # Timing

@@ -5,6 +5,7 @@ This is the aggregate root that represents a complete aggregation run.
 """
 
 from __future__ import annotations
+from typing import Optional
 from datetime import datetime
 from pydantic import Field
 
@@ -41,9 +42,9 @@ class AggregateRun(RunInfo):
     )
 
     # What was produced (output)
-    aggregated_dataset: AggregatedDataset = Field(
+    aggregated_dataset: Optional[AggregatedDataset] = Field(
         ...,
-        description="Dataset produced by this run"
+        description="Dataset produced by this run (None when included in summary to avoid duplication)"
     )
 
     # Timing

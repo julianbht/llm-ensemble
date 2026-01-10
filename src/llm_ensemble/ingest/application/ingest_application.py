@@ -153,7 +153,8 @@ class IngestApplication(ForRunningIngest):
         write_summary = self.output_port.write(ingest_run)
         logger.info(IngestLogEvent.PERSISTENCE_COMPLETE)
 
-        # Build run summary
+        # Build run summary (clear dataset to avoid duplication)
+        ingest_run.normalized_dataset = None  # Dataset stats already in summary metrics
         run_summary = IngestRunSummary(
             start_time=start_time,
             end_time=end_time,

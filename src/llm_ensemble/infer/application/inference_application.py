@@ -399,9 +399,10 @@ class InferenceApplication(ForRunningInference):
             details=write_summary,
         )
 
-        # Update run entity with end_time
+        # Update run entity with end_time and clear output (avoid duplication in summary)
         end_time = datetime.now()
         infer_run.end_time = end_time
+        infer_run.infer_run_output = None  # Output data already in summary metrics
 
         # Construct Pydantic summary
         return InferRunSummary(

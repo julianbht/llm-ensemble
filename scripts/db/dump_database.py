@@ -11,7 +11,7 @@ from pathlib import Path
 
 from llm_ensemble.libs.runtime.env import load_runtime_config
 
-DUMP_OUTPUT_PATH = Path("./artifacts/backups/backup.sql.gz")
+DUMP_OUTPUT_PATH = Path("./artifacts/backup/backup.sql.gz")
 
 # Load runtime configuration (DATABASE_URL, etc.)
 load_runtime_config()

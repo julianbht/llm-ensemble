@@ -7,7 +7,7 @@ This is the aggregate root that represents a complete inference run.
 from __future__ import annotations
 from typing import Optional
 from datetime import datetime
-from pydantic import ConfigDict, Field
+from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
@@ -61,5 +61,3 @@ class InferRun(RunInfo):
         default=None,
         description="When the run completed (None until run completes)"
     )
-
-    model_config = ConfigDict(frozen=True)

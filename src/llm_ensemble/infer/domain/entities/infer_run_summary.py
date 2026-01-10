@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.runtime.run_summary import RunSummary
 from llm_ensemble.infer.application.write_summary import WriteSummary
-from llm_ensemble.infer.domain.entities.infer_run_config import InferRunConfig
+from llm_ensemble.infer.domain.entities.infer_run import InferRun
 
 
 class JudgementsSummary(BaseModel):
@@ -130,16 +130,16 @@ class InferRunSummary(RunSummary):
     """Summary for infer CLI runs - aggregate metrics computed post-run.
 
     Extends the base RunSummary with inference-specific aggregate statistics:
-    - Config: complete run configuration for reproducibility
+    - Run: complete run entity (includes config, git info, timestamps, run metadata)
     - Judgements: counts and success metrics
     - Performance: latency, cost, and token usage
     - Persistence: write operations summary
     - Issues: warnings and errors collected during run
     """
 
-    config: InferRunConfig = Field(
+    run: InferRun = Field(
         ...,
-        description="Complete inference run configuration (model, provider, prompts, retries, etc.)"
+        description="Complete inference run entity (includes config, git info, timestamps, run metadata)"
     )
 
     judgements: JudgementsSummary = Field(

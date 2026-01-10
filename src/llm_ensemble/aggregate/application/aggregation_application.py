@@ -196,6 +196,7 @@ class AggregationApplication(ForRunningAggregation):
             judged_datasets,
             aggregated_votes,
             write_summary,
+            aggregate_run,
         )
 
         # Write summary.json
@@ -214,6 +215,7 @@ class AggregationApplication(ForRunningAggregation):
         judged_datasets: list[InferRunOutput],
         aggregated_votes: list[AggregatedVote],
         write_result: WriteSummary,
+        aggregate_run: AggregateRun,
     ) -> AggregateRunSummary:
         """Build run summary from execution results.
 
@@ -223,6 +225,7 @@ class AggregationApplication(ForRunningAggregation):
             judged_datasets: List of input InferRunOutput objects
             aggregated_votes: List of AggregatedVote entities produced
             write_result: Write operation summary from output port
+            aggregate_run: Complete run entity
 
         Returns:
             Complete AggregateRunSummary with all statistics
@@ -235,6 +238,7 @@ class AggregationApplication(ForRunningAggregation):
         return AggregateRunSummary(
             start_time=start_time,
             end_time=end_time,
+            run=aggregate_run,
             input_judgement_count=total_judgements,
             unique_pair_count=len(aggregated_votes),
             output_aggregated_count=len(aggregated_votes),

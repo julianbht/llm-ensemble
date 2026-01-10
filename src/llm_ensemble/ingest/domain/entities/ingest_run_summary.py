@@ -10,19 +10,22 @@ from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_summary import RunSummary
 from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
+from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
 
 
 class IngestRunSummary(RunSummary):
     """Summary for ingest CLI runs - aggregate metrics computed post-run.
 
     Extends the base RunSummary with ingestion-specific aggregate statistics:
+    - Run: complete run entity (includes config, git info, timestamps, run metadata)
     - Sample counts (number of samples produced)
     - Write summary (details of what was written to storage)
-
-    This is separate from IngestRunInfo which contains immutable configuration.
-    The IngestRunInfo is persisted separately (ingest_run_info.json) to avoid
-    duplication. This summary contains only runtime metrics for quick inspection.
     """
+
+    run: IngestRun = Field(
+        ...,
+        description="Complete ingest run entity (includes config, git info, timestamps, run metadata)"
+    )
 
     # Aggregate statistics (computed at end of run)
     sample_count: int = Field(

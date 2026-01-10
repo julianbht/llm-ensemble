@@ -6,7 +6,7 @@ This is the aggregate root that represents a complete ingest run.
 
 from __future__ import annotations
 from datetime import datetime
-from pydantic import ConfigDict, Field
+from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_info import RunInfo
 from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
@@ -56,5 +56,3 @@ class IngestRun(RunInfo):
         ...,
         description="When the run completed"
     )
-
-    model_config = ConfigDict(frozen=True)

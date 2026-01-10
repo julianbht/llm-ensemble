@@ -269,7 +269,7 @@ class InferenceApplication(ForRunningInference):
             start_time=start_time,
             llm_judgements=llm_judgements,
             write_summary=write_summary,
-            infer_run_config=infer_run.infer_run_config,
+            infer_run=infer_run,
         )
 
         # Write run summary to disk and log completion
@@ -347,7 +347,7 @@ class InferenceApplication(ForRunningInference):
         start_time: datetime,
         llm_judgements: list[LLMJudgement],
         write_summary: WriteSummary,
-        infer_run_config: InferRunConfig,
+        infer_run: InferRun,
     ) -> InferRunSummary:
         """Build run summary from execution results.
 
@@ -355,7 +355,7 @@ class InferenceApplication(ForRunningInference):
             start_time: Time when inference pipeline started
             llm_judgements: List of all judgements produced
             write_summary: Write operation summary from output port
-            infer_run_config: Complete run configuration for reproducibility
+            infer_run: Complete run entity (will be updated with end_time)
 
         Returns:
             Complete InferRunSummary with all statistics
@@ -399,11 +399,15 @@ class InferenceApplication(ForRunningInference):
             details=write_summary,
         )
 
+        # Update run entity with end_time
+        end_time = datetime.now()
+        infer_run.end_time = end_time
+
         # Construct Pydantic summary
         return InferRunSummary(
             start_time=start_time,
-            end_time=datetime.now(),
-            config=infer_run_config,
+            end_time=end_time,
+            run=infer_run,
             judgements=judgements_summary,
             performance=performance_summary,
             persistence=persistence_summary,

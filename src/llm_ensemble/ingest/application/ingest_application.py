@@ -157,6 +157,7 @@ class IngestApplication(ForRunningIngest):
         run_summary = IngestRunSummary(
             start_time=start_time,
             end_time=end_time,
+            run=ingest_run,
             sample_count=normalized_dataset.sample_count,
             write_summary=write_summary,
         )

@@ -9,20 +9,26 @@ from pydantic import Field
 
 from llm_ensemble.libs.runtime.run_summary import RunSummary
 from llm_ensemble.aggregate.domain.entities.write_summary import WriteSummary
+from llm_ensemble.aggregate.domain.entities.aggregate_run import AggregateRun
 
 
 class AggregateRunSummary(RunSummary):
     """Summary of aggregate run with timing and statistics.
 
     Extends the base RunSummary with aggregation-specific aggregate statistics:
+    - Run: complete run entity (includes config, git info, timestamps, run metadata)
     - Input/output counts (judgements read, unique pairs, aggregated votes)
     - Aggregation statistics (ties, no valid votes)
     - Write summary (persistence statistics from writer port)
     - Warnings summary (counts by warning type)
 
-    This is separate from AggregateRunInfo which contains immutable configuration.
     Written to summary.json for provenance tracking.
     """
+
+    run: AggregateRun = Field(
+        ...,
+        description="Complete aggregate run entity (includes config, git info, timestamps, run metadata)"
+    )
 
     # Core statistics
     input_judgement_count: int = Field(

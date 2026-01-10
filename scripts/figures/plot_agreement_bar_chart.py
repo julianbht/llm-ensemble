@@ -26,12 +26,13 @@ import typer
 
 # List of (label, run_name) tuples to compare
 RUNS = [
-    ("google-gemma-3-4b-it", "ensemble-1-google-gemma-3-4b-it"),
-    ("ministral-3b-2515", "ensemble-2-ministral-3b-2515"),
-    ("phi-4-multimodal-instruct", "ensemble-3-phi-4-multimodal-instruct"),
     ("llama-3.2-3b-instruct", "ensemble-4-meta-llama-3.2-3b-instruct-start"),
+    ("ministral-3b-2515", "ensemble-2-ministral-3b-2515"),
+    ("google-gemma-3-4b-it", "ensemble-1-google-gemma-3-4b-it"),
+    ("phi-4-multimodal-instruct", "ensemble-3-phi-4-multimodal-instruct"),
     ("ui-tars-1.5-7b", "ensemble-5-ui-tars-1.5-7b-start"),
-    ("cohere-command-r7b-12-2024", "ensemble-6-cohere-command-r7b-12-2024-start"),
+    ("ensemble (avg)", "ensemble-aggregated-avg-vote-1-to-5"),
+    # ("cohere-command-r7b-12-2024", "ensemble-6-cohere-command-r7b-12-2024-start"),
 ]
 
 # Metric to plot (must exist in evaluate_run.json metric_results)

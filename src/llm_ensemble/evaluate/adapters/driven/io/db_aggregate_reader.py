@@ -23,6 +23,7 @@ from llm_ensemble.aggregate.adapters.driven.io.orms import (
     AggregateRunORM,
     AggregatedDatasetORM,
     AggregatedVoteORM,
+    AggregationVoteORM,
 )
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
     NormalizedDatasetJudgingSampleORM,
@@ -58,41 +59,45 @@ class DBAggregateReader(ForInput):
         engine = get_engine()
 
         with get_session(engine) as session:
-            # Find AggregateRun by name
-            aggregate_run = session.query(AggregateRunORM).filter_by(run_name=input_run_name).first()
+            # Find AggregateRun by name with eager loading of dataset and votes
+            aggregate_run = (
+                session.query(AggregateRunORM)
+                .filter_by(run_name=input_run_name)
+                .options(
+                    selectinload(AggregateRunORM.aggregated_dataset)
+                    .selectinload(AggregatedDatasetORM.aggregated_votes)
+                    .selectinload(AggregatedVoteORM.aggregation_votes)
+                    .selectinload(AggregationVoteORM.llm_judgement)
+                )
+                .first()
+            )
             if not aggregate_run:
                 raise ValueError(f"Aggregate run '{input_run_name}' not found in database")
 
-            # Get AggregatedDataset
-            aggregated_dataset = (
-                session.query(AggregatedDatasetORM)
-                .filter_by(aggregate_run_id=aggregate_run.id)
-                .first()
-            )
+            # Get AggregatedDataset via relationship (AggregateRun has aggregated_dataset_id FK)
+            aggregated_dataset = aggregate_run.aggregated_dataset
             if not aggregated_dataset:
                 raise ValueError(f"No aggregated dataset found for aggregate run '{input_run_name}'")
 
-            # Read all aggregated votes with eager loading
-            votes = (
-                session.query(AggregatedVoteORM)
-                .filter_by(aggregated_dataset_id=aggregated_dataset.id)
-                .options(
-                    selectinload(AggregatedVoteORM.llm_judgements)
-                )
-                .all()
-            )
+            # Read all aggregated votes via many-to-many relationship
+            # (AggregatedDataset and AggregatedVote linked via junction table)
+            votes = aggregated_dataset.aggregated_votes
 
             # Extract ground truth and predictions
             ground_truth = []
             predictions = []
 
             for vote in votes:
+                # Get LLM judgements through junction table
+                # aggregation_votes is a list of AggregationVoteORM (junction records)
+                llm_judgements = [junction.llm_judgement for junction in vote.aggregation_votes]
+
                 # Validate business rule: all judgements in vote must judge same sample
-                if len(vote.llm_judgements) == 0:
+                if len(llm_judgements) == 0:
                     raise ValueError(f"AggregatedVote {vote.id} has no judgements")
 
-                first_dataset_sample_id = vote.llm_judgements[0].normalized_dataset_judging_sample_id
-                for judgement in vote.llm_judgements:
+                first_dataset_sample_id = llm_judgements[0].normalized_dataset_judging_sample_id
+                for judgement in llm_judgements:
                     assert judgement.normalized_dataset_judging_sample_id == first_dataset_sample_id, (
                         f"Business rule violation: All judgements in vote {vote.id} "
                         f"must judge the same normalized_dataset_judging_sample"

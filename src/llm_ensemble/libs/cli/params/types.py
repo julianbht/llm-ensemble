@@ -242,6 +242,47 @@ class AggregateIOConfigParamType(click.ParamType):
         ]
 
 
+class EvaluateIOConfigParamType(click.ParamType):
+    """Click parameter type for evaluate IO format selection."""
+
+    name = "IO_FORMAT"
+
+    def convert(self, value, param, ctx):  # type: ignore[override]
+        if value in (None, ""):
+            from llm_ensemble.evaluate.adapters.driven.io_factory import IOAdapterFactory
+            available = IOAdapterFactory.list_available()
+            available_str = ", ".join(available) if available else "none"
+            self.fail(
+                f"IO format is required. Use --io-cfg <format>.\n"
+                f"Available formats: {available_str}",
+                param,
+                ctx,
+            )
+
+        from llm_ensemble.evaluate.adapters.driven.io_factory import IOAdapterFactory
+        if not IOAdapterFactory.has_format(value):
+            available = IOAdapterFactory.list_available()
+            available_str = ", ".join(available) if available else "none"
+            self.fail(
+                f"IO format '{value}' not found.\n"
+                f"Available formats: {available_str}",
+                param,
+                ctx,
+            )
+
+        return value
+
+    def shell_complete(self, ctx, param, incomplete):  # type: ignore[override]
+        """Provide shell completion for available IO formats."""
+        from llm_ensemble.evaluate.adapters.driven.io_factory import IOAdapterFactory
+        available = IOAdapterFactory.list_available()
+        return [
+            click.shell_completion.CompletionItem(fmt)
+            for fmt in available
+            if fmt.startswith(incomplete)
+        ]
+
+
 class ModelConfigParamType(ConfigParamType):
     def __init__(self) -> None:
         super().__init__(

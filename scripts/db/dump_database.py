@@ -2,12 +2,8 @@
 """Dump the entire database to a compressed SQL file.
 
 Uses pg_dump to create a full backup of the database.
-
-Usage:
-    python scripts/dump_database.py --output llm_ensemble_backup.sql.gz
 """
 
-import argparse
 import os
 import subprocess
 import sys
@@ -15,31 +11,21 @@ from pathlib import Path
 
 from llm_ensemble.libs.runtime.env import load_runtime_config
 
+DUMP_OUTPUT_PATH = Path("/artifacts/backups/backup.sql.gz")
+
 # Load runtime configuration (DATABASE_URL, etc.)
 load_runtime_config()
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Dump entire database using pg_dump"
-    )
-    parser.add_argument(
-        "--output",
-        "-o",
-        type=Path,
-        required=True,
-        help="Output file path (use .sql.gz for compressed output)",
-    )
-
-    args = parser.parse_args()
-
     # Get database URL from environment
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         print("Error: DATABASE_URL not set in environment", file=sys.stderr)
         sys.exit(1)
 
-    output_path = args.output
+    output_path = DUMP_OUTPUT_PATH
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Build pg_dump command
     if output_path.suffix == ".gz":

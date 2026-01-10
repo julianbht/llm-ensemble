@@ -85,7 +85,8 @@ class AverageVoteAdapter(ForAggregating):
             std_dev = statistics.stdev(valid_scores)
             # Normalize std_dev and invert: 0 std_dev = 1.0 confidence, max std_dev = lower confidence
             normalized_std = std_dev / self.MAX_STD_DEV
-            final_confidence = 1.0 - normalized_std
+            # Clamp to [0, 1] range in case actual std_dev exceeds MAX_STD_DEV
+            final_confidence = max(0.0, min(1.0, 1.0 - normalized_std))
 
         # Build reasoning string
         total_votes = len(valid_scores)

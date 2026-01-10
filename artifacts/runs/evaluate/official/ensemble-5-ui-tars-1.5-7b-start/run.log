@@ -1,0 +1,57 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "ensemble-5-ui-tars-1.5-7b-start",
+  "run_name": "ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:04:49.084016Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "ensemble-5-ui-tars-1.5-7b-start",
+  "level": "info",
+  "run_name": "ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "infer",
+  "timestamp": "2026-01-10T17:04:55.405680Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:04:55.408158Z",
+  "value": 0.16664871898459443
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:04:55.409845Z",
+  "value": 0.3569290433849338
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/ensemble-5-ui-tars-1.5-7b-start/evaluate_run.json",
+  "run_name": "ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:04:55.416886Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:04:55.417049Z"
+}

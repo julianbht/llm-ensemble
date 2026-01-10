@@ -1,0 +1,47 @@
+{
+  "id": "c45ba47d-aff3-4fc3-8104-08a79c0d3b28",
+  "run_name": "ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "official",
+  "cli_name": "evaluate",
+  "notes": "The fifth run of the ensemble evaluated individually. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
+  "git_info": {
+    "git_sha": "306c7a3",
+    "git_clean": false,
+    "git_branch": "master"
+  },
+  "evaluate_run_config": {
+    "id": "ceddb84d-7d65-4bb8-b158-941920241470",
+    "io_config_name": "db_infer_to_json",
+    "input_run_name": "ensemble-5-ui-tars-1.5-7b-start",
+    "metric_names": [
+      "cohens_kappa",
+      "krippendorffs_alpha"
+    ]
+  },
+  "metric_results": [
+    {
+      "name": "cohens_kappa",
+      "value": 0.16664871898459443,
+      "sample_size": 3915,
+      "interpretation": "slight",
+      "description": "Cohen's Kappa coefficient measuring inter-rater agreement",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    },
+    {
+      "name": "krippendorffs_alpha",
+      "value": 0.3569290433849338,
+      "sample_size": 3915,
+      "interpretation": "insufficient (unreliable)",
+      "description": "Krippendorff's Alpha coefficient measuring inter-rater reliability (ordinal scale)",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    }
+  ],
+  "evaluated_run_type": "infer",
+  "evaluated_sample_count": 3918,
+  "start_time": "2026-01-10T12:04:49.084124",
+  "end_time": "2026-01-10T12:04:55.409899"
+}

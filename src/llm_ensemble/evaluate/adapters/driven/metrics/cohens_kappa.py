@@ -55,8 +55,33 @@ class CohensKappaAdapter(ForComputingMetrics):
         if len(ground_truth) == 0:
             raise ValueError("Cannot compute Cohen's Kappa on empty input")
 
+        # Filter out pairs where prediction is None (failed parse)
+        # Cohen's Kappa requires complete data (unlike Krippendorff's Alpha)
+        valid_pairs = [
+            (gt, pred) for gt, pred in zip(ground_truth, predictions)
+            if pred is not None
+        ]
+
+        missing_count = len(ground_truth) - len(valid_pairs)
+
+        if len(valid_pairs) == 0:
+            raise ValueError(
+                "Cannot compute Cohen's Kappa: all predictions are None (no valid data)"
+            )
+
+        # Assert data quality: no more than 5 missing labels
+        if missing_count > 5:
+            raise ValueError(
+                f"Too many missing predictions ({missing_count}). "
+                f"Maximum allowed: 5. Data may not be usable."
+            )
+
+        # Extract filtered ground truth and predictions
+        filtered_ground_truth = [pair[0] for pair in valid_pairs]
+        filtered_predictions = [pair[1] for pair in valid_pairs]
+
         # Compute Cohen's Kappa using scikit-learn
-        kappa_value = cohen_kappa_score(ground_truth, predictions)
+        kappa_value = cohen_kappa_score(filtered_ground_truth, filtered_predictions)
 
         # Interpretation guide (Landis & Koch, 1977)
         interpretation = self._interpret_kappa(kappa_value)
@@ -64,7 +89,7 @@ class CohensKappaAdapter(ForComputingMetrics):
         return MetricResult(
             name="cohens_kappa",
             value=kappa_value,
-            sample_size=len(ground_truth),
+            sample_size=len(valid_pairs),
             interpretation=interpretation,
             description="Cohen's Kappa coefficient measuring inter-rater agreement",
             min_value=-1.0,

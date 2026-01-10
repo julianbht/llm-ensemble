@@ -1,0 +1,57 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "ensemble-6-cohere-command-r7b-12-2024-start",
+  "run_name": "ensemble-6-cohere-command-r7b-12-2024-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:07:45.690640Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "ensemble-6-cohere-command-r7b-12-2024-start",
+  "level": "info",
+  "run_name": "ensemble-6-cohere-command-r7b-12-2024-start",
+  "run_type": "infer",
+  "timestamp": "2026-01-10T17:07:52.406279Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "ensemble-6-cohere-command-r7b-12-2024-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:07:52.408919Z",
+  "value": 0.21058176628530767
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "ensemble-6-cohere-command-r7b-12-2024-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:07:52.410613Z",
+  "value": 0.41255761543977254
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/ensemble-6-cohere-command-r7b-12-2024-start/evaluate_run.json",
+  "run_name": "ensemble-6-cohere-command-r7b-12-2024-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:07:52.417728Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "ensemble-6-cohere-command-r7b-12-2024-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:07:52.417895Z"
+}

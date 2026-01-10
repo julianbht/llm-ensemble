@@ -430,19 +430,23 @@ class DBWriter(ForOutput):
         # Build list of (vote_id, judgement_id) tuples to check
         junction_keys = [(j.aggregated_vote_id, j.llm_judgement_id) for j in junction_orms]
 
-        # Query existing junctions
-        existing_junctions = {
-            (str(vote_id), str(judgement_id))
-            for (vote_id, judgement_id) in
-            session.query(
+        # Query existing junctions in batches to avoid stack depth errors
+        # PostgreSQL struggles with massive IN clauses (e.g., 11k+ pairs)
+        existing_junctions = set()
+        batch_size = 1000
+        for i in range(0, len(junction_keys), batch_size):
+            batch = junction_keys[i:i + batch_size]
+            batch_results = session.query(
                 AggregationVoteORM.aggregated_vote_id,
                 AggregationVoteORM.llm_judgement_id
-            )
-            .filter(
+            ).filter(
                 tuple_(AggregationVoteORM.aggregated_vote_id, AggregationVoteORM.llm_judgement_id)
-                .in_(junction_keys)
+                .in_(batch)
             )
-        }
+            existing_junctions.update(
+                (str(vote_id), str(judgement_id))
+                for (vote_id, judgement_id) in batch_results
+            )
 
         # Filter to only new junctions
         new_junction_orms = [
@@ -497,19 +501,22 @@ class DBWriter(ForOutput):
         # Build list of (dataset_id, vote_id) tuples to check
         junction_keys = [(j.aggregated_dataset_id, j.aggregated_vote_id) for j in junction_orms]
 
-        # Query existing junctions
-        existing_junctions = {
-            (str(dataset_id), str(vote_id))
-            for (dataset_id, vote_id) in
-            session.query(
+        # Query existing junctions in batches to avoid stack depth errors
+        existing_junctions = set()
+        batch_size = 1000
+        for i in range(0, len(junction_keys), batch_size):
+            batch = junction_keys[i:i + batch_size]
+            batch_results = session.query(
                 AggregatedDatasetVoteORM.aggregated_dataset_id,
                 AggregatedDatasetVoteORM.aggregated_vote_id
-            )
-            .filter(
+            ).filter(
                 tuple_(AggregatedDatasetVoteORM.aggregated_dataset_id, AggregatedDatasetVoteORM.aggregated_vote_id)
-                .in_(junction_keys)
+                .in_(batch)
             )
-        }
+            existing_junctions.update(
+                (str(dataset_id), str(vote_id))
+                for (dataset_id, vote_id) in batch_results
+            )
 
         # Filter to only new junctions
         new_junction_orms = [

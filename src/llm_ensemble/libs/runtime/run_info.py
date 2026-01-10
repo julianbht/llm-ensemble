@@ -10,7 +10,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Optional
 from uuid import UUID, uuid4
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from llm_ensemble.libs.runtime.git_utils import GitInfo, get_git_info
 
@@ -72,5 +72,3 @@ class RunInfo(BaseModel):
         default_factory=get_git_info,
         description="Git metadata (commit SHA, branch, clean status) captured at time of run"
     )
-
-    model_config = ConfigDict(frozen=True)

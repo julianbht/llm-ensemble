@@ -1,0 +1,25 @@
+# Short name for run ID generation
+name_hint: command-r7b-12-2024
+
+# Model identifier (passed directly to provider API)
+model_id: cohere/command-r7b-12-2024
+
+# Model capabilities
+context_window: null
+capabilities: {}
+
+# Core inference parameters
+temperature: 0.01
+max_tokens: null
+top_p: null
+frequency_penalty: null
+presence_penalty: null
+seed: null
+
+# Additional provider-specific parameters (stop sequences, response_format, etc.)
+additional_params: {}
+# Pricing information (auto-updated from OpenRouter API)
+pricing:
+  prompt_cost_per_1m_tokens: 0.08
+  completion_cost_per_1m_tokens: 0.5
+  last_updated: "2026-01-10T12:25:42.269104+00:00"

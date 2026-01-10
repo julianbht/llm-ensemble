@@ -186,8 +186,32 @@ class OpenRouterAdapter(ForInvokingLLM):
 
         latency_ms = (time.perf_counter() - start_time) * 1000
 
-        # Extract response text
-        raw_response_text = response.choices[0].message.content
+        # Validate response structure before extracting content
+        if not response.choices or len(response.choices) == 0:
+            self.logger.error(
+                InferLogEvent.API_ERROR,
+                error="API returned empty choices array",
+                response_id=getattr(response, "id", None),
+                model=self.model_config.model_id,
+            )
+            # Return sentinel response instead of crashing
+            raw_response_text = "[ERROR: OpenRouter API returned empty choices array - possible content filtering or model refusal]"
+        else:
+            # Extract response text
+            raw_response_text = response.choices[0].message.content
+
+            # Validate content is not None
+            if raw_response_text is None:
+                finish_reason = getattr(response.choices[0], "finish_reason", None)
+                self.logger.error(
+                    InferLogEvent.API_ERROR,
+                    error="API returned None content",
+                    response_id=getattr(response, "id", None),
+                    model=self.model_config.model_id,
+                    finish_reason=finish_reason,
+                )
+                # Return sentinel response instead of crashing
+                raw_response_text = f"[ERROR: OpenRouter API returned None content - finish_reason: {finish_reason}]"
 
         # Extract metadata
         generation_id = getattr(response, "id", None)

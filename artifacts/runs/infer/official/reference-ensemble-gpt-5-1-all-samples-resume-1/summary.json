@@ -1,0 +1,134 @@
+{
+  "start_time": "2026-01-10T09:37:25.900716",
+  "end_time": "2026-01-10T12:36:06.342919",
+  "run": {
+    "id": "1c0c3da5-b146-45f7-9614-73349e94610b",
+    "run_name": "reference-ensemble-gpt-5-1-all-samples-resume-1",
+    "run_type": "official",
+    "cli_name": "infer",
+    "notes": "The proper reference run, repeating an earlier run. The first run had an issue in the promt template where it wouldnt give valid instruction as to the label to assign (it missed an instruction for the label 3). There was an unhandled api error on sample 1443, so we continue from there.",
+    "git_info": {
+      "git_sha": "e63db7a",
+      "git_clean": false,
+      "git_branch": "master"
+    },
+    "infer_run_config": {
+      "id": "037f1b0b-9965-4d92-90ea-39f04c979161",
+      "model_cfg": {
+        "id": "caa17958-21de-460e-b349-4becc2ce9925",
+        "name": "openai-gpt-5.1",
+        "name_hint": "gpt-5.1",
+        "model_id": "openai/gpt-5.1",
+        "context_window": null,
+        "capabilities": {},
+        "temperature": 0.01,
+        "max_tokens": null,
+        "top_p": null,
+        "frequency_penalty": null,
+        "presence_penalty": null,
+        "seed": null,
+        "additional_params": {},
+        "pricing": {
+          "prompt_cost_per_1m_tokens": 1.25,
+          "completion_cost_per_1m_tokens": 10.0
+        }
+      },
+      "provider": {
+        "id": "658b768d-2130-4240-a565-fd6c28a6ce4e",
+        "name": "openrouter",
+        "version": "1.0"
+      },
+      "prompt_template": {
+        "id": "1e313655-3141-43e9-829f-dfe71eafbb48",
+        "name": "thomas-advanced-trec-v2",
+        "template_text": "Given a query and a web page, you must provide a score on an integer scale of 0 to 3 with the following meanings:\n\n3 = Perfectly relevant: The passage is dedicated to the query and contains the exact answer.\n2 = Highly relevant: The passage has some answers for the query, but the answer may be a bit unclear, or hidden amongst extraneous information\n1 = Related: The passage seems related to the query but does not answer it.\n0 = Irrelevant: The passage has nothing to do with the query.\n\nAssume that you are writing a report on the subject of the topic.\nIf the passage directly and clearly answers the query, mark it 3.\nIf it is primarily about the topic but the answer is partial or indirect, mark it 2.\nIf it is only loosely related but might provide minor context, mark it 1.\nOtherwise, mark it 0.\n\nQuery\nA person has typed [{query}] into a search engine.\n\nResult\nConsider the following web page.\n—BEGIN WEB PAGE CONTENT—\n{document}\n—END WEB PAGE CONTENT—\n\nInstructions\nSplit this problem into steps:\n\nConsider the underlying intent of the search.\n\nMeasure how well the content matches a likely intent of the query (M).\nMeasure how trustworthy the web page is (T).\nConsider the aspects above and the relative importance of each, and decide on a final score (O).\n\nProduce a JSON object scores without providing any reasoning.\nExample: {{\"M\": 2, \"T\": 1, \"O\": 1}}",
+        "prompt_builder": {
+          "id": "6cd726de-6102-5810-a21d-4f21f16083fb",
+          "name": "thomas-advanced-trec-v2",
+          "version": "1.0"
+        },
+        "response_parser": {
+          "id": "f44d8c88-8f27-56e3-9ea5-9980e071256c",
+          "name": "thomas-advanced-trec",
+          "version": "1.0"
+        }
+      },
+      "retry_config": {
+        "id": "bd4fe04e-2996-4ded-9cf7-ade1845bd4de",
+        "name": "standard",
+        "max_retries": 5,
+        "base_delay_seconds": 1.0,
+        "max_delay_seconds": 60.0,
+        "request_timeout_seconds": 120,
+        "retryable_status_codes": [
+          429,
+          503,
+          504
+        ]
+      },
+      "input_run_name": "20260107_014749",
+      "start_idx": 1442,
+      "end_idx": 3918,
+      "io_name": "db_to_db"
+    },
+    "infer_run_output": null,
+    "start_time": "2026-01-10T09:37:25.900716",
+    "end_time": "2026-01-10T12:36:06.342919"
+  },
+  "judgements": {
+    "total_count": 2476,
+    "failed_parses_count": 0,
+    "vote_breakdown": {
+      "Irrelevant": 974,
+      "Relevant": 923,
+      "Highly Relevant": 387,
+      "Perfectly Relevant": 192
+    }
+  },
+  "performance": {
+    "latency": {
+      "total_ms": 10683465.853265058,
+      "avg_ms": 4314.808502934192
+    },
+    "cost": {
+      "total_usd": 4.213175
+    },
+    "tokens": {
+      "total_prompt": 1447644,
+      "total_completion": 240362,
+      "total": 1688006
+    }
+  },
+  "persistence": {
+    "total_created": 2479,
+    "total_skipped": 7432,
+    "details": {
+      "providers_created": 0,
+      "providers_skipped": 1,
+      "model_configs_created": 0,
+      "model_configs_skipped": 1,
+      "prompt_templates_created": 0,
+      "prompt_templates_skipped": 1,
+      "parser_created": 0,
+      "parser_skipped": 1,
+      "infer_run_configs_created": 1,
+      "infer_run_configs_skipped": 0,
+      "infer_runs_created": 1,
+      "infer_runs_skipped": 0,
+      "infer_run_outputs_created": 1,
+      "infer_run_outputs_skipped": 0,
+      "llm_prompts_created": 0,
+      "llm_prompts_skipped": 2476,
+      "llm_responses_created": 0,
+      "llm_responses_skipped": 2476,
+      "llm_scores_created": 0,
+      "llm_scores_skipped": 2476,
+      "llm_judgements_created": 2476,
+      "llm_judgements_skipped": 0
+    }
+  },
+  "issues": null,
+  "duration_seconds": 10720.44,
+  "duration_minutes": 178.67,
+  "duration_hours": 2.98
+}

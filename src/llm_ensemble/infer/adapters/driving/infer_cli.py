@@ -13,13 +13,14 @@ and all logging appears in the terminal automatically.
 
 Tested via CLI integration tests.
 """
+
 from __future__ import annotations
 import typer
 
 from llm_ensemble.infer.startup.dependency_configurator import build_application
 from llm_ensemble.libs.runtime.run_name import generate_run_name
 
-from llm_ensemble.libs.cli.params import (
+from llm_ensemble.libs.cli.params.shared_params import (
     RunName,
     Official,
     Notes,
@@ -27,11 +28,10 @@ from llm_ensemble.libs.cli.params import (
     EndIdx,
     ModelCfg,
     PromptTemplate,
-    Provider,
-    InferIoCfg,
     RetryCfg,
-    InferIngestRunInput,
 )
+
+from llm_ensemble.libs.cli.params.infer import Provider, InferIoCfg, IngestRunInput
 
 app = typer.Typer(
     add_completion=True,
@@ -47,7 +47,7 @@ def infer(
     provider: Provider,
     prompt_template: PromptTemplate,
     io_cfg: InferIoCfg,
-    input_run_name: InferIngestRunInput,
+    input_run_name: IngestRunInput,
     # Optional parameters
     retry_cfg: RetryCfg = "standard",
     start_idx: StartIdx = None,

@@ -13,16 +13,20 @@ and all logging appears in the terminal automatically.
 
 Tested via CLI integration tests.
 """
+
 from __future__ import annotations
 import typer
 
 from llm_ensemble.ingest.startup.dependency_configurator import build_application
 from llm_ensemble.libs.runtime.run_name import generate_run_name
-from llm_ensemble.libs.cli.params import (
+from llm_ensemble.libs.cli.params.shared_params import (
     InputPath,
     RunName,
     Official,
     Notes,
+)
+
+from llm_ensemble.libs.cli.params.ingest import (
     Limit,
     IngestIoCfg,
 )

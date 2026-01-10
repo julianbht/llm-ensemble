@@ -1,0 +1,47 @@
+{
+  "id": "73d926e7-d3b8-4d0f-9c95-5021576f0aed",
+  "run_name": "reference-ensemble-gpt-5-1-all-samples-start",
+  "run_type": "official",
+  "cli_name": "evaluate",
+  "notes": "The reference state of the art LLM to compare the ensemble to. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
+  "git_info": {
+    "git_sha": "3a00692",
+    "git_clean": false,
+    "git_branch": "master"
+  },
+  "evaluate_run_config": {
+    "id": "a8c089a1-88b1-474c-b05c-cd94a9f9918d",
+    "io_config_name": "db_infer_to_json",
+    "input_run_name": "reference-ensemble-gpt-5-1-all-samples-start",
+    "metric_names": [
+      "cohens_kappa",
+      "krippendorffs_alpha"
+    ]
+  },
+  "metric_results": [
+    {
+      "name": "cohens_kappa",
+      "value": 0.22916593914211825,
+      "sample_size": 3918,
+      "interpretation": "fair",
+      "description": "Cohen's Kappa coefficient measuring inter-rater agreement",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    },
+    {
+      "name": "krippendorffs_alpha",
+      "value": 0.4752246367000904,
+      "sample_size": 3918,
+      "interpretation": "insufficient (unreliable)",
+      "description": "Krippendorff's Alpha coefficient measuring inter-rater reliability (ordinal scale)",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    }
+  ],
+  "evaluated_run_type": "infer",
+  "evaluated_sample_count": 3918,
+  "start_time": "2026-01-10T18:03:00.021893",
+  "end_time": "2026-01-10T18:03:06.781552"
+}

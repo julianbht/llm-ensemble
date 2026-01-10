@@ -93,6 +93,9 @@ class KrippendorffsAlphaAdapter(ForComputingMetrics):
             sample_size=sample_size,
             interpretation=interpretation,
             description="Krippendorff's Alpha coefficient measuring inter-rater reliability (ordinal scale)",
+            min_value=-1.0,
+            max_value=1.0,
+            higher_is_better=True,
         )
 
     @staticmethod

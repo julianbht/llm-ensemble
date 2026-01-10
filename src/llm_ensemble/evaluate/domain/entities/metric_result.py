@@ -43,3 +43,18 @@ class MetricResult(BaseModel):
         None,
         description="Brief description of what this metric measures"
     )
+
+    min_value: Optional[float] = Field(
+        None,
+        description="Minimum possible value for this metric (for visualization)"
+    )
+
+    max_value: Optional[float] = Field(
+        None,
+        description="Maximum possible value for this metric (for visualization)"
+    )
+
+    higher_is_better: Optional[bool] = Field(
+        None,
+        description="Whether higher values indicate better performance"
+    )

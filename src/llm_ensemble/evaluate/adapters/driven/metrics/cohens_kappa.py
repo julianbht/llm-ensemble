@@ -67,6 +67,9 @@ class CohensKappaAdapter(ForComputingMetrics):
             sample_size=len(ground_truth),
             interpretation=interpretation,
             description="Cohen's Kappa coefficient measuring inter-rater agreement",
+            min_value=-1.0,
+            max_value=1.0,
+            higher_is_better=True,
         )
 
     @staticmethod

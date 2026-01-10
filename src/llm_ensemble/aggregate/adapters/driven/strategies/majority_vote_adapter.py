@@ -1,11 +1,12 @@
 """Majority vote aggregation strategy adapter.
 
 Simple majority vote: the label with the most votes wins.
-Ties are broken deterministically by choosing the lowest numeric label.
+Ties are broken by averaging the tied labels and rounding to nearest label.
 """
 
 from __future__ import annotations
 from collections import Counter
+import statistics
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.application.ports.driven.for_aggregating import ForAggregating
@@ -20,8 +21,8 @@ class MajorityVoteAdapter(ForAggregating):
 
     Counts votes for each label and selects the label with the most votes.
 
-    Tie handling: If multiple labels have the same count, picks the lowest
-    numeric label deterministically (e.g., IRRELEVANT=0 beats RELEVANT=1).
+    Tie handling: If multiple labels have the same count, averages the tied
+    labels' numeric values and rounds to the nearest label.
 
     Confidence: Fraction of votes that went to the winning label.
 
@@ -71,8 +72,15 @@ class MajorityVoteAdapter(ForAggregating):
         # Find all labels with max count (for tie detection)
         winners = [label for label, count in vote_counts.items() if count == max_count]
 
-        # Break ties deterministically: pick lowest numeric label
-        final_label = min(winners, key=lambda x: x.value)
+        # Break ties by averaging: calculate mean of tied labels and round
+        if len(winners) > 1:
+            mean_score = statistics.mean([label.value for label in winners])
+            rounded_score = round(mean_score)
+            # Clamp to valid range [0, 3]
+            final_score = max(0, min(3, rounded_score))
+            final_label = RelevanceScore(final_score)
+        else:
+            final_label = winners[0]
 
         # Calculate confidence: fraction of votes for winning label
         total_votes = len(valid_labels)
@@ -80,10 +88,10 @@ class MajorityVoteAdapter(ForAggregating):
 
         # Build reasoning string
         if len(winners) > 1:
+            tied_labels_str = ', '.join(str(w.label) for w in winners)
             reasoning = (
-                f"{max_count}/{total_votes} models voted {final_label.label} "
-                f"(tie with {', '.join(str(w.label) for w in winners if w != final_label)}, "
-                f"broken by lowest label)"
+                f"{max_count}/{total_votes} models each voted for: {tied_labels_str} "
+                f"(tie broken by average: {mean_score:.2f} → {final_label.label})"
             )
         else:
             reasoning = f"{max_count}/{total_votes} models voted {final_label.label}"

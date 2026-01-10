@@ -1,18 +1,18 @@
 {
-  "id": "f6f636fa-f24c-4e90-899a-62e64cd795bf",
-  "run_name": "ensemble-aggregated-avg-vote-1-to-5",
+  "id": "3dd98e25-d30f-4747-9c05-3fb24391364e",
+  "run_name": "-ensemble-1-to-5-majority-vote",
   "run_type": "official",
   "cli_name": "evaluate",
-  "notes": "The average vote strategy output of the ensemble 1 to 5. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
+  "notes": "The majority vote strategy output of the ensemble 1 to 5. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
   "git_info": {
-    "git_sha": "3ec47d0",
+    "git_sha": "dfda55a",
     "git_clean": false,
     "git_branch": "master"
   },
   "evaluate_run_config": {
-    "id": "2a974e91-d1c8-45ef-9a5d-8666d73af406",
+    "id": "312c637d-2c5b-4f56-bdbe-1b8a5b605b9a",
     "io_config_name": "db_aggregate_to_json",
-    "input_run_name": "-ensemble-1-to-5-avg-vote-3",
+    "input_run_name": "-ensemble-1-to-5-majority-vote",
     "metric_names": [
       "cohens_kappa",
       "krippendorffs_alpha"
@@ -21,9 +21,9 @@
   "metric_results": [
     {
       "name": "cohens_kappa",
-      "value": 0.16452896214113621,
+      "value": 0.2061285068544204,
       "sample_size": 3918,
-      "interpretation": "slight",
+      "interpretation": "fair",
       "description": "Cohen's Kappa coefficient measuring inter-rater agreement",
       "min_value": -1.0,
       "max_value": 1.0,
@@ -31,7 +31,7 @@
     },
     {
       "name": "krippendorffs_alpha",
-      "value": 0.38217840823792637,
+      "value": 0.39416993566654956,
       "sample_size": 3918,
       "interpretation": "insufficient (unreliable)",
       "description": "Krippendorff's Alpha coefficient measuring inter-rater reliability (ordinal scale)",
@@ -42,6 +42,6 @@
   ],
   "evaluated_run_type": "aggregate",
   "evaluated_sample_count": 3918,
-  "start_time": "2026-01-10T12:54:44.823612",
-  "end_time": "2026-01-10T12:54:52.377926"
+  "start_time": "2026-01-10T13:02:47.933624",
+  "end_time": "2026-01-10T13:02:55.453432"
 }

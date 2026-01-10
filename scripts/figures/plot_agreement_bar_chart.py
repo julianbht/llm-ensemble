@@ -31,7 +31,8 @@ RUNS = [
     ("google-gemma-3-4b-it", "ensemble-1-google-gemma-3-4b-it"),
     ("phi-4-multimodal-instruct", "ensemble-3-phi-4-multimodal-instruct"),
     ("ui-tars-1.5-7b", "ensemble-5-ui-tars-1.5-7b-start"),
-    ("ensemble (avg)", "ensemble-aggregated-avg-vote-1-to-5"),
+    ("ensemble (mv)", "-ensemble-1-to-5-majority-vote"),
+    ("ensemble (av)", "-ensemble-1-to-5-avg-vote-3"),
     # ("cohere-command-r7b-12-2024", "ensemble-6-cohere-command-r7b-12-2024-start"),
 ]
 

@@ -1,0 +1,57 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "ensemble-aggregated-avg-vote-1-to-5",
+  "run_name": "ensemble-aggregated-avg-vote-1-to-5",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:54:44.823461Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "-ensemble-1-to-5-avg-vote-3",
+  "level": "info",
+  "run_name": "ensemble-aggregated-avg-vote-1-to-5",
+  "run_type": "aggregate",
+  "timestamp": "2026-01-10T17:54:52.367032Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "ensemble-aggregated-avg-vote-1-to-5",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:54:52.375246Z",
+  "value": 0.16452896214113621
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "ensemble-aggregated-avg-vote-1-to-5",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:54:52.377861Z",
+  "value": 0.38217840823792637
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/ensemble-aggregated-avg-vote-1-to-5/evaluate_run.json",
+  "run_name": "ensemble-aggregated-avg-vote-1-to-5",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:54:52.386714Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "ensemble-aggregated-avg-vote-1-to-5",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:54:52.386983Z"
+}

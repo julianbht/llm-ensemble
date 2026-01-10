@@ -14,6 +14,18 @@ app = typer.Typer(
 )
 
 
+# Default table caption and label
+TABLE_CAPTION = "Ensemble candidates that satisfsy the operational constraints. Sorted by parameter size."
+TABLE_LABEL = "tab:models"
+
+# Models to exclude from output (matches on Model column, before or after provider prefix strip)
+EXCLUDED_MODELS = [
+    "mistralai/ministral-3b",
+    "mistralai/ministral-8b",
+    "ministral-3b",
+    "ministral-8b",
+]
+
 EXCLUDED_COLUMNS = [
     # Add column names to exclude from LaTeX output
     # "Unnamed: 0",
@@ -25,16 +37,16 @@ EXCLUDED_COLUMNS = [
     "release",
     "Cost",
     "Ctx",
-    "Reasoning"
+    "Reasoning",
 ]
 
 # Columns that should wrap text with specified width (in cm)
 WRAPPED_COLUMNS = {
-    "Use Case" : "7cm",
-    "Model" : "2cm",
-    "Size" : "1cm",
-    "Training Data" : "7cm",
-    "Input" : "3cm",
+    "Use Case": "7cm",
+    "Model": "3cm",
+    "Size": "0.8cm",
+    "Training Data": "5.5cm",
+    "Input": "2cm",
     # "Column Name": "3cm",
     # "Long Description": "5cm",
 }
@@ -50,7 +62,7 @@ AUTO_WIDTH_COLUMNS = [
 USE_TABULARX = False
 
 # Split table into two equal parts (by rows)
-SPLIT_TABLE = True
+SPLIT_TABLE = False
 
 # Columns to apply specific transformations
 COLUMN_TRANSFORMS = {
@@ -62,7 +74,7 @@ COLUMN_TRANSFORMS = {
 def _df_to_latex(df: pd.DataFrame, latex_kwargs: dict) -> str:
     """Helper to convert a single DataFrame to LaTeX."""
     # Build column format with wrapped columns and X columns
-    if 'column_format' not in latex_kwargs or latex_kwargs['column_format'] is None:
+    if "column_format" not in latex_kwargs or latex_kwargs["column_format"] is None:
         col_format = []
         for col in df.columns:
             if USE_TABULARX and col in AUTO_WIDTH_COLUMNS:
@@ -73,7 +85,7 @@ def _df_to_latex(df: pd.DataFrame, latex_kwargs: dict) -> str:
                 col_format.append("l")
         column_format_str = "".join(col_format)
     else:
-        column_format_str = latex_kwargs['column_format']
+        column_format_str = latex_kwargs["column_format"]
 
     # Make headers bold by temporarily renaming columns
     original_columns = df.columns.tolist()
@@ -82,12 +94,12 @@ def _df_to_latex(df: pd.DataFrame, latex_kwargs: dict) -> str:
     # Convert to LaTeX with sensible defaults
     # Note: pandas 2.x always uses booktabs style (requires \usepackage{booktabs})
     latex_defaults = {
-        'index': False,
-        'escape': False,  # Disable escape to allow \textbf{} in headers
-        'column_format': column_format_str,
-        'longtable': False,
-        'caption': None,
-        'label': None,
+        "index": False,
+        "escape": False,  # Disable escape to allow \textbf{} in headers
+        "column_format": column_format_str,
+        "longtable": False,
+        "caption": None,
+        "label": None,
     }
     latex_defaults.update(latex_kwargs)
 
@@ -99,12 +111,14 @@ def _df_to_latex(df: pd.DataFrame, latex_kwargs: dict) -> str:
     # Convert tabular to tabularx if enabled
     if USE_TABULARX:
         latex_str = latex_str.replace(
-            r'\begin{tabular}',
-            r'\begin{tabularx}{\textwidth}'
+            r"\begin{tabular}", r"\begin{tabularx}{\textwidth}"
         )
+        latex_str = latex_str.replace(r"\end{tabular}", r"\end{tabularx}")
+
+    # Add centering to table environment if caption is present
+    if latex_kwargs.get("caption"):
         latex_str = latex_str.replace(
-            r'\end{tabular}',
-            r'\end{tabularx}'
+            r"\begin{table}", r"\begin{table}" + "\n\\centering"
         )
 
     return latex_str
@@ -114,7 +128,7 @@ def excel_to_latex(
     excel_path: str,
     output_path: str | None = None,
     sheet_name: str | int = 0,
-    **latex_kwargs
+    **latex_kwargs,
 ) -> str:
     """
     Convert Excel file to LaTeX table with formatting.
@@ -143,10 +157,17 @@ def excel_to_latex(
     if columns_to_drop:
         df = df.drop(columns=columns_to_drop)
 
+    # Filter out excluded models (if Model column exists)
+    if "Model" in df.columns:
+        df = df[~df["Model"].isin(EXCLUDED_MODELS)]
+
     # Apply column transformations
     for col, transform in COLUMN_TRANSFORMS.items():
         if col in df.columns:
             df[col] = df[col].apply(transform)
+
+    # Replace NaN with empty strings
+    df = df.fillna("")
 
     # Split table if enabled
     if SPLIT_TABLE:
@@ -173,14 +194,22 @@ def excel_to_latex(
 
 @app.command()
 def main(
-    excel_file: Path = typer.Argument(..., help="Path to Excel file", exists=True),
-    output: Optional[Path] = typer.Option(None, "-o", "--output", help="Output LaTeX file (default: print to stdout)"),
+    excel_file: Path = typer.Argument(
+        "artifacts/tables/model-analysis.xlsx", help="Path to Excel file", exists=True
+    ),
+    output: Optional[Path] = typer.Option(
+        None, "-o", "--output", help="Output LaTeX file (default: print to stdout)"
+    ),
     sheet: str = typer.Option("0", help="Sheet name or index"),
     index: bool = typer.Option(False, help="Include DataFrame index in output"),
-    longtable: bool = typer.Option(False, help="Use longtable environment for multi-page tables"),
+    longtable: bool = typer.Option(
+        False, help="Use longtable environment for multi-page tables"
+    ),
     caption: Optional[str] = typer.Option(None, help="Table caption"),
     label: Optional[str] = typer.Option(None, help="LaTeX label for referencing"),
-    column_format: Optional[str] = typer.Option(None, help='LaTeX column format string (e.g., "lrr")'),
+    column_format: Optional[str] = typer.Option(
+        None, help='LaTeX column format string (e.g., "lrr")'
+    ),
 ):
     """
     Convert Excel file to LaTeX table with booktabs formatting.
@@ -205,24 +234,22 @@ def main(
         pass
 
     latex_kwargs = {
-        'index': index,
-        'longtable': longtable,
+        "index": index,
+        "longtable": longtable,
+        "caption": caption if caption else TABLE_CAPTION,
+        "label": label if label else TABLE_LABEL,
     }
 
-    if caption:
-        latex_kwargs['caption'] = caption
-    if label:
-        latex_kwargs['label'] = label
     if column_format:
-        latex_kwargs['column_format'] = column_format
+        latex_kwargs["column_format"] = column_format
 
     excel_to_latex(
         str(excel_file),
         str(output) if output else None,
         sheet_name=sheet_name,
-        **latex_kwargs
+        **latex_kwargs,
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app()

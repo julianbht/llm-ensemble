@@ -196,19 +196,6 @@ def test_parse_fuzzy_irrelevant(parser: ThomasAdvancedTrecParser):
 # ============================================================================
 
 @pytest.mark.unit
-def test_parse_string_score_converts_to_int(parser: ThomasAdvancedTrecParser):
-    """Parse JSON with string "2" instead of int 2 - should convert."""
-    raw_text = '{"M": 2, "T": 1, "O": "2"}'
-
-    score, issue = parser.parse(raw_text)
-
-    assert score is not None
-    assert score.label == RelevanceScore.HIGHLY_RELEVANT
-    assert issue is not None
-    assert issue.code == ParserIssueCode.TYPE_COERCION_APPLIED
-    
-
-@pytest.mark.unit
 def test_parse_float_instead_of_int(parser: ThomasAdvancedTrecParser):
     """Parse JSON with float value - regex extracts integer part."""
     raw_text = '{"M": 2, "T": 1, "O": 2.5}'

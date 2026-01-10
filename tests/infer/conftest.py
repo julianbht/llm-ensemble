@@ -1,4 +1,4 @@
-"""Pytest fixtures for infer CLI tests.
+i"""Pytest fixtures for infer CLI tests.
 
 This module provides shared test fixtures that are automatically discovered
 by pytest and available to all test files in the tests/infer/ directory.

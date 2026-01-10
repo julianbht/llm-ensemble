@@ -1,0 +1,47 @@
+{
+  "id": "53e3e137-e151-4033-8c97-645bfc45eb64",
+  "run_name": "ensemble-3-phi-4-multimodal-instruct",
+  "run_type": "official",
+  "cli_name": "evaluate",
+  "notes": "The third run of the ensemble evaluated individually. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
+  "git_info": {
+    "git_sha": "306c7a3",
+    "git_clean": false,
+    "git_branch": "master"
+  },
+  "evaluate_run_config": {
+    "id": "4327e631-2c59-46c2-be1b-e41ce77e97dc",
+    "io_config_name": "db_infer_to_json",
+    "input_run_name": "ensemble-3-phi-4-multimodal-instruct",
+    "metric_names": [
+      "cohens_kappa",
+      "krippendorffs_alpha"
+    ]
+  },
+  "metric_results": [
+    {
+      "name": "cohens_kappa",
+      "value": 0.2023903182779191,
+      "sample_size": 3918,
+      "interpretation": "fair",
+      "description": "Cohen's Kappa coefficient measuring inter-rater agreement",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    },
+    {
+      "name": "krippendorffs_alpha",
+      "value": 0.39752035978951916,
+      "sample_size": 3918,
+      "interpretation": "insufficient (unreliable)",
+      "description": "Krippendorff's Alpha coefficient measuring inter-rater reliability (ordinal scale)",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    }
+  ],
+  "evaluated_run_type": "infer",
+  "evaluated_sample_count": 3918,
+  "start_time": "2026-01-10T11:59:03.938043",
+  "end_time": "2026-01-10T11:59:09.970351"
+}

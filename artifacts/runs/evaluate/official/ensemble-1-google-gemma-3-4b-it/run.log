@@ -1,0 +1,57 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "ensemble-1-google-gemma-3-4b-it",
+  "run_name": "ensemble-1-google-gemma-3-4b-it",
+  "run_type": "official",
+  "timestamp": "2026-01-10T16:57:00.626910Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "ensemble-1-google-gemma-3-4b-it",
+  "level": "info",
+  "run_name": "ensemble-1-google-gemma-3-4b-it",
+  "run_type": "infer",
+  "timestamp": "2026-01-10T16:57:06.506448Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "ensemble-1-google-gemma-3-4b-it",
+  "run_type": "official",
+  "timestamp": "2026-01-10T16:57:06.508363Z",
+  "value": 0.10449711634419179
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "ensemble-1-google-gemma-3-4b-it",
+  "run_type": "official",
+  "timestamp": "2026-01-10T16:57:06.509952Z",
+  "value": 0.20749378722365974
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/ensemble-1-google-gemma-3-4b-it/evaluate_run.json",
+  "run_name": "ensemble-1-google-gemma-3-4b-it",
+  "run_type": "official",
+  "timestamp": "2026-01-10T16:57:06.516785Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "ensemble-1-google-gemma-3-4b-it",
+  "run_type": "official",
+  "timestamp": "2026-01-10T16:57:06.516945Z"
+}

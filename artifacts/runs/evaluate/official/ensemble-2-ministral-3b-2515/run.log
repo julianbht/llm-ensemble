@@ -1,0 +1,57 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "ensemble-2-ministral-3b-2515",
+  "run_name": "ensemble-2-ministral-3b-2515",
+  "run_type": "official",
+  "timestamp": "2026-01-10T16:58:25.770509Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "ensemble-2-ministral-3b-2515",
+  "level": "info",
+  "run_name": "ensemble-2-ministral-3b-2515",
+  "run_type": "infer",
+  "timestamp": "2026-01-10T16:58:31.828697Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "ensemble-2-ministral-3b-2515",
+  "run_type": "official",
+  "timestamp": "2026-01-10T16:58:31.830760Z",
+  "value": 0.15689790440346307
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "ensemble-2-ministral-3b-2515",
+  "run_type": "official",
+  "timestamp": "2026-01-10T16:58:31.832422Z",
+  "value": 0.3130602136676308
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/ensemble-2-ministral-3b-2515/evaluate_run.json",
+  "run_name": "ensemble-2-ministral-3b-2515",
+  "run_type": "official",
+  "timestamp": "2026-01-10T16:58:31.839996Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "ensemble-2-ministral-3b-2515",
+  "run_type": "official",
+  "timestamp": "2026-01-10T16:58:31.840183Z"
+}

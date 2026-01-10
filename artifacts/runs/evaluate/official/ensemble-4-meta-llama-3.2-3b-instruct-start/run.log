@@ -1,0 +1,57 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_name": "ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:00:11.982391Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "level": "info",
+  "run_name": "ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "infer",
+  "timestamp": "2026-01-10T17:00:17.988443Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:00:17.990240Z",
+  "value": 0.2040977732434568
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:00:17.991836Z",
+  "value": 0.4134961021513359
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/ensemble-4-meta-llama-3.2-3b-instruct-start/evaluate_run.json",
+  "run_name": "ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:00:18.000718Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "official",
+  "timestamp": "2026-01-10T17:00:18.001005Z"
+}

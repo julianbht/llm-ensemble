@@ -8,7 +8,7 @@ import pytest
 from llm_ensemble.evaluate.adapters.driven.metrics.cohens_kappa import CohensKappaAdapter
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
-from tests.evaluate.test_helpers import (
+from .test_helpers import (
     load_qrels,
     load_submission,
     get_expected_metric,

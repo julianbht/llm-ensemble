@@ -6,7 +6,7 @@ import numpy as np
 from llm_ensemble.evaluate.adapters.driven.metrics.krippendorffs_alpha import KrippendorffsAlphaAdapter
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
-from tests.evaluate.test_helpers import (
+from .test_helpers import (
     load_qrels,
     load_submission,
     get_expected_metric,

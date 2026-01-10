@@ -6,6 +6,12 @@ import numpy as np
 from llm_ensemble.evaluate.adapters.driven.metrics.krippendorffs_alpha import KrippendorffsAlphaAdapter
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
+from tests.evaluate.test_helpers import (
+    load_qrels,
+    load_submission,
+    get_expected_metric,
+)
+
 
 @pytest.mark.unit
 class TestKrippendorffsAlphaAdapter:
@@ -237,3 +243,88 @@ class TestKrippendorffsAlphaAdapter:
         # Should have high agreement (2/3 perfect, 1/3 close)
         assert result.value > 0
         assert isinstance(result.interpretation, str)
+
+
+@pytest.mark.unit
+class TestKrippendorffsAlphaWithChallengeData:
+    """Validate Krippendorff's Alpha implementation against LLM Judge Challenge official results.
+
+    These tests use real submission data and ground truth from the challenge
+    to ensure our implementation produces identical results to the official metrics.
+    """
+
+    def test_trema_direct_submission(self):
+        """Test TREMA-direct submission matches official Krippendorff's Alpha."""
+        adapter = KrippendorffsAlphaAdapter()
+        ground_truth = load_qrels()
+        predictions = load_submission("TREMA-direct.txt")
+        expected_alpha = get_expected_metric("TREMA-direct", "krippendorfalpha")
+
+        result = adapter.compute(ground_truth, predictions)
+
+        assert result.value == pytest.approx(expected_alpha, abs=0.0001)
+        assert result.sample_size == 4423  # Full dataset
+        assert result.name == "krippendorffs_alpha"
+
+    def test_h2oloo_zeroshot1_submission(self):
+        """Test h2oloo-zeroshot1 submission matches official Krippendorff's Alpha."""
+        adapter = KrippendorffsAlphaAdapter()
+        ground_truth = load_qrels()
+        predictions = load_submission("h2oloo-zeroshot1.txt")
+        expected_alpha = get_expected_metric("h2oloo-zeroshot1", "krippendorfalpha")
+
+        result = adapter.compute(ground_truth, predictions)
+
+        assert result.value == pytest.approx(expected_alpha, abs=0.0001)
+        assert result.sample_size == 4423
+
+    def test_rmitir_llama70b_submission(self):
+        """Test RMITIR-llama70B submission matches official Krippendorff's Alpha."""
+        adapter = KrippendorffsAlphaAdapter()
+        ground_truth = load_qrels()
+        predictions = load_submission("RMITIR-llama70B.txt")
+        expected_alpha = get_expected_metric("RMITIR-llama70B", "krippendorfalpha")
+
+        result = adapter.compute(ground_truth, predictions)
+
+        assert result.value == pytest.approx(expected_alpha, abs=0.0001)
+        assert result.sample_size == 4423
+
+    def test_willia_umbrela1_submission(self):
+        """Test willia-umbrela1 submission matches official Krippendorff's Alpha."""
+        adapter = KrippendorffsAlphaAdapter()
+        ground_truth = load_qrels()
+        predictions = load_submission("willia-umbrela1.txt")
+        expected_alpha = get_expected_metric("willia-umbrela1", "krippendorfalpha")
+
+        result = adapter.compute(ground_truth, predictions)
+
+        assert result.value == pytest.approx(expected_alpha, abs=0.0001)
+        assert result.sample_size == 4423
+
+    @pytest.mark.parametrize("submission_name", [
+        "NISTRetrieval-instruct0.txt",
+        "Olz-gpt4o.txt",
+        "TREMA-4prompts.txt",
+        "prophet-setting1.txt",
+    ])
+    def test_multiple_submissions_match_official_results(self, submission_name: str):
+        """Test multiple submissions match official Krippendorff's Alpha values.
+
+        This parametrized test validates our implementation across diverse
+        submission types to ensure correctness.
+        """
+        adapter = KrippendorffsAlphaAdapter()
+        ground_truth = load_qrels()
+        predictions = load_submission(submission_name)
+
+        # Extract submission ID (remove .txt extension)
+        submission_id = submission_name.replace(".txt", "")
+        expected_alpha = get_expected_metric(submission_id, "krippendorfalpha")
+
+        result = adapter.compute(ground_truth, predictions)
+
+        assert result.value == pytest.approx(expected_alpha, abs=0.0001), (
+            f"Krippendorff's Alpha mismatch for {submission_id}: "
+            f"computed={result.value:.4f}, expected={expected_alpha:.4f}"
+        )

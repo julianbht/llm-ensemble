@@ -1,8 +1,8 @@
 # Short name for run ID generation
-name_hint: qwen3-vl-8b-instruct
+name_hint: llama-3.2-3b-instruct
 
 # Model identifier (passed directly to provider API)
-model_id: qwen/qwen3-vl-8b-instruct
+model_id: meta-llama/llama-3.2-3b-instruct
 
 # Model capabilities
 context_window: null
@@ -20,6 +20,6 @@ seed: null
 additional_params: {}
 # Pricing information (auto-updated from OpenRouter API)
 pricing:
-  prompt_cost_per_1m_tokens: 0.08
-  completion_cost_per_1m_tokens: 0.5
-  last_updated: "2026-01-10T12:25:42.269104+00:00"
+  prompt_cost_per_1m_tokens: 0.02
+  completion_cost_per_1m_tokens: 0.02
+  last_updated: "2026-01-10T12:25:42.259550+00:00"

@@ -4,19 +4,21 @@ This utility script merges a continuation run into an incomplete (interrupted) r
 Used for resuming long-running inference jobs that were interrupted.
 
 Usage:
-    merge-infer-runs --source <continuation_run_name> --target <incomplete_run_name> [--dry-run]
+    merge-infer-runs --source <continuation_run_name> --target <incomplete_run_name> [--dry-run] [--allow-overlaps]
 
 Example:
     merge-infer-runs --source gpt-5-1-continuation --target gpt-5-1-all-samples-base-reference
+    merge-infer-runs --source continuation --target base --allow-overlaps
 
 What it does:
 1. Validates that target is incomplete (finished=False) and source is complete (finished=True)
-2. Validates no overlapping samples (would violate unique constraint)
+2. Validates no overlapping samples (throws unless --allow-overlaps is set)
 3. Validates compatible configurations (same model, prompt, provider)
-4. Migrates all judgements from source → target
-5. Recomputes target's sample fingerprint
-6. Marks target as finished=True
-7. Deletes source run records and artifacts
+4. If --allow-overlaps: deletes overlapping samples from target (keeps source judgements)
+5. Migrates all judgements from source → target
+6. Recomputes target's sample fingerprint
+7. Marks target as finished=True
+8. Deletes source run records and artifacts
 
 All operations are performed in a single database transaction for safety.
 """
@@ -115,16 +117,21 @@ def validate_no_overlapping_samples(
     session: Session,
     source_run: InferRunORM,
     target_run: InferRunORM,
-) -> None:
+    allow_overlaps: bool = False,
+) -> set:
     """Validate that source and target have no overlapping samples.
 
     Args:
         session: Database session
         source_run: Source run ORM
         target_run: Target run ORM
+        allow_overlaps: If True, return overlaps instead of raising
+
+    Returns:
+        Set of overlapping sample IDs (empty if no overlaps)
 
     Raises:
-        ValueError: If there are overlapping samples
+        ValueError: If there are overlapping samples and allow_overlaps=False
     """
     # Get all sample IDs from both runs
     source_sample_ids = set(
@@ -145,17 +152,27 @@ def validate_no_overlapping_samples(
     overlap = source_sample_ids & target_sample_ids
 
     if overlap:
-        raise ValueError(
-            f"Source and target runs have {len(overlap)} overlapping samples. "
-            "This would violate the unique constraint on (infer_run_output_id, normalized_dataset_judging_sample_id). "
-            f"Overlapping sample IDs: {list(overlap)[:5]}..."
+        if not allow_overlaps:
+            raise ValueError(
+                f"Source and target runs have {len(overlap)} overlapping samples. "
+                "This would violate the unique constraint on (infer_run_output_id, normalized_dataset_judging_sample_id). "
+                f"Overlapping sample IDs: {list(overlap)[:5]}... "
+                "Use --allow-overlaps to resolve by keeping source judgements."
+            )
+        logger.warning(
+            "overlapping_samples_detected",
+            overlap_count=len(overlap),
+            source_count=len(source_sample_ids),
+            target_count=len(target_sample_ids),
+        )
+    else:
+        logger.info(
+            "no_overlapping_samples",
+            source_count=len(source_sample_ids),
+            target_count=len(target_sample_ids),
         )
 
-    logger.info(
-        "no_overlapping_samples",
-        source_count=len(source_sample_ids),
-        target_count=len(target_sample_ids),
-    )
+    return overlap
 
 
 def validate_compatible_configs(
@@ -207,6 +224,7 @@ def perform_merge(
     session: Session,
     source_run: InferRunORM,
     target_run: InferRunORM,
+    overlapping_sample_ids: set,
     delete_artifacts: bool = False,
 ) -> dict[str, int]:
     """Perform the actual merge operation.
@@ -215,6 +233,7 @@ def perform_merge(
         session: Database session
         source_run: Source run ORM
         target_run: Target run ORM
+        overlapping_sample_ids: Set of sample IDs that overlap between runs
         delete_artifacts: Whether to delete source run artifacts
 
     Returns:
@@ -233,6 +252,19 @@ def perform_merge(
         source_judgements=source_judgement_count,
         target_judgements_before=target_judgement_count_before,
     )
+
+    # Step 0: If there are overlapping samples, delete them from target (keep source)
+    deleted_count = 0
+    if overlapping_sample_ids:
+        deleted_count = session.query(LLMJudgementORM).filter(
+            LLMJudgementORM.infer_run_output_id == target_run.id,
+            LLMJudgementORM.normalized_dataset_judging_sample_id.in_(overlapping_sample_ids)
+        ).delete(synchronize_session=False)
+        logger.info(
+            "overlapping_judgements_deleted",
+            deleted_from_target=deleted_count,
+            overlap_count=len(overlapping_sample_ids),
+        )
 
     # Step 1: Migrate all source judgements to target
     session.query(LLMJudgementORM).filter_by(
@@ -302,6 +334,7 @@ def perform_merge(
         "target_judgements_before": target_judgement_count_before,
         "target_judgements_after": target_judgement_count_after,
         "total_judgements": target_judgement_count_after,
+        "overlaps_deleted": deleted_count,
     }
 
 
@@ -311,13 +344,14 @@ def merge(
     target: str = typer.Option(..., "--target", help="Name of incomplete run to merge INTO"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Validate without making changes"),
     delete_artifacts: bool = typer.Option(False, "--delete-artifacts", help="Delete source run artifacts after merge"),
+    allow_overlaps: bool = typer.Option(False, "--allow-overlaps", help="Allow overlapping samples (keeps source judgements, deletes target duplicates)"),
 ):
     """Merge continuation run into incomplete run.
 
     This utility merges judgements from a continuation run into an incomplete
     (interrupted) run, allowing you to resume long-running inference jobs.
     """
-    logger.info("merge_started", source=source, target=target, dry_run=dry_run)
+    logger.info("merge_started", source=source, target=target, dry_run=dry_run, allow_overlaps=allow_overlaps)
 
     engine = get_engine()
     session = get_session(engine)
@@ -326,12 +360,15 @@ def merge(
         # Validation phase
         logger.info("validation_phase_starting")
         source_run, target_run = validate_runs(session, source, target)
-        validate_no_overlapping_samples(session, source_run, target_run)
+        overlapping_sample_ids = validate_no_overlapping_samples(session, source_run, target_run, allow_overlaps)
         validate_compatible_configs(session, source_run, target_run)
         logger.info("validation_phase_complete")
 
         if dry_run:
             logger.info("dry_run_mode", message="Validation passed. No changes made.")
+            if overlapping_sample_ids:
+                typer.echo(f"\nWARNING: {len(overlapping_sample_ids)} overlapping samples detected.")
+                typer.echo("With --allow-overlaps, these would be resolved by keeping source judgements.\n")
             session.close()
             return
 
@@ -341,6 +378,7 @@ def merge(
             session,
             source_run,
             target_run,
+            overlapping_sample_ids,
             delete_artifacts=delete_artifacts,
         )
         session.commit()
@@ -354,6 +392,8 @@ def merge(
         typer.echo(f"Total judgements in target: {stats['total_judgements']}")
         typer.echo(f"  - Original: {stats['target_judgements_before']}")
         typer.echo(f"  - Added: {stats['source_judgements']}")
+        if stats['overlaps_deleted'] > 0:
+            typer.echo(f"  - Overlaps deleted from target: {stats['overlaps_deleted']}")
         typer.echo("=" * 60 + "\n")
 
     except ValueError as e:

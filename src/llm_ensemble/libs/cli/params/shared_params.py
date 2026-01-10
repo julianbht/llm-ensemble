@@ -16,11 +16,12 @@ from llm_ensemble.libs.cli.params.types import (
 )
 
 InputPath = Annotated[
-    Optional[Path],
+    Path,
     typer.Option(
+        ...,
         "--input",
         "-i",
-        help="Input path (optional for database-backed readers)",
+        help="Input path to raw dataset",
     ),
 ]
 

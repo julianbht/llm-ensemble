@@ -59,9 +59,18 @@ class KrippendorffsAlphaAdapter(ForComputingMetrics):
 
         # Check if there are any valid predictions
         valid_count = sum(1 for pred in predictions if pred is not None)
+        missing_count = len(predictions) - valid_count
+
         if valid_count == 0:
             raise ValueError(
                 "Cannot compute Krippendorff's Alpha: all predictions are None (no valid data)"
+            )
+
+        # Assert data quality: no more than 5 missing labels
+        if missing_count > 5:
+            raise ValueError(
+                f"Too many missing predictions ({missing_count}). "
+                f"Maximum allowed: 5. Data may not be usable."
             )
 
         # Format data for krippendorff package (2 raters x N units matrix)

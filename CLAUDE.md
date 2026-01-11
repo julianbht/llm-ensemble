@@ -15,8 +15,6 @@ The project follows a 4-stage pipeline architecture with shared libraries and he
 3. **aggregate** — Combine judgements using ensemble strategies (weighted majority vote, etc.)
 4. **evaluate** — Compute metrics and generate reports
 
-All artifacts are managed by the **run manager** (`libs/runtime/run_manager.py`), which creates run directories, generates IDs, and writes manifests. Outputs are organized under `artifacts/runs/<cli_name>/<run_name>/` with manifests tracking git SHA, timestamps, and full reproducibility metadata.
-
 ### Running Individual CLIs
 
 ```bash

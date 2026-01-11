@@ -1,0 +1,12 @@
+{"name": "ensemble-7-qwen3-8b-resume-1", "event": "inference_started", "run_type": "official", "run_name": "ensemble-7-qwen3-8b-resume-1", "cli": "infer", "level": "info", "timestamp": "2026-01-11T08:58:48.280031Z"}
+{"name": "ensemble-7-qwen3-8b-resume-1", "event": "inference_started", "cli": "infer", "run_type": "official", "run_name": "ensemble-7-qwen3-8b-resume-1", "level": "info", "timestamp": "2026-01-11T08:59:22.105091Z"}
+{"event": "input_read", "cli": "infer", "run_type": "official", "run_name": "ensemble-7-qwen3-8b-resume-1", "level": "info", "timestamp": "2026-01-11T08:59:22.406183Z"}
+{"component": "db_writer", "created": 0, "skipped": 1, "event": "write_providers", "cli": "infer", "run_type": "official", "run_name": "ensemble-7-qwen3-8b-resume-1", "level": "info", "timestamp": "2026-01-11T08:59:22.432059Z"}
+{"component": "db_writer", "created": 0, "skipped": 1, "event": "write_model_configs", "cli": "infer", "run_type": "official", "run_name": "ensemble-7-qwen3-8b-resume-1", "level": "info", "timestamp": "2026-01-11T08:59:22.436002Z"}
+{"component": "db_writer", "created": 0, "skipped": 1, "event": "write_parsers", "cli": "infer", "run_type": "official", "run_name": "ensemble-7-qwen3-8b-resume-1", "level": "info", "timestamp": "2026-01-11T08:59:22.441315Z"}
+{"component": "db_writer", "created": 0, "skipped": 1, "event": "write_prompt_templates", "cli": "infer", "run_type": "official", "run_name": "ensemble-7-qwen3-8b-resume-1", "level": "info", "timestamp": "2026-01-11T08:59:22.445511Z"}
+{"component": "db_writer", "created": 1, "skipped": 0, "event": "write_infer_run_configs", "cli": "infer", "run_type": "official", "run_name": "ensemble-7-qwen3-8b-resume-1", "level": "info", "timestamp": "2026-01-11T08:59:22.452049Z"}
+{"component": "db_writer", "created": 1, "skipped": 0, "event": "write_infer_run_outputs", "cli": "infer", "run_type": "official", "run_name": "ensemble-7-qwen3-8b-resume-1", "level": "info", "timestamp": "2026-01-11T08:59:22.452313Z"}
+{"component": "db_writer", "created": 1, "skipped": 0, "event": "write_infer_runs", "cli": "infer", "run_type": "official", "run_name": "ensemble-7-qwen3-8b-resume-1", "level": "info", "timestamp": "2026-01-11T08:59:22.452495Z"}
+{"event": "building_prompt", "cli": "infer", "run_type": "official", "run_name": "ensemble-7-qwen3-8b-resume-1", "level": "info", "timestamp": "2026-01-11T08:59:22.457978Z"}
+{"event": "sending_request", "cli": "infer", "run_type": "official", "run_name": "ensemble-7-qwen3-8b-resume-1", "level": "info", "timestamp": "2026-01-11T08:59:22.458185Z"}

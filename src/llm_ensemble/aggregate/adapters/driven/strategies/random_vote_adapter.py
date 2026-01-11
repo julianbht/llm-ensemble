@@ -20,7 +20,7 @@ from llm_ensemble.aggregate.domain.aggregated_vote_builder import build_aggregat
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
-class RandomVoteAdapter(ForAggregating):
+class MajoryVoteRandom(ForAggregating):
     """Majority vote with random tie-breaking aggregation strategy adapter.
 
     Counts votes for each label and selects the label with the most votes.

@@ -9,14 +9,18 @@ from collections import Counter
 import statistics
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
-from llm_ensemble.aggregate.application.ports.driven.for_aggregating import ForAggregating
+from llm_ensemble.aggregate.application.ports.driven.for_aggregating import (
+    ForAggregating,
+)
 from llm_ensemble.aggregate.domain.entities.aggregated_vote import AggregatedVote
-from llm_ensemble.aggregate.domain.entities.aggregation_strategy import AggregationStrategy
+from llm_ensemble.aggregate.domain.entities.aggregation_strategy import (
+    AggregationStrategy,
+)
 from llm_ensemble.aggregate.domain.aggregated_vote_builder import build_aggregated_vote
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
-class MajorityVoteAdapter(ForAggregating):
+class MajorityVoteAverage(ForAggregating):
     """Simple majority vote aggregation strategy adapter.
 
     Counts votes for each label and selects the label with the most votes.
@@ -51,7 +55,10 @@ class MajorityVoteAdapter(ForAggregating):
 
         for judgement in judgements:
             # Get label from llm_score (if available)
-            if judgement.llm_score is not None and judgement.llm_score.label is not None:
+            if (
+                judgement.llm_score is not None
+                and judgement.llm_score.label is not None
+            ):
                 valid_labels.append(judgement.llm_score.label)
 
         # Handle edge case: no valid votes
@@ -88,7 +95,7 @@ class MajorityVoteAdapter(ForAggregating):
 
         # Build reasoning string
         if len(winners) > 1:
-            tied_labels_str = ', '.join(str(w.label) for w in winners)
+            tied_labels_str = ", ".join(str(w.label) for w in winners)
             reasoning = (
                 f"{max_count}/{total_votes} models each voted for: {tied_labels_str} "
                 f"(tie broken by average: {mean_score:.2f} → {final_label.label})"

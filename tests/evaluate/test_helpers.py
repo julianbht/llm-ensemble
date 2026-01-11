@@ -19,7 +19,7 @@ QRELS_PATH = (
     / "llm_judge_challenge_experiment"
     / "llm4eval_test_qrel_2024_recovered.txt"
 )
-EXPECTED_METRICS_PATH = FIXTURES_DIR / "llm-judge-challenge-metrics"
+EXPECTED_METRICS_PATH = FIXTURES_DIR / "llm-judge-challenge-metrics.txt"
 
 
 def load_trec_file(file_path: Path) -> list[RelevanceScore]:

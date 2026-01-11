@@ -1,0 +1,47 @@
+{
+  "id": "298a4393-7f77-49c6-b4b2-43361627ccd0",
+  "run_name": "-ensemble-1-to-5-majority-vote-random",
+  "run_type": "official",
+  "cli_name": "evaluate",
+  "notes": "Evaluating the ensemble that aggregated with majority random vote. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
+  "git_info": {
+    "git_sha": "b6439c5",
+    "git_clean": false,
+    "git_branch": "master"
+  },
+  "evaluate_run_config": {
+    "id": "b4f50f2f-fd5d-4803-8f01-962738f57e8f",
+    "io_config_name": "db_aggregate_to_json",
+    "input_run_name": "-ensemble-1-to-5-majority-vote-random",
+    "metric_names": [
+      "cohens_kappa",
+      "krippendorffs_alpha"
+    ]
+  },
+  "metric_results": [
+    {
+      "name": "cohens_kappa",
+      "value": 0.20509163967668986,
+      "sample_size": 3918,
+      "interpretation": "fair",
+      "description": "Cohen's Kappa coefficient measuring inter-rater agreement",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    },
+    {
+      "name": "krippendorffs_alpha",
+      "value": 0.3882247858195794,
+      "sample_size": 3918,
+      "interpretation": "insufficient (unreliable)",
+      "description": "Krippendorff's Alpha coefficient measuring inter-rater reliability (ordinal scale)",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    }
+  ],
+  "evaluated_run_type": "aggregate",
+  "evaluated_sample_count": 3918,
+  "start_time": "2026-01-11T05:08:03.728605",
+  "end_time": "2026-01-11T05:08:11.095291"
+}

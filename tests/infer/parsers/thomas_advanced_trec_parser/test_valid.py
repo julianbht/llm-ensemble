@@ -22,11 +22,11 @@ def test_parse_clean_json_score_0(parser: ThomasAdvancedTrecParser):
     """Parse clean JSON with score 0 (irrelevant)."""
     raw_text = '{"M": 0, "T": 0, "O": 0}'
 
-    score, issues = parser.parse(raw_text)
+    score, issue = parser.parse(raw_text)
 
     assert score is not None
     assert score.label == RelevanceScore.IRRELEVANT
-    assert len(issues) == 0
+    assert issue is None
 
 
 @pytest.mark.unit
@@ -34,11 +34,11 @@ def test_parse_clean_json_score_1(parser: ThomasAdvancedTrecParser):
     """Parse clean JSON with score 1 (relevant)."""
     raw_text = '{"M": 1, "T": 1, "O": 1}'
 
-    score, issues = parser.parse(raw_text)
+    score, issue = parser.parse(raw_text)
 
     assert score is not None
     assert score.label == RelevanceScore.RELEVANT
-    assert len(issues) == 0
+    assert issue is None
 
 
 @pytest.mark.unit
@@ -46,11 +46,11 @@ def test_parse_clean_json_score_2(parser: ThomasAdvancedTrecParser):
     """Parse clean JSON with score 2 (highly relevant)."""
     raw_text = '{"M": 2, "T": 2, "O": 2}'
 
-    score, issues = parser.parse(raw_text)
+    score, issue = parser.parse(raw_text)
 
     assert score is not None
     assert score.label == RelevanceScore.HIGHLY_RELEVANT
-    assert len(issues) == 0
+    assert issue is None
 
 
 @pytest.mark.unit
@@ -58,11 +58,11 @@ def test_parse_clean_json_score_3(parser: ThomasAdvancedTrecParser):
     """Parse clean JSON with score 3 (perfectly relevant)."""
     raw_text = '{"M": 3, "T": 3, "O": 3}'
 
-    score, issues = parser.parse(raw_text)
+    score, issue = parser.parse(raw_text)
 
     assert score is not None
     assert score.label == RelevanceScore.PERFECTLY_RELEVANT
-    assert len(issues) == 0
+    assert issue is None
 
 
 @pytest.mark.unit
@@ -70,11 +70,11 @@ def test_parse_json_with_whitespace(parser: ThomasAdvancedTrecParser):
     """Parse JSON with extra whitespace."""
     raw_text = '  \n  {"M": 2, "T": 1, "O": 2}  \n  '
 
-    score, issues = parser.parse(raw_text)
+    score, issue = parser.parse(raw_text)
 
     assert score is not None
     assert score.label == RelevanceScore.HIGHLY_RELEVANT
-    assert len(issues) == 0
+    assert issue is None
 
 
 @pytest.mark.unit
@@ -82,11 +82,11 @@ def test_parse_json_with_extra_fields(parser: ThomasAdvancedTrecParser):
     """Parse JSON with additional fields beyond M, T, O."""
     raw_text = '{"M": 2, "T": 1, "O": 1, "explanation": "Partly relevant"}'
 
-    score, issues = parser.parse(raw_text)
+    score, issue = parser.parse(raw_text)
 
     assert score is not None
     assert score.label == RelevanceScore.RELEVANT
-    assert len(issues) == 0
+    assert issue is None
 
 
 @pytest.mark.unit
@@ -94,11 +94,11 @@ def test_parse_json_only_o_field(parser: ThomasAdvancedTrecParser):
     """Parse JSON with only O field present."""
     raw_text = '{"O": 3}'
 
-    score, issues = parser.parse(raw_text)
+    score, issue = parser.parse(raw_text)
 
     assert score is not None
     assert score.label == RelevanceScore.PERFECTLY_RELEVANT
-    assert len(issues) == 0
+    assert issue is None
 
 
 @pytest.mark.unit

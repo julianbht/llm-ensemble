@@ -10,7 +10,9 @@ from pathlib import Path
 from uuid import uuid4
 
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
-from llm_ensemble.ingest.domain.entities.dataset_sample import NormalizedDatasetJudgingSample
+from llm_ensemble.ingest.domain.entities.dataset_sample import (
+    NormalizedDatasetJudgingSample,
+)
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.query import Query
 from llm_ensemble.ingest.domain.entities.document import Document
@@ -35,9 +37,9 @@ def sample_dataset() -> NormalizedDataset:
         judging_sample=JudgingSample(
             query=Query(query_text="What is Python?"),
             document=Document(doc_text="Python is a programming language."),
-            gold_score=RelevanceScore.RELEVANT
+            gold_score=RelevanceScore.RELEVANT,
         ),
-        sequence_number=0
+        sequence_number=0,
     )
 
     # Sample 2: Highly relevant query-document pair
@@ -46,16 +48,16 @@ def sample_dataset() -> NormalizedDataset:
         judging_sample=JudgingSample(
             query=Query(query_text="How to install packages?"),
             document=Document(doc_text="Use pip install to add Python packages."),
-            gold_score=RelevanceScore.HIGHLY_RELEVANT
+            gold_score=RelevanceScore.HIGHLY_RELEVANT,
         ),
-        sequence_number=1
+        sequence_number=1,
     )
 
     return NormalizedDataset(
         id=dataset_id,
         fingerprint="mock-fingerprint-123",
         external_dataset_name="test-dataset",
-        samples=[sample1, sample2]
+        samples=[sample1, sample2],
     )
 
 
@@ -74,45 +76,51 @@ def sample_dataset_five() -> NormalizedDataset:
             judging_sample=JudgingSample(
                 query=Query(query_text="What is Python?"),
                 document=Document(doc_text="Python is a programming language."),
-                gold_score=RelevanceScore.RELEVANT
+                gold_score=RelevanceScore.RELEVANT,
             ),
-            sequence_number=0
+            sequence_number=0,
         ),
         NormalizedDatasetJudgingSample(
             normalized_dataset_id=dataset_id,
             judging_sample=JudgingSample(
                 query=Query(query_text="How to install packages?"),
                 document=Document(doc_text="Use pip install to add Python packages."),
-                gold_score=RelevanceScore.HIGHLY_RELEVANT
+                gold_score=RelevanceScore.HIGHLY_RELEVANT,
             ),
-            sequence_number=1
+            sequence_number=1,
         ),
         NormalizedDatasetJudgingSample(
             normalized_dataset_id=dataset_id,
             judging_sample=JudgingSample(
                 query=Query(query_text="What is machine learning?"),
-                document=Document(doc_text="Machine learning is a subset of artificial intelligence."),
-                gold_score=RelevanceScore.RELEVANT
+                document=Document(
+                    doc_text="Machine learning is a subset of artificial intelligence."
+                ),
+                gold_score=RelevanceScore.RELEVANT,
             ),
-            sequence_number=2
+            sequence_number=2,
         ),
         NormalizedDatasetJudgingSample(
             normalized_dataset_id=dataset_id,
             judging_sample=JudgingSample(
                 query=Query(query_text="Python data structures"),
-                document=Document(doc_text="Python has built-in data structures like lists and dictionaries."),
-                gold_score=RelevanceScore.HIGHLY_RELEVANT
+                document=Document(
+                    doc_text="Python has built-in data structures like lists and dictionaries."
+                ),
+                gold_score=RelevanceScore.HIGHLY_RELEVANT,
             ),
-            sequence_number=3
+            sequence_number=3,
         ),
         NormalizedDatasetJudgingSample(
             normalized_dataset_id=dataset_id,
             judging_sample=JudgingSample(
                 query=Query(query_text="Best IDE for Python"),
-                document=Document(doc_text="Popular Python IDEs include PyCharm and VS Code."),
-                gold_score=RelevanceScore.RELEVANT
+                document=Document(
+                    doc_text="Popular Python IDEs include PyCharm and VS Code."
+                ),
+                gold_score=RelevanceScore.RELEVANT,
             ),
-            sequence_number=4
+            sequence_number=4,
         ),
     ]
 
@@ -120,7 +128,7 @@ def sample_dataset_five() -> NormalizedDataset:
         id=dataset_id,
         fingerprint="mock-fingerprint-456",
         external_dataset_name="test-dataset-five",
-        samples=samples
+        samples=samples,
     )
 
 

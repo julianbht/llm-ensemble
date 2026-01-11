@@ -33,6 +33,7 @@ RUNS = [
     ("ui-tars-1.5-7b", "ensemble-5-ui-tars-1.5-7b-start"),
     ("ensemble (mv)", "-ensemble-1-to-5-majority-vote"),
     ("ensemble (av)", "-ensemble-1-to-5-avg-vote-3"),
+    ("gpt-5.1", "reference-ensemble-gpt-5-1-all-samples-start"),
     # ("cohere-command-r7b-12-2024", "ensemble-6-cohere-command-r7b-12-2024-start"),
 ]
 
@@ -44,7 +45,7 @@ RUN_TYPE = "official"
 
 # Y-axis limits: None for auto-scaling, or [min, max] to fix the range
 # Examples: [0.0, 1.0], [0.0, 0.75], [-1.0, 1.0], None
-Y_AXIS_LIMITS = [0.0, 1.0]
+Y_AXIS_LIMITS = [0.0, 0.5]
 
 # Output filename (None = auto-generate from metric name)
 OUTPUT_FILENAME = None  # e.g., "my_figure.svg" or None

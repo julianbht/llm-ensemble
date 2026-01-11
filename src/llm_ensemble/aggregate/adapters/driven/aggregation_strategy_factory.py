@@ -15,12 +15,14 @@ from typing import Dict, Type
 from llm_ensemble.aggregate.application.ports.driven.for_aggregating import ForAggregating
 from llm_ensemble.aggregate.adapters.driven.strategies.majority_vote_adapter import MajorityVoteAdapter
 from llm_ensemble.aggregate.adapters.driven.strategies.average_vote_adapter import AverageVoteAdapter
+from llm_ensemble.aggregate.adapters.driven.strategies.random_vote_adapter import RandomVoteAdapter
 
 
 # Explicit mapping of strategy names to adapter classes
 STRATEGIES: Dict[str, Type[ForAggregating]] = {
     "majority_vote": MajorityVoteAdapter,
     "average_vote": AverageVoteAdapter,
+    "random_vote": RandomVoteAdapter,
 }
 
 

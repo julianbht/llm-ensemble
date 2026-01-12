@@ -8,7 +8,8 @@ venv/
 .env.backup
 # OS/editor
 .DS_Store
-.vscode/
+# below is commented out to share tasks.json
+# .vscode/
 .idea/
 # caches
 *.cache

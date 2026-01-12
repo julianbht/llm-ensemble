@@ -1,0 +1,64 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Evaluate",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python3",
+      "args": [
+        "${workspaceFolder}/src/llm_ensemble/evaluate/adapters/driving/evaluate_cli.py",btw
+        "--io-cfg", "db_aggregate_to_json",
+        "--input", "-ensemble-1-to-5-majority-vote-random",
+        "--run-name", "-ensemble-1-to-5-majority-vote-random",
+        "--official",
+        "--notes", "Evaluating the ensemble that aggregated with majority random vote. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total."
+      ],
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/src"
+        }
+      },
+      "problemMatcher": ["$python"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "label": "Aggregate: Ensemble 1-5 (majority random vote)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python3",
+      "args": [
+        "${workspaceFolder}/src/llm_ensemble/aggregate/adapters/driving/aggregate_cli.py",
+        "--aggregation-strategy", "majority_vote_random",
+        "--io-cfg", "db_to_db",
+        "-i", "ensemble-1-google-gemma-3-4b-it",
+        "-i", "ensemble-2-ministral-3b-2515",
+        "-i", "ensemble-3-phi-4-multimodal-instruct",
+        "-i", "ensemble-4-meta-llama-3.2-3b-instruct-start",
+        "-i", "ensemble-5-ui-tars-1.5-7b-start",
+        "--run-name", "-ensemble-1-to-5-majority-vote-random",
+        "--notes", "Aggregating ensemble models 1 to 5 with majority voting and random tie breaking. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
+        "--official"
+      ],
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/src"
+        }
+      },
+      "problemMatcher": ["$python"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    }
+  ]
+}

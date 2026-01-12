@@ -27,6 +27,7 @@ from __future__ import annotations
 import sys
 import shutil
 import typer
+from datetime import datetime
 from sqlalchemy.orm import Session
 
 # Load runtime env configuration (DATABASE_URL, API keys, etc.)
@@ -226,6 +227,7 @@ def perform_merge(
     target_run: InferRunORM,
     overlapping_sample_ids: set,
     delete_artifacts: bool = False,
+    target_end_time: datetime | None = None,
 ) -> dict[str, int]:
     """Perform the actual merge operation.
 
@@ -235,6 +237,7 @@ def perform_merge(
         target_run: Target run ORM
         overlapping_sample_ids: Set of sample IDs that overlap between runs
         delete_artifacts: Whether to delete source run artifacts
+        target_end_time: Optional end time for the target run (if None, uses source end_time)
 
     Returns:
         Dict with merge statistics
@@ -292,18 +295,24 @@ def perform_merge(
         fingerprint=new_fingerprint[:16] + "...",
     )
 
-    # Step 3: Recompute target's end_time by adding source run duration
-    # This ensures accurate timing by excluding the gap between runs
-    # Formula: new_end_time = target_end_time + (source_end_time - source_start_time)
-    source_duration = source_run.end_time - source_run.start_time
-    new_end_time = target_run.end_time + source_duration
+    # Step 3: Set target's end_time
+    # Target is incomplete, so end_time is None - we need user to provide it
+    if target_run.end_time is None and target_end_time is None:
+        raise ValueError(
+            f"Target run '{target_run.run_name}' is incomplete (end_time=None). "
+            "You must provide --target-end-time to specify when the incomplete run ended. "
+            "Check your run logs to find the actual end time."
+        )
+
+    # Use user-provided end_time if available, otherwise use existing end_time
+    new_end_time = target_end_time if target_end_time is not None else target_run.end_time
     setattr(target_run, "end_time", new_end_time)
 
     logger.info(
-        "target_end_time_recomputed",
-        original_end_time=str(target_run.end_time),
-        source_duration_seconds=source_duration.total_seconds(),
+        "target_end_time_set",
+        original_end_time=str(target_run.end_time) if target_run.end_time else "None",
         new_end_time=str(new_end_time),
+        source="user-provided" if target_end_time is not None else "existing",
     )
 
     # Step 4: Delete source run (CASCADE will delete source output)
@@ -342,6 +351,7 @@ def perform_merge(
 def merge(
     source: str = typer.Option(..., "--source", help="Name of continuation run to merge FROM"),
     target: str = typer.Option(..., "--target", help="Name of incomplete run to merge INTO"),
+    target_end_time: str = typer.Option(None, "--target-end-time", help="End time for incomplete target run (ISO format: YYYY-MM-DDTHH:MM:SS)"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Validate without making changes"),
     delete_artifacts: bool = typer.Option(False, "--delete-artifacts", help="Delete source run artifacts after merge"),
     allow_overlaps: bool = typer.Option(False, "--allow-overlaps", help="Allow overlapping samples (keeps source judgements, deletes target duplicates)"),
@@ -352,6 +362,16 @@ def merge(
     (interrupted) run, allowing you to resume long-running inference jobs.
     """
     logger.info("merge_started", source=source, target=target, dry_run=dry_run, allow_overlaps=allow_overlaps)
+
+    # Parse target_end_time if provided
+    parsed_target_end_time = None
+    if target_end_time:
+        try:
+            parsed_target_end_time = datetime.fromisoformat(target_end_time)
+        except ValueError as e:
+            typer.echo(f"\nERROR: Invalid --target-end-time format: {e}", err=True)
+            typer.echo("Expected ISO format: YYYY-MM-DDTHH:MM:SS (e.g., 2026-01-12T00:55:38)", err=True)
+            sys.exit(1)
 
     engine = get_engine()
     session = get_session(engine)
@@ -380,6 +400,7 @@ def merge(
             target_run,
             overlapping_sample_ids,
             delete_artifacts=delete_artifacts,
+            target_end_time=parsed_target_end_time,
         )
         session.commit()
         logger.info("merge_phase_complete", **stats)

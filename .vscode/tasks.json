@@ -12,8 +12,9 @@
         "--prompt-template", "thomas-advanced-trec",
         "--io-cfg", "db_to_db",
         "--input", "20260107_014749",
-        "--run-name", "noise-3-ensemble-3-phi-4-multimodal-instruct-start",
-        "--notes", "Ensemble model 3. Rerun with the same settings as the first run with this model. Goal: determine ground noise.",
+        "--run-name", "noise-3-ensemble-3-phi-4-multimodal-instruct-resume-1",
+        "--notes", "Ensemble model 3. Rerun with the same settings as the first run with this model. Goal: determine ground noise. First resume after API rate limit error.",
+        "--start-idx", "1433",
         "--official"
       ],
       "options": {

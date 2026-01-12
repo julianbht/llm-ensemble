@@ -1,12 +1,12 @@
-"""Majority vote aggregation strategy adapter.
+"""Majority vote with random tie-breaking aggregation strategy adapter.
 
-Simple majority vote: the label with the most votes wins.
-Ties are broken by averaging the tied labels and rounding to nearest label.
+Uses majority vote to find the most common label.
+When there's a tie, randomly selects one of the tied labels instead of averaging.
 """
 
 from __future__ import annotations
+import random
 from collections import Counter
-import statistics
 
 from llm_ensemble.infer.domain.entities.llm_judgement import LLMJudgement
 from llm_ensemble.aggregate.application.ports.driven.for_aggregating import (
@@ -20,29 +20,34 @@ from llm_ensemble.aggregate.domain.aggregated_vote_builder import build_aggregat
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
 
-class MajorityVoteAverage(ForAggregating):
-    """Simple majority vote aggregation strategy adapter.
+class MajoryVoteRandom(ForAggregating):
+    """Majority vote with random tie-breaking aggregation strategy adapter.
 
     Counts votes for each label and selects the label with the most votes.
 
-    Tie handling: If multiple labels have the same count, averages the tied
-    labels' numeric values and rounds to the nearest label.
+    Tie handling: If multiple labels have the same max count, randomly selects
+    one of the tied labels (unlike majority_vote which averages tied labels).
 
     Confidence: Fraction of votes that went to the winning label.
+
+    Uses fixed seed for reproducibility while maintaining uniform random distribution.
 
     Strategy identity comes from config via constructor.
     """
 
+    RANDOM_SEED = 42
+
     def __init__(self, strategy_name: str):
-        """Initialize majority vote adapter with strategy name.
+        """Initialize random tie-breaking majority vote adapter with strategy name.
 
         Args:
             strategy_name: Natural key for AggregationStrategy entity (from config)
         """
         self.strategy_name = strategy_name
+        self._random = random.Random(self.RANDOM_SEED)
 
     def aggregate(self, judgements: list[LLMJudgement]) -> AggregatedVote:
-        """Apply majority vote logic and create AggregatedVote entity.
+        """Apply majority vote with random tie-breaking logic and create AggregatedVote entity.
 
         Args:
             judgements: All model judgements for a single (query_id, docid) pair
@@ -79,13 +84,9 @@ class MajorityVoteAverage(ForAggregating):
         # Find all labels with max count (for tie detection)
         winners = [label for label, count in vote_counts.items() if count == max_count]
 
-        # Break ties by averaging: calculate mean of tied labels and round
+        # Break ties randomly: if multiple labels have same max count, pick one randomly
         if len(winners) > 1:
-            mean_score = statistics.mean([label.value for label in winners])
-            rounded_score = round(mean_score)
-            # Clamp to valid range [0, 3]
-            final_score = max(0, min(3, rounded_score))
-            final_label = RelevanceScore(final_score)
+            final_label = self._random.choice(winners)
         else:
             final_label = winners[0]
 
@@ -95,10 +96,12 @@ class MajorityVoteAverage(ForAggregating):
 
         # Build reasoning string
         if len(winners) > 1:
-            tied_labels_str = ", ".join(str(w.label) for w in winners)
+            tied_labels_str = ", ".join(
+                str(w.label) for w in sorted(winners, key=lambda x: x.value)
+            )
             reasoning = (
                 f"{max_count}/{total_votes} models each voted for: {tied_labels_str} "
-                f"(tie broken by average: {mean_score:.2f} → {final_label.label})"
+                f"(tie broken randomly: selected {final_label.label})"
             )
         else:
             reasoning = f"{max_count}/{total_votes} models voted {final_label.label}"

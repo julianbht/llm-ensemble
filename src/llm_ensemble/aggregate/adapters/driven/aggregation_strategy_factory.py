@@ -12,31 +12,41 @@ To add a new strategy:
 from __future__ import annotations
 from typing import Dict, Type
 
-from llm_ensemble.aggregate.application.ports.driven.for_aggregating import ForAggregating
-from llm_ensemble.aggregate.adapters.driven.strategies.majority_vote_adapter import MajorityVoteAdapter
-from llm_ensemble.aggregate.adapters.driven.strategies.average_vote_adapter import AverageVoteAdapter
+from llm_ensemble.aggregate.application.ports.driven.for_aggregating import (
+    ForAggregating,
+)
+from llm_ensemble.aggregate.adapters.driven.strategies.majority_vote_adapter import (
+    MajorityVoteAverage,
+)
+from llm_ensemble.aggregate.adapters.driven.strategies.average_vote_adapter import (
+    AverageVoteAdapter,
+)
+from llm_ensemble.aggregate.adapters.driven.strategies.random_vote_adapter import (
+    MajoryVoteRandom,
+)
 
 
 # Explicit mapping of strategy names to adapter classes
 STRATEGIES: Dict[str, Type[ForAggregating]] = {
-    "majority_vote": MajorityVoteAdapter,
+    "majority_vote_average": MajorityVoteAverage,
     "average_vote": AverageVoteAdapter,
+    "majority_vote_random": MajoryVoteRandom,
 }
 
 
 class AggregationStrategyBuilder:
     """Builder for creating aggregation strategy instances."""
-    
+
     @staticmethod
     def build(strategy_name: str) -> ForAggregating:
         """Build and return a strategy adapter instance.
-        
+
         Args:
             strategy_name: Name of the strategy (e.g., 'majority_vote')
-            
+
         Returns:
             Instantiated strategy adapter
-            
+
         Raises:
             ValueError: If strategy not found
         """
@@ -46,26 +56,26 @@ class AggregationStrategyBuilder:
                 f"Aggregation strategy '{strategy_name}' not found. "
                 f"Available: {available}"
             )
-        
+
         adapter_class = STRATEGIES[strategy_name]
         return adapter_class(strategy_name=strategy_name)
-    
+
     @staticmethod
     def list_available() -> list[str]:
         """List all available strategy names.
-        
+
         Returns:
             Sorted list of strategy names
         """
         return sorted(STRATEGIES.keys())
-    
+
     @staticmethod
     def has_strategy(strategy_name: str) -> bool:
         """Check if strategy is available.
-        
+
         Args:
             strategy_name: Name of the strategy
-            
+
         Returns:
             True if strategy exists
         """

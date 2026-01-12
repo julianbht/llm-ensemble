@@ -1,0 +1,62 @@
+{
+  "start_time": "2026-01-11T05:04:51.975606",
+  "end_time": "2026-01-11T05:04:56.143646",
+  "run": {
+    "id": "10469e19-ae6a-46be-a062-07d304a58fdd",
+    "run_name": "-ensemble-1-to-5-majority-vote-random",
+    "run_type": "official",
+    "cli_name": "aggregate",
+    "notes": "Aggregating ensemble models 1 to 5 with majority voting and random tie breaking. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
+    "git_info": {
+      "git_sha": "b6439c5",
+      "git_clean": false,
+      "git_branch": "master"
+    },
+    "aggregate_run_config": {
+      "id": "68cf9505-d86e-425a-8732-8108865431b5",
+      "aggregation_strategy": {
+        "id": "4a24bc83-de4e-4fc3-8834-697dd148b09e",
+        "name": "majority_vote_random"
+      },
+      "io_config_name": "db_to_db",
+      "input_run_names": [
+        "ensemble-1-google-gemma-3-4b-it",
+        "ensemble-2-ministral-3b-2515",
+        "ensemble-3-phi-4-multimodal-instruct",
+        "ensemble-4-meta-llama-3.2-3b-instruct-start",
+        "ensemble-5-ui-tars-1.5-7b-start"
+      ],
+      "input_run_names_hash": "ee4b222dcbe05a917243d0132817cafe278dd91328dbd98a8ebaf1a3ec5cd304"
+    },
+    "aggregated_dataset": null,
+    "start_time": "2026-01-11T05:04:51.975606",
+    "end_time": "2026-01-11T05:04:56.143646"
+  },
+  "input_judgement_count": 19590,
+  "unique_pair_count": 3918,
+  "output_aggregated_count": 3918,
+  "tie_count": 585,
+  "no_valid_votes_count": 0,
+  "issues_summary": {
+    "tie": 585
+  },
+  "write_summary": {
+    "aggregation_strategies_created": 1,
+    "aggregation_strategies_skipped": 0,
+    "configs_created": 1,
+    "configs_skipped": 0,
+    "datasets_created": 1,
+    "datasets_skipped": 0,
+    "aggregated_votes_created": 3918,
+    "aggregated_votes_skipped": 0,
+    "aggregation_votes_created": 19590,
+    "aggregation_votes_skipped": 0,
+    "aggregated_dataset_votes_created": 3918,
+    "aggregated_dataset_votes_skipped": 0,
+    "runs_created": 1,
+    "runs_skipped": 0
+  },
+  "duration_seconds": 4.17,
+  "duration_minutes": 0.07,
+  "duration_hours": 0.0
+}

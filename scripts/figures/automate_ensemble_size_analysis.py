@@ -45,6 +45,11 @@ EVALUATE_IO_CFG = "db_aggregate_to_json"
 # Run type (official vs test)
 RUN_TYPE = "official"
 
+# Run name prefix/suffix (optional, for distinguishing different experiment runs)
+# Examples: "order1", "random", "best-first", etc.
+RUN_PREFIX = None  # e.g., "order1" -> "order1-1-ensemble-size-analysis"
+RUN_SUFFIX = None  # e.g., "v2" -> "1-ensemble-size-analysis-v2"
+
 # ============================================================================
 
 
@@ -95,7 +100,14 @@ def run_aggregate(
     Returns:
         Run name for the aggregated result
     """
-    run_name = f"{ensemble_size}-ensemble-size-analysis"
+    # Build run name with optional prefix/suffix
+    parts = []
+    if RUN_PREFIX:
+        parts.append(RUN_PREFIX)
+    parts.append(f"{ensemble_size}-ensemble-size-analysis")
+    if RUN_SUFFIX:
+        parts.append(RUN_SUFFIX)
+    run_name = "-".join(parts)
 
     # Build command
     cmd = [

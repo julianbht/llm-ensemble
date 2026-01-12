@@ -1,0 +1,63 @@
+{
+  "start_time": "2026-01-12T07:55:58.863412",
+  "end_time": "2026-01-12T07:56:04.206068",
+  "run": {
+    "id": "32027eaf-ee7a-44ea-8c95-6f52af085cd7",
+    "run_name": "6-ensemble-size-analysis-majority_vote_random-params_small_to_big",
+    "run_type": "official",
+    "cli_name": "aggregate",
+    "notes": "Ensemble size 6 analysis: aggregating 6 models with majority_vote_random",
+    "git_info": {
+      "git_sha": "14af3d7",
+      "git_clean": false,
+      "git_branch": "master"
+    },
+    "aggregate_run_config": {
+      "id": "9b6f4d16-cc7f-4e2d-9159-65f22de26812",
+      "aggregation_strategy": {
+        "id": "92619e03-e60b-41be-97ef-5ffdc7d011c8",
+        "name": "majority_vote_random"
+      },
+      "io_config_name": "db_to_db",
+      "input_run_names": [
+        "ensemble-4-meta-llama-3.2-3b-instruct-start",
+        "ensemble-2-ministral-3b-2515",
+        "ensemble-1-google-gemma-3-4b-it",
+        "ensemble-3-phi-4-multimodal-instruct",
+        "ensemble-5-ui-tars-1.5-7b-start",
+        "ensemble-6-cohere-command-r7b-12-2024-start"
+      ],
+      "input_run_names_hash": "58e74c9825a792da3b5d7a44a4153477303b36dcfca9f1e17a27ae920c24a4ad"
+    },
+    "aggregated_dataset": null,
+    "start_time": "2026-01-12T07:55:58.863412",
+    "end_time": "2026-01-12T07:56:04.206068"
+  },
+  "input_judgement_count": 23508,
+  "unique_pair_count": 3918,
+  "output_aggregated_count": 3918,
+  "tie_count": 493,
+  "no_valid_votes_count": 0,
+  "issues_summary": {
+    "tie": 493
+  },
+  "write_summary": {
+    "aggregation_strategies_created": 0,
+    "aggregation_strategies_skipped": 1,
+    "configs_created": 1,
+    "configs_skipped": 0,
+    "datasets_created": 1,
+    "datasets_skipped": 0,
+    "aggregated_votes_created": 493,
+    "aggregated_votes_skipped": 3425,
+    "aggregation_votes_created": 2958,
+    "aggregation_votes_skipped": 20550,
+    "aggregated_dataset_votes_created": 3918,
+    "aggregated_dataset_votes_skipped": 0,
+    "runs_created": 1,
+    "runs_skipped": 0
+  },
+  "duration_seconds": 5.34,
+  "duration_minutes": 0.09,
+  "duration_hours": 0.0
+}

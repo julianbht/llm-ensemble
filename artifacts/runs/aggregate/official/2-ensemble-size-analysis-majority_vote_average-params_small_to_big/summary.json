@@ -1,0 +1,59 @@
+{
+  "start_time": "2026-01-12T07:52:53.498086",
+  "end_time": "2026-01-12T07:52:55.956862",
+  "run": {
+    "id": "adc1278e-b405-4d21-94f6-aba8ff68c8d9",
+    "run_name": "2-ensemble-size-analysis-majority_vote_average-params_small_to_big",
+    "run_type": "official",
+    "cli_name": "aggregate",
+    "notes": "Ensemble size 2 analysis: aggregating 2 models with majority_vote_average",
+    "git_info": {
+      "git_sha": "14af3d7",
+      "git_clean": false,
+      "git_branch": "master"
+    },
+    "aggregate_run_config": {
+      "id": "962eb3b0-e559-4b47-bc5b-b0b54f4393ff",
+      "aggregation_strategy": {
+        "id": "071d093b-2fd5-4dce-b584-d71c2d522091",
+        "name": "majority_vote_average"
+      },
+      "io_config_name": "db_to_db",
+      "input_run_names": [
+        "ensemble-4-meta-llama-3.2-3b-instruct-start",
+        "ensemble-2-ministral-3b-2515"
+      ],
+      "input_run_names_hash": "3bbe958c2f3191bb3373819f86da52689b6a792f8936c15e4c715bd65d23c0b6"
+    },
+    "aggregated_dataset": null,
+    "start_time": "2026-01-12T07:52:53.498086",
+    "end_time": "2026-01-12T07:52:55.956862"
+  },
+  "input_judgement_count": 7836,
+  "unique_pair_count": 3918,
+  "output_aggregated_count": 3918,
+  "tie_count": 1777,
+  "no_valid_votes_count": 0,
+  "issues_summary": {
+    "tie": 1777
+  },
+  "write_summary": {
+    "aggregation_strategies_created": 0,
+    "aggregation_strategies_skipped": 1,
+    "configs_created": 0,
+    "configs_skipped": 1,
+    "datasets_created": 1,
+    "datasets_skipped": 0,
+    "aggregated_votes_created": 0,
+    "aggregated_votes_skipped": 3918,
+    "aggregation_votes_created": 0,
+    "aggregation_votes_skipped": 7836,
+    "aggregated_dataset_votes_created": 3918,
+    "aggregated_dataset_votes_skipped": 0,
+    "runs_created": 1,
+    "runs_skipped": 0
+  },
+  "duration_seconds": 2.46,
+  "duration_minutes": 0.04,
+  "duration_hours": 0.0
+}

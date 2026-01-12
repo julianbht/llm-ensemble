@@ -1,0 +1,47 @@
+{
+  "id": "8f552a2a-37a2-4e9e-b2d3-47b0bee94130",
+  "run_name": "3-ensemble-size-analysis-average_vote-params_small_to_big",
+  "run_type": "official",
+  "cli_name": "evaluate",
+  "notes": "Evaluation of 3-ensemble-size-analysis-average_vote-params_small_to_big",
+  "git_info": {
+    "git_sha": "14af3d7",
+    "git_clean": false,
+    "git_branch": "master"
+  },
+  "evaluate_run_config": {
+    "id": "f37c705c-b372-4cc4-b637-fb62c3654041",
+    "io_config_name": "db_aggregate_to_json",
+    "input_run_name": "3-ensemble-size-analysis-average_vote-params_small_to_big",
+    "metric_names": [
+      "cohens_kappa",
+      "krippendorffs_alpha"
+    ]
+  },
+  "metric_results": [
+    {
+      "name": "cohens_kappa",
+      "value": 0.1447560947386448,
+      "sample_size": 3918,
+      "interpretation": "slight",
+      "description": "Cohen's Kappa coefficient measuring inter-rater agreement",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    },
+    {
+      "name": "krippendorffs_alpha",
+      "value": 0.35726276588643524,
+      "sample_size": 3918,
+      "interpretation": "insufficient (unreliable)",
+      "description": "Krippendorff's Alpha coefficient measuring inter-rater reliability (ordinal scale)",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    }
+  ],
+  "evaluated_run_type": "aggregate",
+  "evaluated_sample_count": 3918,
+  "start_time": "2026-01-12T07:51:13.777142",
+  "end_time": "2026-01-12T07:51:20.558285"
+}

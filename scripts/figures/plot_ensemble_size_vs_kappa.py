@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Plot ensemble size vs Cohen's kappa from evaluate runs.
+"""Plot ensemble size vs metric for multiple aggregation strategies.
 
 This script reads evaluate_run.json files from multiple runs and creates
-a plot showing how Cohen's kappa varies with ensemble size.
+a plot showing how a metric varies with ensemble size across different
+aggregation strategies.
 
 Usage:
     # Run with defaults from constants below
@@ -11,7 +12,7 @@ Usage:
 
 import json
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 
 import matplotlib.pyplot as plt
 import typer
@@ -21,17 +22,37 @@ import typer
 # CONFIGURATION - Edit these constants to change the plot
 # ============================================================================
 
-# List of (ensemble_size, run_name) tuples to plot
+# Dictionary mapping strategy name to list of (ensemble_size, run_name) tuples
 # The ensemble_size is explicit rather than extracted from the run name
-RUNS = [
-    (1, "1-ensemble-size-analysis"),
-    (2, "2-ensemble-size-analysis"),
-    (3, "3-ensemble-size-analysis"),
-    (4, "4-ensemble-size-analysis"),
-    (5, "5-ensemble-size-analysis"),
-    (6, "6-ensemble-size-analysis"),
-    (7, "7-ensemble-size-analysis"),
-]
+RUNS_BY_STRATEGY = {
+    "average_vote": [
+        (1, "1-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (2, "2-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (3, "3-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (4, "4-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (5, "5-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (6, "6-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (7, "7-ensemble-size-analysis-average_vote-params_small_to_big"),
+    ],
+    "majority_vote_average": [
+        (1, "1-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (2, "2-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (3, "3-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (4, "4-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (5, "5-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (6, "6-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (7, "7-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+    ],
+    "majority_vote_random": [
+        (1, "1-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (2, "2-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (3, "3-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (4, "4-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (5, "5-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (6, "6-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (7, "7-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+    ],
+}
 
 # Metric to plot (must exist in evaluate_run.json metric_results)
 METRIC_NAME = "cohens_kappa"
@@ -44,13 +65,32 @@ RUN_TYPE = "official"
 Y_AXIS_LIMITS = None
 
 # Output filename (None = auto-generate from metric name)
-OUTPUT_FILENAME = None  # e.g., "ensemble_size_vs_kappa.svg" or None
+OUTPUT_FILENAME = None  # e.g., "ensemble_size_vs_kappa_multi_strategy.svg" or None
 
 # Custom plot title (None = auto-generate)
-PLOT_TITLE = None  # e.g., "Ensemble Size vs Cohen's Kappa"
+PLOT_TITLE = None  # e.g., "Ensemble Size vs Cohen's Kappa (Multiple Strategies)"
 
 # Output format: "svg" or "png"
 OUTPUT_FORMAT = "svg"
+
+# Style configuration for each strategy
+STRATEGY_STYLES = {
+    "average_vote": {
+        "color": "steelblue",
+        "marker": "o",
+        "label": "Average Vote",
+    },
+    "majority_vote_average": {
+        "color": "coral",
+        "marker": "s",
+        "label": "Majority Vote (Avg Tiebreak)",
+    },
+    "majority_vote_random": {
+        "color": "mediumseagreen",
+        "marker": "^",
+        "label": "Majority Vote (Random Tiebreak)",
+    },
+}
 
 # ============================================================================
 
@@ -83,108 +123,119 @@ def extract_metric_value(evaluate_run: dict, metric_name: str) -> float:
     raise ValueError(f"Metric '{metric_name}' not found in metric results")
 
 
-def collect_data(
-    runs: List[Tuple[int, str]], evaluate_runs_base: Path, metric_name: str
-) -> List[Tuple[int, float]]:
-    """Collect (ensemble_size, metric_value) pairs from evaluate runs.
+def collect_data_by_strategy(
+    runs_by_strategy: Dict[str, List[Tuple[int, str]]],
+    evaluate_runs_base: Path,
+    metric_name: str,
+) -> Dict[str, List[Tuple[int, float]]]:
+    """Collect metric data grouped by strategy.
 
     Args:
-        runs: List of (ensemble_size, run_name) tuples
+        runs_by_strategy: Dict mapping strategy to list of (ensemble_size, run_name)
         evaluate_runs_base: Base path for evaluate runs
         metric_name: Name of metric to extract
 
     Returns:
-        List of (ensemble_size, metric_value) tuples sorted by ensemble size
+        Dict mapping strategy to list of (ensemble_size, metric_value) tuples
     """
-    data = []
+    data_by_strategy = {}
 
-    for ensemble_size, run_name in runs:
-        run_path = evaluate_runs_base / run_name
-        if not run_path.exists():
-            typer.echo(f"Warning: Run path does not exist: {run_path}", err=True)
-            continue
+    for strategy, runs in runs_by_strategy.items():
+        typer.echo(f"\nCollecting data for strategy: {strategy}")
+        data = []
 
-        evaluate_run = read_evaluate_run(run_path)
+        for ensemble_size, run_name in runs:
+            run_path = evaluate_runs_base / run_name
+            if not run_path.exists():
+                typer.echo(f"  Warning: Run path does not exist: {run_path}", err=True)
+                continue
 
-        try:
-            metric_value = extract_metric_value(evaluate_run, metric_name)
-            data.append((ensemble_size, metric_value))
-            typer.echo(
-                f"Found: ensemble_size={ensemble_size}, {metric_name}={metric_value:.4f} ({run_name})"
-            )
-        except ValueError as e:
-            typer.echo(f"Warning: {e} for run {run_name}", err=True)
-            continue
+            evaluate_run = read_evaluate_run(run_path)
 
-    return sorted(data, key=lambda x: x[0])
+            try:
+                metric_value = extract_metric_value(evaluate_run, metric_name)
+                data.append((ensemble_size, metric_value))
+                typer.echo(
+                    f"  Found: ensemble_size={ensemble_size}, {metric_name}={metric_value:.4f}"
+                )
+            except ValueError as e:
+                typer.echo(f"  Warning: {e} for run {run_name}", err=True)
+                continue
+
+        data_by_strategy[strategy] = sorted(data, key=lambda x: x[0])
+
+    return data_by_strategy
 
 
-def plot_ensemble_size_vs_metric(
-    data: List[Tuple[int, float]],
+def plot_ensemble_size_vs_metric_multi_strategy(
+    data_by_strategy: Dict[str, List[Tuple[int, float]]],
     metric_name: str,
     output_path: Path,
     y_limits: Optional[List[float]] = None,
     title: Optional[str] = None,
 ):
-    """Create and save plot of ensemble size vs metric.
+    """Create and save plot of ensemble size vs metric for multiple strategies.
 
     Args:
-        data: List of (ensemble_size, metric_value) tuples
+        data_by_strategy: Dict mapping strategy to list of (size, value) tuples
         metric_name: Name of the metric (for axis label)
         output_path: Where to save the figure
         y_limits: Y-axis limits [min, max] or None for auto-scaling
         title: Optional custom title
     """
-    ensemble_sizes = [d[0] for d in data]
-    metric_values = [d[1] for d in data]
+    fig, ax = plt.subplots(figsize=(12, 7))
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    # Plot each strategy
+    for strategy, data in data_by_strategy.items():
+        if not data:
+            typer.echo(f"Warning: No data for strategy {strategy}, skipping", err=True)
+            continue
 
-    # Plot line with markers
-    ax.plot(
-        ensemble_sizes,
-        metric_values,
-        marker="o",
-        linewidth=2.5,
-        markersize=8,
-        color="steelblue",
-        markerfacecolor="coral",
-        markeredgecolor="black",
-        markeredgewidth=1.2,
-    )
+        ensemble_sizes = [d[0] for d in data]
+        metric_values = [d[1] for d in data]
+
+        style = STRATEGY_STYLES.get(
+            strategy,
+            {"color": "gray", "marker": "x", "label": strategy},
+        )
+
+        ax.plot(
+            ensemble_sizes,
+            metric_values,
+            marker=style["marker"],
+            linewidth=2.5,
+            markersize=10,
+            color=style["color"],
+            label=style["label"],
+            markeredgecolor="black",
+            markeredgewidth=1.0,
+        )
 
     # Set y-axis limits if specified
     if y_limits is not None:
         ax.set_ylim(y_limits[0], y_limits[1])
 
     # Labels and title
-    ax.set_xlabel("Ensemble Size", fontsize=12, fontweight="bold")
+    ax.set_xlabel("Ensemble Size", fontsize=13, fontweight="bold")
 
     metric_display = metric_name.replace("_", " ").title()
-    ax.set_ylabel(f"{metric_display}", fontsize=12, fontweight="bold")
+    ax.set_ylabel(f"{metric_display}", fontsize=13, fontweight="bold")
 
     if title is None:
         title = f"Ensemble Size vs {metric_display}"
-    ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
+    ax.set_title(title, fontsize=15, fontweight="bold", pad=20)
 
     # Grid for readability
     ax.grid(True, alpha=0.3, linestyle="--")
     ax.set_axisbelow(True)
 
     # Show all ensemble sizes on x-axis
-    ax.set_xticks(ensemble_sizes)
+    if data_by_strategy:
+        all_sizes = sorted(set(size for data in data_by_strategy.values() for size, _ in data))
+        ax.set_xticks(all_sizes)
 
-    # Add value labels on points
-    for size, value in data:
-        ax.annotate(
-            f"{value:.3f}",
-            xy=(size, value),
-            xytext=(0, 10),
-            textcoords="offset points",
-            ha="center",
-            fontsize=10,
-            fontweight="bold",
-        )
+    # Legend
+    ax.legend(loc="best", fontsize=11, framealpha=0.95)
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches="tight", format=OUTPUT_FORMAT)
@@ -194,7 +245,7 @@ def plot_ensemble_size_vs_metric(
 
 @app.command()
 def main():
-    """Plot ensemble size vs metric from evaluate runs.
+    """Plot ensemble size vs metric for multiple aggregation strategies.
 
     Configuration is set via constants at the top of this file.
 
@@ -210,16 +261,22 @@ def main():
     # Output filename
     output_filename = OUTPUT_FILENAME
     if output_filename is None:
-        output_filename = f"ensemble_size_vs_{METRIC_NAME}.{OUTPUT_FORMAT}"
+        output_filename = f"ensemble_size_vs_{METRIC_NAME}_multi_strategy.{OUTPUT_FORMAT}"
     output_path = figures_dir / output_filename
 
-    typer.echo(f"Analyzing {len(RUNS)} evaluate runs from: {evaluate_runs_base}")
+    total_runs = sum(len(runs) for runs in RUNS_BY_STRATEGY.values())
+    typer.echo(
+        f"Analyzing {total_runs} evaluate runs across {len(RUNS_BY_STRATEGY)} strategies"
+    )
+    typer.echo(f"Base path: {evaluate_runs_base}")
     typer.echo(f"Metric: {METRIC_NAME}\n")
 
     # Collect data
-    data = collect_data(RUNS, evaluate_runs_base, METRIC_NAME)
+    data_by_strategy = collect_data_by_strategy(
+        RUNS_BY_STRATEGY, evaluate_runs_base, METRIC_NAME
+    )
 
-    if not data:
+    if not data_by_strategy or all(not data for data in data_by_strategy.values()):
         typer.echo(
             "Error: No data collected. Check that run paths exist and contain valid data.",
             err=True,
@@ -227,8 +284,8 @@ def main():
         raise typer.Exit(1)
 
     # Create plot
-    plot_ensemble_size_vs_metric(
-        data, METRIC_NAME, output_path, Y_AXIS_LIMITS, PLOT_TITLE
+    plot_ensemble_size_vs_metric_multi_strategy(
+        data_by_strategy, METRIC_NAME, output_path, Y_AXIS_LIMITS, PLOT_TITLE
     )
 
 

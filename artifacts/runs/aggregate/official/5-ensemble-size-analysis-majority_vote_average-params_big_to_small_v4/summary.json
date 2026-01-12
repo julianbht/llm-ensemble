@@ -1,0 +1,62 @@
+{
+  "start_time": "2026-01-12T08:33:16.530826",
+  "end_time": "2026-01-12T08:33:20.446292",
+  "run": {
+    "id": "c37062f1-1a2e-4873-9b57-c46c3fc182ec",
+    "run_name": "5-ensemble-size-analysis-majority_vote_average-params_big_to_small_v4",
+    "run_type": "official",
+    "cli_name": "aggregate",
+    "notes": "Ensemble size 5 analysis: aggregating 5 models with majority_vote_average",
+    "git_info": {
+      "git_sha": "f5e8fb8",
+      "git_clean": false,
+      "git_branch": "master"
+    },
+    "aggregate_run_config": {
+      "id": "a1c084d8-24ab-40a1-99fa-dddeef0b8044",
+      "aggregation_strategy": {
+        "id": "aee95a21-b30c-4b44-92db-9cf59a41c16e",
+        "name": "majority_vote_average"
+      },
+      "io_config_name": "db_to_db",
+      "input_run_names": [
+        "ensemble-7-qwen3-8b-start",
+        "ensemble-6-cohere-command-r7b-12-2024-start",
+        "ensemble-5-ui-tars-1.5-7b-start",
+        "ensemble-3-phi-4-multimodal-instruct",
+        "ensemble-1-google-gemma-3-4b-it"
+      ],
+      "input_run_names_hash": "3c36a5841b6d0a2c74190b7b3a33d7844c94b9cf35bfaea9cde81e215245c5c0"
+    },
+    "aggregated_dataset": null,
+    "start_time": "2026-01-12T08:33:16.530826",
+    "end_time": "2026-01-12T08:33:20.446292"
+  },
+  "input_judgement_count": 19590,
+  "unique_pair_count": 3918,
+  "output_aggregated_count": 3918,
+  "tie_count": 534,
+  "no_valid_votes_count": 0,
+  "issues_summary": {
+    "tie": 534
+  },
+  "write_summary": {
+    "aggregation_strategies_created": 0,
+    "aggregation_strategies_skipped": 1,
+    "configs_created": 1,
+    "configs_skipped": 0,
+    "datasets_created": 1,
+    "datasets_skipped": 0,
+    "aggregated_votes_created": 3918,
+    "aggregated_votes_skipped": 0,
+    "aggregation_votes_created": 19590,
+    "aggregation_votes_skipped": 0,
+    "aggregated_dataset_votes_created": 3918,
+    "aggregated_dataset_votes_skipped": 0,
+    "runs_created": 1,
+    "runs_skipped": 0
+  },
+  "duration_seconds": 3.92,
+  "duration_minutes": 0.07,
+  "duration_hours": 0.0
+}

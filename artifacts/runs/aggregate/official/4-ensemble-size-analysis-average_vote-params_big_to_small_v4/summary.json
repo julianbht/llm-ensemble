@@ -1,0 +1,59 @@
+{
+  "start_time": "2026-01-12T08:31:09.442036",
+  "end_time": "2026-01-12T08:31:12.598015",
+  "run": {
+    "id": "d5ce2e73-5a86-4c37-8977-eed402505074",
+    "run_name": "4-ensemble-size-analysis-average_vote-params_big_to_small_v4",
+    "run_type": "official",
+    "cli_name": "aggregate",
+    "notes": "Ensemble size 4 analysis: aggregating 4 models with average_vote",
+    "git_info": {
+      "git_sha": "f5e8fb8",
+      "git_clean": false,
+      "git_branch": "master"
+    },
+    "aggregate_run_config": {
+      "id": "5ae9b5bd-a171-4d91-ac3c-86532c43d04d",
+      "aggregation_strategy": {
+        "id": "82387ff5-1f61-4031-9163-cb24c54f2a30",
+        "name": "average_vote"
+      },
+      "io_config_name": "db_to_db",
+      "input_run_names": [
+        "ensemble-7-qwen3-8b-start",
+        "ensemble-6-cohere-command-r7b-12-2024-start",
+        "ensemble-5-ui-tars-1.5-7b-start",
+        "ensemble-3-phi-4-multimodal-instruct"
+      ],
+      "input_run_names_hash": "fd1106c4b6ae4f070449a2dd5a223c069e622c8956c6bf76aeb3af9e106854a8"
+    },
+    "aggregated_dataset": null,
+    "start_time": "2026-01-12T08:31:09.442036",
+    "end_time": "2026-01-12T08:31:12.598015"
+  },
+  "input_judgement_count": 15672,
+  "unique_pair_count": 3918,
+  "output_aggregated_count": 3918,
+  "tie_count": 0,
+  "no_valid_votes_count": 0,
+  "issues_summary": null,
+  "write_summary": {
+    "aggregation_strategies_created": 0,
+    "aggregation_strategies_skipped": 1,
+    "configs_created": 1,
+    "configs_skipped": 0,
+    "datasets_created": 1,
+    "datasets_skipped": 0,
+    "aggregated_votes_created": 3918,
+    "aggregated_votes_skipped": 0,
+    "aggregation_votes_created": 15672,
+    "aggregation_votes_skipped": 0,
+    "aggregated_dataset_votes_created": 3918,
+    "aggregated_dataset_votes_skipped": 0,
+    "runs_created": 1,
+    "runs_skipped": 0
+  },
+  "duration_seconds": 3.16,
+  "duration_minutes": 0.05,
+  "duration_hours": 0.0
+}

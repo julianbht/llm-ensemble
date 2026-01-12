@@ -1,0 +1,47 @@
+{
+  "id": "4f260ebc-29d5-4745-a663-a13d3cb4538d",
+  "run_name": "6-ensemble-size-analysis-average_vote-params_big_to_small_v4",
+  "run_type": "official",
+  "cli_name": "evaluate",
+  "notes": "Evaluation of 6-ensemble-size-analysis-average_vote-params_big_to_small_v4",
+  "git_info": {
+    "git_sha": "f5e8fb8",
+    "git_clean": false,
+    "git_branch": "master"
+  },
+  "evaluate_run_config": {
+    "id": "ee881c62-d45c-49ed-81c3-d6268143d713",
+    "io_config_name": "db_aggregate_to_json",
+    "input_run_name": "6-ensemble-size-analysis-average_vote-params_big_to_small_v4",
+    "metric_names": [
+      "cohens_kappa",
+      "krippendorffs_alpha"
+    ]
+  },
+  "metric_results": [
+    {
+      "name": "cohens_kappa",
+      "value": 0.19206496710573073,
+      "sample_size": 3918,
+      "interpretation": "slight",
+      "description": "Cohen's Kappa coefficient measuring inter-rater agreement",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    },
+    {
+      "name": "krippendorffs_alpha",
+      "value": 0.40725376796015034,
+      "sample_size": 3918,
+      "interpretation": "insufficient (unreliable)",
+      "description": "Krippendorff's Alpha coefficient measuring inter-rater reliability (ordinal scale)",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    }
+  ],
+  "evaluated_run_type": "aggregate",
+  "evaluated_sample_count": 3918,
+  "start_time": "2026-01-12T08:31:53.059155",
+  "end_time": "2026-01-12T08:32:00.573962"
+}

@@ -1,0 +1,57 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "5-ensemble-size-analysis-majority_vote_random-params_small_to_big",
+  "run_name": "5-ensemble-size-analysis-majority_vote_random-params_small_to_big",
+  "run_type": "official",
+  "timestamp": "2026-01-12T12:55:49.841774Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "5-ensemble-size-analysis-majority_vote_random-params_small_to_big",
+  "level": "info",
+  "run_name": "5-ensemble-size-analysis-majority_vote_random-params_small_to_big",
+  "run_type": "aggregate",
+  "timestamp": "2026-01-12T12:55:58.219807Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "5-ensemble-size-analysis-majority_vote_random-params_small_to_big",
+  "run_type": "official",
+  "timestamp": "2026-01-12T12:55:58.223203Z",
+  "value": 0.19923650654358005
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "5-ensemble-size-analysis-majority_vote_random-params_small_to_big",
+  "run_type": "official",
+  "timestamp": "2026-01-12T12:55:58.225462Z",
+  "value": 0.39045586955399014
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/5-ensemble-size-analysis-majority_vote_random-params_small_to_big/evaluate_run.json",
+  "run_name": "5-ensemble-size-analysis-majority_vote_random-params_small_to_big",
+  "run_type": "official",
+  "timestamp": "2026-01-12T12:55:58.235455Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "5-ensemble-size-analysis-majority_vote_random-params_small_to_big",
+  "run_type": "official",
+  "timestamp": "2026-01-12T12:55:58.235670Z"
+}

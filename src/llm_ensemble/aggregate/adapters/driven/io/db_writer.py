@@ -559,7 +559,10 @@ class DBWriter(ForOutput):
         existing = session.query(AggregateRunORM).filter_by(run_name=aggregate_run.run_name).first()
 
         if existing:
-            return (0, 1)
+            raise ValueError(
+                f"Aggregate run with name '{aggregate_run.run_name}' already exists. "
+                f"Please use a different run name to avoid overwriting existing results."
+            )
 
         # Insert new run with correct foreign key UUIDs
         aggregate_run_orm = AggregateRunORM(

@@ -1,0 +1,64 @@
+{
+  "start_time": "2026-01-12T08:33:53.061014",
+  "end_time": "2026-01-12T08:34:00.659075",
+  "run": {
+    "id": "15e0f597-f24e-4b1c-96e6-cf4df9a96ce7",
+    "run_name": "7-ensemble-size-analysis-majority_vote_average-params_big_to_small_v4",
+    "run_type": "official",
+    "cli_name": "aggregate",
+    "notes": "Ensemble size 7 analysis: aggregating 7 models with majority_vote_average",
+    "git_info": {
+      "git_sha": "f5e8fb8",
+      "git_clean": false,
+      "git_branch": "master"
+    },
+    "aggregate_run_config": {
+      "id": "e098c289-bee0-4265-a8a3-bc06b342c6e4",
+      "aggregation_strategy": {
+        "id": "d813234d-54df-48bb-9264-7df0a6ca726a",
+        "name": "majority_vote_average"
+      },
+      "io_config_name": "db_to_db",
+      "input_run_names": [
+        "ensemble-7-qwen3-8b-start",
+        "ensemble-6-cohere-command-r7b-12-2024-start",
+        "ensemble-5-ui-tars-1.5-7b-start",
+        "ensemble-3-phi-4-multimodal-instruct",
+        "ensemble-1-google-gemma-3-4b-it",
+        "ensemble-2-ministral-3b-2515",
+        "ensemble-4-meta-llama-3.2-3b-instruct-start"
+      ],
+      "input_run_names_hash": "5ec834a721224b41a6b2dea6dee749a15fbebaf52e473013c20d90d2753ac948"
+    },
+    "aggregated_dataset": null,
+    "start_time": "2026-01-12T08:33:53.061014",
+    "end_time": "2026-01-12T08:34:00.659075"
+  },
+  "input_judgement_count": 27426,
+  "unique_pair_count": 3918,
+  "output_aggregated_count": 3918,
+  "tie_count": 319,
+  "no_valid_votes_count": 0,
+  "issues_summary": {
+    "tie": 319
+  },
+  "write_summary": {
+    "aggregation_strategies_created": 0,
+    "aggregation_strategies_skipped": 1,
+    "configs_created": 0,
+    "configs_skipped": 1,
+    "datasets_created": 1,
+    "datasets_skipped": 0,
+    "aggregated_votes_created": 119,
+    "aggregated_votes_skipped": 3799,
+    "aggregation_votes_created": 833,
+    "aggregation_votes_skipped": 26593,
+    "aggregated_dataset_votes_created": 3918,
+    "aggregated_dataset_votes_skipped": 0,
+    "runs_created": 1,
+    "runs_skipped": 0
+  },
+  "duration_seconds": 7.6,
+  "duration_minutes": 0.13,
+  "duration_hours": 0.0
+}

@@ -25,12 +25,11 @@ import typer
 # ============================================================================
 
 # Ordered list of ensemble inference runs to progressively combine
-# Note: ensemble-7 has two variants; using ensemble-7-qwen3-8b-resume-1
 ENSEMBLE_RUNS = [
-    "ensemble-1-google-gemma-3-4b-it",
-    "ensemble-2-ministral-3b-2515",
-    "ensemble-3-phi-4-multimodal-instruct",
     "ensemble-4-meta-llama-3.2-3b-instruct-start",
+    "ensemble-2-ministral-3b-2515",
+    "ensemble-1-google-gemma-3-4b-it",
+    "ensemble-3-phi-4-multimodal-instruct",
     "ensemble-5-ui-tars-1.5-7b-start",
     "ensemble-6-cohere-command-r7b-12-2024-start",
     "ensemble-7-qwen3-8b-start",

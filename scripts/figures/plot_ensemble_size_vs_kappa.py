@@ -26,31 +26,31 @@ import typer
 # The ensemble_size is explicit rather than extracted from the run name
 RUNS_BY_STRATEGY = {
     "average_vote": [
-        (1, "1-ensemble-size-analysis-average_vote-params_small_to_big"),
-        (2, "2-ensemble-size-analysis-average_vote-params_small_to_big"),
-        (3, "3-ensemble-size-analysis-average_vote-params_small_to_big"),
-        (4, "4-ensemble-size-analysis-average_vote-params_small_to_big"),
-        (5, "5-ensemble-size-analysis-average_vote-params_small_to_big"),
-        (6, "6-ensemble-size-analysis-average_vote-params_small_to_big"),
-        (7, "7-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (1, "1-ensemble-size-analysis-average_vote-params_small_to_big_v4"),
+        (2, "2-ensemble-size-analysis-average_vote-params_small_to_big_v4"),
+        (3, "3-ensemble-size-analysis-average_vote-params_small_to_big_v4"),
+        (4, "4-ensemble-size-analysis-average_vote-params_small_to_big_v4"),
+        (5, "5-ensemble-size-analysis-average_vote-params_small_to_big_v4"),
+        (6, "6-ensemble-size-analysis-average_vote-params_small_to_big_v4"),
+        (7, "7-ensemble-size-analysis-average_vote-params_small_to_big_v4"),
     ],
     "majority_vote_average": [
-        (1, "1-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
-        (2, "2-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
-        (3, "3-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
-        (4, "4-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
-        (5, "5-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
-        (6, "6-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
-        (7, "7-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (1, "1-ensemble-size-analysis-majority_vote_average-params_small_to_big_v4"),
+        (2, "2-ensemble-size-analysis-majority_vote_average-params_small_to_big_v4"),
+        (3, "3-ensemble-size-analysis-majority_vote_average-params_small_to_big_v4"),
+        (4, "4-ensemble-size-analysis-majority_vote_average-params_small_to_big_v4"),
+        (5, "5-ensemble-size-analysis-majority_vote_average-params_small_to_big_v4"),
+        (6, "6-ensemble-size-analysis-majority_vote_average-params_small_to_big_v4"),
+        (7, "7-ensemble-size-analysis-majority_vote_average-params_small_to_big_v4"),
     ],
     "majority_vote_random": [
-        (1, "1-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
-        (2, "2-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
-        (3, "3-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
-        (4, "4-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
-        (5, "5-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
-        (6, "6-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
-        (7, "7-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (1, "1-ensemble-size-analysis-majority_vote_random-params_small_to_big_v4"),
+        (2, "2-ensemble-size-analysis-majority_vote_random-params_small_to_big_v4"),
+        (3, "3-ensemble-size-analysis-majority_vote_random-params_small_to_big_v4"),
+        (4, "4-ensemble-size-analysis-majority_vote_random-params_small_to_big_v4"),
+        (5, "5-ensemble-size-analysis-majority_vote_random-params_small_to_big_v4"),
+        (6, "6-ensemble-size-analysis-majority_vote_random-params_small_to_big_v4"),
+        (7, "7-ensemble-size-analysis-majority_vote_random-params_small_to_big_v4"),
     ],
 }
 
@@ -231,7 +231,9 @@ def plot_ensemble_size_vs_metric_multi_strategy(
 
     # Show all ensemble sizes on x-axis
     if data_by_strategy:
-        all_sizes = sorted(set(size for data in data_by_strategy.values() for size, _ in data))
+        all_sizes = sorted(
+            set(size for data in data_by_strategy.values() for size, _ in data)
+        )
         ax.set_xticks(all_sizes)
 
     # Legend
@@ -261,7 +263,9 @@ def main():
     # Output filename
     output_filename = OUTPUT_FILENAME
     if output_filename is None:
-        output_filename = f"ensemble_size_vs_{METRIC_NAME}_multi_strategy.{OUTPUT_FORMAT}"
+        output_filename = (
+            f"ensemble_size_vs_{METRIC_NAME}_multi_strategy.{OUTPUT_FORMAT}"
+        )
     output_path = figures_dir / output_filename
 
     total_runs = sum(len(runs) for runs in RUNS_BY_STRATEGY.values())

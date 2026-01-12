@@ -26,13 +26,13 @@ import typer
 
 # Ordered list of ensemble inference runs to progressively combine
 ENSEMBLE_RUNS = [
-    "ensemble-4-meta-llama-3.2-3b-instruct-start",
-    "ensemble-2-ministral-3b-2515",
-    "ensemble-1-google-gemma-3-4b-it",
-    "ensemble-3-phi-4-multimodal-instruct",
-    "ensemble-5-ui-tars-1.5-7b-start",
-    "ensemble-6-cohere-command-r7b-12-2024-start",
     "ensemble-7-qwen3-8b-start",
+    "ensemble-6-cohere-command-r7b-12-2024-start",
+    "ensemble-5-ui-tars-1.5-7b-start",
+    "ensemble-3-phi-4-multimodal-instruct",
+    "ensemble-1-google-gemma-3-4b-it",
+    "ensemble-2-ministral-3b-2515",
+    "ensemble-4-meta-llama-3.2-3b-instruct-start",
 ]
 
 # Aggregation strategies to compare (all will be plotted together)
@@ -52,7 +52,7 @@ RUN_TYPE = "official"
 # Run name prefix/suffix (optional, for distinguishing different experiment runs)
 # Examples: "order1", "random", "best-first", etc.
 RUN_PREFIX = ""
-RUN_SUFFIX = "params_small_to_big"
+RUN_SUFFIX = "params_big_to_small_v4"
 
 # ============================================================================
 

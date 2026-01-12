@@ -1,0 +1,57 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "6-ensemble-size-analysis",
+  "run_name": "6-ensemble-size-analysis",
+  "run_type": "official",
+  "timestamp": "2026-01-12T09:22:51.598264Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "6-ensemble-size-analysis",
+  "level": "info",
+  "run_name": "6-ensemble-size-analysis",
+  "run_type": "aggregate",
+  "timestamp": "2026-01-12T09:23:00.234920Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "6-ensemble-size-analysis",
+  "run_type": "official",
+  "timestamp": "2026-01-12T09:23:00.237463Z",
+  "value": 0.2085630906895084
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "6-ensemble-size-analysis",
+  "run_type": "official",
+  "timestamp": "2026-01-12T09:23:00.239452Z",
+  "value": 0.41390732887096005
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/6-ensemble-size-analysis/evaluate_run.json",
+  "run_name": "6-ensemble-size-analysis",
+  "run_type": "official",
+  "timestamp": "2026-01-12T09:23:00.246982Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "6-ensemble-size-analysis",
+  "run_type": "official",
+  "timestamp": "2026-01-12T09:23:00.247153Z"
+}

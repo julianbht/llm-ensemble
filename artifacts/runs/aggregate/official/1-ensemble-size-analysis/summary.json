@@ -1,0 +1,56 @@
+{
+  "start_time": "2026-01-12T04:21:32.741260",
+  "end_time": "2026-01-12T04:21:34.078233",
+  "run": {
+    "id": "96729fee-3a9a-460d-b75d-3abb112f4db7",
+    "run_name": "1-ensemble-size-analysis",
+    "run_type": "official",
+    "cli_name": "aggregate",
+    "notes": "Ensemble size 1 analysis: aggregating 1 models with majority_vote_average",
+    "git_info": {
+      "git_sha": "792f10a",
+      "git_clean": false,
+      "git_branch": "master"
+    },
+    "aggregate_run_config": {
+      "id": "c55f7cba-e54a-4323-b94b-cd8011f8fd40",
+      "aggregation_strategy": {
+        "id": "92fc9c82-7ff0-43de-aa16-38bdac472f96",
+        "name": "majority_vote_average"
+      },
+      "io_config_name": "db_to_db",
+      "input_run_names": [
+        "ensemble-1-google-gemma-3-4b-it"
+      ],
+      "input_run_names_hash": "6a5f61fab2fa02723e9938bb95c74d53ce7d199b68428afe8a3092d2ac6397ee"
+    },
+    "aggregated_dataset": null,
+    "start_time": "2026-01-12T04:21:32.741260",
+    "end_time": "2026-01-12T04:21:34.078233"
+  },
+  "input_judgement_count": 3918,
+  "unique_pair_count": 3918,
+  "output_aggregated_count": 3918,
+  "tie_count": 0,
+  "no_valid_votes_count": 0,
+  "issues_summary": null,
+  "write_summary": {
+    "aggregation_strategies_created": 1,
+    "aggregation_strategies_skipped": 0,
+    "configs_created": 1,
+    "configs_skipped": 0,
+    "datasets_created": 1,
+    "datasets_skipped": 0,
+    "aggregated_votes_created": 3918,
+    "aggregated_votes_skipped": 0,
+    "aggregation_votes_created": 3918,
+    "aggregation_votes_skipped": 0,
+    "aggregated_dataset_votes_created": 3918,
+    "aggregated_dataset_votes_skipped": 0,
+    "runs_created": 1,
+    "runs_skipped": 0
+  },
+  "duration_seconds": 1.34,
+  "duration_minutes": 0.02,
+  "duration_hours": 0.0
+}

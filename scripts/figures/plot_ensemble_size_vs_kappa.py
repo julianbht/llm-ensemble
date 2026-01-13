@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import typer
 
 from thesis_colors import BHT_COLORS
+from copy_to_overleaf import copy_figure_to_overleaf
 
 
 # ============================================================================
@@ -245,6 +246,9 @@ def plot_ensemble_size_vs_metric_multi_strategy(
     plt.savefig(output_path, dpi=300, bbox_inches="tight", format=OUTPUT_FORMAT)
     typer.echo(f"\nPlot saved to: {output_path}")
     plt.close()
+
+    # Copy to Overleaf
+    copy_figure_to_overleaf(output_path)
 
 
 @app.command()

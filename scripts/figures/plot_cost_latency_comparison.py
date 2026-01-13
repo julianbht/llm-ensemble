@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from thesis_colors import BHT_COLORS, GRAY_SCALE, ENSEMBLE_PALETTE, REFERENCE_COLOR
+from copy_to_overleaf import copy_figure_to_overleaf
 
 # Configuration
 INPUT_FILE = Path("artifacts/other/cost_latency_comparison.json")
@@ -48,7 +49,7 @@ MODEL_COLORS = {
 
 # Display labels for x-axis and legend (using model_id without provider prefix)
 DISPLAY_LABELS = {
-    "reference-ensemble-gpt-5-1-all-samples-start": "gpt-5.1",
+    "reference-ensemble-gpt-5-1-all-samples-start": "GPT-5.1",
     "ensemble": "Ensemble",
     "ensemble-1-google-gemma-3-4b-it": "gemma-3-4b-it",
     "ensemble-2-ministral-3b-2515": "ministral-3b-2512",
@@ -89,7 +90,9 @@ def create_comparison_chart(
         metrics: Dict mapping run_name to metrics
         output_path: Where to save the figure
     """
-    fig, (ax_cost, ax_latency) = plt.subplots(1, 2, figsize=(FIGURE_WIDTH, FIGURE_HEIGHT))
+    fig, (ax_cost, ax_latency) = plt.subplots(
+        1, 2, figsize=(FIGURE_WIDTH, FIGURE_HEIGHT)
+    )
 
     x_pos = np.arange(len(RUN_ORDER))
     bar_width = 0.6
@@ -105,35 +108,71 @@ def create_comparison_chart(
 
         if run_name == "ensemble":
             # Stack ensemble members
-            total_cost = sum(metrics[m]["total_cost_usd"] for m in ENSEMBLE_MEMBER_RUNS if m in metrics)
-            total_latency = sum(metrics[m]["total_latency_ms"] for m in ENSEMBLE_MEMBER_RUNS if m in metrics) / (1000.0 * 3600.0)  # Convert to hours
+            total_cost = sum(
+                metrics[m]["total_cost_usd"]
+                for m in ENSEMBLE_MEMBER_RUNS
+                if m in metrics
+            )
+            total_latency = sum(
+                metrics[m]["total_latency_ms"]
+                for m in ENSEMBLE_MEMBER_RUNS
+                if m in metrics
+            ) / (
+                1000.0 * 3600.0
+            )  # Convert to hours
 
             cost_values.append(("ensemble", total_cost, ENSEMBLE_MEMBER_RUNS))
             latency_values.append(("ensemble", total_latency, ENSEMBLE_MEMBER_RUNS))
         else:
             # Single model
-            cost_values.append(("single", metrics[run_name]["total_cost_usd"], run_name))
-            latency_values.append(("single", metrics[run_name]["total_latency_ms"] / (1000.0 * 3600.0), run_name))  # Convert to hours
+            cost_values.append(
+                ("single", metrics[run_name]["total_cost_usd"], run_name)
+            )
+            latency_values.append(
+                (
+                    "single",
+                    metrics[run_name]["total_latency_ms"] / (1000.0 * 3600.0),
+                    run_name,
+                )
+            )  # Convert to hours
 
     # Left panel: Cost
     for i, (bar_type, value, info) in enumerate(cost_values):
         if bar_type == "single":
             # Solid bar for single model
             color = MODEL_COLORS.get(info, GRAY_SCALE["very_light"])
-            ax_cost.bar(x_pos[i], value, bar_width, color=color, edgecolor="black", linewidth=0.5)
+            ax_cost.bar(
+                x_pos[i],
+                value,
+                bar_width,
+                color=color,
+                edgecolor="black",
+                linewidth=0.5,
+            )
         else:
             # Stacked bar for ensemble - sort by cost (largest at bottom)
-            member_costs = [(m, metrics[m]["total_cost_usd"]) for m in info if m in metrics]
+            member_costs = [
+                (m, metrics[m]["total_cost_usd"]) for m in info if m in metrics
+            ]
             member_costs.sort(key=lambda x: x[1], reverse=True)  # Largest first
 
             bottom = 0
             for idx, (member_run, member_cost) in enumerate(member_costs):
                 # Assign colors based on sorted position (largest gets first color)
-                color = ENSEMBLE_PALETTE[idx] if idx < len(ENSEMBLE_PALETTE) else GRAY_SCALE["very_light"]
+                color = (
+                    ENSEMBLE_PALETTE[idx]
+                    if idx < len(ENSEMBLE_PALETTE)
+                    else GRAY_SCALE["very_light"]
+                )
                 legend_mapping[member_run] = color  # Track for legend
                 ax_cost.bar(
-                    x_pos[i], member_cost, bar_width,
-                    bottom=bottom, color=color, edgecolor="black", linewidth=0.5
+                    x_pos[i],
+                    member_cost,
+                    bar_width,
+                    bottom=bottom,
+                    color=color,
+                    edgecolor="black",
+                    linewidth=0.5,
                 )
                 bottom += member_cost
 
@@ -149,19 +188,39 @@ def create_comparison_chart(
         if bar_type == "single":
             # Solid bar for single model
             color = MODEL_COLORS.get(info, GRAY_SCALE["very_light"])
-            ax_latency.bar(x_pos[i], value, bar_width, color=color, edgecolor="black", linewidth=0.5)
+            ax_latency.bar(
+                x_pos[i],
+                value,
+                bar_width,
+                color=color,
+                edgecolor="black",
+                linewidth=0.5,
+            )
         else:
             # Stacked bar for ensemble - sort by latency (largest at bottom)
-            member_latencies = [(m, metrics[m]["total_latency_ms"] / (1000.0 * 3600.0)) for m in info if m in metrics]  # Convert to hours
+            member_latencies = [
+                (m, metrics[m]["total_latency_ms"] / (1000.0 * 3600.0))
+                for m in info
+                if m in metrics
+            ]  # Convert to hours
             member_latencies.sort(key=lambda x: x[1], reverse=True)  # Largest first
 
             bottom = 0
             for idx, (member_run, member_latency) in enumerate(member_latencies):
                 # Assign colors based on sorted position (largest gets first color)
-                color = ENSEMBLE_PALETTE[idx] if idx < len(ENSEMBLE_PALETTE) else GRAY_SCALE["very_light"]
+                color = (
+                    ENSEMBLE_PALETTE[idx]
+                    if idx < len(ENSEMBLE_PALETTE)
+                    else GRAY_SCALE["very_light"]
+                )
                 ax_latency.bar(
-                    x_pos[i], member_latency, bar_width,
-                    bottom=bottom, color=color, edgecolor="black", linewidth=0.5
+                    x_pos[i],
+                    member_latency,
+                    bar_width,
+                    bottom=bottom,
+                    color=color,
+                    edgecolor="black",
+                    linewidth=0.5,
                 )
                 bottom += member_latency
 
@@ -178,11 +237,24 @@ def create_comparison_chart(
     for run in ENSEMBLE_MEMBER_RUNS:
         if run in legend_mapping:
             legend_handles.append(
-                plt.Rectangle((0, 0), 1, 1, fc=legend_mapping[run], edgecolor="black", linewidth=0.5)
+                plt.Rectangle(
+                    (0, 0),
+                    1,
+                    1,
+                    fc=legend_mapping[run],
+                    edgecolor="black",
+                    linewidth=0.5,
+                )
             )
             legend_labels.append(DISPLAY_LABELS.get(run, run))
 
-    fig.legend(legend_handles, legend_labels, loc="upper center", ncol=len(legend_handles), frameon=False)
+    fig.legend(
+        legend_handles,
+        legend_labels,
+        loc="upper center",
+        ncol=len(legend_handles),
+        frameon=False,
+    )
 
     # Adjust layout
     plt.tight_layout()
@@ -216,7 +288,9 @@ def main():
     print(f"Loaded metrics for {len(metrics)} runs")
 
     # Verify all required runs are present (skip "ensemble" which is synthetic)
-    missing_runs = [run for run in RUN_ORDER if run != "ensemble" and run not in metrics]
+    missing_runs = [
+        run for run in RUN_ORDER if run != "ensemble" and run not in metrics
+    ]
     if missing_runs:
         print(f"Warning: Missing data for runs: {missing_runs}")
 
@@ -228,6 +302,9 @@ def main():
     # Create plot
     print("Generating figure...")
     create_comparison_chart(metrics, output_path)
+
+    # Copy to Overleaf
+    copy_figure_to_overleaf(output_path, project_root)
 
     print("\nDone!")
 

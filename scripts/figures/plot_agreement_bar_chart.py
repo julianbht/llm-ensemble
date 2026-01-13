@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import typer
 
 from thesis_colors import BHT_COLORS, GRAY_SCALE
+from copy_to_overleaf import copy_figure_to_overleaf
 
 
 # ============================================================================
@@ -197,6 +198,9 @@ def plot_agreement_bar_chart(
     plt.savefig(output_path, dpi=300, bbox_inches="tight", format="svg")
     typer.echo(f"\nPlot saved to: {output_path}")
     plt.close()
+
+    # Copy to Overleaf
+    copy_figure_to_overleaf(output_path)
 
 
 @app.command()

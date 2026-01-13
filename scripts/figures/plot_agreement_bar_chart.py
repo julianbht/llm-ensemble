@@ -55,7 +55,9 @@ Y_AXIS_LIMITS = [0.0, 0.5]
 OUTPUT_FILENAME = None  # e.g., "my_figure.svg" or None
 
 # Custom plot title (None = auto-generate)
-PLOT_TITLE = None  # e.g., "Individual vs Ensemble Agreement"
+PLOT_TITLE = (
+    "Individual vs Ensemble Agreement"  # e.g., "Individual vs Ensemble Agreement"
+)
 
 # ============================================================================
 
@@ -170,7 +172,7 @@ def plot_agreement_bar_chart(
     ax.set_ylabel(f"{metric_display}", fontsize=12, fontweight="bold")
 
     if title is None:
-        title = f"Agreement Metrics: {metric_display}"
+        title = f"Agreement Metric: {metric_display}"
     ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
 
     # Add value labels on bars

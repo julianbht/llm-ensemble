@@ -149,6 +149,16 @@ def create_comparison_chart(
                 edgecolor="black",
                 linewidth=0.5,
             )
+            # Add value label on top
+            ax_cost.text(
+                x_pos[i],
+                value,
+                f"{value:.2f}",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                fontweight="bold",
+            )
         else:
             # Stacked bar for ensemble - sort by cost (largest at bottom)
             member_costs = [
@@ -176,6 +186,17 @@ def create_comparison_chart(
                 )
                 bottom += member_cost
 
+            # Add total value label on top of stacked bar
+            ax_cost.text(
+                x_pos[i],
+                bottom,
+                f"{bottom:.2f}",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                fontweight="bold",
+            )
+
     ax_cost.set_ylabel("Total Cost (USD)", fontsize=11, fontweight="bold")
     ax_cost.set_xlabel("Model / Ensemble", fontsize=11, fontweight="bold")
     ax_cost.set_xticks(x_pos)
@@ -195,6 +216,16 @@ def create_comparison_chart(
                 color=color,
                 edgecolor="black",
                 linewidth=0.5,
+            )
+            # Add value label on top
+            ax_latency.text(
+                x_pos[i],
+                value,
+                f"{value:.1f}",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                fontweight="bold",
             )
         else:
             # Stacked bar for ensemble - sort by latency (largest at bottom)
@@ -223,6 +254,17 @@ def create_comparison_chart(
                     linewidth=0.5,
                 )
                 bottom += member_latency
+
+            # Add total value label on top of stacked bar
+            ax_latency.text(
+                x_pos[i],
+                bottom,
+                f"{bottom:.1f}",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                fontweight="bold",
+            )
 
     ax_latency.set_ylabel("Total Latency (hours)", fontsize=11, fontweight="bold")
     ax_latency.set_xlabel("Model / Ensemble", fontsize=11, fontweight="bold")

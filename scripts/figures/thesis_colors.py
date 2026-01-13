@@ -12,6 +12,16 @@ Usage:
     plt.bar(..., color=ENSEMBLE_PALETTE[0])
 """
 
+import matplotlib.pyplot as plt
+
+# Configure matplotlib to use LaTeX-style fonts (Computer Modern)
+# plt.rcParams.update({
+#     "font.family": "serif",
+#     "font.serif": ["CMU Serif", "Computer Modern Roman", "DejaVu Serif"],
+#     "mathtext.fontset": "cm",  # Computer Modern for math text
+#     "axes.unicode_minus": False,  # Use proper minus sign in axes
+# })
+
 # Primary BHT colors (converted from LaTeX \xdefinecolor RGB definitions)
 BHT_COLORS = {
     "gray": "#555555",  # bhtGray (0.333, 0.333, 0.333) - base gray

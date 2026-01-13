@@ -2,11 +2,42 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Infer",
+      "type": "shell",
+      "command": "${workspaceFolder}/venv/bin/python3",
+      "args": [
+        "${workspaceFolder}/src/llm_ensemble/infer/adapters/driving/infer_cli.py",
+        "--model-cfg", "phi-4-multimodal-instruct",
+        "--provider", "openrouter",
+        "--prompt-template", "thomas-advanced-trec",
+        "--io-cfg", "db_to_db",
+        "--input", "20260107_014749",
+        "--run-name", "noise-3-ensemble-3-phi-4-multimodal-instruct-resume-1",
+        "--notes", "Ensemble model 3. Rerun with the same settings as the first run with this model. Goal: determine ground noise. First resume after API rate limit error.",
+        "--start-idx", "1433",
+        "--official"
+      ],
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/src"
+        }
+      },
+      "problemMatcher": ["$python"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
       "label": "Evaluate",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
-        "${workspaceFolder}/src/llm_ensemble/evaluate/adapters/driving/evaluate_cli.py",btw
+        "${workspaceFolder}/src/llm_ensemble/evaluate/adapters/driving/evaluate_cli.py",
         "--io-cfg", "db_aggregate_to_json",
         "--input", "-ensemble-1-to-5-majority-vote-random",
         "--run-name", "-ensemble-1-to-5-majority-vote-random",

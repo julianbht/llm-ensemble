@@ -1,0 +1,60 @@
+% Requires: \usepackage[table]{xcolor}
+\begin{table}[h]
+\centering
+\small
+\caption{Comparison of submissions ranked by Cohen's Kappa and Krippendorff's Alpha agreement metrics.}
+\label{tab:judge-challenge-rankings}
+\begin{tabular}{rlc|rlc}
+\toprule
+\multicolumn{3}{c|}{\textbf{Ranked by Cohen's Kappa}} & \multicolumn{3}{c}{\textbf{Ranked by Krippendorff's Alpha}} \\
+\textbf{Rank} & \textbf{Submission} & \textbf{$\kappa$} & \textbf{Rank} & \textbf{Submission} & \textbf{$\alpha$} \\
+\midrule
+1 & willia-umbrela1 & 0.2863 & 1 & Olz-gpt4o & 0.5020 \\
+2 & h2oloo-zeroshot1 & 0.2817 & 2 & h2oloo-fewself & 0.4958 \\
+3 & h2oloo-fewself & 0.2774 & 3 & willia-umbrela1 & 0.4918 \\
+4 & willia-umbrela3 & 0.2741 & 4 & llmjudge-thomas3 & 0.4877 \\
+5 & willia-umbrela2 & 0.2688 & 5 & RMITIR-llama70B & 0.4873 \\
+6 & RMITIR-llama70B & 0.2654 & 6 & llmjudge-cot3 & 0.4870 \\
+7 & Olz-gpt4o & 0.2625 & 7 & h2oloo-zeroshot1 & 0.4812 \\
+8 & h2oloo-zeroshot2 & 0.2589 & \cellcolor{bhtVeryLightGray}8 & \cellcolor{bhtVeryLightGray}GPT 5.1 & \cellcolor{bhtVeryLightGray}0.4752 \\
+9 & Olz-exp & 0.2519 & 9 & Olz-exp & 0.4701 \\
+10 & Olz-multiprompt & 0.2445 & 10 & llmjudge-simple3 & 0.4642 \\
+11 & RMITIR-GPT4o & 0.2388 & 11 & willia-umbrela2 & 0.4556 \\
+12 & llmjudge-thomas3 & 0.2293 & 12 & Olz-multiprompt & 0.4551 \\
+\cellcolor{bhtVeryLightGray}13 & \cellcolor{bhtVeryLightGray}GPT 5.1 & \cellcolor{bhtVeryLightGray}0.2292 & 13 & Olz-halfbin & 0.4536 \\
+14 & llmjudge-cot3 & 0.2271 & 14 & willia-umbrela3 & 0.4535 \\
+15 & llmjudge-simple3 & 0.2110 & 15 & Olz-somebin & 0.4471 \\
+16 & Olz-somebin & 0.2109 & 16 & RMITIR-GPT4o & 0.4108 \\
+17 & TREMA-sumdecompose & 0.2088 & 17 & prophet-setting1 & 0.4069 \\
+18 & Olz-halfbin & 0.2064 & \cellcolor{bhtVeryLightGray}18 & \cellcolor{bhtVeryLightGray}Ensemble (MVA) & \cellcolor{bhtVeryLightGray}0.3942 \\
+\cellcolor{bhtVeryLightGray}19 & \cellcolor{bhtVeryLightGray}Ensemble (MVA) & \cellcolor{bhtVeryLightGray}0.2061 & 19 & TREMA-sumdecompose & 0.3926 \\
+\cellcolor{bhtVeryLightGray}20 & \cellcolor{bhtVeryLightGray}Ensemble (MVR) & \cellcolor{bhtVeryLightGray}0.2051 & 20 & h2oloo-zeroshot2 & 0.3898 \\
+21 & RMITIR-llama38b & 0.2006 & \cellcolor{bhtVeryLightGray}21 & \cellcolor{bhtVeryLightGray}Ensemble (MVR) & \cellcolor{bhtVeryLightGray}0.3882 \\
+22 & TREMA-CoT & 0.1961 & 22 & NISTRetrieval-reason0 & 0.3874 \\
+23 & NISTRetrieval-instruct2 & 0.1880 & 23 & NISTRetrieval-reason2 & 0.3874 \\
+24 & NISTRetrieval-instruct0 & 0.1877 & 24 & RMITIR-llama38b & 0.3873 \\
+25 & NISTRetrieval-instruct1 & 0.1874 & 25 & NISTRetrieval-reason1 & 0.3872 \\
+26 & NISTRetrieval-reason1 & 0.1845 & 26 & TREMA-all & 0.3855 \\
+27 & NISTRetrieval-reason0 & 0.1844 & 27 & llmjudge-thomas2 & 0.3853 \\
+28 & NISTRetrieval-reason2 & 0.1838 & 28 & TREMA-CoT & 0.3852 \\
+29 & TREMA-4prompts & 0.1829 & \cellcolor{bhtVeryLightGray}29 & \cellcolor{bhtVeryLightGray}Ensemble (AV) & \cellcolor{bhtVeryLightGray}0.3822 \\
+30 & prophet-setting1 & 0.1823 & 30 & NISTRetrieval-instruct2 & 0.3821 \\
+31 & prophet-setting2 & 0.1757 & 31 & NISTRetrieval-instruct0 & 0.3819 \\
+32 & TREMA-direct & 0.1742 & 32 & NISTRetrieval-instruct1 & 0.3812 \\
+33 & TREMA-naiveBdecompose & 0.1741 & 33 & TREMA-direct & 0.3729 \\
+34 & llmjudge-thomas2 & 0.1723 & 34 & llmjudge-simple2 & 0.3672 \\
+\cellcolor{bhtVeryLightGray}35 & \cellcolor{bhtVeryLightGray}Ensemble (AV) & \cellcolor{bhtVeryLightGray}0.1645 & 35 & TREMA-naiveBdecompose & 0.3579 \\
+36 & llmjudge-cot2 & 0.1560 & 36 & llmjudge-cot2 & 0.3263 \\
+37 & TREMA-all & 0.1471 & 37 & llmjudge-cot1 & 0.3218 \\
+38 & prophet-setting4 & 0.1471 & 38 & llmjudge-thomas1 & 0.3207 \\
+39 & TREMA-other & 0.1408 & 39 & TREMA-questions & 0.3148 \\
+40 & llmjudge-simple2 & 0.1327 & 40 & prophet-setting2 & 0.3144 \\
+41 & llmjudge-cot1 & 0.1284 & 41 & TREMA-4prompts & 0.2888 \\
+42 & llmjudge-thomas1 & 0.1236 & 42 & llmjudge-simple1 & 0.2808 \\
+43 & TREMA-questions & 0.1137 & 43 & TREMA-other & 0.2712 \\
+44 & TREMA-rubric0 & 0.0779 & 44 & TREMA-nuggets & 0.1691 \\
+45 & llmjudge-simple1 & 0.0754 & 45 & prophet-setting4 & 0.1623 \\
+46 & TREMA-nuggets & 0.0604 & 46 & TREMA-rubric0 & 0.1036 \\
+\bottomrule
+\end{tabular}
+\end{table}

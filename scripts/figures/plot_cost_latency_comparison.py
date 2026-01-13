@@ -15,9 +15,11 @@ from typing import Dict, List, Any
 import matplotlib.pyplot as plt
 import numpy as np
 
+from thesis_colors import BHT_COLORS, GRAY_SCALE, ENSEMBLE_PALETTE, REFERENCE_COLOR
+
 # Configuration
 INPUT_FILE = Path("artifacts/other/cost_latency_comparison.json")
-OUTPUT_FILE = Path("artifacts/figures/cost_latency_comparison.pdf")
+OUTPUT_FILE = Path("artifacts/figures/cost_latency_comparison.svg")
 
 # Which runs to show on x-axis (in order)
 RUN_ORDER = [
@@ -34,14 +36,14 @@ ENSEMBLE_MEMBER_RUNS = [
     "ensemble-5-ui-tars-1.5-7b-start",
 ]
 
-# Color scheme (one color per ensemble member model)
+# Color scheme (using BHT thesis colors)
 MODEL_COLORS = {
-    "ensemble-1-google-gemma-3-4b-it": "#E74C3C",         # Red
-    "ensemble-2-ministral-3b-2515": "#3498DB",            # Blue
-    "ensemble-3-phi-4-multimodal-instruct": "#2ECC71",    # Green
-    "ensemble-4-meta-llama-3.2-3b-instruct-start": "#F39C12",  # Orange
-    "ensemble-5-ui-tars-1.5-7b-start": "#9B59B6",         # Purple
-    "reference-ensemble-gpt-5-1-all-samples-start": "#34495E",  # Dark gray
+    "ensemble-1-google-gemma-3-4b-it": ENSEMBLE_PALETTE[0],
+    "ensemble-2-ministral-3b-2515": ENSEMBLE_PALETTE[1],
+    "ensemble-3-phi-4-multimodal-instruct": ENSEMBLE_PALETTE[2],
+    "ensemble-4-meta-llama-3.2-3b-instruct-start": ENSEMBLE_PALETTE[3],
+    "ensemble-5-ui-tars-1.5-7b-start": ENSEMBLE_PALETTE[4],
+    "reference-ensemble-gpt-5-1-all-samples-start": REFERENCE_COLOR,
 }
 
 # Display labels for x-axis and legend
@@ -96,6 +98,7 @@ def create_comparison_chart(
     cost_values = []
     latency_values = []
     labels = []
+    legend_mapping = {}  # Track which model gets which color (for legend)
 
     for run_name in RUN_ORDER:
         labels.append(DISPLAY_LABELS.get(run_name, run_name))
@@ -116,7 +119,7 @@ def create_comparison_chart(
     for i, (bar_type, value, info) in enumerate(cost_values):
         if bar_type == "single":
             # Solid bar for single model
-            color = MODEL_COLORS.get(info, "#95A5A6")
+            color = MODEL_COLORS.get(info, GRAY_SCALE["very_light"])
             ax_cost.bar(x_pos[i], value, bar_width, color=color, edgecolor="black", linewidth=0.5)
         else:
             # Stacked bar for ensemble - sort by cost (largest at bottom)
@@ -124,8 +127,10 @@ def create_comparison_chart(
             member_costs.sort(key=lambda x: x[1], reverse=True)  # Largest first
 
             bottom = 0
-            for member_run, member_cost in member_costs:
-                color = MODEL_COLORS.get(member_run, "#95A5A6")
+            for idx, (member_run, member_cost) in enumerate(member_costs):
+                # Assign colors based on sorted position (largest gets first color)
+                color = ENSEMBLE_PALETTE[idx] if idx < len(ENSEMBLE_PALETTE) else GRAY_SCALE["very_light"]
+                legend_mapping[member_run] = color  # Track for legend
                 ax_cost.bar(
                     x_pos[i], member_cost, bar_width,
                     bottom=bottom, color=color, edgecolor="black", linewidth=0.5
@@ -143,7 +148,7 @@ def create_comparison_chart(
     for i, (bar_type, value, info) in enumerate(latency_values):
         if bar_type == "single":
             # Solid bar for single model
-            color = MODEL_COLORS.get(info, "#95A5A6")
+            color = MODEL_COLORS.get(info, GRAY_SCALE["very_light"])
             ax_latency.bar(x_pos[i], value, bar_width, color=color, edgecolor="black", linewidth=0.5)
         else:
             # Stacked bar for ensemble - sort by latency (largest at bottom)
@@ -151,8 +156,9 @@ def create_comparison_chart(
             member_latencies.sort(key=lambda x: x[1], reverse=True)  # Largest first
 
             bottom = 0
-            for member_run, member_latency in member_latencies:
-                color = MODEL_COLORS.get(member_run, "#95A5A6")
+            for idx, (member_run, member_latency) in enumerate(member_latencies):
+                # Assign colors based on sorted position (largest gets first color)
+                color = ENSEMBLE_PALETTE[idx] if idx < len(ENSEMBLE_PALETTE) else GRAY_SCALE["very_light"]
                 ax_latency.bar(
                     x_pos[i], member_latency, bar_width,
                     bottom=bottom, color=color, edgecolor="black", linewidth=0.5
@@ -166,13 +172,17 @@ def create_comparison_chart(
     ax_latency.grid(axis="y", alpha=0.3, linestyle="--")
     ax_latency.set_axisbelow(True)
 
-    # Add legend
-    legend_handles = [
-        plt.Rectangle((0, 0), 1, 1, fc=MODEL_COLORS[run], edgecolor="black", linewidth=0.5)
-        for run in ENSEMBLE_MEMBER_RUNS if run in MODEL_COLORS
-    ]
-    legend_labels = [DISPLAY_LABELS.get(run, run) for run in ENSEMBLE_MEMBER_RUNS]
-    fig.legend(legend_handles, legend_labels, loc="upper center", ncol=len(ENSEMBLE_MEMBER_RUNS), frameon=False)
+    # Add legend using the tracked color mapping
+    legend_handles = []
+    legend_labels = []
+    for run in ENSEMBLE_MEMBER_RUNS:
+        if run in legend_mapping:
+            legend_handles.append(
+                plt.Rectangle((0, 0), 1, 1, fc=legend_mapping[run], edgecolor="black", linewidth=0.5)
+            )
+            legend_labels.append(DISPLAY_LABELS.get(run, run))
+
+    fig.legend(legend_handles, legend_labels, loc="upper center", ncol=len(legend_handles), frameon=False)
 
     # Adjust layout
     plt.tight_layout()

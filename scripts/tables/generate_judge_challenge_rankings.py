@@ -29,7 +29,7 @@ HIGHLIGHT_COLOR = (
 )
 
 # Table metadata
-CAPTION = "Comparison of submissions ranked by Cohen's Kappa and Krippendorff's Alpha agreement metrics."
+CAPTION = "LLM Judge Challenge submissions compared to our approach in highlight."
 LABEL = "tab:judge-challenge-rankings"
 
 
@@ -55,7 +55,6 @@ def generate_latex_table(df: pd.DataFrame) -> str:
 
     # Start LaTeX table
     lines = [
-        "% Requires: \\usepackage[table]{xcolor}",
         "\\begin{table}[h]",
         "\\centering",
         "\\small",

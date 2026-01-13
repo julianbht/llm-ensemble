@@ -46,15 +46,15 @@ MODEL_COLORS = {
     "reference-ensemble-gpt-5-1-all-samples-start": REFERENCE_COLOR,
 }
 
-# Display labels for x-axis and legend
+# Display labels for x-axis and legend (using model_id without provider prefix)
 DISPLAY_LABELS = {
-    "reference-ensemble-gpt-5-1-all-samples-start": "GPT 5.1",
+    "reference-ensemble-gpt-5-1-all-samples-start": "gpt-5.1",
     "ensemble": "Ensemble",
-    "ensemble-1-google-gemma-3-4b-it": "Gemma 3 4B",
-    "ensemble-2-ministral-3b-2515": "Ministral 3B",
-    "ensemble-3-phi-4-multimodal-instruct": "Phi-4",
-    "ensemble-4-meta-llama-3.2-3b-instruct-start": "Llama 3.2 3B",
-    "ensemble-5-ui-tars-1.5-7b-start": "UI-TARS 1.5 7B",
+    "ensemble-1-google-gemma-3-4b-it": "gemma-3-4b-it",
+    "ensemble-2-ministral-3b-2515": "ministral-3b-2512",
+    "ensemble-3-phi-4-multimodal-instruct": "phi-4-multimodal-instruct",
+    "ensemble-4-meta-llama-3.2-3b-instruct-start": "llama-3.2-3b-instruct",
+    "ensemble-5-ui-tars-1.5-7b-start": "ui-tars-1.5-7b",
 }
 
 # Figure dimensions

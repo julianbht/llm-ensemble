@@ -57,5 +57,5 @@ ENSEMBLE_PALETTE_GRAY = [
 ]
 
 # Reference model color (for single baseline models)
-# Change this to BHT_COLORS["red"] or other colors as needed
-REFERENCE_COLOR = GRAY_SCALE["dark"]
+# Dark gray is the default for reference/baseline models
+REFERENCE_COLOR = GRAY_SCALE["dark"]  # #3B3B3B

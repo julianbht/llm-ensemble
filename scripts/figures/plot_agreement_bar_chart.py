@@ -19,6 +19,8 @@ from typing import List, Tuple, Optional
 import matplotlib.pyplot as plt
 import typer
 
+from thesis_colors import BHT_COLORS, GRAY_SCALE
+
 
 # ============================================================================
 # CONFIGURATION - Edit these constants to change the plot
@@ -31,10 +33,10 @@ RUNS = [
     ("google-gemma-3-4b-it", "ensemble-1-google-gemma-3-4b-it"),
     ("phi-4-multimodal-instruct", "ensemble-3-phi-4-multimodal-instruct"),
     ("ui-tars-1.5-7b", "ensemble-5-ui-tars-1.5-7b-start"),
-    ("ensemble (mva)", "-ensemble-1-to-5-majority-vote"),
-    ("ensemble (mvr)", "-ensemble-1-to-5-majority-vote-random"),
-    ("ensemble (av)", "-ensemble-1-to-5-avg-vote-3"),
-    ("gpt-5.1", "reference-ensemble-gpt-5-1-all-samples-start"),
+    ("Ensemble (MVA)", "-ensemble-1-to-5-majority-vote"),
+    ("Ensemble (MVR)", "-ensemble-1-to-5-majority-vote-random"),
+    ("Ensemble (AV)", "-ensemble-1-to-5-avg-vote-3"),
+    ("GPT-5.1", "reference-ensemble-gpt-5-1-all-samples-start"),
     # ("cohere-command-r7b-12-2024", "ensemble-6-cohere-command-r7b-12-2024-start"),
 ]
 
@@ -141,15 +143,20 @@ def plot_agreement_bar_chart(
     """
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    # Create bars
-    bars = ax.bar(
-        labels, values, color="steelblue", alpha=0.8, edgecolor="black", linewidth=1.2
-    )
+    # Create bars with BHT color scheme
+    # Individual models: turquoise, Ensembles: blue, Reference model: dark gray
+    colors = []
+    for label in labels:
+        if (
+            "ensemble" in label.lower() and "(" in label
+        ):  # Ensemble variants (mva, mvr, av)
+            colors.append(BHT_COLORS["blue"])
+        elif label == "GPT-5.1":  # Reference model
+            colors.append(GRAY_SCALE["dark"])
+        else:  # Individual ensemble member models
+            colors.append(BHT_COLORS["turquoise"])
 
-    # Highlight the last bar (assumed to be ensemble) in different color
-    if len(bars) > 1:
-        bars[-1].set_color("coral")
-        bars[-1].set_alpha(0.9)
+    bars = ax.bar(labels, values, color=colors, edgecolor="black", linewidth=0.5)
 
     # Set y-axis limits if specified
     if y_limits is not None:

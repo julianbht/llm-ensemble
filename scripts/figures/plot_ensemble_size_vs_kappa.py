@@ -17,6 +17,8 @@ from typing import Dict, List, Tuple, Optional
 import matplotlib.pyplot as plt
 import typer
 
+from thesis_colors import BHT_COLORS
+
 
 # ============================================================================
 # CONFIGURATION - Edit these constants to change the plot
@@ -73,20 +75,20 @@ PLOT_TITLE = "Ensemble Size vs Cohen's Kappa (small to big)"  # e.g., "Ensemble 
 # Output format: "svg" or "png"
 OUTPUT_FORMAT = "svg"
 
-# Style configuration for each strategy
+# Style configuration for each strategy (using BHT colors)
 STRATEGY_STYLES = {
     "average_vote": {
-        "color": "steelblue",
+        "color": BHT_COLORS["blue"],
         "marker": "o",
         "label": "Average Vote",
     },
     "majority_vote_average": {
-        "color": "coral",
+        "color": BHT_COLORS["red"],
         "marker": "s",
         "label": "Majority Vote (Avg Tiebreak)",
     },
     "majority_vote_random": {
-        "color": "mediumseagreen",
+        "color": BHT_COLORS["turquoise"],
         "marker": "^",
         "label": "Majority Vote (Random Tiebreak)",
     },

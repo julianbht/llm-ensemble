@@ -1,0 +1,62 @@
+[
+  {
+    "run_name": "ensemble-2-ministral-3b-2515",
+    "model_name": "ministral-3b-2512",
+    "model_hint": "ministral-3b-2512",
+    "total_latency_ms": 1504450.4759649865,
+    "avg_latency_ms": 383.98429708141566,
+    "total_cost_usd": 0.2762465000000003,
+    "avg_cost_usd": 7.050701888718741e-05,
+    "num_judgements": 3918
+  },
+  {
+    "run_name": "reference-ensemble-gpt-5-1-all-samples-start",
+    "model_name": "openai-gpt-5.1",
+    "model_hint": "gpt-5.1",
+    "total_latency_ms": 16645176.451050978,
+    "avg_latency_ms": 4248.386026301934,
+    "total_cost_usd": 6.841596249999995,
+    "avg_cost_usd": 0.001746196082184787,
+    "num_judgements": 3918
+  },
+  {
+    "run_name": "ensemble-1-google-gemma-3-4b-it",
+    "model_name": "google-gemma-3-4b-it",
+    "model_hint": "gemma-3-4b-it",
+    "total_latency_ms": 3641169.458910982,
+    "avg_latency_ms": 929.3439149849368,
+    "total_cost_usd": 0.11442024000000023,
+    "avg_cost_usd": 2.9203736600306336e-05,
+    "num_judgements": 3918
+  },
+  {
+    "run_name": "ensemble-4-meta-llama-3.2-3b-instruct-start",
+    "model_name": "meta-llama-3.2-3b-instruct",
+    "model_hint": "qwen3-vl-8b-instruct",
+    "total_latency_ms": 5121336.588158984,
+    "avg_latency_ms": 1307.1303185704398,
+    "total_cost_usd": 0.5088304799999996,
+    "avg_cost_usd": 0.00012986995405819287,
+    "num_judgements": 3918
+  },
+  {
+    "run_name": "ensemble-5-ui-tars-1.5-7b-start",
+    "model_name": "ui-tars-1.5-7b",
+    "model_hint": "ui-tars-1.5-7b",
+    "total_latency_ms": 2946173.0452191085,
+    "avg_latency_ms": 751.958408682774,
+    "total_cost_usd": 0.2804518000000005,
+    "avg_cost_usd": 7.158034711587557e-05,
+    "num_judgements": 3918
+  },
+  {
+    "run_name": "ensemble-3-phi-4-multimodal-instruct",
+    "model_name": "phi-4-multimodal-instruct",
+    "model_hint": "phi-4-multimodal-instruct",
+    "total_latency_ms": 3918132.1449009217,
+    "avg_latency_ms": 1000.0337276418892,
+    "total_cost_usd": 0.14107830000000002,
+    "avg_cost_usd": 3.600773353751915e-05,
+    "num_judgements": 3918
+  }
+]

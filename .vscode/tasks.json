@@ -7,13 +7,13 @@
       "command": "${workspaceFolder}/venv/bin/python3",
       "args": [
         "${workspaceFolder}/src/llm_ensemble/infer/adapters/driving/infer_cli.py",
-        "--model-cfg", "meta-llama-3.2-3b-instruct",
+        "--model-cfg", "ui-tars-1.5-7b",
         "--provider", "openrouter",
         "--prompt-template", "thomas-advanced-trec",
         "--io-cfg", "db_to_db",
         "--input", "20260107_014749",
-        "--run-name", "noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start",
-        "--notes", "Ensemble model 4. Rerun with the same settings as the first run with this model. Goal: determine ground noise.",
+        "--run-name", "noise-5-ensemble-5-ui-tars-1.5-7b-start",
+        "--notes", "Ensemble model 5. Rerun with the same settings as the first run with this model. Goal: determine ground noise.",
         "--official"
       ],
       "options": {

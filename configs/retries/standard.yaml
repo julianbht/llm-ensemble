@@ -12,20 +12,20 @@
 
 # Maximum number of retry attempts before failing
 # Total attempts = max_retries + 1 (initial attempt + retries)
-max_retries: 7
+max_retries: 8
 
 # Initial delay in seconds before first retry
 # Exponential backoff: delay = base_delay × 2^attempt
-base_delay_seconds: 2
+base_delay_seconds: 4
 
 # Maximum delay cap in seconds
 # Prevents excessively long waits in later retries
-max_delay_seconds: 160
+max_delay_seconds: 600
 
 # Maximum time to wait for a single API request (in seconds)
 # If a request takes longer than this, it will timeout and potentially retry
 # Note: This is per-request timeout, not total timeout for all retries
-request_timeout_seconds: 160
+request_timeout_seconds: 180
 
 # HTTP status codes that trigger retries
 # 429: Rate Limit Exceeded (most common)

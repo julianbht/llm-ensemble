@@ -31,7 +31,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import typer
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import (
+    confusion_matrix,
+    accuracy_score,
+    precision_score,
+    recall_score,
+)
 
 from thesis_colors import BHT_COLORS, GRAY_SCALE
 
@@ -203,51 +208,46 @@ def plot_confusion_matrix_figure(
 
 
 def print_confusion_analysis(ground_truth: list, predictions: list):
-    """Print analysis of confusion patterns.
+    """Print analysis of confusion patterns using sklearn metrics.
 
     Args:
         ground_truth: List of true labels
         predictions: List of predicted labels
     """
-    # Filter valid
+    # Filter valid predictions
     valid_indices = [i for i, p in enumerate(predictions) if p >= 0]
     gt_valid = [ground_truth[i] for i in valid_indices]
     pred_valid = [predictions[i] for i in valid_indices]
 
-    cm = confusion_matrix(gt_valid, pred_valid, labels=[0, 1, 2, 3])
+    labels = [0, 1, 2, 3]
+    class_names = ["Irrelevant", "Relevant", "Highly Relevant", "Perfectly Relevant"]
 
     typer.echo("\n" + "=" * 50)
     typer.echo("Confusion Analysis")
     typer.echo("=" * 50)
 
-    # Overall accuracy
-    correct = sum(1 for g, p in zip(gt_valid, pred_valid) if g == p)
-    accuracy = correct / len(gt_valid)
+    # Overall accuracy (sklearn)
+    accuracy = accuracy_score(gt_valid, pred_valid)
+    correct = int(accuracy * len(gt_valid))
     typer.echo(f"\nOverall Accuracy: {accuracy:.1%} ({correct:,}/{len(gt_valid):,})")
 
-    # Per-class recall (sensitivity)
+    # Per-class recall (sklearn)
+    recalls = recall_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
     typer.echo(
         "\nPer-class Recall (what % of each human label did LLM predict correctly):"
     )
-    for i, label in enumerate(
-        ["Irrelevant", "Relevant", "Highly Relevant", "Perfectly Relevant"]
-    ):
-        row_sum = cm[i].sum()
-        if row_sum > 0:
-            recall = cm[i, i] / row_sum
-            typer.echo(f"  {label}: {recall:.1%} ({cm[i, i]}/{row_sum})")
+    for i, (name, rec) in enumerate(zip(class_names, recalls)):
+        support = sum(1 for g in gt_valid if g == i)
+        typer.echo(f"  {name}: {rec:.1%} ({int(rec * support)}/{support})")
 
-    # Per-class precision
+    # Per-class precision (sklearn)
+    precisions = precision_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
     typer.echo("\nPer-class Precision (what % of LLM predictions were correct):")
-    for i, label in enumerate(
-        ["Irrelevant", "Relevant", "Highly Relevant", "Perfectly Relevant"]
-    ):
-        col_sum = cm[:, i].sum()
-        if col_sum > 0:
-            precision = cm[i, i] / col_sum
-            typer.echo(f"  {label}: {precision:.1%} ({cm[i, i]}/{col_sum})")
+    for i, (name, prec) in enumerate(zip(class_names, precisions)):
+        predicted_count = sum(1 for p in pred_valid if p == i)
+        typer.echo(f"  {name}: {prec:.1%} ({int(prec * predicted_count)}/{predicted_count})")
 
-    # Over/under prediction analysis
+    # Custom metrics: Over/under prediction analysis
     over_predict = sum(1 for g, p in zip(gt_valid, pred_valid) if p > g)
     under_predict = sum(1 for g, p in zip(gt_valid, pred_valid) if p < g)
 
@@ -260,7 +260,7 @@ def print_confusion_analysis(ground_truth: list, predictions: list):
     )
     typer.echo(f"  Exact match: {correct:,} ({accuracy:.1%})")
 
-    # Adjacent vs distant errors
+    # Custom metrics: Adjacent vs distant errors
     adjacent_errors = sum(1 for g, p in zip(gt_valid, pred_valid) if abs(g - p) == 1)
     distant_errors = sum(1 for g, p in zip(gt_valid, pred_valid) if abs(g - p) >= 2)
 
@@ -276,7 +276,7 @@ def print_confusion_analysis(ground_truth: list, predictions: list):
 def save_confusion_matrix_table(
     ground_truth: list, predictions: list, output_path: Path
 ):
-    """Save confusion matrix and analysis as a formatted text table.
+    """Save confusion matrix and analysis as a formatted text table using sklearn metrics.
 
     Args:
         ground_truth: List of true labels
@@ -288,7 +288,9 @@ def save_confusion_matrix_table(
     gt_valid = [ground_truth[i] for i in valid_indices]
     pred_valid = [predictions[i] for i in valid_indices]
 
-    cm = confusion_matrix(gt_valid, pred_valid, labels=[0, 1, 2, 3])
+    labels = [0, 1, 2, 3]
+    class_names = ["Irrelevant", "Relevant", "Highly Relevant", "Perfectly Relevant"]
+    cm = confusion_matrix(gt_valid, pred_valid, labels=labels)
 
     lines = []
     lines.append("Confusion Matrix (rows=Human/Ground Truth, cols=LLM Prediction)")
@@ -328,34 +330,31 @@ def save_confusion_matrix_table(
     lines.append("Analysis")
     lines.append("=" * 50)
 
-    # Overall accuracy
-    correct = sum(1 for g, p in zip(gt_valid, pred_valid) if g == p)
-    accuracy = correct / len(gt_valid)
+    # Overall accuracy (sklearn)
+    accuracy = accuracy_score(gt_valid, pred_valid)
+    correct = int(accuracy * len(gt_valid))
     lines.append("")
     lines.append(f"Overall Accuracy: {accuracy:.1%} ({correct:,}/{len(gt_valid):,})")
 
-    # Per-class recall
+    # Per-class recall (sklearn)
+    recalls = recall_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
     lines.append("")
     lines.append(
         "Per-class Recall (what % of each human label did LLM predict correctly):"
     )
-    class_labels = ["Irrelevant", "Relevant", "Highly Relevant", "Perfectly Relevant"]
-    for i, label in enumerate(class_labels):
-        row_sum = cm[i].sum()
-        if row_sum > 0:
-            recall = cm[i, i] / row_sum
-            lines.append(f"  {label}: {recall:.1%} ({cm[i, i]}/{row_sum})")
+    for i, (name, rec) in enumerate(zip(class_names, recalls)):
+        support = sum(1 for g in gt_valid if g == i)
+        lines.append(f"  {name}: {rec:.1%} ({int(rec * support)}/{support})")
 
-    # Per-class precision
+    # Per-class precision (sklearn)
+    precisions = precision_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
     lines.append("")
     lines.append("Per-class Precision (what % of LLM predictions were correct):")
-    for i, label in enumerate(class_labels):
-        col_sum = cm[:, i].sum()
-        if col_sum > 0:
-            precision = cm[i, i] / col_sum
-            lines.append(f"  {label}: {precision:.1%} ({cm[i, i]}/{col_sum})")
+    for i, (name, prec) in enumerate(zip(class_names, precisions)):
+        predicted_count = sum(1 for p in pred_valid if p == i)
+        lines.append(f"  {name}: {prec:.1%} ({int(prec * predicted_count)}/{predicted_count})")
 
-    # Bias analysis
+    # Custom metrics: Bias analysis
     over_predict = sum(1 for g, p in zip(gt_valid, pred_valid) if p > g)
     under_predict = sum(1 for g, p in zip(gt_valid, pred_valid) if p < g)
 
@@ -369,7 +368,7 @@ def save_confusion_matrix_table(
     )
     lines.append(f"  Exact match: {correct:,} ({accuracy:.1%})")
 
-    # Error distance
+    # Custom metrics: Error distance
     adjacent_errors = sum(1 for g, p in zip(gt_valid, pred_valid) if abs(g - p) == 1)
     distant_errors = sum(1 for g, p in zip(gt_valid, pred_valid) if abs(g - p) >= 2)
 
@@ -385,6 +384,103 @@ def save_confusion_matrix_table(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines))
     typer.echo(f"Table saved to: {output_path}")
+
+
+def save_confusion_matrix_latex(
+    ground_truth: list, predictions: list, output_path: Path
+):
+    """Save confusion matrix as a LaTeX table using sklearn metrics.
+
+    Args:
+        ground_truth: List of true labels
+        predictions: List of predicted labels
+        output_path: Where to save the LaTeX table
+    """
+    # Filter valid
+    valid_indices = [i for i, p in enumerate(predictions) if p >= 0]
+    gt_valid = [ground_truth[i] for i in valid_indices]
+    pred_valid = [predictions[i] for i in valid_indices]
+
+    labels = [0, 1, 2, 3]
+    class_names = ["Irrelevant", "Relevant", "Highly Relevant", "Perfectly Relevant"]
+    cm = confusion_matrix(gt_valid, pred_valid, labels=labels)
+
+    # Calculate metrics using sklearn
+    accuracy = accuracy_score(gt_valid, pred_valid)
+    recalls = recall_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
+    precisions = precision_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
+
+    # Custom metrics
+    over_predict = sum(1 for g, p in zip(gt_valid, pred_valid) if p > g)
+    under_predict = sum(1 for g, p in zip(gt_valid, pred_valid) if p < g)
+    adjacent_errors = sum(1 for g, p in zip(gt_valid, pred_valid) if abs(g - p) == 1)
+    distant_errors = sum(1 for g, p in zip(gt_valid, pred_valid) if abs(g - p) >= 2)
+
+    lines = []
+
+    # Confusion matrix table
+    lines.append("% Confusion Matrix")
+    lines.append("\\begin{table}[htbp]")
+    lines.append("\\centering")
+    lines.append("\\caption{Confusion Matrix (rows = Human Labels, columns = LLM Predictions)}")
+    lines.append("\\label{tab:confusion-matrix}")
+    lines.append("\\begin{tabular}{l|rrrr|r}")
+    lines.append("\\toprule")
+    lines.append(" & \\multicolumn{4}{c|}{LLM Prediction} & \\\\")
+    lines.append("Human Label & 0 & 1 & 2 & 3 & Total \\\\")
+    lines.append("\\midrule")
+
+    row_labels = ["0 (Irrelevant)", "1 (Relevant)", "2 (Highly Rel.)", "3 (Perfectly Rel.)"]
+    for i, label in enumerate(row_labels):
+        row_values = " & ".join(str(cm[i, j]) for j in range(4))
+        lines.append(f"{label} & {row_values} & {cm[i].sum()} \\\\")
+
+    lines.append("\\midrule")
+    col_totals = " & ".join(str(cm[:, j].sum()) for j in range(4))
+    lines.append(f"Total & {col_totals} & {cm.sum()} \\\\")
+    lines.append("\\bottomrule")
+    lines.append("\\end{tabular}")
+    lines.append("\\end{table}")
+
+    lines.append("")
+    lines.append("")
+
+    # Analysis metrics table
+    lines.append("% Analysis Metrics")
+    lines.append("\\begin{table}[htbp]")
+    lines.append("\\centering")
+    lines.append("\\caption{Confusion Matrix Analysis}")
+    lines.append("\\label{tab:confusion-analysis}")
+    lines.append("\\begin{tabular}{lr}")
+    lines.append("\\toprule")
+    lines.append("Metric & Value \\\\")
+    lines.append("\\midrule")
+    lines.append(f"Overall Accuracy & {accuracy:.1%} \\\\")
+    lines.append("\\midrule")
+
+    # Per-class recall (sklearn)
+    for name, rec in zip(class_names, recalls):
+        lines.append(f"Recall ({name}) & {rec:.1%} \\\\")
+
+    lines.append("\\midrule")
+
+    # Per-class precision (sklearn)
+    for name, prec in zip(class_names, precisions):
+        lines.append(f"Precision ({name}) & {prec:.1%} \\\\")
+
+    lines.append("\\midrule")
+    lines.append(f"Over-predicting (LLM > Human) & {over_predict/len(gt_valid):.1%} \\\\")
+    lines.append(f"Under-predicting (LLM < Human) & {under_predict/len(gt_valid):.1%} \\\\")
+    lines.append("\\midrule")
+    lines.append(f"Adjacent errors (off by 1) & {adjacent_errors/len(gt_valid):.1%} \\\\")
+    lines.append(f"Distant errors (off by 2+) & {distant_errors/len(gt_valid):.1%} \\\\")
+    lines.append("\\bottomrule")
+    lines.append("\\end{tabular}")
+    lines.append("\\end{table}")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(lines))
+    typer.echo(f"LaTeX table saved to: {output_path}")
 
 
 @app.command()
@@ -420,6 +516,9 @@ def main(
     table_filename = f"confusion_matrix{norm_suffix}_{safe_run_name}.txt"
     table_path = tables_dir / table_filename
 
+    latex_filename = f"confusion_matrix{norm_suffix}_{safe_run_name}.tex"
+    latex_path = tables_dir / latex_filename
+
     typer.echo(f"Loading data from {run_type} run: {run_name}")
 
     # Load data
@@ -429,8 +528,9 @@ def main(
     # Print analysis
     print_confusion_analysis(ground_truth, predictions)
 
-    # Save table
+    # Save tables
     save_confusion_matrix_table(ground_truth, predictions, table_path)
+    save_confusion_matrix_latex(ground_truth, predictions, latex_path)
 
     # Create plot
     plot_confusion_matrix_figure(

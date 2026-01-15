@@ -18,14 +18,14 @@ Overall Accuracy: 46.1% (1,808/3,918)
 Per-class Recall (what % of each human label did LLM predict correctly):
   Irrelevant: 61.4% (1134/1846)
   Relevant: 32.8% (355/1083)
-  Highly Relevant: 28.8% (194/673)
+  Highly Relevant: 28.8% (193/673)
   Perfectly Relevant: 39.6% (125/316)
 
 Per-class Precision (what % of LLM predictions were correct):
   Irrelevant: 65.4% (1134/1733)
   Relevant: 33.9% (355/1048)
   Highly Relevant: 28.4% (194/683)
-  Perfectly Relevant: 27.5% (125/454)
+  Perfectly Relevant: 27.5% (124/454)
 
 Bias Analysis:
   Over-predicting (LLM > Human): 1,111 (28.4%)

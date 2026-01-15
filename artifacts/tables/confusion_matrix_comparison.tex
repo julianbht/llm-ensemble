@@ -1,0 +1,29 @@
+% Confusion Matrix Comparison Table
+\begin{table}[htbp]
+\centering
+\caption{Confusion Matrix Comparison: Ensemble vs GPT-5.1}
+\label{tab:confusion-comparison}
+\begin{tabular}{lrr}
+\toprule
+Metric & Ensemble & GPT-5.1 \\
+\midrule
+Accuracy & 46.1\% & 47.4\% \\
+\midrule
+Recall (Irrelevant) & 61.4\% & 54.4\% \\
+Recall (Relevant) & 32.8\% & 44.6\% \\
+Recall (Highly Relevant) & 28.8\% & 31.6\% \\
+Recall (Perfectly Relevant) & 39.6\% & 49.4\% \\
+\midrule
+Precision (Irrelevant) & 65.4\% & 67.7\% \\
+Precision (Relevant) & 33.9\% & 31.8\% \\
+Precision (Highly Relevant) & 28.4\% & 38.6\% \\
+Precision (Perfectly Relevant) & 27.5\% & 42.9\% \\
+\midrule
+Over-predicting (LLM > Human) & 28.4\% & 29.9\% \\
+Under-predicting (LLM < Human) & 25.5\% & 22.7\% \\
+\midrule
+Soft Disagreement & 37.5\% & 42.7\% \\
+Hard Disagreement & 16.3\% & 9.9\% \\
+\bottomrule
+\end{tabular}
+\end{table}

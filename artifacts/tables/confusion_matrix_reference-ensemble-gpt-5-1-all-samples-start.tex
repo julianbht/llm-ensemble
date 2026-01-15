@@ -1,0 +1,50 @@
+% Confusion Matrix
+\begin{table}[htbp]
+\centering
+\caption{Confusion Matrix (rows = Human Labels, columns = LLM Predictions)}
+\label{tab:confusion-matrix}
+\begin{tabular}{l|rrrr|r}
+\toprule
+ & \multicolumn{4}{c|}{LLM Prediction} & \\
+Human Label & 0 & 1 & 2 & 3 & Total \\
+\midrule
+0 (Irrelevant) & 1004 & 706 & 98 & 38 & 1846 \\
+1 (Relevant) & 372 & 483 & 160 & 68 & 1083 \\
+2 (Highly Rel.) & 105 & 253 & 213 & 102 & 673 \\
+3 (Perfectly Rel.) & 3 & 76 & 81 & 156 & 316 \\
+\midrule
+Total & 1484 & 1518 & 552 & 364 & 3918 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+% Analysis Metrics
+\begin{table}[htbp]
+\centering
+\caption{Confusion Matrix Analysis}
+\label{tab:confusion-analysis}
+\begin{tabular}{lr}
+\toprule
+Metric & Value \\
+\midrule
+Accuracy & 47.4\% \\
+\midrule
+Recall (Irrelevant) & 54.4\% \\
+Recall (Relevant) & 44.6\% \\
+Recall (Highly Relevant) & 31.6\% \\
+Recall (Perfectly Relevant) & 49.4\% \\
+\midrule
+Precision (Irrelevant) & 67.7\% \\
+Precision (Relevant) & 31.8\% \\
+Precision (Highly Relevant) & 38.6\% \\
+Precision (Perfectly Relevant) & 42.9\% \\
+\midrule
+Over-predicting (LLM > Human) & 29.9\% \\
+Under-predicting (LLM < Human) & 22.7\% \\
+\midrule
+Soft Disagreement & 42.7\% \\
+Hard Disagreement & 9.9\% \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -13,7 +13,7 @@ Col Total          1484    1518     552     364   |  3918
 Analysis
 ==================================================
 
-Overall Accuracy: 47.4% (1,856/3,918)
+Accuracy: 47.4% (1,856/3,918)
 
 Per-class Recall (what % of each human label did LLM predict correctly):
   Irrelevant: 54.4% (1004/1846)
@@ -32,6 +32,6 @@ Bias Analysis:
   Under-predicting (LLM < Human): 890 (22.7%)
   Exact match: 1,856 (47.4%)
 
-Error Distance:
-  Adjacent errors (off by 1): 1,674 (42.7%)
-  Distant errors (off by 2+): 388 (9.9%)
+Disagreement:
+  Soft Disagreement: 1,674 (42.7%)
+  Hard Disagreement: 388 (9.9%)

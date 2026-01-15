@@ -57,12 +57,12 @@ from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 # ============================================================================
 
 # Run name to analyze
-RUN_NAME = "5-ensemble-size-analysis-majority_vote_average-params_small_to_big"
-# RUN_NAME = "reference-ensemble-gpt-5-1-all-samples-start"
+# RUN_NAME = "5-ensemble-size-analysis-majority_vote_average-params_small_to_big"
+RUN_NAME = "reference-ensemble-gpt-5-1-all-samples-start"
 
 # Run type: "aggregate" or "infer"
-RUN_TYPE = "aggregate"
-# RUN_TYPE = "infer"
+# RUN_TYPE = "aggregate"
+RUN_TYPE = "infer"
 
 # Labels for the relevance scores (0, 1, 2, 3)
 RELEVANCE_LABELS = [
@@ -79,8 +79,8 @@ RELEVANCE_LABELS_SHORT = ["0", "1", "2", "3"]
 OUTPUT_FILENAME = None  # e.g., "confusion_matrix.svg" or None
 
 # Custom plot title (None = auto-generate)
-PLOT_TITLE = "Ensemble vs Human Labels"
-# PLOT_TITLE = "GPT 5.1 vs Human Labels"
+# PLOT_TITLE = "Ensemble vs Human Labels"
+PLOT_TITLE = "GPT 5.1 vs Human Labels"
 
 # Normalize confusion matrix: None, "true" (row), "pred" (column), "all"
 NORMALIZE = None  # None for counts, "true" for recall per class
@@ -232,7 +232,9 @@ def print_confusion_analysis(ground_truth: list, predictions: list):
     typer.echo(f"\nAccuracy: {accuracy:.1%} ({correct:,}/{len(gt_valid):,})")
 
     # Per-class recall (sklearn)
-    recalls = recall_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
+    recalls = recall_score(
+        gt_valid, pred_valid, labels=labels, average=None, zero_division=0
+    )
     typer.echo(
         "\nPer-class Recall (what % of each human label did LLM predict correctly):"
     )
@@ -241,11 +243,15 @@ def print_confusion_analysis(ground_truth: list, predictions: list):
         typer.echo(f"  {name}: {rec:.1%} ({int(rec * support)}/{support})")
 
     # Per-class precision (sklearn)
-    precisions = precision_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
+    precisions = precision_score(
+        gt_valid, pred_valid, labels=labels, average=None, zero_division=0
+    )
     typer.echo("\nPer-class Precision (what % of LLM predictions were correct):")
     for i, (name, prec) in enumerate(zip(class_names, precisions)):
         predicted_count = sum(1 for p in pred_valid if p == i)
-        typer.echo(f"  {name}: {prec:.1%} ({int(prec * predicted_count)}/{predicted_count})")
+        typer.echo(
+            f"  {name}: {prec:.1%} ({int(prec * predicted_count)}/{predicted_count})"
+        )
 
     # Custom metrics: Over/under prediction analysis
     over_predict = sum(1 for g, p in zip(gt_valid, pred_valid) if p > g)
@@ -337,7 +343,9 @@ def save_confusion_matrix_table(
     lines.append(f"Accuracy: {accuracy:.1%} ({correct:,}/{len(gt_valid):,})")
 
     # Per-class recall (sklearn)
-    recalls = recall_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
+    recalls = recall_score(
+        gt_valid, pred_valid, labels=labels, average=None, zero_division=0
+    )
     lines.append("")
     lines.append(
         "Per-class Recall (what % of each human label did LLM predict correctly):"
@@ -347,12 +355,16 @@ def save_confusion_matrix_table(
         lines.append(f"  {name}: {rec:.1%} ({int(rec * support)}/{support})")
 
     # Per-class precision (sklearn)
-    precisions = precision_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
+    precisions = precision_score(
+        gt_valid, pred_valid, labels=labels, average=None, zero_division=0
+    )
     lines.append("")
     lines.append("Per-class Precision (what % of LLM predictions were correct):")
     for i, (name, prec) in enumerate(zip(class_names, precisions)):
         predicted_count = sum(1 for p in pred_valid if p == i)
-        lines.append(f"  {name}: {prec:.1%} ({int(prec * predicted_count)}/{predicted_count})")
+        lines.append(
+            f"  {name}: {prec:.1%} ({int(prec * predicted_count)}/{predicted_count})"
+        )
 
     # Custom metrics: Bias analysis
     over_predict = sum(1 for g, p in zip(gt_valid, pred_valid) if p > g)
@@ -407,8 +419,12 @@ def save_confusion_matrix_latex(
 
     # Calculate metrics using sklearn
     accuracy = accuracy_score(gt_valid, pred_valid)
-    recalls = recall_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
-    precisions = precision_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
+    recalls = recall_score(
+        gt_valid, pred_valid, labels=labels, average=None, zero_division=0
+    )
+    precisions = precision_score(
+        gt_valid, pred_valid, labels=labels, average=None, zero_division=0
+    )
 
     # Custom metrics
     over_predict = sum(1 for g, p in zip(gt_valid, pred_valid) if p > g)
@@ -422,7 +438,9 @@ def save_confusion_matrix_latex(
     lines.append("% Confusion Matrix")
     lines.append("\\begin{table}[htbp]")
     lines.append("\\centering")
-    lines.append("\\caption{Confusion Matrix (rows = Human Labels, columns = LLM Predictions)}")
+    lines.append(
+        "\\caption{Confusion Matrix (rows = Human Labels, columns = LLM Predictions)}"
+    )
     lines.append("\\label{tab:confusion-matrix}")
     lines.append("\\begin{tabular}{l|rrrr|r}")
     lines.append("\\toprule")
@@ -430,7 +448,12 @@ def save_confusion_matrix_latex(
     lines.append("Human Label & 0 & 1 & 2 & 3 & Total \\\\")
     lines.append("\\midrule")
 
-    row_labels = ["0 (Irrelevant)", "1 (Relevant)", "2 (Highly Rel.)", "3 (Perfectly Rel.)"]
+    row_labels = [
+        "0 (Irrelevant)",
+        "1 (Relevant)",
+        "2 (Highly Rel.)",
+        "3 (Perfectly Rel.)",
+    ]
     for i, label in enumerate(row_labels):
         row_values = " & ".join(str(cm[i, j]) for j in range(4))
         lines.append(f"{label} & {row_values} & {cm[i].sum()} \\\\")
@@ -469,11 +492,27 @@ def save_confusion_matrix_latex(
         lines.append(f"Precision ({name}) & {prec:.1%}".replace("%", "\\%") + " \\\\")
 
     lines.append("\\midrule")
-    lines.append(f"Over-predicting (LLM > Human) & {over_predict/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
-    lines.append(f"Under-predicting (LLM < Human) & {under_predict/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
+    lines.append(
+        f"Over-predicting (LLM > Human) & {over_predict/len(gt_valid):.1%}".replace(
+            "%", "\\%"
+        )
+        + " \\\\"
+    )
+    lines.append(
+        f"Under-predicting (LLM < Human) & {under_predict/len(gt_valid):.1%}".replace(
+            "%", "\\%"
+        )
+        + " \\\\"
+    )
     lines.append("\\midrule")
-    lines.append(f"Soft Disagreement & {adjacent_errors/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
-    lines.append(f"Hard Disagreement & {distant_errors/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
+    lines.append(
+        f"Soft Disagreement & {adjacent_errors/len(gt_valid):.1%}".replace("%", "\\%")
+        + " \\\\"
+    )
+    lines.append(
+        f"Hard Disagreement & {distant_errors/len(gt_valid):.1%}".replace("%", "\\%")
+        + " \\\\"
+    )
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
     lines.append("\\end{table}")

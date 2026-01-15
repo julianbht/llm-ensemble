@@ -1,0 +1,37 @@
+Confusion Matrix (rows=Human/Ground Truth, cols=LLM Prediction)
+
+                    LLM Prediction
+                    0       1       2       3     | Row Total
+Human  0 (Irrel)   1004     706      98      38   |  1846
+       1 (Relev)    372     483     160      68   |  1083
+       2 (High)     105     253     213     102   |   673
+       3 (Perf)       3      76      81     156   |   316
+       --------------------------------------------------
+Col Total          1484    1518     552     364   |  3918
+
+==================================================
+Analysis
+==================================================
+
+Overall Accuracy: 47.4% (1,856/3,918)
+
+Per-class Recall (what % of each human label did LLM predict correctly):
+  Irrelevant: 54.4% (1004/1846)
+  Relevant: 44.6% (483/1083)
+  Highly Relevant: 31.6% (213/673)
+  Perfectly Relevant: 49.4% (156/316)
+
+Per-class Precision (what % of LLM predictions were correct):
+  Irrelevant: 67.7% (1004/1484)
+  Relevant: 31.8% (483/1518)
+  Highly Relevant: 38.6% (213/552)
+  Perfectly Relevant: 42.9% (156/364)
+
+Bias Analysis:
+  Over-predicting (LLM > Human): 1,172 (29.9%)
+  Under-predicting (LLM < Human): 890 (22.7%)
+  Exact match: 1,856 (47.4%)
+
+Error Distance:
+  Adjacent errors (off by 1): 1,674 (42.7%)
+  Distant errors (off by 2+): 388 (9.9%)

@@ -229,7 +229,7 @@ def print_confusion_analysis(ground_truth: list, predictions: list):
     # Overall accuracy (sklearn)
     accuracy = accuracy_score(gt_valid, pred_valid)
     correct = int(accuracy * len(gt_valid))
-    typer.echo(f"\nOverall Accuracy: {accuracy:.1%} ({correct:,}/{len(gt_valid):,})")
+    typer.echo(f"\nAccuracy: {accuracy:.1%} ({correct:,}/{len(gt_valid):,})")
 
     # Per-class recall (sklearn)
     recalls = recall_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
@@ -264,12 +264,12 @@ def print_confusion_analysis(ground_truth: list, predictions: list):
     adjacent_errors = sum(1 for g, p in zip(gt_valid, pred_valid) if abs(g - p) == 1)
     distant_errors = sum(1 for g, p in zip(gt_valid, pred_valid) if abs(g - p) >= 2)
 
-    typer.echo(f"\nError Distance:")
+    typer.echo(f"\nDisagreement:")
     typer.echo(
-        f"  Adjacent errors (off by 1): {adjacent_errors:,} ({adjacent_errors/len(gt_valid):.1%})"
+        f"  Soft Disagreement: {adjacent_errors:,} ({adjacent_errors/len(gt_valid):.1%})"
     )
     typer.echo(
-        f"  Distant errors (off by 2+): {distant_errors:,} ({distant_errors/len(gt_valid):.1%})"
+        f"  Hard Disagreement: {distant_errors:,} ({distant_errors/len(gt_valid):.1%})"
     )
 
 
@@ -334,7 +334,7 @@ def save_confusion_matrix_table(
     accuracy = accuracy_score(gt_valid, pred_valid)
     correct = int(accuracy * len(gt_valid))
     lines.append("")
-    lines.append(f"Overall Accuracy: {accuracy:.1%} ({correct:,}/{len(gt_valid):,})")
+    lines.append(f"Accuracy: {accuracy:.1%} ({correct:,}/{len(gt_valid):,})")
 
     # Per-class recall (sklearn)
     recalls = recall_score(gt_valid, pred_valid, labels=labels, average=None, zero_division=0)
@@ -373,12 +373,12 @@ def save_confusion_matrix_table(
     distant_errors = sum(1 for g, p in zip(gt_valid, pred_valid) if abs(g - p) >= 2)
 
     lines.append("")
-    lines.append("Error Distance:")
+    lines.append("Disagreement:")
     lines.append(
-        f"  Adjacent errors (off by 1): {adjacent_errors:,} ({adjacent_errors/len(gt_valid):.1%})"
+        f"  Soft Disagreement: {adjacent_errors:,} ({adjacent_errors/len(gt_valid):.1%})"
     )
     lines.append(
-        f"  Distant errors (off by 2+): {distant_errors:,} ({distant_errors/len(gt_valid):.1%})"
+        f"  Hard Disagreement: {distant_errors:,} ({distant_errors/len(gt_valid):.1%})"
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -455,7 +455,7 @@ def save_confusion_matrix_latex(
     lines.append("\\toprule")
     lines.append("Metric & Value \\\\")
     lines.append("\\midrule")
-    lines.append(f"Overall Accuracy & {accuracy:.1%}".replace("%", "\\%") + " \\\\")
+    lines.append(f"Accuracy & {accuracy:.1%}".replace("%", "\\%") + " \\\\")
     lines.append("\\midrule")
 
     # Per-class recall (sklearn)
@@ -472,8 +472,8 @@ def save_confusion_matrix_latex(
     lines.append(f"Over-predicting (LLM > Human) & {over_predict/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
     lines.append(f"Under-predicting (LLM < Human) & {under_predict/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
     lines.append("\\midrule")
-    lines.append(f"Adjacent errors (off by 1) & {adjacent_errors/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
-    lines.append(f"Distant errors (off by 2+) & {distant_errors/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
+    lines.append(f"Soft Disagreement & {adjacent_errors/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
+    lines.append(f"Hard Disagreement & {distant_errors/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
     lines.append("\\end{table}")

@@ -455,25 +455,25 @@ def save_confusion_matrix_latex(
     lines.append("\\toprule")
     lines.append("Metric & Value \\\\")
     lines.append("\\midrule")
-    lines.append(f"Overall Accuracy & {accuracy:.1%} \\\\")
+    lines.append(f"Overall Accuracy & {accuracy:.1%}".replace("%", "\\%") + " \\\\")
     lines.append("\\midrule")
 
     # Per-class recall (sklearn)
     for name, rec in zip(class_names, recalls):
-        lines.append(f"Recall ({name}) & {rec:.1%} \\\\")
+        lines.append(f"Recall ({name}) & {rec:.1%}".replace("%", "\\%") + " \\\\")
 
     lines.append("\\midrule")
 
     # Per-class precision (sklearn)
     for name, prec in zip(class_names, precisions):
-        lines.append(f"Precision ({name}) & {prec:.1%} \\\\")
+        lines.append(f"Precision ({name}) & {prec:.1%}".replace("%", "\\%") + " \\\\")
 
     lines.append("\\midrule")
-    lines.append(f"Over-predicting (LLM > Human) & {over_predict/len(gt_valid):.1%} \\\\")
-    lines.append(f"Under-predicting (LLM < Human) & {under_predict/len(gt_valid):.1%} \\\\")
+    lines.append(f"Over-predicting (LLM > Human) & {over_predict/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
+    lines.append(f"Under-predicting (LLM < Human) & {under_predict/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
     lines.append("\\midrule")
-    lines.append(f"Adjacent errors (off by 1) & {adjacent_errors/len(gt_valid):.1%} \\\\")
-    lines.append(f"Distant errors (off by 2+) & {distant_errors/len(gt_valid):.1%} \\\\")
+    lines.append(f"Adjacent errors (off by 1) & {adjacent_errors/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
+    lines.append(f"Distant errors (off by 2+) & {distant_errors/len(gt_valid):.1%}".replace("%", "\\%") + " \\\\")
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
     lines.append("\\end{table}")

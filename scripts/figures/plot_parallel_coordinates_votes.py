@@ -49,15 +49,41 @@ from llm_ensemble.ingest.adapters.driven.io.db.orms import (
 # CONFIGURATION - Edit these constants to change the plot
 # ============================================================================
 
-# List of (display_label, run_name) tuples for each model in the ensemble
-# Order matters for finding patterns - try placing similar models adjacent
-INFER_RUNS = [
-    ("Ministral 3B", "ensemble-2-ministral-3b-2515"),
-    ("Phi-4", "ensemble-3-phi-4-multimodal-instruct"),
-    ("Llama 3.2 3B", "ensemble-4-meta-llama-3.2-3b-instruct-start"),
-    ("UI-TARS 7B", "ensemble-5-ui-tars-1.5-7b-start"),
-    ("Gemma 3 4B", "ensemble-1-google-gemma-3-4b-it"),
+# Base model definitions (label, run_name, approx_params_billions)
+MODELS = [
+    ("Gemma 3 4B", "ensemble-1-google-gemma-3-4b-it", 4),
+    ("Ministral 3B", "ensemble-2-ministral-3b-2515", 3),
+    ("Phi-4", "ensemble-3-phi-4-multimodal-instruct", 14),
+    ("Llama 3.2 3B", "ensemble-4-meta-llama-3.2-3b-instruct-start", 3),
+    ("UI-TARS 7B", "ensemble-5-ui-tars-1.5-7b-start", 7),
 ]
+
+# Different orderings to try
+MODEL_ORDERINGS = {
+    "by_ensemble_number": [0, 1, 2, 3, 4],  # Original order
+    "by_ensemble_number_reversed": [4, 3, 2, 1, 0],
+    "by_size_small_to_large": None,  # Will be computed
+    "by_size_large_to_small": None,  # Will be computed
+    "alphabetical": None,  # Will be computed
+    "rotation_1": [1, 2, 3, 4, 0],
+    "rotation_2": [2, 3, 4, 0, 1],
+}
+
+# Compute size-based and alphabetical orderings
+_size_order = sorted(range(len(MODELS)), key=lambda i: MODELS[i][2])
+MODEL_ORDERINGS["by_size_small_to_large"] = _size_order
+MODEL_ORDERINGS["by_size_large_to_small"] = _size_order[::-1]
+MODEL_ORDERINGS["alphabetical"] = sorted(range(len(MODELS)), key=lambda i: MODELS[i][0])
+
+# Set to None to generate all orderings, or specify one ordering name to run single
+SINGLE_ORDERING = None  # e.g., "by_size_small_to_large" or None for all
+
+# Helper to get runs in a specific order
+def get_infer_runs(ordering_indices):
+    return [(MODELS[i][0], MODELS[i][1]) for i in ordering_indices]
+
+# Default for backward compatibility
+INFER_RUNS = get_infer_runs(MODEL_ORDERINGS["by_ensemble_number"])
 
 # Line transparency (lower = more transparent, helps see density patterns)
 # With ~4000 lines, use very low alpha (0.01-0.05)
@@ -387,44 +413,68 @@ def main():
     """Plot parallel coordinates of model votes.
 
     Configuration is set via constants at the top of this file.
+    Generates plots for all model orderings (or single if SINGLE_ORDERING is set).
     """
     # Setup paths
     project_root = Path(__file__).parent.parent.parent
     figures_dir = project_root / "artifacts" / "figures"
-    figures_dir.mkdir(parents=True, exist_ok=True)
 
-    # Output filename
-    output_filename = OUTPUT_FILENAME
-    if output_filename is None:
-        output_filename = "parallel_coordinates_votes.svg"
-    output_path = figures_dir / output_filename
+    # Determine which orderings to run
+    if SINGLE_ORDERING:
+        orderings_to_run = {SINGLE_ORDERING: MODEL_ORDERINGS[SINGLE_ORDERING]}
+        output_base = figures_dir
+    else:
+        orderings_to_run = MODEL_ORDERINGS
+        output_base = figures_dir / "parallel_coordinates_orderings"
 
-    typer.echo(f"Loading votes from {len(INFER_RUNS)} models...")
+    output_base.mkdir(parents=True, exist_ok=True)
 
-    # Collect all votes
-    model_labels, votes_matrix, ground_truth = collect_all_votes(INFER_RUNS)
+    typer.echo(f"Will generate {len(orderings_to_run)} plots with different model orderings")
+    typer.echo(f"Output directory: {output_base}\n")
 
-    typer.echo(
-        f"Collected {votes_matrix.shape[0]:,} samples from {len(model_labels)} models"
-    )
+    # Load all votes once (we'll reorder the matrix for each plot)
+    typer.echo("Loading votes from all models...")
+    base_runs = get_infer_runs(MODEL_ORDERINGS["by_ensemble_number"])
+    base_labels, base_votes_matrix, ground_truth = collect_all_votes(base_runs)
+    typer.echo(f"Collected {base_votes_matrix.shape[0]:,} samples from {len(base_labels)} models\n")
 
-    # Print statistics
-    print_consensus_statistics(votes_matrix, model_labels)
+    # Generate plot for each ordering
+    for ordering_name, ordering_indices in orderings_to_run.items():
+        typer.echo(f"\n{'='*60}")
+        typer.echo(f"Ordering: {ordering_name}")
+        typer.echo(f"Model order: {[MODELS[i][0] for i in ordering_indices]}")
+        typer.echo(f"{'='*60}")
 
-    # Create plot
-    plot_parallel_coordinates(
-        model_labels=model_labels,
-        votes_matrix=votes_matrix,
-        ground_truth=ground_truth,
-        output_path=output_path,
-        title=PLOT_TITLE,
-        alpha=LINE_ALPHA,
-        line_width=LINE_WIDTH,
-        color_mode=COLOR_MODE,
-        line_color=LINE_COLOR,
-        gt_colors=GROUND_TRUTH_COLORS,
-        y_jitter=Y_JITTER,
-    )
+        # Reorder the votes matrix and labels
+        model_labels = [base_labels[i] for i in ordering_indices]
+        votes_matrix = base_votes_matrix[:, ordering_indices]
+
+        # Output path
+        output_filename = f"parallel_coords_{ordering_name}.svg"
+        output_path = output_base / output_filename
+
+        # Title with ordering info
+        title = f"{PLOT_TITLE} ({ordering_name.replace('_', ' ')})"
+
+        # Print statistics for this ordering
+        print_consensus_statistics(votes_matrix, model_labels)
+
+        # Create plot
+        plot_parallel_coordinates(
+            model_labels=model_labels,
+            votes_matrix=votes_matrix,
+            ground_truth=ground_truth,
+            output_path=output_path,
+            title=title,
+            alpha=LINE_ALPHA,
+            line_width=LINE_WIDTH,
+            color_mode=COLOR_MODE,
+            line_color=LINE_COLOR,
+            gt_colors=GROUND_TRUTH_COLORS,
+            y_jitter=Y_JITTER,
+        )
+
+    typer.echo(f"\n\nDone! Generated {len(orderings_to_run)} plots in: {output_base}")
 
 
 if __name__ == "__main__":

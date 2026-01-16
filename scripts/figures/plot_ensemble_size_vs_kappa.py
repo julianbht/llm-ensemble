@@ -71,7 +71,8 @@ Y_AXIS_LIMITS = None
 OUTPUT_FILENAME = "ensemble_size_vs_kappa_multi_strategy_params_small_to_big.svg"  # e.g., "ensemble_size_vs_kappa_multi_strategy.svg" or None
 
 # Custom plot title (None = auto-generate)
-PLOT_TITLE = "Ensemble Size vs Cohen's Kappa (small to big)"  # e.g., "Ensemble Size vs Cohen's Kappa (Multiple Strategies)"
+# PLOT_TITLE = "Ensemble Size vs Cohen's Kappa (small to big)"  # e.g., "Ensemble Size vs Cohen's Kappa (Multiple Strategies)"
+PLOT_TITLE = "Ensemble Size vs Cohen's Kappa (big to small)"  # e.g., "Ensemble Size vs Cohen's Kappa (Multiple Strategies)"
 
 # Output format: "svg" or "png"
 OUTPUT_FORMAT = "svg"
@@ -79,7 +80,7 @@ OUTPUT_FORMAT = "svg"
 # Style configuration for each strategy (using BHT colors)
 STRATEGY_STYLES = {
     "average_vote": {
-        "color": BHT_COLORS["blue"],
+        "color": BHT_COLORS["blue"],  # Dark blue
         "marker": "o",
         "label": "Average Vote",
     },

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import List, Tuple, Optional
 
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import typer
 
 from thesis_colors import BHT_COLORS, GRAY_SCALE
@@ -195,6 +196,14 @@ def plot_agreement_bar_chart(
     # Rotate x-labels if many models
     if len(labels) > 4:
         plt.xticks(rotation=45, ha="right")
+
+    # Legend for color categories
+    legend_patches = [
+        mpatches.Patch(color=BHT_COLORS["turquoise"], label="Individual Model"),
+        mpatches.Patch(color=BHT_COLORS["blue"], label="Ensemble"),
+        mpatches.Patch(color=GRAY_SCALE["dark"], label="Reference Model"),
+    ]
+    ax.legend(handles=legend_patches, loc="upper right", fontsize=12, framealpha=0.95)
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches="tight", format="svg")

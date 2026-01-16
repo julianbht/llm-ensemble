@@ -10,6 +10,7 @@ Usage:
     python scripts/figures/plot_ensemble_size_vs_kappa.py
 """
 
+import csv
 import json
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
@@ -252,6 +253,53 @@ def plot_ensemble_size_vs_metric_multi_strategy(
     copy_figure_to_overleaf(output_path)
 
 
+def save_data_table(
+    data_by_strategy: Dict[str, List[Tuple[int, float]]],
+    metric_name: str,
+    output_path: Path,
+):
+    """Save the data as a CSV table.
+
+    Args:
+        data_by_strategy: Dict mapping strategy to list of (size, value) tuples
+        metric_name: Name of the metric (for header)
+        output_path: Where to save the CSV file
+    """
+    # Get all ensemble sizes across all strategies
+    all_sizes = sorted(
+        set(size for data in data_by_strategy.values() for size, _ in data)
+    )
+
+    # Build lookup dict for quick access: strategy -> {size: value}
+    lookup = {}
+    for strategy, data in data_by_strategy.items():
+        lookup[strategy] = {size: value for size, value in data}
+
+    # Get strategy display labels
+    strategies = list(data_by_strategy.keys())
+    strategy_labels = [
+        STRATEGY_STYLES.get(s, {"label": s})["label"] for s in strategies
+    ]
+
+    # Write CSV
+    with open(output_path, "w", newline="") as f:
+        writer = csv.writer(f)
+
+        # Header row
+        header = ["Ensemble Size"] + strategy_labels
+        writer.writerow(header)
+
+        # Data rows
+        for size in all_sizes:
+            row = [size]
+            for strategy in strategies:
+                value = lookup[strategy].get(size)
+                row.append(f"{value:.4f}" if value is not None else "")
+            writer.writerow(row)
+
+    typer.echo(f"Table saved to: {output_path}")
+
+
 @app.command()
 def main():
     """Plot ensemble size vs metric for multiple aggregation strategies.
@@ -266,6 +314,8 @@ def main():
     evaluate_runs_base = project_root / "artifacts" / "runs" / "evaluate" / RUN_TYPE
     figures_dir = project_root / "artifacts" / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
+    tables_dir = project_root / "artifacts" / "tables"
+    tables_dir.mkdir(parents=True, exist_ok=True)
 
     # Output filename
     output_filename = OUTPUT_FILENAME
@@ -298,6 +348,11 @@ def main():
     plot_ensemble_size_vs_metric_multi_strategy(
         data_by_strategy, METRIC_NAME, output_path, Y_AXIS_LIMITS, PLOT_TITLE
     )
+
+    # Save table
+    table_filename = output_filename.replace(f".{OUTPUT_FORMAT}", ".csv")
+    table_path = tables_dir / table_filename
+    save_data_table(data_by_strategy, METRIC_NAME, table_path)
 
 
 if __name__ == "__main__":

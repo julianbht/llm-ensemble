@@ -1,0 +1,47 @@
+{
+  "id": "0e6f347b-8659-40f8-af93-cd552d51530b",
+  "run_name": "noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "official",
+  "cli_name": "evaluate",
+  "notes": "Evaluating the infer repeat runs. Goal: Determine the ground noise between the first and second repeat run. ",
+  "git_info": {
+    "git_sha": "b70ef71",
+    "git_clean": false,
+    "git_branch": "master"
+  },
+  "evaluate_run_config": {
+    "id": "8d15a810-7be9-40b7-998f-22fdbbcc3503",
+    "io_config_name": "db_infer_to_json",
+    "input_run_name": "noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start",
+    "metric_names": [
+      "cohens_kappa",
+      "krippendorffs_alpha"
+    ]
+  },
+  "metric_results": [
+    {
+      "name": "cohens_kappa",
+      "value": 0.09805728141864589,
+      "sample_size": 3914,
+      "interpretation": "slight",
+      "description": "Cohen's Kappa coefficient measuring inter-rater agreement",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    },
+    {
+      "name": "krippendorffs_alpha",
+      "value": 0.2200493547113055,
+      "sample_size": 3914,
+      "interpretation": "insufficient (unreliable)",
+      "description": "Krippendorff's Alpha coefficient measuring inter-rater reliability (ordinal scale)",
+      "min_value": -1.0,
+      "max_value": 1.0,
+      "higher_is_better": true
+    }
+  ],
+  "evaluated_run_type": "infer",
+  "evaluated_sample_count": 3918,
+  "start_time": "2026-01-17T13:32:33.247340",
+  "end_time": "2026-01-17T13:32:39.500627"
+}

@@ -1,0 +1,57 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_name": "noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:33.247246Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "level": "info",
+  "run_name": "noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "infer",
+  "timestamp": "2026-01-17T18:32:39.496495Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:39.498848Z",
+  "value": 0.09805728141864589
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:39.500564Z",
+  "value": 0.2200493547113055
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start/evaluate_run.json",
+  "run_name": "noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:39.508886Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:39.509075Z"
+}

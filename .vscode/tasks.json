@@ -37,11 +37,11 @@
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
         "${workspaceFolder}/src/llm_ensemble/evaluate/adapters/driving/evaluate_cli.py",
-        "--io-cfg", "db_aggregate_to_json",
-        "--input", "-ensemble-1-to-5-majority-vote-random",
-        "--run-name", "-ensemble-1-to-5-majority-vote-random",
+        "--io-cfg", "db_infer_to_json",
+        "--input", "noise-5-ensemble-5-ui-tars-1.5-7b-start",
+        "--run-name", "noise-5-ensemble-5-ui-tars-1.5-7b-start",
         "--official",
-        "--notes", "Evaluating the ensemble that aggregated with majority random vote. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total."
+        "--notes", "Evaluating the infer repeat runs. Goal: Determine the ground noise between the first and second repeat run. "
       ],
       "options": {
         "env": {

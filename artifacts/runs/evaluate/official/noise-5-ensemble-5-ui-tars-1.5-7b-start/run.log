@@ -1,0 +1,57 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "noise-5-ensemble-5-ui-tars-1.5-7b-start",
+  "run_name": "noise-5-ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:49.002437Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "noise-5-ensemble-5-ui-tars-1.5-7b-start",
+  "level": "info",
+  "run_name": "noise-5-ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "infer",
+  "timestamp": "2026-01-17T18:32:55.530248Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "noise-5-ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:55.532655Z",
+  "value": 0.16865084957261733
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "noise-5-ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:55.534509Z",
+  "value": 0.35996266390772547
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/noise-5-ensemble-5-ui-tars-1.5-7b-start/evaluate_run.json",
+  "run_name": "noise-5-ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:55.542029Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "noise-5-ensemble-5-ui-tars-1.5-7b-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:55.542308Z"
+}

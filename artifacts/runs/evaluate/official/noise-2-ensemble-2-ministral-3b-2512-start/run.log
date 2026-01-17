@@ -1,0 +1,57 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "noise-2-ensemble-2-ministral-3b-2512-start",
+  "run_name": "noise-2-ensemble-2-ministral-3b-2512-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:31:57.943638Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "noise-2-ensemble-2-ministral-3b-2512-start",
+  "level": "info",
+  "run_name": "noise-2-ensemble-2-ministral-3b-2512-start",
+  "run_type": "infer",
+  "timestamp": "2026-01-17T18:32:03.962598Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "noise-2-ensemble-2-ministral-3b-2512-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:03.965112Z",
+  "value": 0.15660357682106274
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "noise-2-ensemble-2-ministral-3b-2512-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:03.966800Z",
+  "value": 0.31392675990706975
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/noise-2-ensemble-2-ministral-3b-2512-start/evaluate_run.json",
+  "run_name": "noise-2-ensemble-2-ministral-3b-2512-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:03.975057Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "noise-2-ensemble-2-ministral-3b-2512-start",
+  "run_type": "official",
+  "timestamp": "2026-01-17T18:32:03.975234Z"
+}

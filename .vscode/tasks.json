@@ -38,8 +38,8 @@
       "args": [
         "${workspaceFolder}/src/llm_ensemble/evaluate/adapters/driving/evaluate_cli.py",
         "--io-cfg", "db_infer_to_json",
-        "--input", "noise-5-ensemble-5-ui-tars-1.5-7b-start",
-        "--run-name", "noise-5-ensemble-5-ui-tars-1.5-7b-start",
+        "--input", "noise-reference-ensemble-gpt-5-1-all-samples-start",
+        "--run-name", "noise-reference-ensemble-gpt-5-1-all-samples-start",
         "--official",
         "--notes", "Evaluating the infer repeat runs. Goal: Determine the ground noise between the first and second repeat run. "
       ],

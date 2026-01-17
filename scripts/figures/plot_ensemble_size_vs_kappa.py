@@ -30,31 +30,31 @@ from copy_to_overleaf import copy_figure_to_overleaf
 # The ensemble_size is explicit rather than extracted from the run name
 RUNS_BY_STRATEGY = {
     "average_vote": [
-        (1, "1-ensemble-size-analysis-average_vote-params_big_to_small_v4"),
-        (2, "2-ensemble-size-analysis-average_vote-params_big_to_small_v4"),
-        (3, "3-ensemble-size-analysis-average_vote-params_big_to_small_v4"),
-        (4, "4-ensemble-size-analysis-average_vote-params_big_to_small_v4"),
-        (5, "5-ensemble-size-analysis-average_vote-params_big_to_small_v4"),
-        (6, "6-ensemble-size-analysis-average_vote-params_big_to_small_v4"),
-        (7, "7-ensemble-size-analysis-average_vote-params_big_to_small_v4"),
+        (1, "1-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (2, "2-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (3, "3-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (4, "4-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (5, "5-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (6, "6-ensemble-size-analysis-average_vote-params_small_to_big"),
+        (7, "7-ensemble-size-analysis-average_vote-params_small_to_big"),
     ],
     "majority_vote_average": [
-        (1, "1-ensemble-size-analysis-majority_vote_average-params_big_to_small_v4"),
-        (2, "2-ensemble-size-analysis-majority_vote_average-params_big_to_small_v4"),
-        (3, "3-ensemble-size-analysis-majority_vote_average-params_big_to_small_v4"),
-        (4, "4-ensemble-size-analysis-majority_vote_average-params_big_to_small_v4"),
-        (5, "5-ensemble-size-analysis-majority_vote_average-params_big_to_small_v4"),
-        (6, "6-ensemble-size-analysis-majority_vote_average-params_big_to_small_v4"),
-        (7, "7-ensemble-size-analysis-majority_vote_average-params_big_to_small_v4"),
+        (1, "1-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (2, "2-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (3, "3-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (4, "4-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (5, "5-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (6, "6-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
+        (7, "7-ensemble-size-analysis-majority_vote_average-params_small_to_big"),
     ],
     "majority_vote_random": [
-        (1, "1-ensemble-size-analysis-majority_vote_random-params_big_to_small_v4"),
-        (2, "2-ensemble-size-analysis-majority_vote_random-params_big_to_small_v4"),
-        (3, "3-ensemble-size-analysis-majority_vote_random-params_big_to_small_v4"),
-        (4, "4-ensemble-size-analysis-majority_vote_random-params_big_to_small_v4"),
-        (5, "5-ensemble-size-analysis-majority_vote_random-params_big_to_small_v4"),
-        (6, "6-ensemble-size-analysis-majority_vote_random-params_big_to_small_v4"),
-        (7, "7-ensemble-size-analysis-majority_vote_random-params_big_to_small_v4"),
+        (1, "1-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (2, "2-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (3, "3-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (4, "4-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (5, "5-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (6, "6-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
+        (7, "7-ensemble-size-analysis-majority_vote_random-params_small_to_big"),
     ],
 }
 
@@ -69,11 +69,11 @@ RUN_TYPE = "official"
 Y_AXIS_LIMITS = None
 
 # Output filename (None = auto-generate from metric name)
-OUTPUT_FILENAME = "ensemble_size_vs_kappa_multi_strategy_params_big_to_small_v4.svg"  # e.g., "ensemble_size_vs_kappa_multi_strategy.svg" or None
+OUTPUT_FILENAME = "ensemble_size_vs_kappa_multi_strategy_params_small_to_big.svg"  # e.g., "ensemble_size_vs_kappa_multi_strategy.svg" or None
 
 # Custom plot title (None = auto-generate)
-# PLOT_TITLE = "Ensemble Size vs Cohen's Kappa (small to big)"  # e.g., "Ensemble Size vs Cohen's Kappa (Multiple Strategies)"
-PLOT_TITLE = "Ensemble Size vs Cohen's Kappa (big to small)"  # e.g., "Ensemble Size vs Cohen's Kappa (Multiple Strategies)"
+PLOT_TITLE = "Ensemble Size vs Cohen's Kappa (small to big)"  # e.g., "Ensemble Size vs Cohen's Kappa (Multiple Strategies)"
+# PLOT_TITLE = "Ensemble Size vs Cohen's Kappa (big to small)"  # e.g., "Ensemble Size vs Cohen's Kappa (Multiple Strategies)"
 
 # Output format: "svg" or "png"
 OUTPUT_FORMAT = "svg"

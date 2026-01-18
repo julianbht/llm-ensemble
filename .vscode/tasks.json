@@ -37,11 +37,11 @@
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
         "${workspaceFolder}/src/llm_ensemble/evaluate/adapters/driving/evaluate_cli.py",
-        "--io-cfg", "db_infer_to_json",
-        "--input", "noise-reference-ensemble-gpt-5-1-all-samples-start",
-        "--run-name", "noise-reference-ensemble-gpt-5-1-all-samples-start",
+        "--io-cfg", "db_aggregate_to_json",
+        "--input", "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+        "--run-name", "-ensemble-1-to-5-majority-vote-average-disagreement-script",
         "--official",
-        "--notes", "Evaluating the infer repeat runs. Goal: Determine the ground noise between the first and second repeat run. "
+        "--notes", "For the script where I try to evaluate the hard disagreements."
       ],
       "options": {
         "env": {
@@ -71,7 +71,7 @@
         "-i", "ensemble-3-phi-4-multimodal-instruct",
         "-i", "ensemble-4-meta-llama-3.2-3b-instruct-start",
         "-i", "ensemble-5-ui-tars-1.5-7b-start",
-        "--run-name", "-ensemble-1-to-5-majority-vote-average",
+        "--run-name", "-ensemble-1-to-5-majority-vote-average-disagreement-script",
         "--notes", "Aggregating ensemble models 1 to 5 with average voting and random tie breaking. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
         "--official"
       ],

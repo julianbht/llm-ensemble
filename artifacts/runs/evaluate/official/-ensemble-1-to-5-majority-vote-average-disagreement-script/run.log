@@ -1,0 +1,66 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+  "run_name": "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+  "run_type": "official",
+  "timestamp": "2026-01-18T19:17:48.474419Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+  "run_name": "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+  "run_type": "official",
+  "timestamp": "2026-01-18T19:18:11.719204Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+  "level": "info",
+  "run_name": "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+  "run_type": "aggregate",
+  "timestamp": "2026-01-18T19:18:28.271895Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+  "run_type": "official",
+  "timestamp": "2026-01-18T19:18:28.293887Z",
+  "value": 0.2061285068544204
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+  "run_type": "official",
+  "timestamp": "2026-01-18T19:18:28.298049Z",
+  "value": 0.39416993566654956
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/-ensemble-1-to-5-majority-vote-average-disagreement-script/evaluate_run.json",
+  "run_name": "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+  "run_type": "official",
+  "timestamp": "2026-01-18T19:18:28.317312Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+  "run_type": "official",
+  "timestamp": "2026-01-18T19:18:28.317790Z"
+}

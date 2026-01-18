@@ -12,8 +12,8 @@
         "--prompt-template", "thomas-advanced-trec",
         "--io-cfg", "db_to_db",
         "--input", "20260107_014749",
-        "--run-name", "noise-reference-ensemble-gpt-5-1-all-samples-start",
-        "--notes", "Ensemble reference model. Rerun with the same settings as the first run with this model. Goal: determine ground noise.",
+        "--run-name", "noise-2-reference-ensemble-gpt-5-1-all-samples-start",
+        "--notes", "Ensemble reference model. Rerun with the same settings as the first and second run with this model. Goal: determine ground noise.",
         "--official"
       ],
       "options": {

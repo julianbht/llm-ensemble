@@ -7,12 +7,12 @@
       "command": "${workspaceFolder}/venv/bin/python3",
       "args": [
         "${workspaceFolder}/src/llm_ensemble/infer/adapters/driving/infer_cli.py",
-        "--model-cfg", "ministral-3b-2515",
+        "--model-cfg", "ministral-3b-2512",
         "--provider", "openrouter",
         "--prompt-template", "thomas-advanced-trec",
         "--io-cfg", "db_to_db",
         "--input", "20260107_014749",
-        "--run-name", "+2-noise-2-ministral-3b-2515",
+        "--run-name", "+2-noise-2-ministral-3b-2512",
         "--notes", "Ensemble model 2. Rerun with the same settings as the first and second run with this model. Goal: determine ground noise.",
         "--official"
       ],

@@ -1,0 +1,137 @@
+{
+  "start_time": "2026-01-18T02:23:57.376875",
+  "end_time": "2026-01-18T05:28:07.831336",
+  "run": {
+    "id": "07d8df85-14ea-4daf-ab1e-21f87f37d610",
+    "run_name": "+2-noise-4-meta-llama-3.2-3b-instruct-start",
+    "run_type": "official",
+    "cli_name": "infer",
+    "notes": "Ensemble model 4. Rerun with the same settings as the first and second run with this model. Goal: determine ground noise.",
+    "git_info": {
+      "git_sha": "18b0737",
+      "git_clean": false,
+      "git_branch": "master"
+    },
+    "infer_run_config": {
+      "id": "62da6cf6-6f80-4522-b96e-21b5e796eee7",
+      "model_cfg": {
+        "id": "88973566-1418-4583-93b7-eca40ee98786",
+        "name": "meta-llama-3.2-3b-instruct",
+        "name_hint": "llama-3.2-3b-instruct",
+        "model_id": "meta-llama/llama-3.2-3b-instruct",
+        "context_window": null,
+        "capabilities": {},
+        "temperature": 0.01,
+        "max_tokens": null,
+        "top_p": null,
+        "frequency_penalty": null,
+        "presence_penalty": null,
+        "seed": null,
+        "additional_params": {},
+        "pricing": {
+          "prompt_cost_per_1m_tokens": 0.02,
+          "completion_cost_per_1m_tokens": 0.02
+        }
+      },
+      "provider": {
+        "id": "55f35a31-6af3-4085-8444-3150d3c631db",
+        "name": "openrouter",
+        "version": "1.0"
+      },
+      "prompt_template": {
+        "id": "8392b168-fb1d-4157-a4de-d819e4c9e2c3",
+        "name": "thomas-advanced-trec-v2",
+        "template_text": "Given a query and a web page, you must provide a score on an integer scale of 0 to 3 with the following meanings:\n\n3 = Perfectly relevant: The passage is dedicated to the query and contains the exact answer.\n2 = Highly relevant: The passage has some answers for the query, but the answer may be a bit unclear, or hidden amongst extraneous information\n1 = Related: The passage seems related to the query but does not answer it.\n0 = Irrelevant: The passage has nothing to do with the query.\n\nAssume that you are writing a report on the subject of the topic.\nIf the passage directly and clearly answers the query, mark it 3.\nIf it is primarily about the topic but the answer is partial or indirect, mark it 2.\nIf it is only loosely related but might provide minor context, mark it 1.\nOtherwise, mark it 0.\n\nQuery\nA person has typed [{query}] into a search engine.\n\nResult\nConsider the following web page.\n—BEGIN WEB PAGE CONTENT—\n{document}\n—END WEB PAGE CONTENT—\n\nInstructions\nSplit this problem into steps:\n\nConsider the underlying intent of the search.\n\nMeasure how well the content matches a likely intent of the query (M).\nMeasure how trustworthy the web page is (T).\nConsider the aspects above and the relative importance of each, and decide on a final score (O).\n\nProduce a JSON object scores without providing any reasoning.\nExample: {{\"M\": 2, \"T\": 1, \"O\": 1}}",
+        "prompt_builder": {
+          "id": "6cd726de-6102-5810-a21d-4f21f16083fb",
+          "name": "thomas-advanced-trec-v2",
+          "version": "1.0"
+        },
+        "response_parser": {
+          "id": "f44d8c88-8f27-56e3-9ea5-9980e071256c",
+          "name": "thomas-advanced-trec",
+          "version": "1.0"
+        }
+      },
+      "retry_config": {
+        "id": "fe22dd89-3d13-4532-a6e3-18cdcade0e20",
+        "name": "standard",
+        "max_retries": 8,
+        "base_delay_seconds": 4.0,
+        "max_delay_seconds": 600.0,
+        "request_timeout_seconds": 180,
+        "retryable_status_codes": [
+          429,
+          503,
+          504
+        ]
+      },
+      "input_run_name": "20260107_014749",
+      "start_idx": 0,
+      "end_idx": 3918,
+      "io_name": "db_to_db"
+    },
+    "infer_run_output": null,
+    "start_time": "2026-01-18T02:23:57.376875",
+    "end_time": "2026-01-18T05:28:07.831336"
+  },
+  "judgements": {
+    "total_count": 3918,
+    "failed_parses_count": 4,
+    "vote_breakdown": {
+      "Irrelevant": 1935,
+      "Relevant": 1571,
+      "Highly Relevant": 240,
+      "Perfectly Relevant": 168
+    }
+  },
+  "performance": {
+    "latency": {
+      "total_ms": 11655358.346332021,
+      "avg_ms": 2974.8234676702455
+    },
+    "cost": {
+      "total_usd": 0.05483426
+    },
+    "tokens": {
+      "total_prompt": 2432366,
+      "total_completion": 309347,
+      "total": 2741713
+    }
+  },
+  "persistence": {
+    "total_created": 5183,
+    "total_skipped": 10492,
+    "details": {
+      "providers_created": 0,
+      "providers_skipped": 1,
+      "model_configs_created": 0,
+      "model_configs_skipped": 1,
+      "prompt_templates_created": 0,
+      "prompt_templates_skipped": 1,
+      "parser_created": 0,
+      "parser_skipped": 1,
+      "infer_run_configs_created": 0,
+      "infer_run_configs_skipped": 1,
+      "infer_runs_created": 1,
+      "infer_runs_skipped": 0,
+      "infer_run_outputs_created": 1,
+      "infer_run_outputs_skipped": 0,
+      "llm_prompts_created": 0,
+      "llm_prompts_skipped": 3918,
+      "llm_responses_created": 1263,
+      "llm_responses_skipped": 2655,
+      "llm_scores_created": 0,
+      "llm_scores_skipped": 3914,
+      "llm_judgements_created": 3918,
+      "llm_judgements_skipped": 0
+    }
+  },
+  "issues": {
+    "non_standard_format": 3675,
+    "parse_failed": 4
+  },
+  "duration_seconds": 11050.45,
+  "duration_minutes": 184.17,
+  "duration_hours": 3.07
+}

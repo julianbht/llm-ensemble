@@ -7,13 +7,13 @@
       "command": "${workspaceFolder}/venv/bin/python3",
       "args": [
         "${workspaceFolder}/src/llm_ensemble/infer/adapters/driving/infer_cli.py",
-        "--model-cfg", "openai-gpt-5.1",
+        "--model-cfg", "ui-tars-1.5-7b",
         "--provider", "openrouter",
         "--prompt-template", "thomas-advanced-trec",
         "--io-cfg", "db_to_db",
         "--input", "20260107_014749",
-        "--run-name", "noise-reference-ensemble-gpt-5-1-all-samples-start",
-        "--notes", "Ensemble reference model. Rerun with the same settings as the first run with this model. Goal: determine ground noise.",
+        "--run-name", "+2-noise-5-ui-tars-1.5-7b-start",
+        "--notes", "Ensemble model 5. Rerun with the same settings as the first and second run with this model. Goal: determine ground noise.",
         "--official"
       ],
       "options": {

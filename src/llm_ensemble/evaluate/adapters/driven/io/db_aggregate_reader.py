@@ -81,7 +81,12 @@ class DBAggregateReader(ForInput):
 
             # Read all aggregated votes via many-to-many relationship
             # (AggregatedDataset and AggregatedVote linked via junction table)
-            votes = aggregated_dataset.aggregated_votes
+            # Sort by sample ID to ensure deterministic, reproducible ordering
+            votes = sorted(
+                aggregated_dataset.aggregated_votes,
+                key=lambda v: v.aggregation_votes[0].llm_judgement.normalized_dataset_judging_sample_id
+                if v.aggregation_votes else v.id,
+            )
 
             # Extract ground truth and predictions
             ground_truth = []

@@ -109,6 +109,7 @@ class DBReader(ForInput):
                     )
 
                 # Query all judgements for this infer_run_output with eager loading
+                # ORDER BY sample ID ensures deterministic, reproducible ordering
                 llm_judgement_orms = (
                     session.query(LLMJudgementORM)
                     .filter_by(infer_run_output_id=infer_run_output_orm.id)
@@ -117,6 +118,7 @@ class DBReader(ForInput):
                         joinedload(LLMJudgementORM.llm_response_text),
                         joinedload(LLMJudgementORM.llm_score),
                     )
+                    .order_by(LLMJudgementORM.normalized_dataset_judging_sample_id)
                     .all()
                 )
 

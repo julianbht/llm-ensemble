@@ -73,12 +73,14 @@ class DBInferReader(ForInput):
                 raise ValueError(f"No output found for infer run '{input_run_name}'")
 
             # Read all judgements with eager loading of llm_score
+            # ORDER BY sample ID ensures deterministic, reproducible ordering
             judgements = (
                 session.query(LLMJudgementORM)
                 .filter_by(infer_run_output_id=infer_run_output.id)
                 .options(
                     selectinload(LLMJudgementORM.llm_score),
                 )
+                .order_by(LLMJudgementORM.normalized_dataset_judging_sample_id)
                 .all()
             )
 

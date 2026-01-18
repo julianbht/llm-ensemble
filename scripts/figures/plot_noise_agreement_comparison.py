@@ -46,6 +46,7 @@ RUN_GROUPS = [
         run_names=[
             "ensemble-1-google-gemma-3-4b-it",
             "noise-1-ensemble-1-google-gemma-3-4b-it-start",
+            "+2-noise-1-google-gemma-3-4b-it-start",
         ],
     ),
     ModelRunGroup(
@@ -53,6 +54,7 @@ RUN_GROUPS = [
         run_names=[
             "ensemble-2-ministral-3b-2515",
             "noise-2-ensemble-2-ministral-3b-2512-start",
+            "+2-noise-2-ministral-3b-2512",
         ],
     ),
     ModelRunGroup(
@@ -60,7 +62,7 @@ RUN_GROUPS = [
         run_names=[
             "ensemble-3-phi-4-multimodal-instruct",
             "noise-3-ensemble-3-phi-4-multimodal-instruct-start",
-            # "noise-3-ensemble-3-phi-4-multimodal-instruct-resume-1.2",  # Add if evaluated
+            # Third run had API issues - no data available
         ],
     ),
     ModelRunGroup(
@@ -68,6 +70,7 @@ RUN_GROUPS = [
         run_names=[
             "ensemble-4-meta-llama-3.2-3b-instruct-start",
             "noise-4-ensemble-4-meta-llama-3.2-3b-instruct-start",
+            "+2-noise-4-meta-llama-3.2-3b-instruct-start",
         ],
     ),
     ModelRunGroup(
@@ -75,6 +78,7 @@ RUN_GROUPS = [
         run_names=[
             "ensemble-5-ui-tars-1.5-7b-start",
             "noise-5-ensemble-5-ui-tars-1.5-7b-start",
+            "+2-noise-5-ui-tars-1.5-7b-start",
         ],
     ),
     ModelRunGroup(
@@ -82,6 +86,7 @@ RUN_GROUPS = [
         run_names=[
             "reference-ensemble-gpt-5-1-all-samples-start",
             "noise-reference-ensemble-gpt-5-1-all-samples-start",
+            "+2-noise-reference-ensemble-gpt-5-1-all-samples-start",
         ],
     ),
 ]
@@ -270,21 +275,21 @@ def plot_grouped_bar_chart(
                 rotation=0,
             )
 
-    # Calculate and display differences for each group
+    # Calculate and display range for each group
     for group_idx, group in enumerate(group_data):
         if len(group.values) >= 2:
-            diff = abs(group.values[0] - group.values[1])
+            val_range = max(group.values) - min(group.values)
             group_center = x_group_centers[group_idx]
             max_val = max(group.values)
 
-            # Add difference annotation
+            # Add range annotation
             ax.annotate(
-                f"Δ={diff:.3f}",
+                f"range={val_range:.3f}",
                 xy=(group_center, max_val + 0.035),
                 ha="center",
                 va="bottom",
                 fontsize=9,
-                color=BHT_COLORS["red"] if diff > 0.02 else GRAY_SCALE["dark"],
+                color=BHT_COLORS["red"] if val_range > 0.02 else GRAY_SCALE["dark"],
                 fontweight="bold",
             )
 
@@ -335,23 +340,24 @@ def print_summary_statistics(group_data: List[GroupData], metric_name: str):
     typer.echo("SUMMARY: Run-to-Run Variability")
     typer.echo("=" * 60)
 
-    differences = []
+    all_ranges = []
     for group in group_data:
         if len(group.values) >= 2:
-            diff = abs(group.values[0] - group.values[1])
-            differences.append(diff)
+            # Print all run values
+            run_strs = [f"Run{i+1}={v:.4f}" for i, v in enumerate(group.values)]
+            val_range = max(group.values) - min(group.values)
+            all_ranges.append(val_range)
             typer.echo(
                 f"{group.model_label:20s}: "
-                f"Run1={group.values[0]:.4f}, Run2={group.values[1]:.4f}, "
-                f"Δ={diff:.4f}"
+                f"{', '.join(run_strs)}, "
+                f"range={val_range:.4f}"
             )
 
-    if differences:
+    if all_ranges:
         typer.echo("-" * 60)
-        typer.echo(f"Mean absolute difference: {np.mean(differences):.4f}")
-        typer.echo(f"Max absolute difference:  {np.max(differences):.4f}")
-        typer.echo(f"Min absolute difference:  {np.min(differences):.4f}")
-        typer.echo(f"Std of differences:       {np.std(differences):.4f}")
+        typer.echo(f"Mean range across runs: {np.mean(all_ranges):.4f}")
+        typer.echo(f"Max range:              {np.max(all_ranges):.4f}")
+        typer.echo(f"Min range:              {np.min(all_ranges):.4f}")
 
 
 @app.command()

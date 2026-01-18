@@ -1,0 +1,57 @@
+{
+  "cli": "evaluate",
+  "event": "evaluation_started",
+  "level": "info",
+  "name": "+2-noise-reference-ensemble-gpt-5-1-all-samples-start",
+  "run_name": "+2-noise-reference-ensemble-gpt-5-1-all-samples-start",
+  "run_type": "official",
+  "timestamp": "2026-01-18T15:39:12.531529Z"
+}
+{
+  "cli": "evaluate",
+  "event": "input_read",
+  "input_run_name": "+2-noise-reference-ensemble-gpt-5-1-all-samples-start",
+  "level": "info",
+  "run_name": "+2-noise-reference-ensemble-gpt-5-1-all-samples-start",
+  "run_type": "infer",
+  "timestamp": "2026-01-18T15:39:18.859754Z"
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "cohens_kappa",
+  "run_name": "+2-noise-reference-ensemble-gpt-5-1-all-samples-start",
+  "run_type": "official",
+  "timestamp": "2026-01-18T15:39:18.862240Z",
+  "value": 0.2268548027826326
+}
+{
+  "cli": "evaluate",
+  "event": "metric_computed",
+  "level": "info",
+  "metric": "krippendorffs_alpha",
+  "run_name": "+2-noise-reference-ensemble-gpt-5-1-all-samples-start",
+  "run_type": "official",
+  "timestamp": "2026-01-18T15:39:18.864069Z",
+  "value": 0.4757129712894915
+}
+{
+  "cli": "evaluate",
+  "component": "llm_ensemble.evaluate.adapters.driven.io.json_writer",
+  "event": "evaluate.json_writer.write_complete",
+  "level": "info",
+  "metric_count": 2,
+  "path": "/home/jn/dev/llm-ensemble/artifacts/runs/evaluate/official/+2-noise-reference-ensemble-gpt-5-1-all-samples-start/evaluate_run.json",
+  "run_name": "+2-noise-reference-ensemble-gpt-5-1-all-samples-start",
+  "run_type": "official",
+  "timestamp": "2026-01-18T15:39:18.872971Z"
+}
+{
+  "cli": "evaluate",
+  "event": "evaluation_complete",
+  "level": "info",
+  "run_name": "+2-noise-reference-ensemble-gpt-5-1-all-samples-start",
+  "run_type": "official",
+  "timestamp": "2026-01-18T15:39:18.873148Z"
+}

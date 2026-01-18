@@ -31,9 +31,11 @@ from copy_to_overleaf import copy_figure_to_overleaf
 # CONFIGURATION - Edit these constants to change the plot
 # ============================================================================
 
+
 @dataclass
 class ModelRunGroup:
     """A group of repeat runs for the same model."""
+
     model_label: str  # Display label for the model (e.g., "phi-4-multimodal")
     run_names: List[str]  # List of run names to compare
 
@@ -133,6 +135,7 @@ def extract_metric_value(evaluate_run: dict, metric_name: str) -> float:
 @dataclass
 class GroupData:
     """Collected data for a model group."""
+
     model_label: str
     run_labels: List[str]  # Short labels for each run (e.g., "Run 1", "Run 2")
     values: List[float]
@@ -190,24 +193,9 @@ def collect_group_data(
 
 
 def get_run_colors(num_runs: int) -> List[str]:
-    """Get colors for runs within a group.
-
-    Run 1 gets turquoise (original), Run 2+ get progressively lighter shades.
-    """
-    if num_runs == 1:
-        return [BHT_COLORS["turquoise"]]
-
-    colors = [BHT_COLORS["turquoise"]]  # Original run
-    # Subsequent runs get different colors to distinguish them
-    alternate_colors = [
-        BHT_COLORS["yellow"],
-        BHT_COLORS["red"],
-        BHT_COLORS["blue"],
-    ]
-    for i in range(1, num_runs):
-        colors.append(alternate_colors[(i - 1) % len(alternate_colors)])
-
-    return colors
+    """Get colors for runs within a group: blue, yellow, turquoise."""
+    colors = [BHT_COLORS["blue"], BHT_COLORS["yellow"], BHT_COLORS["turquoise"]]
+    return colors[:num_runs]
 
 
 def plot_grouped_bar_chart(
@@ -316,12 +304,12 @@ def plot_grouped_bar_chart(
 
     # Legend
     legend_patches = [
-        mpatches.Patch(color=BHT_COLORS["turquoise"], label="Run 1 (Original)"),
-        mpatches.Patch(color=BHT_COLORS["yellow"], label="Run 2 (Repeat)"),
+        mpatches.Patch(color=BHT_COLORS["blue"], label="Run 1"),
+        mpatches.Patch(color=BHT_COLORS["yellow"], label="Run 2"),
     ]
     if max_runs > 2:
         legend_patches.append(
-            mpatches.Patch(color=BHT_COLORS["red"], label="Run 3 (Repeat)")
+            mpatches.Patch(color=BHT_COLORS["turquoise"], label="Run 3")
         )
     ax.legend(handles=legend_patches, loc="upper right", fontsize=11, framealpha=0.95)
 
@@ -362,9 +350,7 @@ def print_summary_statistics(group_data: List[GroupData], metric_name: str):
 
 @app.command()
 def main(
-    metric: str = typer.Option(
-        METRIC_NAME, "--metric", "-m", help="Metric to plot"
-    ),
+    metric: str = typer.Option(METRIC_NAME, "--metric", "-m", help="Metric to plot"),
 ):
     """Plot grouped bar chart comparing repeat runs of the same model.
 

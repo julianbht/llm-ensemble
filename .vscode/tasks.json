@@ -64,15 +64,15 @@
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
         "${workspaceFolder}/src/llm_ensemble/aggregate/adapters/driving/aggregate_cli.py",
-        "--aggregation-strategy", "majority_vote_random",
+        "--aggregation-strategy", "majority_vote_average",
         "--io-cfg", "db_to_db",
         "-i", "ensemble-1-google-gemma-3-4b-it",
         "-i", "ensemble-2-ministral-3b-2515",
         "-i", "ensemble-3-phi-4-multimodal-instruct",
         "-i", "ensemble-4-meta-llama-3.2-3b-instruct-start",
         "-i", "ensemble-5-ui-tars-1.5-7b-start",
-        "--run-name", "-ensemble-1-to-5-majority-vote-random",
-        "--notes", "Aggregating ensemble models 1 to 5 with majority voting and random tie breaking. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
+        "--run-name", "-ensemble-1-to-5-majority-vote-average",
+        "--notes", "Aggregating ensemble models 1 to 5 with average voting and random tie breaking. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
         "--official"
       ],
       "options": {

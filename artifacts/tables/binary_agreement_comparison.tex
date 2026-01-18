@@ -1,0 +1,22 @@
+% Graded vs Binary Kappa Comparison
+\begin{table}[htbp]
+\centering
+\caption{Graded vs Binary Agreement (threshold: $\geq 1$ = relevant)}
+\label{tab:binary-agreement-comparison}
+\begin{tabular}{lrrr}
+\toprule
+Model & Graded $\kappa$ & Binary $\kappa$ & $\Delta$ \\
+\midrule
+llama-3.2-3b & 0.204 & 0.316 & +0.112 \\
+ministral-3b & 0.157 & 0.254 & +0.097 \\
+gemma-3-4b & 0.104 & 0.198 & +0.094 \\
+phi-4 & 0.202 & 0.325 & +0.122 \\
+ui-tars-1.5-7b & 0.167 & 0.302 & +0.135 \\
+Ensemble (MVA) & 0.206 & 0.326 & +0.120 \\
+Ensemble (MVR) & 0.205 & 0.324 & +0.118 \\
+GPT-5.1 & 0.229 & 0.316 & +0.086 \\
+\midrule
+Average & 0.184 & 0.295 & +0.111 \\
+\bottomrule
+\end{tabular}
+\end{table}

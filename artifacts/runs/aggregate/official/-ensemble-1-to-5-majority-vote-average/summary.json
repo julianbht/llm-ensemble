@@ -1,22 +1,22 @@
 {
-  "start_time": "2026-01-18T09:21:47.709723",
-  "end_time": "2026-01-18T09:21:51.601016",
+  "start_time": "2026-01-18T09:23:24.363301",
+  "end_time": "2026-01-18T09:23:28.277445",
   "run": {
-    "id": "7e7808cb-6ba8-447b-a950-ed4a6868122b",
-    "run_name": "-ensemble-1-to-5-majority-vote-random",
+    "id": "d217d022-2f44-41b8-918a-9d4af73a6cc6",
+    "run_name": "-ensemble-1-to-5-majority-vote-average",
     "run_type": "official",
     "cli_name": "aggregate",
-    "notes": "Aggregating ensemble models 1 to 5 with majority voting and random tie breaking. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
+    "notes": "Aggregating ensemble models 1 to 5 with average voting and random tie breaking. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
     "git_info": {
       "git_sha": "83c38b0",
       "git_clean": false,
       "git_branch": "master"
     },
     "aggregate_run_config": {
-      "id": "63de58b8-7edb-4fb9-a7ab-b9fe172be444",
+      "id": "90838338-a9a1-4618-b8ed-f76369e591e3",
       "aggregation_strategy": {
-        "id": "1b3adc10-a820-4948-bb7c-7dd17190407d",
-        "name": "majority_vote_random"
+        "id": "f1304f75-897e-47eb-abc2-2f8167ebaa37",
+        "name": "majority_vote_average"
       },
       "io_config_name": "db_to_db",
       "input_run_names": [
@@ -29,8 +29,8 @@
       "input_run_names_hash": "ee4b222dcbe05a917243d0132817cafe278dd91328dbd98a8ebaf1a3ec5cd304"
     },
     "aggregated_dataset": null,
-    "start_time": "2026-01-18T09:21:47.709723",
-    "end_time": "2026-01-18T09:21:51.601016"
+    "start_time": "2026-01-18T09:23:24.363301",
+    "end_time": "2026-01-18T09:23:28.277445"
   },
   "input_judgement_count": 19590,
   "unique_pair_count": 3918,
@@ -47,16 +47,16 @@
     "configs_skipped": 0,
     "datasets_created": 1,
     "datasets_skipped": 0,
-    "aggregated_votes_created": 3918,
-    "aggregated_votes_skipped": 0,
-    "aggregation_votes_created": 19590,
-    "aggregation_votes_skipped": 0,
+    "aggregated_votes_created": 585,
+    "aggregated_votes_skipped": 3333,
+    "aggregation_votes_created": 2925,
+    "aggregation_votes_skipped": 16665,
     "aggregated_dataset_votes_created": 3918,
     "aggregated_dataset_votes_skipped": 0,
     "runs_created": 1,
     "runs_skipped": 0
   },
-  "duration_seconds": 3.89,
-  "duration_minutes": 0.06,
+  "duration_seconds": 3.91,
+  "duration_minutes": 0.07,
   "duration_hours": 0.0
 }

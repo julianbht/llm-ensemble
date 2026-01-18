@@ -24,13 +24,12 @@ load_runtime_config()
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import krippendorff
 import typer
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from thesis_colors import BHT_COLORS, GRAY_SCALE
+from thesis_colors import BHT_COLORS
 from copy_to_overleaf import copy_figure_to_overleaf
 
 from llm_ensemble.libs.db.base import get_engine
@@ -47,9 +46,11 @@ from llm_ensemble.infer.adapters.driven.io.db.orms import (
 # CONFIGURATION
 # ============================================================================
 
+
 @dataclass
 class ModelRunGroup:
     """A group of repeat runs for the same model."""
+
     model_label: str
     run_names: list[str]
 
@@ -105,7 +106,6 @@ RUN_GROUPS = [
     ),
 ]
 
-Y_AXIS_LIMITS = [0.0, 1.0]
 OUTPUT_FILENAME = "self_agreement_krippendorff.svg"
 PLOT_TITLE = "Model Self-Agreement (Krippendorff's α)"
 
@@ -114,9 +114,11 @@ PLOT_TITLE = "Model Self-Agreement (Krippendorff's α)"
 # DATA LOADING
 # ============================================================================
 
+
 @dataclass
 class RunData:
     """Data loaded from a single infer run."""
+
     run_name: str
     sample_fingerprint: str
     sample_ids: list[str]  # Ordered list of sample UUIDs
@@ -175,6 +177,7 @@ def load_run_data(run_name: str, engine) -> RunData:
 # VALIDATION
 # ============================================================================
 
+
 def validate_run_group(runs: list[RunData]) -> None:
     """Validate that all runs in a group are comparable."""
     if len(runs) < 2:
@@ -206,9 +209,11 @@ def validate_run_group(runs: list[RunData]) -> None:
 # ANALYSIS
 # ============================================================================
 
+
 @dataclass
 class SelfAgreementResult:
     """Result of self-agreement analysis for a model."""
+
     model_label: str
     alpha: float
     n_runs: int
@@ -229,11 +234,13 @@ def compute_krippendorff_alpha(run_predictions: list[list[int | None]]) -> float
     return krippendorff.alpha(
         reliability_data=reliability_data,
         level_of_measurement="ordinal",
-        value_domain=[0, 1, 2, 3]
+        value_domain=[0, 1, 2, 3],
     )
 
 
-def analyze_run_groups(run_groups: list[ModelRunGroup], engine) -> list[SelfAgreementResult]:
+def analyze_run_groups(
+    run_groups: list[ModelRunGroup], engine
+) -> list[SelfAgreementResult]:
     """Analyze self-agreement for each model group."""
     results = []
 
@@ -257,7 +264,9 @@ def analyze_run_groups(run_groups: list[ModelRunGroup], engine) -> list[SelfAgre
         # Validate
         try:
             validate_run_group(runs)
-            typer.echo(f"  Validation passed: fingerprint={runs[0].sample_fingerprint[:16]}...")
+            typer.echo(
+                f"  Validation passed: fingerprint={runs[0].sample_fingerprint[:16]}..."
+            )
         except ValueError as e:
             typer.echo(f"  Validation failed: {e}", err=True)
             continue
@@ -274,7 +283,9 @@ def analyze_run_groups(run_groups: list[ModelRunGroup], engine) -> list[SelfAgre
             sample_fingerprint=runs[0].sample_fingerprint,
         )
         results.append(result)
-        typer.echo(f"  Krippendorff's α = {alpha:.3f} ({result.n_runs} runs, {result.n_items} items)")
+        typer.echo(
+            f"  Krippendorff's α = {alpha:.3f} ({result.n_runs} runs, {result.n_items} items)"
+        )
 
     return results
 
@@ -283,6 +294,44 @@ def analyze_run_groups(run_groups: list[ModelRunGroup], engine) -> list[SelfAgre
 # PLOTTING
 # ============================================================================
 
+
+def print_latex_table(results: list[SelfAgreementResult], output_path: Path):
+    """Generate LaTeX table of self-agreement scores."""
+    typer.echo("\n" + "=" * 60)
+    typer.echo("LATEX TABLE")
+    typer.echo("=" * 60)
+
+    latex_lines = [
+        r"\begin{table}[htbp]",
+        r"  \centering",
+        r"  \caption{Model Self-Agreement Across Repeated Runs (Krippendorff's $\alpha$)}",
+        r"  \label{tab:self-agreement-krippendorff}",
+        r"  \begin{tabular}{lcc}",
+        r"    \toprule",
+        r"    Model & Krippendorff's $\alpha$ & Runs \\",
+        r"    \midrule",
+    ]
+
+    for r in results:
+        latex_lines.append(f"    {r.model_label} & {r.alpha:.3f} & {r.n_runs} \\\\")
+
+    latex_lines.extend(
+        [
+            r"    \bottomrule",
+            r"  \end{tabular}",
+            r"\end{table}",
+        ]
+    )
+
+    latex_content = "\n".join(latex_lines)
+    typer.echo(latex_content)
+
+    # Save to file
+    table_path = output_path.with_suffix(".tex")
+    table_path.write_text(latex_content)
+    typer.echo(f"\nLaTeX table saved to: {table_path}")
+
+
 def plot_bar_chart(results: list[SelfAgreementResult], output_path: Path):
     """Create bar chart of self-agreement scores."""
     fig, ax = plt.subplots(figsize=(10, 6))
@@ -290,21 +339,14 @@ def plot_bar_chart(results: list[SelfAgreementResult], output_path: Path):
     labels = [r.model_label for r in results]
     alphas = [r.alpha for r in results]
 
-    colors = []
-    for alpha in alphas:
-        if alpha >= 0.8:
-            colors.append(BHT_COLORS["turquoise"])
-        elif alpha >= 0.67:
-            colors.append(BHT_COLORS["yellow"])
-        else:
-            colors.append(BHT_COLORS["red"])
-
-    bars = ax.bar(labels, alphas, color=colors, edgecolor="black", linewidth=0.5)
+    bars = ax.bar(
+        labels, alphas, color=BHT_COLORS["blue"], edgecolor="black", linewidth=0.5
+    )
 
     for bar, alpha in zip(bars, alphas):
         ax.text(
             bar.get_x() + bar.get_width() / 2.0,
-            alpha + 0.02,
+            alpha + 0.01,
             f"{alpha:.3f}",
             ha="center",
             va="bottom",
@@ -312,12 +354,7 @@ def plot_bar_chart(results: list[SelfAgreementResult], output_path: Path):
             fontweight="bold",
         )
 
-    ax.axhline(y=0.8, color=GRAY_SCALE["medium"], linestyle="--", linewidth=1, alpha=0.7)
-    ax.axhline(y=0.67, color=GRAY_SCALE["medium"], linestyle=":", linewidth=1, alpha=0.7)
-    ax.text(len(labels) - 0.5, 0.81, "α ≥ 0.80 (reliable)", fontsize=9, color=GRAY_SCALE["dark"])
-    ax.text(len(labels) - 0.5, 0.68, "α ≥ 0.67 (tentative)", fontsize=9, color=GRAY_SCALE["dark"])
-
-    ax.set_ylim(Y_AXIS_LIMITS[0], Y_AXIS_LIMITS[1])
+    ax.set_ylim(bottom=0)
     ax.set_xlabel("Model", fontsize=12, fontweight="bold")
     ax.set_ylabel("Krippendorff's α", fontsize=12, fontweight="bold")
     ax.set_title(PLOT_TITLE, fontsize=14, fontweight="bold")
@@ -325,13 +362,6 @@ def plot_bar_chart(results: list[SelfAgreementResult], output_path: Path):
     plt.xticks(rotation=45, ha="right")
     ax.grid(True, axis="y", alpha=0.3, linestyle="--")
     ax.set_axisbelow(True)
-
-    legend_patches = [
-        mpatches.Patch(color=BHT_COLORS["turquoise"], label="Reliable (α ≥ 0.80)"),
-        mpatches.Patch(color=BHT_COLORS["yellow"], label="Tentative (α ≥ 0.67)"),
-        mpatches.Patch(color=BHT_COLORS["red"], label="Insufficient (α < 0.67)"),
-    ]
-    ax.legend(handles=legend_patches, loc="lower right", fontsize=10)
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches="tight", format="svg")
@@ -372,7 +402,12 @@ def main():
     typer.echo("=" * 60)
     avg_alpha = np.mean([r.alpha for r in results])
     typer.echo(f"Average Krippendorff's α: {avg_alpha:.3f}")
-    typer.echo(f"Range: {min(r.alpha for r in results):.3f} - {max(r.alpha for r in results):.3f}")
+    typer.echo(
+        f"Range: {min(r.alpha for r in results):.3f} - {max(r.alpha for r in results):.3f}"
+    )
+
+    # Generate LaTeX table
+    print_latex_table(results, output_path)
 
     # Plot
     plot_bar_chart(results, output_path)

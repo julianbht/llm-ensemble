@@ -106,7 +106,10 @@ Y_AXIS_LIMITS = [0.0, 0.5]
 OUTPUT_FILENAME = None
 
 # Custom plot title (None = auto-generate)
-PLOT_TITLE = "Run-to-Run Agreement Variability (Ground Noise)"
+PLOT_TITLE = "Run-to-Run Agreement Variability"
+
+# LaTeX caption for the figure
+LATEX_CAPTION = r"\caption{\CK for each model across repeated runs, computed against human annotations.}"
 
 # Bar appearance
 BAR_WIDTH = 0.35  # Width of individual bars

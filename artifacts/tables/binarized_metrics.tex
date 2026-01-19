@@ -1,0 +1,19 @@
+% Binarized Classification Metrics
+\begin{table}[htbp]
+\centering
+\caption{Binary classification metrics at different relevance thresholds}
+\label{tab:binarized-metrics}
+\begin{tabular}{ll|rrrr}
+\toprule
+Model & Threshold & Accuracy & Precision & Recall & F1 \\
+\midrule
+GPT-5.1 & 0|123 & 66.3\% & 65.4\% & 76.8\% & 0.707 \\
+ & 01|23 & 79.6\% & 60.3\% & 55.8\% & 0.580 \\
+ & 012|3 & 90.6\% & 42.9\% & 49.4\% & 0.459 \\
+\midrule
+Ensemble (MVA) & 0|123 & 66.5\% & 67.4\% & 71.1\% & 0.692 \\
+ & 01|23 & 72.7\% & 46.5\% & 53.5\% & 0.498 \\
+ & 012|3 & 86.7\% & 27.5\% & 39.6\% & 0.325 \\
+\bottomrule
+\end{tabular}
+\end{table}

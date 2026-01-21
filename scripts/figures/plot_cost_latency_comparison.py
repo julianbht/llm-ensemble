@@ -20,6 +20,7 @@ from thesis_colors import (
     GRAY_SCALE,
     ENSEMBLE_PALETTE,
     REFERENCE_COLOR,
+    FONTSIZE,
     FONTSIZE_SMALL,
     FIGURE_WIDTH,
     apply_thesis_style,
@@ -298,7 +299,7 @@ def create_comparison_chart(
         loc="upper center",
         ncol=3,
         frameon=False,
-        fontsize=FONTSIZE_SMALL,
+        fontsize=FONTSIZE,
         bbox_to_anchor=(0.5, 1.12),
     )
 

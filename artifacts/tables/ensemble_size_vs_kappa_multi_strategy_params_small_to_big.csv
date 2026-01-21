@@ -1,4 +1,4 @@
-Ensemble Size,Average Vote,Majority Vote (Average Tiebreak),Majority Vote (Random Tiebreak)
+Ensemble Size,Average Vote,Majority Vote Average,Majority Vote Random
 1,0.2041,0.2041,0.2041
 2,0.1980,0.1980,0.1762
 3,0.1448,0.1759,0.1807

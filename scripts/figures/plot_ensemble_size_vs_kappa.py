@@ -18,8 +18,14 @@ from typing import Dict, List, Tuple, Optional
 import matplotlib.pyplot as plt
 import typer
 
-from thesis_colors import BHT_COLORS
+from thesis_colors import (
+    BHT_COLORS,
+    FIGURE_WIDTH,
+    apply_thesis_style,
+)
 from copy_to_overleaf import copy_figure_to_overleaf
+
+apply_thesis_style()
 
 
 # ============================================================================
@@ -88,19 +94,19 @@ STRATEGY_STYLES = {
     "majority_vote_average": {
         "color": BHT_COLORS["red"],
         "marker": "s",
-        "label": "Majority Vote (Average Tiebreak)",
+        "label": "Majority Vote Average",
     },
     "majority_vote_random": {
         "color": BHT_COLORS["turquoise"],
         "marker": "^",
-        "label": "Majority Vote (Random Tiebreak)",
+        "label": "Majority Vote Random",
     },
 }
 
 # ============================================================================
 
 
-app = typer.Typer()
+app = typer.Typer(pretty_exceptions_enable=False)
 
 
 def read_evaluate_run(run_path: Path) -> dict:
@@ -188,7 +194,7 @@ def plot_ensemble_size_vs_metric_multi_strategy(
         y_limits: Y-axis limits [min, max] or None for auto-scaling
         title: Optional custom title
     """
-    fig, ax = plt.subplots(figsize=(12, 7))
+    fig, ax = plt.subplots(figsize=(FIGURE_WIDTH, 4))
 
     # Plot each strategy
     for strategy, data in data_by_strategy.items():
@@ -208,12 +214,12 @@ def plot_ensemble_size_vs_metric_multi_strategy(
             ensemble_sizes,
             metric_values,
             marker=style["marker"],
-            linewidth=2.5,
-            markersize=10,
+            linewidth=1.5,
+            markersize=6,
             color=style["color"],
             label=style["label"],
             markeredgecolor="black",
-            markeredgewidth=1.0,
+            markeredgewidth=0.5,
         )
 
     # Set y-axis limits if specified
@@ -221,14 +227,14 @@ def plot_ensemble_size_vs_metric_multi_strategy(
         ax.set_ylim(y_limits[0], y_limits[1])
 
     # Labels and title
-    ax.set_xlabel("Ensemble Size", fontsize=13, fontweight="bold")
+    ax.set_xlabel("Ensemble Size", fontweight="bold")
 
     metric_display = metric_name.replace("_", " ").title()
-    ax.set_ylabel(f"{metric_display}", fontsize=13, fontweight="bold")
+    ax.set_ylabel(f"{metric_display}", fontweight="bold")
 
     if title is None:
         title = f"Ensemble Size vs {metric_display}"
-    ax.set_title(title, fontsize=15, fontweight="bold", pad=20)
+    ax.set_title(title, pad=20)
 
     # Grid for readability
     ax.grid(True, alpha=0.3, linestyle="--")
@@ -242,9 +248,8 @@ def plot_ensemble_size_vs_metric_multi_strategy(
         ax.set_xticks(all_sizes)
 
     # Legend
-    ax.legend(loc="best", fontsize=11, framealpha=0.95)
+    ax.legend(loc="best", framealpha=0.95)
 
-    plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches="tight", format=OUTPUT_FORMAT)
     typer.echo(f"\nPlot saved to: {output_path}")
     plt.close()

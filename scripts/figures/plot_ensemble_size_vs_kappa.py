@@ -105,7 +105,7 @@ STRATEGY_STYLES = {
 
 # Legend position: (x, y) in axes coordinates (0-1), or None for "best"
 # (0.5, 0.5) = center, (0, 0.5) = center left, (1, 0.5) = center right
-LEGEND_POSITION = (0.35, 0.1)  # Middle, slightly left
+LEGEND_POSITION = (0.35, 0.117)  # Middle, slightly left
 
 # ============================================================================
 

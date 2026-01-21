@@ -23,46 +23,17 @@ import matplotlib.patches as mpatches
 import numpy as np
 import typer
 
-from thesis_colors import BHT_COLORS, GRAY_SCALE, ENSEMBLE_PALETTE
-
-# Font configuration: Latin Modern Roman with Computer Modern numerals (no LaTeX required)
-FONTSIZE = 9  # Standard size for most text
-FONTSIZE_SMALL = 6  # Value labels on bars
-
-plt.rcParams.update(
-    {
-        # Font family
-        "font.family": "serif",
-        "font.serif": ["Latin Modern Roman", "Times New Roman", "DejaVu Serif"],
-        # Mathtext with Computer Modern for numerals
-        "mathtext.fontset": "cm",
-        "mathtext.rm": "serif",
-        "mathtext.it": "serif:italic",
-        "mathtext.bf": "serif:bold",
-        # No LaTeX
-        "text.usetex": False,
-        # Font sizes
-        "font.size": FONTSIZE,
-        "axes.labelsize": FONTSIZE,
-        "axes.titlesize": FONTSIZE,
-        "xtick.labelsize": FONTSIZE,
-        "ytick.labelsize": FONTSIZE,
-        "legend.fontsize": FONTSIZE,
-        # Misc
-        "axes.unicode_minus": False,
-        # Axis lines
-        "axes.linewidth": 0.8,
-        "xtick.major.width": 0.8,
-        "ytick.major.width": 0.8,
-        "xtick.minor.width": 0.6,
-        "ytick.minor.width": 0.6,
-        "xtick.major.pad": 6,
-        "ytick.major.pad": 6,
-        "figure.constrained_layout.use": True,
-    }
+from thesis_colors import (
+    BHT_COLORS,
+    GRAY_SCALE,
+    FONTSIZE,
+    FONTSIZE_SMALL,
+    FIGURE_WIDTH,
+    apply_thesis_style,
 )
-
 from copy_to_overleaf import copy_figure_to_overleaf
+
+apply_thesis_style()
 
 
 # ============================================================================
@@ -259,7 +230,7 @@ def plot_grouped_bar_chart(
         bar_width: Width of individual bars
         group_spacing: Extra space between groups
     """
-    fig, ax = plt.subplots(figsize=(5.9, 4))
+    fig, ax = plt.subplots(figsize=(FIGURE_WIDTH, 4))
 
     # Find max runs per group for positioning
     max_runs = max(len(g.values) for g in group_data)

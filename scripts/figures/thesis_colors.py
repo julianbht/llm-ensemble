@@ -1,26 +1,65 @@
 """
-BHT Thesis Color Scheme
+BHT Thesis Style Configuration
 
-Official BHT Berlin colors converted from LaTeX RGB to hex format.
+Official BHT Berlin colors and matplotlib styling for thesis figures.
 Import this module in all plotting scripts for consistent theming.
 
 Usage:
-    from thesis_colors import BHT_COLORS, ENSEMBLE_PALETTE
+    from thesis_colors import BHT_COLORS, ENSEMBLE_PALETTE, FONTSIZE, FONTSIZE_SMALL, FIGURE_WIDTH, apply_thesis_style
 
+    apply_thesis_style()  # Call once at start of script
+    fig, ax = plt.subplots(figsize=(FIGURE_WIDTH, 4))
     plt.bar(..., color=BHT_COLORS["blue"])
-    # or for multiple colors:
-    plt.bar(..., color=ENSEMBLE_PALETTE[0])
 """
 
 import matplotlib.pyplot as plt
 
-# Configure matplotlib to use LaTeX-style fonts (Computer Modern)
-# plt.rcParams.update({
-#     "font.family": "serif",
-#     "font.serif": ["CMU Serif", "Computer Modern Roman", "DejaVu Serif"],
-#     "mathtext.fontset": "cm",  # Computer Modern for math text
-#     "axes.unicode_minus": False,  # Use proper minus sign in axes
-# })
+# =============================================================================
+# Figure dimensions (matches LaTeX \linewidth of 426.79pt)
+# =============================================================================
+FIGURE_WIDTH = 5.9  # inches (426.79pt / 72.27)
+
+# =============================================================================
+# Font sizes
+# =============================================================================
+FONTSIZE = 9         # Standard size for most text (title, axis labels, ticks, legend)
+FONTSIZE_SMALL = 6   # Smaller annotations (e.g., value labels on bars)
+
+
+def apply_thesis_style():
+    """Apply thesis-consistent matplotlib style. Call once at start of script."""
+    plt.rcParams.update(
+        {
+            # Font family: Latin Modern Roman with fallbacks
+            "font.family": "serif",
+            "font.serif": ["Latin Modern Roman", "Times New Roman", "DejaVu Serif"],
+            # Mathtext with Computer Modern for numerals
+            "mathtext.fontset": "cm",
+            "mathtext.rm": "serif",
+            "mathtext.it": "serif:italic",
+            "mathtext.bf": "serif:bold",
+            # No LaTeX required
+            "text.usetex": False,
+            # Font sizes
+            "font.size": FONTSIZE,
+            "axes.labelsize": FONTSIZE,
+            "axes.titlesize": FONTSIZE,
+            "xtick.labelsize": FONTSIZE,
+            "ytick.labelsize": FONTSIZE,
+            "legend.fontsize": FONTSIZE,
+            # Misc
+            "axes.unicode_minus": False,
+            # Axis lines
+            "axes.linewidth": 0.8,
+            "xtick.major.width": 0.8,
+            "ytick.major.width": 0.8,
+            "xtick.minor.width": 0.6,
+            "ytick.minor.width": 0.6,
+            "xtick.major.pad": 6,
+            "ytick.major.pad": 6,
+            "figure.constrained_layout.use": True,
+        }
+    )
 
 # Primary BHT colors (converted from LaTeX \xdefinecolor RGB definitions)
 BHT_COLORS = {

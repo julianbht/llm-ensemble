@@ -71,8 +71,8 @@
         "-i", "ensemble-3-phi-4-multimodal-instruct",
         "-i", "ensemble-4-meta-llama-3.2-3b-instruct-start",
         "-i", "ensemble-5-ui-tars-1.5-7b-start",
-        "--run-name", "-ensemble-1-to-5-majority-vote-average-disagreement-script",
-        "--notes", "Aggregating ensemble models 1 to 5 with average voting and random tie breaking. Goal: produce a figure that shows aggrement metrics of the individual models, vs the reference-model vs the ensemble in total.",
+        "--run-name", "5-ensemble-size-analysis-majority_vote_average-params_small_to_big",
+        "--notes", "Aggregating ensemble models 1 to 5 with majority voting and average tie breaking. Goal: Confusion matrix.",
         "--official"
       ],
       "options": {

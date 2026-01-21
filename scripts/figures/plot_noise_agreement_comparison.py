@@ -25,19 +25,42 @@ import typer
 
 from thesis_colors import BHT_COLORS, GRAY_SCALE, ENSEMBLE_PALETTE
 
-# Configure matplotlib to use Latin Modern Roman font via LaTeX
-plt.rcParams.update({
-    "text.usetex": True,
-    "font.family": "serif",
-    "font.serif": ["Latin Modern Roman"],
-    "text.latex.preamble": r"\usepackage{lmodern}",
-    "font.size": 12,
-    "axes.labelsize": 14,
-    "axes.titlesize": 16,
-    "xtick.labelsize": 12,
-    "ytick.labelsize": 12,
-    "legend.fontsize": 12,
-})
+# Font configuration: Latin Modern Roman with Computer Modern numerals (no LaTeX required)
+FONTSIZE = 9  # Standard size for most text
+FONTSIZE_SMALL = 6  # Value labels on bars
+
+plt.rcParams.update(
+    {
+        # Font family
+        "font.family": "serif",
+        "font.serif": ["Latin Modern Roman", "Times New Roman", "DejaVu Serif"],
+        # Mathtext with Computer Modern for numerals
+        "mathtext.fontset": "cm",
+        "mathtext.rm": "serif",
+        "mathtext.it": "serif:italic",
+        "mathtext.bf": "serif:bold",
+        # No LaTeX
+        "text.usetex": False,
+        # Font sizes
+        "font.size": FONTSIZE,
+        "axes.labelsize": FONTSIZE,
+        "axes.titlesize": FONTSIZE,
+        "xtick.labelsize": FONTSIZE,
+        "ytick.labelsize": FONTSIZE,
+        "legend.fontsize": FONTSIZE,
+        # Misc
+        "axes.unicode_minus": False,
+        # Axis lines
+        "axes.linewidth": 0.8,
+        "xtick.major.width": 0.8,
+        "ytick.major.width": 0.8,
+        "xtick.minor.width": 0.6,
+        "ytick.minor.width": 0.6,
+        "xtick.major.pad": 6,
+        "ytick.major.pad": 6,
+        "figure.constrained_layout.use": True,
+    }
+)
 
 from copy_to_overleaf import copy_figure_to_overleaf
 
@@ -236,7 +259,7 @@ def plot_grouped_bar_chart(
         bar_width: Width of individual bars
         group_spacing: Extra space between groups
     """
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(5.9, 4))
 
     # Find max runs per group for positioning
     max_runs = max(len(g.values) for g in group_data)
@@ -273,11 +296,10 @@ def plot_grouped_bar_chart(
             ax.text(
                 x_pos,
                 value + 0.005,  # Small offset above bar
-                f"{value:.3f}",
+                f"{value:.2f}",
                 ha="center",
                 va="bottom",
-                fontsize=11,
-                fontweight="bold",
+                fontsize=FONTSIZE_SMALL,
                 rotation=0,
             )
 
@@ -290,13 +312,13 @@ def plot_grouped_bar_chart(
 
             # Add range annotation
             ax.annotate(
-                f"range={val_range:.3f}",
+                f"Δ={val_range:.3f}",
                 xy=(group_center, max_val + 0.035),
                 ha="center",
                 va="bottom",
-                fontsize=11,
-                color=BHT_COLORS["red"] if val_range > 0.02 else GRAY_SCALE["dark"],
+                fontsize=FONTSIZE,
                 fontweight="bold",
+                color=BHT_COLORS["red"] if val_range > 0.02 else GRAY_SCALE["dark"],
             )
 
     # Set y-axis limits
@@ -304,17 +326,21 @@ def plot_grouped_bar_chart(
         ax.set_ylim(y_limits[0], y_limits[1])
 
     # Labels and title
-    ax.set_xlabel("Model", fontsize=14, fontweight="bold")
+    ax.set_xlabel("Model", fontweight="bold")
     metric_display = metric_name.replace("_", " ").title()
-    ax.set_ylabel(f"{metric_display}", fontsize=14, fontweight="bold")
+    ax.set_ylabel(f"{metric_display}", fontweight="bold")
 
     if title is None:
         title = f"Run-to-Run Variability: {metric_display}"
-    ax.set_title(title, fontsize=16, fontweight="bold", pad=20)
+    ax.set_title(title, pad=20)
 
     # Set x-tick labels to model names
     ax.set_xticks(x_group_centers)
-    ax.set_xticklabels([g.model_label for g in group_data], rotation=45, ha="right")
+    ax.set_xticklabels(
+        [g.model_label for g in group_data],
+        rotation=45,
+        ha="right",
+    )
 
     # Grid
     ax.grid(True, axis="y", alpha=0.3, linestyle="--")
@@ -329,9 +355,12 @@ def plot_grouped_bar_chart(
         legend_patches.append(
             mpatches.Patch(color=BHT_COLORS["turquoise"], label="Run 3")
         )
-    ax.legend(handles=legend_patches, loc="upper right", fontsize=12, framealpha=0.95)
+    ax.legend(
+        handles=legend_patches,
+        loc="upper right",
+        framealpha=0.95,
+    )
 
-    plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches="tight", format="svg")
     typer.echo(f"\nPlot saved to: {output_path}")
     plt.close()

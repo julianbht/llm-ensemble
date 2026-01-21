@@ -317,7 +317,6 @@ def plot_grouped_bar_chart(
                 ha="center",
                 va="bottom",
                 fontsize=FONTSIZE,
-                fontweight="bold",
                 color=BHT_COLORS["red"] if val_range > 0.02 else GRAY_SCALE["dark"],
             )
 

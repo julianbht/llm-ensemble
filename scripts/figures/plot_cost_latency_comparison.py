@@ -63,8 +63,8 @@ DISPLAY_LABELS = {
     "ensemble": "Ensemble",
     "ensemble-1-google-gemma-3-4b-it": "gemma-3-4b-it",
     "ensemble-2-ministral-3b-2515": "ministral-3b-2512",
-    "ensemble-3-phi-4-multimodal-instruct": "phi-4-multimodal-instruct",
-    "ensemble-4-meta-llama-3.2-3b-instruct-start": "llama-3.2-3b-instruct",
+    "ensemble-3-phi-4-multimodal-instruct": "phi-4-multimodal",
+    "ensemble-4-meta-llama-3.2-3b-instruct-start": "llama-3.2-3b",
     "ensemble-5-ui-tars-1.5-7b-start": "ui-tars-1.5-7b",
 }
 
@@ -296,10 +296,10 @@ def create_comparison_chart(
         legend_handles,
         legend_labels,
         loc="upper center",
-        ncol=len(legend_handles),
+        ncol=3,
         frameon=False,
         fontsize=FONTSIZE_SMALL,
-        bbox_to_anchor=(0.5, 1.0),
+        bbox_to_anchor=(0.5, 1.05),
     )
 
     # Save figure

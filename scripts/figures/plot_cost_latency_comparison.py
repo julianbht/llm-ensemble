@@ -98,7 +98,7 @@ def create_comparison_chart(
         metrics: Dict mapping run_name to metrics
         output_path: Where to save the figure
     """
-    fig, (ax_cost, ax_latency) = plt.subplots(1, 2, figsize=(FIGURE_WIDTH, 3))
+    fig, (ax_cost, ax_latency) = plt.subplots(1, 2, figsize=(FIGURE_WIDTH, 3.5))
 
     x_pos = np.arange(len(RUN_ORDER))
     bar_width = 0.6
@@ -299,7 +299,7 @@ def create_comparison_chart(
         ncol=3,
         frameon=False,
         fontsize=FONTSIZE_SMALL,
-        bbox_to_anchor=(0.5, 1.05),
+        bbox_to_anchor=(0.5, 1.12),
     )
 
     # Save figure

@@ -24,6 +24,21 @@ import numpy as np
 import typer
 
 from thesis_colors import BHT_COLORS, GRAY_SCALE, ENSEMBLE_PALETTE
+
+# Configure matplotlib to use Latin Modern Roman font via LaTeX
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "serif",
+    "font.serif": ["Latin Modern Roman"],
+    "text.latex.preamble": r"\usepackage{lmodern}",
+    "font.size": 12,
+    "axes.labelsize": 14,
+    "axes.titlesize": 16,
+    "xtick.labelsize": 12,
+    "ytick.labelsize": 12,
+    "legend.fontsize": 12,
+})
+
 from copy_to_overleaf import copy_figure_to_overleaf
 
 
@@ -118,7 +133,7 @@ GROUP_SPACING = 0.15  # Extra space between groups
 # ============================================================================
 
 
-app = typer.Typer()
+app = typer.Typer(pretty_exceptions_enable=False)
 
 
 def read_evaluate_run(run_path: Path) -> dict:
@@ -261,7 +276,7 @@ def plot_grouped_bar_chart(
                 f"{value:.3f}",
                 ha="center",
                 va="bottom",
-                fontsize=9,
+                fontsize=11,
                 fontweight="bold",
                 rotation=0,
             )
@@ -279,7 +294,7 @@ def plot_grouped_bar_chart(
                 xy=(group_center, max_val + 0.035),
                 ha="center",
                 va="bottom",
-                fontsize=9,
+                fontsize=11,
                 color=BHT_COLORS["red"] if val_range > 0.02 else GRAY_SCALE["dark"],
                 fontweight="bold",
             )
@@ -289,13 +304,13 @@ def plot_grouped_bar_chart(
         ax.set_ylim(y_limits[0], y_limits[1])
 
     # Labels and title
-    ax.set_xlabel("Model", fontsize=12, fontweight="bold")
+    ax.set_xlabel("Model", fontsize=14, fontweight="bold")
     metric_display = metric_name.replace("_", " ").title()
-    ax.set_ylabel(f"{metric_display}", fontsize=12, fontweight="bold")
+    ax.set_ylabel(f"{metric_display}", fontsize=14, fontweight="bold")
 
     if title is None:
         title = f"Run-to-Run Variability: {metric_display}"
-    ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
+    ax.set_title(title, fontsize=16, fontweight="bold", pad=20)
 
     # Set x-tick labels to model names
     ax.set_xticks(x_group_centers)
@@ -314,7 +329,7 @@ def plot_grouped_bar_chart(
         legend_patches.append(
             mpatches.Patch(color=BHT_COLORS["turquoise"], label="Run 3")
         )
-    ax.legend(handles=legend_patches, loc="upper right", fontsize=11, framealpha=0.95)
+    ax.legend(handles=legend_patches, loc="upper right", fontsize=12, framealpha=0.95)
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches="tight", format="svg")

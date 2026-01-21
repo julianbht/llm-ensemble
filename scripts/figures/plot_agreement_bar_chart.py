@@ -20,8 +20,16 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import typer
 
-from thesis_colors import BHT_COLORS, GRAY_SCALE
+from thesis_colors import (
+    BHT_COLORS,
+    GRAY_SCALE,
+    FONTSIZE_SMALL,
+    FIGURE_WIDTH,
+    apply_thesis_style,
+)
 from copy_to_overleaf import copy_figure_to_overleaf
+
+apply_thesis_style()
 
 
 # ============================================================================
@@ -33,7 +41,7 @@ RUNS = [
     ("llama-3.2-3b-instruct", "ensemble-4-meta-llama-3.2-3b-instruct-start"),
     ("ministral-3b-2515", "ensemble-2-ministral-3b-2515"),
     ("google-gemma-3-4b-it", "ensemble-1-google-gemma-3-4b-it"),
-    ("phi-4-multimodal-instruct", "ensemble-3-phi-4-multimodal-instruct"),
+    ("phi-4-multimodal", "ensemble-3-phi-4-multimodal-instruct"),
     ("ui-tars-1.5-7b", "ensemble-5-ui-tars-1.5-7b-start"),
     ("Ensemble (MVA)", "-ensemble-1-to-5-majority-vote"),
     ("Ensemble (MVR)", "-ensemble-1-to-5-majority-vote-random"),
@@ -63,7 +71,7 @@ PLOT_TITLE = (
 # ============================================================================
 
 
-app = typer.Typer()
+app = typer.Typer(pretty_exceptions_enable=False)
 
 
 def read_evaluate_run(run_path: Path) -> dict:
@@ -145,7 +153,7 @@ def plot_agreement_bar_chart(
         y_limits: Y-axis limits [min, max] or None for auto-scaling
         title: Optional custom title
     """
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(FIGURE_WIDTH, 4))
 
     # Create bars with BHT color scheme
     # Individual models: turquoise, Ensembles: blue, Reference model: dark gray
@@ -167,14 +175,14 @@ def plot_agreement_bar_chart(
         ax.set_ylim(y_limits[0], y_limits[1])
 
     # Labels and title
-    ax.set_xlabel("Model", fontsize=12, fontweight="bold")
+    ax.set_xlabel("Model")
 
     metric_display = metric_name.replace("_", " ").title()
-    ax.set_ylabel(f"{metric_display}", fontsize=12, fontweight="bold")
+    ax.set_ylabel(f"{metric_display}")
 
     if title is None:
         title = f"Agreement Metric: {metric_display}"
-    ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
+    ax.set_title(title, pad=20)
 
     # Add value labels on bars
     for bar, value in zip(bars, values):
@@ -182,11 +190,10 @@ def plot_agreement_bar_chart(
         ax.text(
             bar.get_x() + bar.get_width() / 2.0,
             height,
-            f"{value:.3f}",
+            f"{value:.2f}",
             ha="center",
             va="bottom",
-            fontsize=10,
-            fontweight="bold",
+            fontsize=FONTSIZE_SMALL,
         )
 
     # Grid for readability
@@ -203,9 +210,8 @@ def plot_agreement_bar_chart(
         mpatches.Patch(color=BHT_COLORS["blue"], label="Ensemble"),
         mpatches.Patch(color=GRAY_SCALE["dark"], label="Reference Model"),
     ]
-    ax.legend(handles=legend_patches, loc="upper right", fontsize=12, framealpha=0.95)
+    ax.legend(handles=legend_patches, loc="upper right", framealpha=0.95)
 
-    plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches="tight", format="svg")
     typer.echo(f"\nPlot saved to: {output_path}")
     plt.close()

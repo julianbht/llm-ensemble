@@ -27,7 +27,7 @@ from thesis_colors import (
     BHT_COLORS,
     GRAY_SCALE,
     FONTSIZE,
-    FONTSIZE_SMALL,
+    FONTSIZE_XSMALL,
     FIGURE_WIDTH,
     apply_thesis_style,
 )
@@ -270,7 +270,7 @@ def plot_grouped_bar_chart(
                 f"{value:.2f}",
                 ha="center",
                 va="bottom",
-                fontsize=FONTSIZE_SMALL,
+                fontsize=FONTSIZE_XSMALL,
                 rotation=0,
             )
 

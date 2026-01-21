@@ -23,7 +23,8 @@ FIGURE_WIDTH = 5.9  # inches (426.79pt / 72.27)
 # Font sizes
 # =============================================================================
 FONTSIZE = 9         # Standard size for most text (title, axis labels, ticks, legend)
-FONTSIZE_SMALL = 6   # Smaller annotations (e.g., value labels on bars)
+FONTSIZE_SMALL = 7   # Smaller annotations (e.g., value labels on bars)
+FONTSIZE_XSMALL = 6  # Very small annotations (e.g., dense bar charts)
 
 
 def apply_thesis_style():

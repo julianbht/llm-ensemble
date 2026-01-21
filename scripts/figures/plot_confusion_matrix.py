@@ -65,12 +65,12 @@ from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 # ============================================================================
 
 # Run name to analyze
-RUN_NAME = "5-ensemble-size-analysis-majority_vote_average-params_small_to_big"
-# RUN_NAME = "reference-ensemble-gpt-5-1-all-samples-start"
+# RUN_NAME = "5-ensemble-size-analysis-majority_vote_average-params_small_to_big"
+RUN_NAME = "reference-ensemble-gpt-5-1-all-samples-start"
 
 # Run type: "aggregate" or "infer"
-RUN_TYPE = "aggregate"
-# RUN_TYPE = "infer"
+# RUN_TYPE = "aggregate"
+RUN_TYPE = "infer"
 
 # Labels for the relevance scores (0, 1, 2, 3)
 RELEVANCE_LABELS = [
@@ -87,8 +87,8 @@ RELEVANCE_LABELS_SHORT = ["0", "1", "2", "3"]
 OUTPUT_FILENAME = None  # e.g., "confusion_matrix.svg" or None
 
 # Custom plot title (None = auto-generate)
-PLOT_TITLE = "Ensemble vs Human Labels"
-# PLOT_TITLE = "GPT 5.1 vs Human Labels"
+# PLOT_TITLE = "Ensemble vs Human Labels"
+PLOT_TITLE = "GPT 5.1 vs Human Labels"
 
 # Normalize confusion matrix: None, "true" (row), "pred" (column), "all"
 NORMALIZE = None  # None for counts, "true" for recall per class
@@ -160,7 +160,7 @@ def plot_confusion_matrix_figure(
     )
 
     # Create figure
-    fig, ax = plt.subplots(figsize=(FIGURE_WIDTH, 3.5))
+    fig, ax = plt.subplots(figsize=(FIGURE_WIDTH, 4))
 
     # Plot heatmap
     im = ax.imshow(cm, interpolation="nearest", cmap=cmap)

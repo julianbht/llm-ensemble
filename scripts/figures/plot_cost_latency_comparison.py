@@ -300,7 +300,7 @@ def create_comparison_chart(
         ncol=3,
         frameon=False,
         fontsize=FONTSIZE,
-        bbox_to_anchor=(0.5, 1.12),
+        bbox_to_anchor=(0.5, 1.18),
     )
 
     # Save figure

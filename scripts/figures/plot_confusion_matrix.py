@@ -38,13 +38,21 @@ from sklearn.metrics import (
     recall_score,
 )
 
-from thesis_colors import BHT_COLORS, GRAY_SCALE
+from thesis_colors import (
+    BHT_COLORS,
+    FONTSIZE,
+    FONTSIZE_SMALL,
+    FIGURE_WIDTH,
+    apply_thesis_style,
+)
+from copy_to_overleaf import copy_figure_to_overleaf
+
+apply_thesis_style()
 
 # Create custom BHT blue colormap (white to BHT blue)
 BHT_BLUE_CMAP = mcolors.LinearSegmentedColormap.from_list(
     "bht_blue", ["white", BHT_COLORS["blue"]]
 )
-from copy_to_overleaf import copy_figure_to_overleaf
 
 # Import evaluate startup to ensure all ORMs are registered with SQLAlchemy
 from llm_ensemble.evaluate.startup import dependency_configurator  # noqa: F401
@@ -91,7 +99,7 @@ CMAP = BHT_BLUE_CMAP
 # ============================================================================
 
 
-app = typer.Typer()
+app = typer.Typer(pretty_exceptions_enable=False)
 
 
 def load_evaluation_data(run_name: str, run_type: str = "aggregate"):
@@ -152,21 +160,22 @@ def plot_confusion_matrix_figure(
     )
 
     # Create figure
-    fig, ax = plt.subplots(figsize=(8, 7))
+    fig, ax = plt.subplots(figsize=(FIGURE_WIDTH, 3.5))
 
     # Plot heatmap
     im = ax.imshow(cm, interpolation="nearest", cmap=cmap)
 
     # Add colorbar
-    cbar = ax.figure.colorbar(im, ax=ax)
+    cbar = ax.figure.colorbar(im, ax=ax, shrink=1.0)
     cbar_label = "Proportion" if normalize else "Count"
-    cbar.ax.set_ylabel(cbar_label, rotation=-90, va="bottom", fontsize=11)
+    cbar.ax.set_ylabel(cbar_label, rotation=-90, va="bottom", fontsize=FONTSIZE_SMALL)
+    cbar.ax.tick_params(labelsize=FONTSIZE_SMALL)
 
     # Set ticks and labels
     ax.set_xticks(np.arange(len(labels)))
     ax.set_yticks(np.arange(len(labels)))
-    ax.set_xticklabels(labels, fontsize=10)
-    ax.set_yticklabels(labels, fontsize=10)
+    ax.set_xticklabels(labels)
+    ax.set_yticklabels(labels)
 
     # Rotate x labels for better fit
     plt.setp(ax.get_xticklabels(), rotation=0, ha="center")
@@ -187,18 +196,16 @@ def plot_confusion_matrix_figure(
                 ha="center",
                 va="center",
                 color=text_color,
-                fontsize=12,
-                fontweight="bold",
+                fontsize=FONTSIZE,
             )
 
     # Labels and title
-    ax.set_xlabel("LLM Prediction", fontsize=12, fontweight="bold")
-    ax.set_ylabel("Human Label (Ground Truth)", fontsize=12, fontweight="bold")
+    ax.set_xlabel("LLM Prediction", fontweight="bold")
+    ax.set_ylabel("Human Label (Ground Truth)", fontweight="bold")
 
     if title:
-        ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
+        ax.set_title(title, pad=10)
 
-    plt.tight_layout()
     plt.savefig(output_path, dpi=300, bbox_inches="tight", format="svg")
     typer.echo(f"\nPlot saved to: {output_path}")
     plt.close()

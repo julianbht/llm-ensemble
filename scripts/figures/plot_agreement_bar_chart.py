@@ -175,10 +175,10 @@ def plot_agreement_bar_chart(
         ax.set_ylim(y_limits[0], y_limits[1])
 
     # Labels and title
-    ax.set_xlabel("Model")
+    ax.set_xlabel("Model", fontweight="bold")
 
     metric_display = metric_name.replace("_", " ").title()
-    ax.set_ylabel(f"{metric_display}")
+    ax.set_ylabel(f"{metric_display}", fontweight="bold")
 
     if title is None:
         title = f"Agreement Metric: {metric_display}"

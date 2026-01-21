@@ -15,8 +15,18 @@ from typing import Dict, List, Any
 import matplotlib.pyplot as plt
 import numpy as np
 
-from thesis_colors import BHT_COLORS, GRAY_SCALE, ENSEMBLE_PALETTE, REFERENCE_COLOR
+from thesis_colors import (
+    BHT_COLORS,
+    GRAY_SCALE,
+    ENSEMBLE_PALETTE,
+    REFERENCE_COLOR,
+    FONTSIZE_SMALL,
+    FIGURE_WIDTH,
+    apply_thesis_style,
+)
 from copy_to_overleaf import copy_figure_to_overleaf
+
+apply_thesis_style()
 
 # Configuration
 INPUT_FILE = Path("artifacts/other/cost_latency_comparison.json")
@@ -59,8 +69,6 @@ DISPLAY_LABELS = {
 }
 
 # Figure dimensions
-FIGURE_WIDTH = 10
-FIGURE_HEIGHT = 5
 DPI = 300
 
 
@@ -90,9 +98,7 @@ def create_comparison_chart(
         metrics: Dict mapping run_name to metrics
         output_path: Where to save the figure
     """
-    fig, (ax_cost, ax_latency) = plt.subplots(
-        1, 2, figsize=(FIGURE_WIDTH, FIGURE_HEIGHT)
-    )
+    fig, (ax_cost, ax_latency) = plt.subplots(1, 2, figsize=(FIGURE_WIDTH, 3))
 
     x_pos = np.arange(len(RUN_ORDER))
     bar_width = 0.6
@@ -156,8 +162,7 @@ def create_comparison_chart(
                 f"{value:.2f}",
                 ha="center",
                 va="bottom",
-                fontsize=9,
-                fontweight="bold",
+                fontsize=FONTSIZE_SMALL,
             )
         else:
             # Stacked bar for ensemble - sort by cost (largest at bottom)
@@ -193,14 +198,13 @@ def create_comparison_chart(
                 f"{bottom:.2f}",
                 ha="center",
                 va="bottom",
-                fontsize=9,
-                fontweight="bold",
+                fontsize=FONTSIZE_SMALL,
             )
 
-    ax_cost.set_ylabel("Total Cost (USD)", fontsize=11, fontweight="bold")
-    ax_cost.set_xlabel("Model / Ensemble", fontsize=11, fontweight="bold")
+    ax_cost.set_ylabel("Total Cost (USD)", fontweight="bold")
+    ax_cost.set_xlabel("Model / Ensemble", fontweight="bold")
     ax_cost.set_xticks(x_pos)
-    ax_cost.set_xticklabels(labels, rotation=45, ha="right", fontsize=10)
+    ax_cost.set_xticklabels(labels, rotation=45, ha="right")
     ax_cost.grid(axis="y", alpha=0.3, linestyle="--")
     ax_cost.set_axisbelow(True)
 
@@ -224,8 +228,7 @@ def create_comparison_chart(
                 f"{value:.1f}",
                 ha="center",
                 va="bottom",
-                fontsize=9,
-                fontweight="bold",
+                fontsize=FONTSIZE_SMALL,
             )
         else:
             # Stacked bar for ensemble - sort by latency (largest at bottom)
@@ -262,14 +265,13 @@ def create_comparison_chart(
                 f"{bottom:.1f}",
                 ha="center",
                 va="bottom",
-                fontsize=9,
-                fontweight="bold",
+                fontsize=FONTSIZE_SMALL,
             )
 
-    ax_latency.set_ylabel("Total Latency (hours)", fontsize=11, fontweight="bold")
-    ax_latency.set_xlabel("Model / Ensemble", fontsize=11, fontweight="bold")
+    ax_latency.set_ylabel("Total Latency (hours)", fontweight="bold")
+    ax_latency.set_xlabel("Model / Ensemble", fontweight="bold")
     ax_latency.set_xticks(x_pos)
-    ax_latency.set_xticklabels(labels, rotation=45, ha="right", fontsize=10)
+    ax_latency.set_xticklabels(labels, rotation=45, ha="right")
     ax_latency.grid(axis="y", alpha=0.3, linestyle="--")
     ax_latency.set_axisbelow(True)
 
@@ -296,11 +298,9 @@ def create_comparison_chart(
         loc="upper center",
         ncol=len(legend_handles),
         frameon=False,
+        fontsize=FONTSIZE_SMALL,
+        bbox_to_anchor=(0.5, 1.0),
     )
-
-    # Adjust layout
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.88)
 
     # Save figure
     output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -2,35 +2,22 @@
 
 A framework for creating relevance judgements for information retrieval datasets using an ensemble of LLMs or a single model.
 
-## Quick Start
+## Installation
 
 ```bash
-# 1. Clone and install
+# Clone and install
 git clone https://github.com/julianbht/llm-ensemble.git
 cd llm-ensemble
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
-# 2. Set up environment
+# Set up environment
 cp .env.example .env
 # Edit .env with your API keys (OPENROUTER_API_KEY, etc.)
 
-# 3. Start database (starts postgres in docker container)
+# Start database
 make db
 make db-init
-
-# 4. Run your first pipeline
-ingest --input datasets/llm_judge_challenge_experiment \
-       --io-cfg llm_judge_challenge_to_db \
-       --run-name my-first-ingest
-
-infer --model-cfg gemma-3n-e2b-it-free \
-      --provider openrouter \
-      --prompt-template thomas-advanced-trec \
-      --io-cfg db_to_db \
-      --input my-first-ingest
-
-evaluate --io-cfg db_infer_to_json --input <infer-run-name>
 ```
 
 ## Directory Structure

@@ -2,13 +2,10 @@
 
 Application Layer - Hexagonal Architecture
 
-This module contains the complete aggregation backend orchestration.
-It implements the driving port (ForRunningAggregation) and handles:
-- Infrastructure setup (run directories, logging)
+Implements the driving port (ForRunningAggregation) and coordinates:
 - Aggregation pipeline execution via driven ports
 - Result persistence and finalization
 
-This is the backend that both CLI and Web adapters use.
 Depends only on port abstractions for testability.
 """
 
@@ -52,21 +49,6 @@ class AggregationApplication(ForRunningAggregation):
 
     Implements the driving port ForRunningAggregation - this IS the application's API.
     Driving adapters (CLI, Web API, etc.) call the run_aggregation() method.
-
-    This is the backend application that handles:
-    - Logging configuration
-    - Aggregation execution (read → group → aggregate → write loop)
-    - Result persistence and finalization
-
-    Infrastructure setup (run directories, run naming) is handled by the
-    composition root before application instantiation.
-
-    Driving adapters are thin wrappers that:
-    - Parse input (CLI args, HTTP requests)
-    - Call this application
-    - Present results (terminal output, HTTP responses)
-
-    Depends only on driven port abstractions, enabling unit testing with mocked ports.
     """
 
     def __init__(

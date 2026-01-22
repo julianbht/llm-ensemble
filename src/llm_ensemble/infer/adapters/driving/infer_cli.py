@@ -6,12 +6,6 @@ This is a thin driving adapter that:
 1. Parses CLI arguments
 2. Calls the dependency configurator to build the application
 3. Executes the application via its driving port (ForRunningInference)
-
-The application handles all backend concerns (infrastructure setup, logging,
-inference execution, result persistence). This adapter simply triggers it
-and all logging appears in the terminal automatically.
-
-Tested via CLI integration tests.
 """
 
 from __future__ import annotations
@@ -56,10 +50,8 @@ def infer(
     official: Official = False,
     notes: Notes = None,
 ):
-    """Run LLM inference on judging examples.
-
+    """
     Thin CLI driving adapter that builds the application and executes it.
-    All backend logic (infrastructure, logging, inference) handled by application.
     """
     # Generate run name if not given
     if run_name is None:

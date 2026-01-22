@@ -2,13 +2,10 @@
 
 Application Layer - Hexagonal Architecture
 
-This module contains the complete evaluation backend orchestration.
-It implements the driving port (ForRunningEvaluation) and handles:
-- Infrastructure setup (run directories, logging)
+Implements the driving port (ForRunningEvaluation) and coordinates:
 - Evaluation pipeline execution via driven ports
 - Result persistence and finalization
 
-This is the backend that both CLI and Web adapters use.
 Depends only on port abstractions for testability.
 """
 
@@ -33,21 +30,6 @@ class EvaluationApplication(ForRunningEvaluation):
 
     Implements the driving port ForRunningEvaluation - this IS the application's API.
     Driving adapters (CLI, Web API, etc.) call the run_evaluation() method.
-
-    This is the backend application that handles:
-    - Logging configuration
-    - Evaluation execution (read → compute metrics → write report)
-    - Result persistence
-
-    Infrastructure setup (run directories, run naming) is handled by the
-    composition root before application instantiation.
-
-    Driving adapters are thin wrappers that:
-    - Parse input (CLI args, HTTP requests)
-    - Call this application
-    - Present results (terminal output, HTTP responses)
-
-    Depends only on driven port abstractions, enabling unit testing with mocked ports.
     """
 
     def __init__(

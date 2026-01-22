@@ -2,13 +2,10 @@
 
 Application Layer - Hexagonal Architecture
 
-This module contains the complete inference backend orchestration.
-It implements the driving port (ForRunningInference) and handles:
-- Infrastructure setup (run directories, logging)
+Implements the driving port (ForRunningInference) and coordinates:
 - Inference pipeline execution via driven ports
 - Result persistence and finalization
 
-This is the backend that both CLI and Web adapters use.
 Depends only on port abstractions for testability.
 """
 
@@ -71,21 +68,6 @@ class InferenceApplication(ForRunningInference):
 
     Implements the driving port ForRunningInference - this IS the application's API.
     Driving adapters (CLI, Web API, etc.) call the execute() method.
-
-    This is the backend application that handles:
-    - Logging configuration
-    - Inference execution (read → prompt → infer → parse → write loop)
-    - Result persistence and finalization
-
-    Infrastructure setup (run directories, run naming) is handled by the
-    composition root before application instantiation.
-
-    Driving adapters are thin wrappers that:
-    - Parse input (CLI args, HTTP requests)
-    - Call this application
-    - Present results (terminal output, HTTP responses)
-
-    Depends only on driven port abstractions, enabling unit testing with mocked ports.
     """
 
     def __init__(

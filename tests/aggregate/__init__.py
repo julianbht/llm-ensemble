@@ -1,0 +1,1 @@
+"""Aggregate CLI test package."""

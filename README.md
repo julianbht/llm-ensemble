@@ -4,18 +4,25 @@ A pipeline for creating relevance judgements for information retrieval datasets 
 
 ## Installation
 
+**1. Clone and install**
 ```bash
-# Clone and install
 git clone https://github.com/julianbht/llm-ensemble.git
 cd llm-ensemble
+```
+
+```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
+```
 
-# Set up environment
+**2. Set up environment**
+```bash
 cp .env.example .env
-# Edit .env with your API keys
+```
+Edit `.env` with your API keys (at minimum `OPENROUTER_API_KEY`).
 
-# Start database (starts postgres in docker container)
+**3. Start database**
+```bash
 make db
 make db-init
 ```

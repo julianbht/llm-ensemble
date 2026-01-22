@@ -1,6 +1,6 @@
 # LLM Ensemble
 
-A framework for creating relevance judgements for information retrieval datasets using an ensemble of LLMs or a single model.
+A pipeline for creating relevance judgements for information retrieval datasets using an ensemble of LLMs or a single model.
 
 ## Installation
 

@@ -20,17 +20,17 @@ make db
 make db-init
 
 # 4. Run your first pipeline
-ingest --input-path datasets/llm_judge_challenge_experiment \
+ingest --input datasets/llm_judge_challenge_experiment \
        --io-cfg llm_judge_challenge_to_db \
        --run-name my-first-ingest
 
 infer --model-cfg gemma-3n-e2b-it-free \
       --provider openrouter \
-      --prompt-template thomas-simple \
+      --prompt-template thomas-advanced-trec \
       --io-cfg db_to_db \
       --input my-first-ingest
 
-evaluate --io-cfg db_infer_to_json --input-run-name <infer-run-name>
+evaluate --io-cfg db_infer_to_json --input <infer-run-name>
 ```
 
 ## Directory Structure
@@ -45,11 +45,11 @@ llm-ensemble/
 │   └── libs/                  # Shared utilities (CLI, config, DB, logging)
 │
 ├── configs/
-│   ├── models/                # LLM model configurations (20+ models)
+│   ├── models/                # LLM model configurations
 │   ├── prompts/               # Prompt templates
 │   └── retries/               # Retry strategy configs
 │
-├── tests/                     # Test suite (89% coverage)
+├── tests/                     # Test suite
 ├── artifacts/runs/            # Pipeline run outputs
 ├── datasets/                  # Input datasets
 └── scripts/                   # Utility scripts
@@ -69,26 +69,26 @@ llm-ensemble/
 
 ```bash
 # 1. Ingest a dataset
-ingest --input-path datasets/llm_judge_challenge_experiment \
+ingest --input datasets/llm_judge_challenge_experiment \
        --io-cfg llm_judge_challenge_to_db \
        --run-name my-ingest
 
 # 2. Run inference with multiple models (using free models)
 infer --model-cfg gemma-3n-e2b-it-free --provider openrouter \
-      --prompt-template thomas-simple --io-cfg db_to_db --input my-ingest
+      --prompt-template thomas-advanced-trec --io-cfg db_to_db --input my-ingest
 
 infer --model-cfg gpt-oss-20b-free --provider openrouter \
-      --prompt-template thomas-simple --io-cfg db_to_db --input my-ingest
+      --prompt-template thomas-advanced-trec --io-cfg db_to_db --input my-ingest
 
 infer --model-cfg mai-ds-r1-free --provider openrouter \
-      --prompt-template thomas-simple --io-cfg db_to_db --input my-ingest
+      --prompt-template thomas-advanced-trec --io-cfg db_to_db --input my-ingest
 
 # 3. Aggregate predictions using majority vote
-aggregate --aggregation-strategy majority_vote --io-cfg db_to_db \
-          --input-run-names <run1> <run2> <run3>
+aggregate --aggregation-strategy majority_vote_average --io-cfg db_to_db \
+          --input <run1> --input <run2> --input <run3>
 
 # 4. Evaluate agreement with ground truth
-evaluate --io-cfg db_aggregate_to_json --input-run-name <aggregate-run-name>
+evaluate --io-cfg db_aggregate_to_json --input <aggregate-run-name>
 ```
 
 ## Configuration

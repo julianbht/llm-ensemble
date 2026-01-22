@@ -15,23 +15,11 @@ from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDat
 class ForInput(ABC):
     """Abstract base class for reading and normalizing IR datasets.
 
-    Implementations read dataset-specific formats (TSV + JSONL, Parquet, etc.)
-    and return a complete NormalizedDataset with metadata and samples.
-
-    The reader is instantiated with its io_name (format identifier) and reads
-    external raw datasets at runtime. Runtime parameters (input_path, limit)
-    are passed to the read() method.
-
     The reader handles complete normalization:
     - Dataset metadata extraction
     - Creating Query and Document entities with UUIDs
     - Creating complete JudgingSample objects
     - Packaging everything as NormalizedDataset
-
-    Note: DatasetReader is for raw dataset ingestion, not reading from runs.
-    It accepts paths to external data sources at runtime.
-    The application layer creates the IngestRunConfig based on the parameters
-    passed to the reader.
     """
 
     @abstractmethod

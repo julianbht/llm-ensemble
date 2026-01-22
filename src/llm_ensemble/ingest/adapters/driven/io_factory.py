@@ -1,12 +1,5 @@
-"""Builder for IO adapters.
-
-Explicit instantiation of IO adapters with format-specific constructors.
-Each adapter defines its own constructor signature and configuration needs.
-
-To add a new IO format:
-1. Create adapter classes that extend ForInput/ForOutput
-2. Import them here
-3. Add explicit instantiation case in create_reader/create_writer methods
+"""
+Builder for IO adapters.
 """
 
 from __future__ import annotations
@@ -14,7 +7,9 @@ from pathlib import Path
 
 from llm_ensemble.ingest.application.ports.driven.for_input import ForInput
 from llm_ensemble.ingest.application.ports.driven.for_output import ForOutput
-from llm_ensemble.ingest.adapters.driven.io.llm_judge_dataset_reader import LlmJudgeDatasetReader
+from llm_ensemble.ingest.adapters.driven.io.llm_judge_dataset_reader import (
+    LlmJudgeDatasetReader,
+)
 from llm_ensemble.ingest.adapters.driven.io.db.db_writer import DbWriter
 
 
@@ -42,8 +37,7 @@ class IOAdapterFactory:
         else:
             available = ", ".join(sorted(AVAILABLE_FORMATS))
             raise ValueError(
-                f"IO format '{io_name}' not found. "
-                f"Available: {available}"
+                f"IO format '{io_name}' not found. " f"Available: {available}"
             )
 
     @staticmethod
@@ -65,8 +59,7 @@ class IOAdapterFactory:
         else:
             available = ", ".join(sorted(AVAILABLE_FORMATS))
             raise ValueError(
-                f"IO format '{io_name}' not found. "
-                f"Available: {available}"
+                f"IO format '{io_name}' not found. " f"Available: {available}"
             )
 
     @staticmethod

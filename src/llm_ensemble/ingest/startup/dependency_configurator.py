@@ -5,27 +5,27 @@ Startup Layer - Composition Root
 Hexagonal Architecture - Composition Root Pattern:
 Builds and wires together the application hexagon by:
 1. Loading configuration from YAML files
-2. Creating run directory (infrastructure concern)
-3. Instantiating driven adapters (ports implementations)
+2. Creating run directory
+3. Instantiating driven adapters
 4. Assembling the use case with its dependencies
 5. Returning the application's driving port interface
 
 This is the composition root where all dependency wiring happens.
-NOT unit tested - tested via CLI integration tests.
-
-The driving adapter (CLI) calls this configurator to build the application,
-then uses the returned ForRunningIngest interface to execute business logic.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 
 # Load runtime env configuration (DATABASE_URL, API keys, etc.)
 from llm_ensemble.libs.runtime.env import load_runtime_config
+
 load_runtime_config()
 
 from llm_ensemble.ingest.application.ingest_application import IngestApplication
-from llm_ensemble.ingest.application.ports.driving.for_running_ingest import ForRunningIngest
+from llm_ensemble.ingest.application.ports.driving.for_running_ingest import (
+    ForRunningIngest,
+)
 from llm_ensemble.ingest.adapters.driven.io_factory import IOAdapterFactory
 
 from llm_ensemble.libs.runtime.path_manager import PathManager
@@ -39,15 +39,6 @@ def build_application(
     official: bool = False,
 ) -> ForRunningIngest:
     """Build and wire the ingestion application hexagon.
-
-    Pure dependency wiring - no business logic.
-
-    Composition root responsibilities:
-    1. Create run directory from provided run_name
-    2. Instantiate adapter implementations from factory
-    3. Wire adapters into application
-
-    The CLI generates the run_name.
 
     Args:
         io_name: Name of the IO format (e.g., "llm_judge_ingest")

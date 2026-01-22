@@ -6,12 +6,6 @@ This is a thin driving adapter that:
 1. Parses CLI arguments
 2. Calls the dependency configurator to build the application
 3. Executes the application via its driving port (ForRunningIngest)
-
-The application handles all backend concerns (infrastructure setup, logging,
-normalization execution, result persistence). This adapter simply triggers it
-and all logging appears in the terminal automatically.
-
-Tested via CLI integration tests.
 """
 
 from __future__ import annotations
@@ -49,10 +43,8 @@ def ingest(
     official: Official = False,
     notes: Notes = None,
 ):
-    """Normalize raw IR datasets into JudgingSample records.
-
+    """
     Thin CLI driving adapter that builds the application and executes it.
-    All backend logic (infrastructure, logging, normalization) handled by application.
     """
     # Generate run name if not given
     if run_name is None:

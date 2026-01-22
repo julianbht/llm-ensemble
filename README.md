@@ -83,11 +83,7 @@ evaluate --io-cfg db_aggregate_to_json --input <aggregate-run-name>
 **Environment variables** (`.env`):
 ```
 OPENROUTER_API_KEY=your-key-here
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=llm_ensemble
-POSTGRES_PASSWORD=llm_ensemble
-POSTGRES_DB=llm_ensemble
+DATABASE_URL=postgresql://llm_ensemble:llm_ensemble@localhost:5432/llm_ensemble
 ```
 
 **Model configs** (`configs/models/`): YAML files defining model parameters, pricing, and context windows.

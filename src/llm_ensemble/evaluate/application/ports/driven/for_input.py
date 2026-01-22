@@ -1,12 +1,9 @@
 """Driven port for reading evaluation inputs.
 
-Driven Port Interface (Hexagonal Architecture)
+Driven Port Interface
 
 This port abstracts input reading from infrastructure details.
 The application depends on this abstraction, not concrete implementations.
-
-Adapters implement this port to provide different input sources
-(database, JSON files, etc.).
 """
 
 from __future__ import annotations
@@ -20,11 +17,6 @@ class ForInput(ABC):
 
     The application depends on this abstraction.
     IO adapters implement this interface.
-
-    Responsibilities:
-    - Read judgements from infer or aggregate runs
-    - Normalize to EvaluationData entity (ground_truth vs predictions)
-    - Validate data via domain builder
     """
 
     @abstractmethod

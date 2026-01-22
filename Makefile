@@ -108,11 +108,11 @@ db-status:
 db-init:
 	@echo "Initializing database schema..."
 	@if [ -d .venv ]; then \
-		. .venv/bin/activate && python scripts/init_db.py; \
+		. .venv/bin/activate && python scripts/db/init_db.py; \
 	elif [ -d venv ]; then \
-		. venv/bin/activate && python scripts/init_db.py; \
+		. venv/bin/activate && python scripts/db/init_db.py; \
 	else \
-		python3 scripts/init_db.py; \
+		python3 scripts/db/init_db.py; \
 	fi
 
 db-logs:

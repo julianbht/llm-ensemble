@@ -13,9 +13,9 @@ pip install -e ".[dev]"
 
 # Set up environment
 cp .env.example .env
-# Edit .env with your API keys (OPENROUTER_API_KEY, etc.)
+# Edit .env with your API keys
 
-# Start database
+# Start database (starts postgres in docker container)
 make db
 make db-init
 ```

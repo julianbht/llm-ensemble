@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-LLM Ensemble is a framework for evaluating and comparing LLM performance on information retrieval and ranking tasks. 
+LLM Ensemble is a framework for creating relevance judgements for information retrieval datasets using an ensemble of LLMs or a single model. It supports evaluating and comparing LLM performance on ranking tasks. 
 
 ## Architecture
 

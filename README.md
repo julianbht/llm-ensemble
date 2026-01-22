@@ -55,7 +55,6 @@ llm-ensemble/
 |---------|-------------|
 | `ingest` | Load and normalize datasets into judging samples |
 | `infer` | Run LLM inference to generate relevance judgements |
-| `merge-infer-runs` | Combine multiple inference runs |
 | `aggregate` | Apply ensemble voting (majority, average, random) |
 | `evaluate` | Compute inter-rater agreement metrics |
 

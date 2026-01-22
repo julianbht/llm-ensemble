@@ -1,12 +1,12 @@
 """Driving port for running evaluation pipeline.
 
-Driving Port Interface (Hexagonal Architecture)
+Driving Port (Primary/Driver Port) - Application API
 
-This is the application's driving port - the contract that driving adapters
-(CLI, Web API, etc.) use to interact with the evaluation use case.
+This is the interface that the application OFFERS to driving adapters.
+Driving adapters (CLI, Web API, Test harness, etc.) call this interface.
 
-Driving adapters call this interface to execute the evaluation backend.
-The application layer implements this port.
+Defined BY the application, implemented BY the application (EvaluationApplication).
+Called BY driving adapters.
 """
 
 from __future__ import annotations
@@ -15,12 +15,8 @@ from typing import Optional
 
 
 class ForRunningEvaluation(ABC):
-    """Driving port for evaluation pipeline execution.
-
-    Driving adapters (CLI, Web API) depend on this abstraction.
-    The application use case implements this interface.
-
-    This defines the application's public API - what driving adapters can request.
+    """
+    Driving port for evaluation pipeline execution.
     """
 
     @abstractmethod

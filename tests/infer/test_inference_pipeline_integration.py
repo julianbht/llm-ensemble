@@ -20,8 +20,8 @@ import pytest
 from pathlib import Path
 
 from llm_ensemble.infer.application.inference_application import InferenceApplication
-from llm_ensemble.infer.adapters.driven.parsers.thomas_advanced_parser import ThomasAdvancedParser
-from llm_ensemble.infer.adapters.driven.prompts.thomas_advanced_prompt_builder import ThomasAdvancedPromptBuilder
+from llm_ensemble.infer.adapters.driven.parsers.thomas_advanced_trec_parser import ThomasAdvancedTrecParser
+from llm_ensemble.infer.adapters.driven.prompts.thomas_advanced_trec_prompt_builder import ThomasAdvancedTrecPromptBuilder
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
@@ -40,7 +40,7 @@ def test_inference_pipeline_slice(
     """Test end-to-end inference pipeline with real adapters and dataset slicing.
 
     This demonstrates the testing benefits of Ports & Adapters architecture:
-    - REAL domain logic (ThomasAdvancedPromptBuilder, ThomasAdvancedParser)
+    - REAL domain logic (ThomasAdvancedTrecPromptBuilder, ThomasAdvancedTrecParser)
     - MOCK infrastructure (LLM API, file I/O)
     - Fast execution without external dependencies
 
@@ -55,9 +55,9 @@ def test_inference_pipeline_slice(
     app = InferenceApplication(
         input_port=MockInputAdapter(sample_dataset_five),
         output_port=output_adapter,
-        prompt_builder=ThomasAdvancedPromptBuilder(), 
-        llm_provider=MockLLMProvider(mock_response='{"M": 2, "T": 1, "O": 1}'), 
-        response_parser=ThomasAdvancedParser(),
+        prompt_builder=ThomasAdvancedTrecPromptBuilder(),
+        llm_provider=MockLLMProvider(mock_response='{"M": 2, "T": 1, "O": 1}'),
+        response_parser=ThomasAdvancedTrecParser(),
         run_dir=temp_run_dir,
         run_name="integration-test-run"
     )

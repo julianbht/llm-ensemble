@@ -12,9 +12,11 @@ To add a new parser:
 from __future__ import annotations
 
 from llm_ensemble.infer.adapters.driven.parsers.thomas_advanced_trec_parser import ThomasAdvancedTrecParser
-from llm_ensemble.infer.application.ports.driven.for_parsing_responses import ForParsingResponses
 from llm_ensemble.infer.adapters.driven.parsers.thomas_simple_parser import ThomasSimpleParser
-from llm_ensemble.infer.adapters.driven.parsers.thomas_advanced_parser import ThomasAdvancedParser
+from llm_ensemble.infer.application.ports.driven.for_parsing_responses import ForParsingResponses
+
+
+AVAILABLE_PARSERS = ["thomas-simple", "thomas-advanced-trec"]
 
 
 class ParserAdapterFactory:
@@ -28,7 +30,7 @@ class ParserAdapterFactory:
         constructor signatures and configuration.
 
         Args:
-            parser_name: Name of the parser (e.g., 'thomas-simple', 'thomas-advanced')
+            parser_name: Name of the parser (e.g., 'thomas-simple', 'thomas-advanced-trec')
 
         Returns:
             Instantiated parser adapter
@@ -38,12 +40,10 @@ class ParserAdapterFactory:
         """
         if parser_name == "thomas-simple":
             return ThomasSimpleParser()
-        elif parser_name == "thomas-advanced":
-            return ThomasAdvancedParser()
         elif parser_name == "thomas-advanced-trec":
             return ThomasAdvancedTrecParser()
         else:
-            available = ", ".join(sorted(["thomas-simple", "thomas-advanced"]))
+            available = ", ".join(sorted(AVAILABLE_PARSERS))
             raise ValueError(
                 f"Parser '{parser_name}' not found. "
                 f"Available: {available}"
@@ -56,7 +56,7 @@ class ParserAdapterFactory:
         Returns:
             Sorted list of parser names
         """
-        return sorted(["thomas-simple", "thomas-advanced"])
+        return sorted(AVAILABLE_PARSERS)
 
     @staticmethod
     def has_parser(parser_name: str) -> bool:
@@ -68,4 +68,4 @@ class ParserAdapterFactory:
         Returns:
             True if parser exists
         """
-        return parser_name in ["thomas-simple", "thomas-advanced"]
+        return parser_name in AVAILABLE_PARSERS

@@ -1,11 +1,4 @@
-"""SQLAlchemy ORM models for INGEST CLI.
-
-Naming convention: ORM models use "Model" suffix to distinguish from Pydantic schemas.
-Example: JudgingSampleModel (ORM) vs JudgingSample (Pydantic)
-
-Design:
-- Queries and Documents are global entities identified by content hash
-"""
+"""SQLAlchemy ORM models for INGEST CLI."""
 
 from __future__ import annotations
 
@@ -70,7 +63,11 @@ class NormalizedDatasetORM(Base):
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
-    dataset_samples = relationship("NormalizedDatasetJudgingSampleORM", back_populates="normalized_dataset", order_by="NormalizedDatasetJudgingSampleORM.sequence_number")
+    dataset_samples = relationship(
+        "NormalizedDatasetJudgingSampleORM",
+        back_populates="normalized_dataset",
+        order_by="NormalizedDatasetJudgingSampleORM.sequence_number",
+    )
     ingest_runs = relationship("IngestRunORM", back_populates="normalized_dataset")
 
 
@@ -93,17 +90,24 @@ class NormalizedDatasetJudgingSampleORM(Base):
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships - association object connects both sides
-    normalized_dataset = relationship("NormalizedDatasetORM", back_populates="dataset_samples")
+    normalized_dataset = relationship(
+        "NormalizedDatasetORM", back_populates="dataset_samples"
+    )
     judging_sample = relationship("JudgingSampleORM", back_populates="dataset_samples")
 
     __table_args__ = (
-        UniqueConstraint("normalized_dataset_id", "judging_sample_id", name="uq_normalized_dataset_judging_sample"),
+        UniqueConstraint(
+            "normalized_dataset_id",
+            "judging_sample_id",
+            name="uq_normalized_dataset_judging_sample",
+        ),
         {"schema": "ingest"},
     )
 
 
 class IngestRunConfigORM(Base):
     """Configuration for an ingest run."""
+
     __tablename__ = "ingest_run_configs"
     __table_args__ = (
         UniqueConstraint(
@@ -131,20 +135,23 @@ class IngestRunORM(Base):
 
     Connects configuration (input) to dataset (output) with execution metadata.
     """
+
     __tablename__ = "ingest_runs"
     __table_args__ = {"schema": "ingest"}
     __natural_key__ = ("run_name",)
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
     run_name = Column(String(255), nullable=False, unique=True)
-    run_type = Column(SQLEnum(RunType, schema="public"), nullable=False, default=RunType.TEST)
+    run_type = Column(
+        SQLEnum(RunType, schema="public"), nullable=False, default=RunType.TEST
+    )
 
     # What was intended (configuration)
     ingest_run_config_id = Column(
         PG_UUID(as_uuid=True),
         ForeignKey("ingest.ingest_run_configs.id"),
         nullable=False,
-        comment="Configuration used for this run"
+        comment="Configuration used for this run",
     )
 
     # What was produced (output)
@@ -152,7 +159,7 @@ class IngestRunORM(Base):
         PG_UUID(as_uuid=True),
         ForeignKey("ingest.normalized_datasets.id"),
         nullable=False,
-        comment="Dataset produced by this run"
+        comment="Dataset produced by this run",
     )
 
     # Timing
@@ -169,7 +176,9 @@ class IngestRunORM(Base):
 
     # Relationships
     ingest_run_config = relationship("IngestRunConfigORM", back_populates="ingest_runs")
-    normalized_dataset = relationship("NormalizedDatasetORM", back_populates="ingest_runs")
+    normalized_dataset = relationship(
+        "NormalizedDatasetORM", back_populates="ingest_runs"
+    )
 
 
 class JudgingSampleORM(Base):
@@ -177,15 +186,21 @@ class JudgingSampleORM(Base):
     __natural_key__ = ("query_id", "document_id")
 
     id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    query_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.queries.id"), nullable=False)
-    document_id = Column(PG_UUID(as_uuid=True), ForeignKey("ingest.documents.id"), nullable=False)
+    query_id = Column(
+        PG_UUID(as_uuid=True), ForeignKey("ingest.queries.id"), nullable=False
+    )
+    document_id = Column(
+        PG_UUID(as_uuid=True), ForeignKey("ingest.documents.id"), nullable=False
+    )
     gold_score = Column(SQLEnum(RelevanceScore, schema="public"), nullable=False)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     # Relationships
     query = relationship("QueryORM", back_populates="judging_samples")
     document = relationship("DocumentORM", back_populates="judging_samples")
-    dataset_samples = relationship("NormalizedDatasetJudgingSampleORM", back_populates="judging_sample")
+    dataset_samples = relationship(
+        "NormalizedDatasetJudgingSampleORM", back_populates="judging_sample"
+    )
 
     __table_args__ = (
         UniqueConstraint("query_id", "document_id", name="uq_query_doc"),

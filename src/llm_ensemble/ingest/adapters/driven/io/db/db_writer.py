@@ -1,12 +1,4 @@
-"""SQL writer adapter for persisting judging samples to database.
-
-Uses pure SQLAlchemy ORM models with random UUIDs.
-Duplicate detection via pre-querying existing entities (no exception handling).
-Returns UUID mappings to ensure correct foreign key references across runs.
-Handles its own logging and returns write summary as metadata.
-
-This adapter delegates ORM mapping to the mappers module for bidirectional symmetry.
-"""
+"""SQL writer adapter for persisting judging samples to database."""
 
 from __future__ import annotations
 from pathlib import Path
@@ -20,7 +12,9 @@ from llm_ensemble.ingest.domain.entities.document import Document
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
 from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDataset
 from llm_ensemble.ingest.domain.entities.ingest_run_config import IngestRunConfig
-from llm_ensemble.ingest.adapters.driven.io.db.orms import NormalizedDatasetJudgingSampleORM
+from llm_ensemble.ingest.adapters.driven.io.db.orms import (
+    NormalizedDatasetJudgingSampleORM,
+)
 from llm_ensemble.ingest.domain.entities.ingest_run import IngestRun
 from llm_ensemble.ingest.domain.entities.write_summary import WriteSummary
 from llm_ensemble.ingest.adapters.driven.io.db.orms import (
@@ -118,19 +112,31 @@ class DbWriter(ForOutput):
                 #   6. IngestRun (depends on IngestRunConfig + NormalizedDataset)
 
                 # Collect unique queries and documents from batch
-                unique_queries, unique_documents = self._collect_unique_entities(dataset_samples)
+                unique_queries, unique_documents = self._collect_unique_entities(
+                    dataset_samples
+                )
 
                 # 1. Queries (no dependencies - global entities)
-                created, skipped, query_uuid_map = self._save_queries(session, unique_queries)
+                created, skipped, query_uuid_map = self._save_queries(
+                    session, unique_queries
+                )
                 summary.add_queries(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
-                    self.logger.info(IngestWriteEvent.WRITE_QUERIES, created=created, skipped=skipped)
+                    self.logger.info(
+                        IngestWriteEvent.WRITE_QUERIES, created=created, skipped=skipped
+                    )
 
                 # 2. Documents (no dependencies - global entities)
-                created, skipped, document_uuid_map = self._save_documents(session, unique_documents)
+                created, skipped, document_uuid_map = self._save_documents(
+                    session, unique_documents
+                )
                 summary.add_documents(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
-                    self.logger.info(IngestWriteEvent.WRITE_DOCUMENTS, created=created, skipped=skipped)
+                    self.logger.info(
+                        IngestWriteEvent.WRITE_DOCUMENTS,
+                        created=created,
+                        skipped=skipped,
+                    )
 
                 # 3. JudgingSamples (depend on Query + Document)
                 # Use UUID mappings to ensure correct foreign key references
@@ -139,19 +145,35 @@ class DbWriter(ForOutput):
                 )
                 summary.add_samples(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
-                    self.logger.info(IngestWriteEvent.WRITE_JUDGING_SAMPLES, created=created, skipped=skipped)
+                    self.logger.info(
+                        IngestWriteEvent.WRITE_JUDGING_SAMPLES,
+                        created=created,
+                        skipped=skipped,
+                    )
 
                 # 4. IngestRunConfig (no FK dependencies)
-                created, skipped, config_uuid = self._save_ingest_run_config(session, ingest_run.ingest_run_config)
+                created, skipped, config_uuid = self._save_ingest_run_config(
+                    session, ingest_run.ingest_run_config
+                )
                 summary.add_configs(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
-                    self.logger.info(IngestWriteEvent.WRITE_RUN_CONFIG, created=created, skipped=skipped)
+                    self.logger.info(
+                        IngestWriteEvent.WRITE_RUN_CONFIG,
+                        created=created,
+                        skipped=skipped,
+                    )
 
                 # 5. NormalizedDataset entity (no dependencies)
-                created, skipped, dataset_uuid = self._save_normalized_dataset_entity(session, normalized_dataset)
+                created, skipped, dataset_uuid = self._save_normalized_dataset_entity(
+                    session, normalized_dataset
+                )
                 summary.add_datasets(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
-                    self.logger.info(IngestWriteEvent.WRITE_NORMALIZED_DATASET, created=created, skipped=skipped)
+                    self.logger.info(
+                        IngestWriteEvent.WRITE_NORMALIZED_DATASET,
+                        created=created,
+                        skipped=skipped,
+                    )
 
                 # Flush to ensure NormalizedDataset is persisted before creating DatasetSample records
                 # (required because DatasetSample has FK to NormalizedDataset)
@@ -159,17 +181,30 @@ class DbWriter(ForOutput):
 
                 # 6. DatasetSample records (depend on NormalizedDataset + JudgingSample)
                 created, skipped = self._save_dataset_samples(
-                    session, normalized_dataset, query_uuid_map, document_uuid_map, sample_uuid_map, dataset_uuid
+                    session,
+                    normalized_dataset,
+                    query_uuid_map,
+                    document_uuid_map,
+                    sample_uuid_map,
+                    dataset_uuid,
                 )
                 if created > 0 or skipped > 0:
-                    self.logger.info(IngestWriteEvent.WRITE_DATASET_SAMPLES, created=created, skipped=skipped)
+                    self.logger.info(
+                        IngestWriteEvent.WRITE_DATASET_SAMPLES,
+                        created=created,
+                        skipped=skipped,
+                    )
 
                 # 7. IngestRun (depends on IngestRunConfig + NormalizedDataset)
                 # Use UUID mappings to ensure correct foreign key references
-                created, skipped = self._save_ingest_run(session, ingest_run, config_uuid, dataset_uuid)
+                created, skipped = self._save_ingest_run(
+                    session, ingest_run, config_uuid, dataset_uuid
+                )
                 summary.add_runs(created=created, skipped=skipped)
                 if created > 0 or skipped > 0:
-                    self.logger.info(IngestWriteEvent.WRITE_RUNS, created=created, skipped=skipped)
+                    self.logger.info(
+                        IngestWriteEvent.WRITE_RUNS, created=created, skipped=skipped
+                    )
 
             # Log totals
             if summary.total_created > 0 or summary.total_skipped > 0:
@@ -183,7 +218,7 @@ class DbWriter(ForOutput):
 
         except Exception as e:
             raise IOError(f"Failed to write samples to database: {e}") from e
-        
+
     def _collect_unique_entities(
         self, samples: List[NormalizedDatasetJudgingSample]
     ) -> Tuple[Dict[str, Query], Dict[str, Document]]:
@@ -208,7 +243,6 @@ class DbWriter(ForOutput):
 
         return unique_queries, unique_documents
 
-
     def _save_ingest_run(
         self,
         session: Session,
@@ -231,7 +265,9 @@ class DbWriter(ForOutput):
             Tuple of (created_count, skipped_count)
         """
         # Check if this run_name already exists
-        existing = session.query(IngestRunORM).filter_by(run_name=ingest_run.run_name).first()
+        existing = (
+            session.query(IngestRunORM).filter_by(run_name=ingest_run.run_name).first()
+        )
 
         if existing:
             return (0, 1)
@@ -325,15 +361,15 @@ class DbWriter(ForOutput):
 
         # Query existing queries and get their UUIDs
         existing_queries = {
-            content_hash: str(uuid) for (content_hash, uuid) in
-            session.query(QueryORM.content_hash, QueryORM.id)
-            .filter(QueryORM.content_hash.in_(content_hashes))
+            content_hash: str(uuid)
+            for (content_hash, uuid) in session.query(
+                QueryORM.content_hash, QueryORM.id
+            ).filter(QueryORM.content_hash.in_(content_hashes))
         }
 
         # Filter to only new queries
         new_query_orms = [
-            orm for orm in query_orms
-            if orm.content_hash not in existing_queries
+            orm for orm in query_orms if orm.content_hash not in existing_queries
         ]
 
         # Bulk insert new queries
@@ -382,15 +418,15 @@ class DbWriter(ForOutput):
 
         # Query existing documents and get their UUIDs
         existing_documents = {
-            content_hash: str(uuid) for (content_hash, uuid) in
-            session.query(DocumentORM.content_hash, DocumentORM.id)
-            .filter(DocumentORM.content_hash.in_(content_hashes))
+            content_hash: str(uuid)
+            for (content_hash, uuid) in session.query(
+                DocumentORM.content_hash, DocumentORM.id
+            ).filter(DocumentORM.content_hash.in_(content_hashes))
         }
 
         # Filter to only new documents
         new_doc_orms = [
-            orm for orm in doc_orms
-            if orm.content_hash not in existing_documents
+            orm for orm in doc_orms if orm.content_hash not in existing_documents
         ]
 
         # Bulk insert new documents
@@ -454,21 +490,21 @@ class DbWriter(ForOutput):
         # Query existing samples and get their UUIDs
         existing_samples = {
             (str(query_id), str(doc_id)): str(sample_id)
-            for (query_id, doc_id, sample_id) in
-            session.query(
+            for (query_id, doc_id, sample_id) in session.query(
                 JudgingSampleORM.query_id,
                 JudgingSampleORM.document_id,
-                JudgingSampleORM.id
-            )
-            .filter(
-                tuple_(JudgingSampleORM.query_id, JudgingSampleORM.document_id)
-                .in_(sample_keys)
+                JudgingSampleORM.id,
+            ).filter(
+                tuple_(JudgingSampleORM.query_id, JudgingSampleORM.document_id).in_(
+                    sample_keys
+                )
             )
         }
 
         # Filter to only new samples
         new_sample_orms = [
-            orm for orm in sample_orms
+            orm
+            for orm in sample_orms
             if (orm.query_id, orm.document_id) not in existing_samples
         ]
 
@@ -572,14 +608,18 @@ class DbWriter(ForOutput):
         # Query which judging_sample_ids already exist for this dataset
         # Since all samples belong to the same dataset_uuid, we can query efficiently
         existing_sample_ids = {
-            str(sample_id) for (sample_id,) in
-            session.query(NormalizedDatasetJudgingSampleORM.judging_sample_id)
-            .filter(NormalizedDatasetJudgingSampleORM.normalized_dataset_id == dataset_uuid)
+            str(sample_id)
+            for (sample_id,) in session.query(
+                NormalizedDatasetJudgingSampleORM.judging_sample_id
+            ).filter(
+                NormalizedDatasetJudgingSampleORM.normalized_dataset_id == dataset_uuid
+            )
         }
 
         # Filter to only new dataset samples
         new_dataset_sample_orms = [
-            orm for orm in dataset_sample_orms
+            orm
+            for orm in dataset_sample_orms
             if orm.judging_sample_id not in existing_sample_ids
         ]
 

@@ -1,6 +1,6 @@
 """Dataset reader for LLM Judge Challenge 2024 dataset.
 
-Reads the LLM Judge Challenge raw dataset format (queries.txt, documents.jsonl, qrels.txt)
+Reads the LLM Judge Challenge raw dataset format
 and returns a complete NormalizedDataset.
 """
 
@@ -14,7 +14,9 @@ from llm_ensemble.ingest.domain.entities.normalized_dataset import NormalizedDat
 from llm_ensemble.ingest.domain.entities.query import Query
 from llm_ensemble.ingest.domain.entities.document import Document
 from llm_ensemble.ingest.domain.entities.judging_sample import JudgingSample
-from llm_ensemble.ingest.domain.normalized_dataset_builder import build_normalized_dataset
+from llm_ensemble.ingest.domain.normalized_dataset_builder import (
+    build_normalized_dataset,
+)
 from llm_ensemble.ingest.application.ports.driven.for_input import ForInput
 from llm_ensemble.libs.schemas.relevance_score import RelevanceScore
 
@@ -133,8 +135,7 @@ class LlmJudgeDatasetReader(ForInput):
         # Build normalized dataset with content-based fingerprint
         samples = list(samples_by_content.values())
         return build_normalized_dataset(
-            samples=samples,
-            external_dataset_name="llmjudge"
+            samples=samples, external_dataset_name="llmjudge"
         )
 
     def _read_queries(self, path: Path) -> Dict[str, Query]:

@@ -5,13 +5,7 @@ CLI Layer - Driving Adapter
 This is a thin driving adapter that:
 1. Parses CLI arguments
 2. Calls the dependency configurator to build the application
-3. Executes the application via its run_evaluation method
-
-The application handles all backend concerns (infrastructure setup, logging,
-evaluation execution, result persistence). This adapter simply triggers it
-and all logging appears in the terminal automatically.
-
-Tested via CLI integration tests.
+3. Executes the application via its driving port (ForRunningEvaluation)
 """
 
 from __future__ import annotations
@@ -47,10 +41,8 @@ def evaluate(
     official: Official = False,
     notes: Notes = None,
 ):
-    """Compute evaluation metrics for model judgements.
-
+    """
     Thin CLI driving adapter that builds the application and executes it.
-    All backend logic (infrastructure, logging, evaluation) handled by application.
     """
     # Generate run name if not given
     if run_name is None:

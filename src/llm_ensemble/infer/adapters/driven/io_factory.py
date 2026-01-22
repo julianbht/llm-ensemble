@@ -1,16 +1,8 @@
 """Builder for IO adapters.
 
-Explicit instantiation of IO adapters with format-specific constructors.
-Each adapter defines its own constructor signature and configuration needs.
-
 IO formats use explicit read→write naming to show the full pipeline:
 - db_to_db: Read from PostgreSQL, write to PostgreSQL
 - db_to_json: Read from PostgreSQL, write JSON array
-
-To add a new IO format:
-1. Create adapter classes that extend InputPort/OutputPort
-2. Import them here
-3. Add explicit instantiation case in create_reader/create_writer methods
 """
 
 from __future__ import annotations

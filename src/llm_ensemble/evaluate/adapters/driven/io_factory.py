@@ -1,16 +1,8 @@
 """Factory for creating I/O adapter instances.
 
-Explicit instantiation of I/O adapters with format-specific constructors.
-Each adapter defines its own constructor signature and configuration needs.
-
 I/O formats use explicit read→write naming to show the full pipeline:
 - db_infer_to_json: Read from PostgreSQL (infer runs), write to JSON
 - db_aggregate_to_json: Read from PostgreSQL (aggregate runs), write to JSON
-
-To add a new I/O format:
-1. Create adapter classes that extend ForInput/ForOutput
-2. Import them here
-3. Add explicit instantiation case in create_reader/create_writer methods
 """
 
 from __future__ import annotations

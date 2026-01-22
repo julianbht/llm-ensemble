@@ -6,7 +6,7 @@ A framework for creating relevance judgements for information retrieval datasets
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/yourusername/llm-ensemble.git
+git clone https://github.com/julianbht/llm-ensemble.git
 cd llm-ensemble
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
@@ -15,7 +15,7 @@ pip install -e ".[dev]"
 cp .env.example .env
 # Edit .env with your API keys (OPENROUTER_API_KEY, etc.)
 
-# 3. Start database
+# 3. Start database (starts postgres in docker container)
 make db
 make db-init
 

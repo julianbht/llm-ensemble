@@ -19,7 +19,7 @@ pip install -e ".[dev]"
 ```bash
 cp .env.example .env
 ```
-Edit `.env` with your API keys (at minimum `OPENROUTER_API_KEY`).
+Edit `.env` with your API key (only needed for `infer` pipeline).  
 
 **3. Start database**
 ```bash

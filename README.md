@@ -2,6 +2,11 @@
 
 A pipeline for creating relevance judgements for information retrieval datasets using an ensemble of LLMs or a single model.
 
+## Prerequisites
+
+- Python 3.11+
+- Docker (for PostgreSQL)
+
 ## Installation
 
 **1. Clone and install**
@@ -95,12 +100,6 @@ DATABASE_URL=postgresql://llm_ensemble:llm_ensemble@localhost:5432/llm_ensemble
 **Model configs** (`configs/models/`): YAML files defining model parameters, pricing, and context windows.
 
 **Prompt templates** (`configs/prompts/`): Customizable prompt templates for different judging strategies.
-
-## Prerequisites
-
-- Python 3.11+
-- Docker (for PostgreSQL)
-- OpenRouter API key (or other LLM provider credentials)
 
 ## Testing
 

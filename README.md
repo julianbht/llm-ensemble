@@ -85,10 +85,11 @@ infer --model-cfg mai-ds-r1-free --provider openrouter \
 
 # 3. Aggregate predictions using majority vote
 aggregate --aggregation-strategy majority_vote_average --io-cfg db_to_db \
-          --input run-gemma --input run-gpt --input run-mai
+          --input run-gemma --input run-gpt --input run-mai \
+          --run-name my-ensemble
 
 # 4. Evaluate agreement with ground truth
-evaluate --io-cfg db_aggregate_to_json --input <aggregate-run-name>
+evaluate --io-cfg db_aggregate_to_json --input my-ensemble
 ```
 
 ## Configuration

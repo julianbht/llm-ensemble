@@ -45,7 +45,6 @@ llm-ensemble/
 │
 ├── configs/
 │   ├── models/                # LLM model configurations
-│   ├── prompts/               # Prompt templates
 │   └── retries/               # Retry strategy configs
 │
 ├── tests/                     # Test suite
@@ -73,17 +72,20 @@ ingest --input datasets/llm_judge_challenge_experiment \
 
 # 2. Run inference with multiple models (using free models)
 infer --model-cfg gemma-3n-e2b-it-free --provider openrouter \
-      --prompt-template thomas-advanced-trec --io-cfg db_to_db --input my-ingest
+      --prompt-template thomas-advanced-trec --io-cfg db_to_db \
+      --input my-ingest --run-name run-gemma
 
 infer --model-cfg gpt-oss-20b-free --provider openrouter \
-      --prompt-template thomas-advanced-trec --io-cfg db_to_db --input my-ingest
+      --prompt-template thomas-advanced-trec --io-cfg db_to_db \
+      --input my-ingest --run-name run-gpt
 
 infer --model-cfg mai-ds-r1-free --provider openrouter \
-      --prompt-template thomas-advanced-trec --io-cfg db_to_db --input my-ingest
+      --prompt-template thomas-advanced-trec --io-cfg db_to_db \
+      --input my-ingest --run-name run-mai
 
 # 3. Aggregate predictions using majority vote
 aggregate --aggregation-strategy majority_vote_average --io-cfg db_to_db \
-          --input <run1> --input <run2> --input <run3>
+          --input run-gemma --input run-gpt --input run-mai
 
 # 4. Evaluate agreement with ground truth
 evaluate --io-cfg db_aggregate_to_json --input <aggregate-run-name>
@@ -99,7 +101,7 @@ DATABASE_URL=postgresql://llm_ensemble:llm_ensemble@localhost:5432/llm_ensemble
 
 **Model configs** (`configs/models/`): YAML files defining model parameters, pricing, and context windows.
 
-**Prompt templates** (`configs/prompts/`): Customizable prompt templates for different judging strategies.
+**Prompt templates** (`src/llm_ensemble/infer/adapters/driven/prompts/`): Python modules defining prompt builders for different judging strategies.
 
 ## Testing
 

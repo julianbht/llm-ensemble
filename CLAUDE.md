@@ -42,7 +42,6 @@ Five main CLIs defined in `pyproject.toml`:
 
 - `src/llm_ensemble/` - Main source code
 - `configs/models/` - LLM model configurations
-- `configs/prompts/` - Prompt templates
 - `artifacts/runs/` - Run outputs
 - `datasets/` - LLM4Eval challenge data
 

@@ -1,6 +1,6 @@
 # LLM Ensemble
 
-A pipeline for creating relevance judgements for information retrieval datasets using an ensemble of LLMs or a single model.
+A pipeline for creating relevance judgments for information retrieval datasets using an ensemble of LLMs or a single model. See `thesis.pdf` for a detailed description of the project.
 
 ## Prerequisites
 

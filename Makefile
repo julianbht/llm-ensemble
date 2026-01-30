@@ -2,6 +2,7 @@ SHELL := /usr/bin/env bash
 .PHONY: help install install-dev test test-ingest test-infer test-schema schemas clean clean-test-runs
 .PHONY: db db-down db-init db-logs db-status autocomplete update-pricing
 .PHONY: observability observability-down observability-reset observability-logs observability-status infra infra-down
+.PHONY: presentation slides
 
 export PYTHONUNBUFFERED=1
 
@@ -42,6 +43,10 @@ help:
 	@echo "  make update-pricing   - Update model configs with latest OpenRouter pricing"
 	@echo "  make clean            - Remove cached files"
 	@echo "  make clean-test-runs  - Remove all test run artifacts (keeps official runs)"
+	@echo ""
+	@echo "Presentation:"
+	@echo "  make presentation     - Start Jupyter Lab"
+	@echo "  make slides           - Generate slides from notebook"
 
 install:
 	pip install -e .
@@ -245,3 +250,24 @@ clean-test-runs:
 	@echo ""
 	@echo "Test runs cleaned! Official runs preserved."
 	@echo "Note: Official runs in artifacts/runs/*/official/ were not touched."
+
+# Presentation
+presentation:
+	@if [ -d .venv ]; then \
+		. .venv/bin/activate && jupyter lab --no-browser notebooks/presentation.ipynb; \
+	elif [ -d venv ]; then \
+		. venv/bin/activate && jupyter lab --no-browser notebooks/presentation.ipynb; \
+	else \
+		jupyter lab --no-browser notebooks/presentation.ipynb; \
+	fi
+
+slides:
+	@echo "Generating slides from presentation notebook..."
+	@if [ -d .venv ]; then \
+		. .venv/bin/activate && jupyter nbconvert notebooks/presentation.ipynb --to slides --output-dir notebooks; \
+	elif [ -d venv ]; then \
+		. venv/bin/activate && jupyter nbconvert notebooks/presentation.ipynb --to slides --output-dir notebooks; \
+	else \
+		jupyter nbconvert notebooks/presentation.ipynb --to slides --output-dir notebooks; \
+	fi
+	@echo "Slides generated: notebooks/presentation.slides.html"

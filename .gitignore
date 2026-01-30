@@ -28,3 +28,5 @@ artifacts/tmp/
 bluezone/
 # Temporary Excel files
 ~$*
+# jupyter stuff
+.ipynb_checkpoints

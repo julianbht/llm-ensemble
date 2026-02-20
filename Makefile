@@ -45,8 +45,9 @@ help:
 	@echo "  make clean-test-runs  - Remove all test run artifacts (keeps official runs)"
 	@echo ""
 	@echo "Presentation:"
-	@echo "  make presentation     - Start Jupyter Lab"
-	@echo "  make slides           - Generate slides from notebook"
+	@echo "  make presentation     - Start reveal-md server with live reload"
+	@echo "  make slides-export    - Export slides to static HTML"
+	@echo "  make slides-pdf       - Export slides to PDF"
 
 install:
 	pip install -e .
@@ -253,21 +254,16 @@ clean-test-runs:
 
 # Presentation
 presentation:
-	@if [ -d .venv ]; then \
-		. .venv/bin/activate && jupyter lab --no-browser notebooks/presentation.ipynb; \
-	elif [ -d venv ]; then \
-		. venv/bin/activate && jupyter lab --no-browser notebooks/presentation.ipynb; \
-	else \
-		jupyter lab --no-browser notebooks/presentation.ipynb; \
-	fi
+	@echo "Starting reveal-md server..."
+	@echo "Open http://localhost:1948 in your browser"
+	@cd presentations && npx reveal-md slides.md --watch
 
-slides:
-	@echo "Generating slides from presentation notebook..."
-	@if [ -d .venv ]; then \
-		. .venv/bin/activate && jupyter nbconvert notebooks/presentation.ipynb --to slides --output-dir notebooks; \
-	elif [ -d venv ]; then \
-		. venv/bin/activate && jupyter nbconvert notebooks/presentation.ipynb --to slides --output-dir notebooks; \
-	else \
-		jupyter nbconvert notebooks/presentation.ipynb --to slides --output-dir notebooks; \
-	fi
-	@echo "Slides generated: notebooks/presentation.slides.html"
+slides-export:
+	@echo "Exporting slides to static HTML..."
+	@cd presentations && npx reveal-md slides.md --static _site
+	@echo "Static site generated in presentations/_site/"
+
+slides-pdf:
+	@echo "Exporting slides to PDF..."
+	@cd presentations && npx reveal-md slides.md --print slides.pdf
+	@echo "PDF generated: presentations/slides.pdf"

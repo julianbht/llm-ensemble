@@ -2,7 +2,6 @@ SHELL := /usr/bin/env bash
 .PHONY: help install install-dev test test-ingest test-infer test-schema schemas clean clean-test-runs
 .PHONY: db db-down db-init db-logs db-status autocomplete update-pricing
 .PHONY: observability observability-down observability-reset observability-logs observability-status infra infra-down
-.PHONY: presentation slides
 
 export PYTHONUNBUFFERED=1
 
@@ -43,11 +42,6 @@ help:
 	@echo "  make update-pricing   - Update model configs with latest OpenRouter pricing"
 	@echo "  make clean            - Remove cached files"
 	@echo "  make clean-test-runs  - Remove all test run artifacts (keeps official runs)"
-	@echo ""
-	@echo "Presentation:"
-	@echo "  make presentation     - Start reveal-md server with live reload"
-	@echo "  make slides-export    - Export slides to static HTML"
-	@echo "  make slides-pdf       - Export slides to PDF"
 
 install:
 	pip install -e .
@@ -251,19 +245,3 @@ clean-test-runs:
 	@echo ""
 	@echo "Test runs cleaned! Official runs preserved."
 	@echo "Note: Official runs in artifacts/runs/*/official/ were not touched."
-
-# Presentation
-presentation:
-	@echo "Starting reveal-md server..."
-	@echo "Open http://localhost:1948 in your browser"
-	@cd presentations && npx reveal-md slides.md --watch
-
-slides-export:
-	@echo "Exporting slides to static HTML..."
-	@cd presentations && npx reveal-md slides.md --static _site
-	@echo "Static site generated in presentations/_site/"
-
-slides-pdf:
-	@echo "Exporting slides to PDF..."
-	@cd presentations && npx reveal-md slides.md --print slides.pdf
-	@echo "PDF generated: presentations/slides.pdf"

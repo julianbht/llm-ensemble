@@ -28,7 +28,3 @@ artifacts/tmp/
 bluezone/
 # Temporary Excel files
 ~$*
-# Presentation artifacts
-presentations/_site/
-presentations/slides.pdf
-presentations/node_modules/

@@ -1,0 +1,26 @@
+# Mock model configuration for Gemma 3 4B (offline presentations)
+# Returns real Gemma responses without API calls
+
+name_hint: mock-gemma
+
+model_id: mock/gemma-3-4b-it
+
+context_window: 8192
+capabilities:
+  offline: true
+  demo_mode: true
+
+temperature: 0.7
+max_tokens: 512
+top_p: null
+frequency_penalty: null
+presence_penalty: null
+seed: null
+
+additional_params:
+  mock_responses_file: "mock_responses_gemma.json"
+
+pricing:
+  prompt_cost_per_1m_tokens: 0.001
+  completion_cost_per_1m_tokens: 0.002
+  last_updated: "2026-03-25T00:00:00+00:00"

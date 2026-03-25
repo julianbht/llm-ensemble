@@ -39,16 +39,20 @@ class MockLLMAdapter(ForInvokingLLM):
         self,
         model_config: ModelConfig,
         retry_config: RetryConfig,
-        responses_path: Path = DEFAULT_RESPONSES_PATH,
-        base_latency_ms: float = 200.0,
-        latency_variance_ms: float = 100.0,
     ):
         self.model_config = model_config
         self.retry_config = retry_config
-        self.base_latency_ms = base_latency_ms
-        self.latency_variance_ms = latency_variance_ms
         self.logger = get_logger(component=f"{self.PROVIDER_NAME}_provider")
         self._call_count = 0
+
+        # Resolve responses file: check additional_params for custom path,
+        # otherwise use the default
+        configs_dir = Path(__file__).resolve().parents[6] / "configs"
+        custom_file = (model_config.additional_params or {}).get("mock_responses_file")
+        if custom_file:
+            responses_path = configs_dir / custom_file
+        else:
+            responses_path = configs_dir / "mock_responses.json"
 
         # Load prompt_hash → response lookup
         if not responses_path.exists():

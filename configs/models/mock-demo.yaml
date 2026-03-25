@@ -22,7 +22,8 @@ presence_penalty: null
 seed: null
 
 # Additional provider-specific parameters
-additional_params: {}
+additional_params:
+  mock_responses_file: "mock_responses.json"
 
 # Pricing information (mock costs for demonstration)
 pricing:

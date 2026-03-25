@@ -14,7 +14,9 @@ import time
 import random
 from pathlib import Path
 
-from llm_ensemble.infer.domain.entities.llm_invocation_metrics import LLMInvocationMetrics
+from llm_ensemble.infer.domain.entities.llm_invocation_metrics import (
+    LLMInvocationMetrics,
+)
 from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.domain.entities.retry_config_schema import RetryConfig
 from llm_ensemble.infer.application.ports.driven.for_invoking_llm import ForInvokingLLM
@@ -22,7 +24,9 @@ from llm_ensemble.libs.logging.structlog_logger import get_logger
 
 
 # Default path to the mock responses lookup file
-DEFAULT_RESPONSES_PATH = Path(__file__).resolve().parents[6] / "configs" / "mock_responses.json"
+DEFAULT_RESPONSES_PATH = (
+    Path(__file__).resolve().parents[6] / "configs" / "mock_responses.json"
+)
 
 
 class MockLLMAdapter(ForInvokingLLM):
@@ -71,6 +75,7 @@ class MockLLMAdapter(ForInvokingLLM):
 
     def get_provider(self):
         from llm_ensemble.infer.domain.entities.provider import Provider
+
         return Provider(name=self.PROVIDER_NAME, version=self.VERSION)
 
     def get_model_config(self) -> ModelConfig:
@@ -119,8 +124,12 @@ class MockLLMAdapter(ForInvokingLLM):
         cost_estimate_usd = None
         actual_cost_usd = None
         if self.model_config.pricing:
-            prompt_cost = (prompt_tokens / 1_000_000) * self.model_config.pricing.prompt_cost_per_1m_tokens
-            completion_cost = (completion_tokens / 1_000_000) * self.model_config.pricing.completion_cost_per_1m_tokens
+            prompt_cost = (
+                prompt_tokens / 1_000_000
+            ) * self.model_config.pricing.prompt_cost_per_1m_tokens
+            completion_cost = (
+                completion_tokens / 1_000_000
+            ) * self.model_config.pricing.completion_cost_per_1m_tokens
             cost_estimate_usd = prompt_cost + completion_cost
             actual_cost_usd = cost_estimate_usd
 
@@ -141,6 +150,6 @@ class MockLLMAdapter(ForInvokingLLM):
     def _simulate_latency(self) -> float:
         """Simulate realistic API latency (1-8 seconds, skewed towards lower end)."""
         # Log-normal distribution: most responses are fast, some are slow
-        latency_ms = random.uniform(1000.0, 8000.0)
+        latency_ms = random.uniform(0000.0, 1000.0)
         time.sleep(latency_ms / 1000.0)
         return latency_ms

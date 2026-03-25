@@ -1,0 +1,43 @@
+{
+  "start_time": "2026-03-25T10:10:28.782465",
+  "end_time": "2026-03-25T10:10:28.953058",
+  "run": {
+    "id": "82cfb08b-e1d0-45ae-aaac-96688ebc438e",
+    "run_name": "demo-ingest",
+    "run_type": "official",
+    "cli_name": "ingest",
+    "notes": null,
+    "git_info": {
+      "git_sha": "7738dd1",
+      "git_clean": false,
+      "git_branch": "presentation"
+    },
+    "ingest_run_config": {
+      "id": "370bfda4-2e6f-4f74-8fe0-e9d5802a018f",
+      "io_config_name": "llm_judge_challenge_to_db",
+      "input_path": "/home/jn-wsl/dev/llm-ensemble/datasets/llm_judge_challenge",
+      "limit": null
+    },
+    "normalized_dataset": null,
+    "start_time": "2026-03-25T10:10:28.782465",
+    "end_time": "2026-03-25T10:10:28.953058"
+  },
+  "sample_count": 6372,
+  "write_summary": {
+    "configs_created": 1,
+    "configs_skipped": 0,
+    "datasets_created": 1,
+    "datasets_skipped": 0,
+    "runs_created": 1,
+    "runs_skipped": 0,
+    "queries_created": 25,
+    "queries_skipped": 0,
+    "documents_created": 6334,
+    "documents_skipped": 0,
+    "samples_created": 6372,
+    "samples_skipped": 0
+  },
+  "duration_seconds": 0.17,
+  "duration_minutes": 0.0,
+  "duration_hours": 0.0
+}

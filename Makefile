@@ -123,9 +123,9 @@ db-reset:
 	@echo ""
 	@echo "Resetting database..."
 	@if [ -d .venv ]; then \
-		. .venv/bin/activate && python scripts/db/reset_db.py; \
+		.venv/bin/python3 scripts/db/reset_db.py; \
 	elif [ -d venv ]; then \
-		. venv/bin/activate && python scripts/db/reset_db.py; \
+		venv/bin/python3 scripts/db/reset_db.py; \
 	else \
 		python3 scripts/db/reset_db.py; \
 	fi

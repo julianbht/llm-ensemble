@@ -22,7 +22,7 @@ from llm_ensemble.libs.logging.structlog_logger import get_logger
 
 
 # Default path to the mock responses lookup file
-DEFAULT_RESPONSES_PATH = Path(__file__).resolve().parents[5] / "configs" / "mock_responses.json"
+DEFAULT_RESPONSES_PATH = Path(__file__).resolve().parents[6] / "configs" / "mock_responses.json"
 
 
 class MockLLMAdapter(ForInvokingLLM):

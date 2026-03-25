@@ -24,10 +24,9 @@
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
         "${workspaceFolder}/src/llm_ensemble/ingest/adapters/driving/ingest_cli.py",
-        "--input-path", "${workspaceFolder}/datasets/llm_judge_challenge",
+        "--input", "${workspaceFolder}/datasets/llm_judge_challenge",
         "--io-cfg", "llm_judge_challenge_to_db",
         "--run-name", "demo-ingest",
-        "--official"
       ],
       "options": {
         "env": {
@@ -57,7 +56,6 @@
         "--run-name", "demo-infer",
         "--start-idx", "0",
         "--end-idx", "30",
-        "--official",
         "--notes", "Offline demo using mock adapter with real GPT-5.1 responses"
       ],
       "options": {

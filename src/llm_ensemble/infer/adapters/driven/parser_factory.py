@@ -16,7 +16,7 @@ from llm_ensemble.infer.adapters.driven.parsers.thomas_simple_parser import Thom
 from llm_ensemble.infer.application.ports.driven.for_parsing_responses import ForParsingResponses
 
 
-AVAILABLE_PARSERS = ["thomas-simple", "thomas-advanced-trec"]
+AVAILABLE_PARSERS = ["thomas-simple", "thomas-advanced-trec-v2"]
 
 
 class ParserAdapterFactory:
@@ -30,7 +30,7 @@ class ParserAdapterFactory:
         constructor signatures and configuration.
 
         Args:
-            parser_name: Name of the parser (e.g., 'thomas-simple', 'thomas-advanced-trec')
+            parser_name: Name of the parser (e.g., 'thomas-simple', 'thomas-advanced-trec-v2')
 
         Returns:
             Instantiated parser adapter
@@ -40,7 +40,7 @@ class ParserAdapterFactory:
         """
         if parser_name == "thomas-simple":
             return ThomasSimpleParser()
-        elif parser_name == "thomas-advanced-trec":
+        elif parser_name == "thomas-advanced-trec-v2":
             return ThomasAdvancedTrecParser()
         else:
             available = ", ".join(sorted(AVAILABLE_PARSERS))

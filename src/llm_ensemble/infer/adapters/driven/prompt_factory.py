@@ -11,12 +11,18 @@ To add a new prompt:
 
 from __future__ import annotations
 
-from llm_ensemble.infer.adapters.driven.prompts.thomas_advanced_trec_prompt_builder import ThomasAdvancedTrecPromptBuilder
-from llm_ensemble.infer.adapters.driven.prompts.thomas_simple_prompt_builder import ThomasSimplePromptBuilder
-from llm_ensemble.infer.application.ports.driven.for_building_prompts import ForBuildingPrompts
+from llm_ensemble.infer.adapters.driven.prompts.thomas_advanced_trec_prompt_builder import (
+    ThomasAdvancedTrecPromptBuilder,
+)
+from llm_ensemble.infer.adapters.driven.prompts.thomas_simple_prompt_builder import (
+    ThomasSimplePromptBuilder,
+)
+from llm_ensemble.infer.application.ports.driven.for_building_prompts import (
+    ForBuildingPrompts,
+)
 
 
-AVAILABLE_PROMPTS = ["thomas-simple", "thomas-advanced-trec"]
+AVAILABLE_PROMPTS = ["thomas-simple", "thomas-advanced-trec-v2"]
 
 
 class PromptAdapterFactory:
@@ -40,13 +46,12 @@ class PromptAdapterFactory:
         """
         if prompt_name == "thomas-simple":
             return ThomasSimplePromptBuilder()
-        elif prompt_name == "thomas-advanced-trec":
+        elif prompt_name == "thomas-advanced-trec-v2":
             return ThomasAdvancedTrecPromptBuilder()
         else:
             available = ", ".join(sorted(AVAILABLE_PROMPTS))
             raise ValueError(
-                f"Prompt '{prompt_name}' not found. "
-                f"Available: {available}"
+                f"Prompt '{prompt_name}' not found. " f"Available: {available}"
             )
 
     @staticmethod

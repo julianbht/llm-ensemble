@@ -58,7 +58,6 @@ class ProviderFactory:
             return MockLLMAdapter(
                 model_config=model_config,
                 retry_config=retry_config,
-                deterministic=False,  # Use random responses for variety
             )
         else:
             available = ", ".join(sorted(["openrouter", "ollama", "mock"]))

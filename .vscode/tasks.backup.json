@@ -1,0 +1,94 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Infer",
+      "type": "shell",
+      "command": "${workspaceFolder}/venv/bin/python3",
+      "args": [
+        "${workspaceFolder}/src/llm_ensemble/infer/adapters/driving/infer_cli.py",
+        "--model-cfg", "ui-tars-1.5-7b",
+        "--provider", "openrouter",
+        "--prompt-template", "thomas-advanced-trec",
+        "--io-cfg", "db_to_db",
+        "--input", "20260107_014749",
+        "--run-name", "+2-noise-5-ui-tars-1.5-7b-start",
+        "--notes", "Ensemble model 5. Rerun with the same settings as the first and second run with this model. Goal: determine ground noise.",
+        "--official"
+      ],
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/src"
+        }
+      },
+      "problemMatcher": ["$python"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "label": "Evaluate",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python3",
+      "args": [
+        "${workspaceFolder}/src/llm_ensemble/evaluate/adapters/driving/evaluate_cli.py",
+        "--io-cfg", "db_aggregate_to_json",
+        "--input", "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+        "--run-name", "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+        "--official",
+        "--notes", "For the script where I try to evaluate the hard disagreements."
+      ],
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/src"
+        }
+      },
+      "problemMatcher": ["$python"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "label": "Aggregate: Ensemble 1-5 (majority random vote)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python3",
+      "args": [
+        "${workspaceFolder}/src/llm_ensemble/aggregate/adapters/driving/aggregate_cli.py",
+        "--aggregation-strategy", "majority_vote_average",
+        "--io-cfg", "db_to_db",
+        "-i", "ensemble-1-google-gemma-3-4b-it",
+        "-i", "ensemble-2-ministral-3b-2515",
+        "-i", "ensemble-3-phi-4-multimodal-instruct",
+        "-i", "ensemble-4-meta-llama-3.2-3b-instruct-start",
+        "-i", "ensemble-5-ui-tars-1.5-7b-start",
+        "--run-name", "5-ensemble-size-analysis-majority_vote_average-params_small_to_big",
+        "--notes", "Aggregating ensemble models 1 to 5 with majority voting and average tie breaking. Goal: Confusion matrix.",
+        "--official"
+      ],
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/src"
+        }
+      },
+      "problemMatcher": ["$python"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    }
+  ]
+}

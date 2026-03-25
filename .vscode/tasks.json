@@ -2,46 +2,63 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Infer",
+      "label": "Demo 1: DB Reset",
       "type": "shell",
-      "command": "${workspaceFolder}/venv/bin/python3",
+      "command": "make",
+      "args": ["db-reset"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Demo 2: Ingest",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python3",
+      "args": [
+        "${workspaceFolder}/src/llm_ensemble/ingest/adapters/driving/ingest_cli.py",
+        "--input-path", "${workspaceFolder}/datasets/llm_judge_challenge",
+        "--io-cfg", "llm_judge_challenge_to_db",
+        "--run-name", "demo-ingest",
+        "--official"
+      ],
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/src"
+        }
+      },
+      "problemMatcher": ["$python"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Demo 3: Infer (mock GPT-5.1)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
         "${workspaceFolder}/src/llm_ensemble/infer/adapters/driving/infer_cli.py",
-        "--model-cfg", "ui-tars-1.5-7b",
-        "--provider", "openrouter",
-        "--prompt-template", "thomas-advanced-trec",
+        "--model-cfg", "mock-demo",
+        "--provider", "mock",
+        "--prompt-template", "thomas-advanced-trec-v2",
         "--io-cfg", "db_to_db",
-        "--input", "20260107_014749",
-        "--run-name", "+2-noise-5-ui-tars-1.5-7b-start",
-        "--notes", "Ensemble model 5. Rerun with the same settings as the first and second run with this model. Goal: determine ground noise.",
-        "--official"
-      ],
-      "options": {
-        "env": {
-          "PYTHONPATH": "${workspaceFolder}/src"
-        }
-      },
-      "problemMatcher": ["$python"],
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      }
-    },
-    {
-      "label": "Evaluate",
-      "type": "shell",
-      "command": "${workspaceFolder}/.venv/bin/python3",
-      "args": [
-        "${workspaceFolder}/src/llm_ensemble/evaluate/adapters/driving/evaluate_cli.py",
-        "--io-cfg", "db_aggregate_to_json",
-        "--input", "-ensemble-1-to-5-majority-vote-average-disagreement-script",
-        "--run-name", "-ensemble-1-to-5-majority-vote-average-disagreement-script",
+        "--input", "demo-ingest",
+        "--run-name", "demo-infer",
+        "--start-idx", "0",
+        "--end-idx", "30",
         "--official",
-        "--notes", "For the script where I try to evaluate the hard disagreements."
+        "--notes", "Offline demo using mock adapter with real GPT-5.1 responses"
       ],
       "options": {
         "env": {
@@ -52,42 +69,9 @@
       "presentation": {
         "echo": true,
         "reveal": "always",
-        "focus": false,
+        "focus": true,
         "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      }
-    },
-    {
-      "label": "Aggregate: Ensemble 1-5 (majority random vote)",
-      "type": "shell",
-      "command": "${workspaceFolder}/.venv/bin/python3",
-      "args": [
-        "${workspaceFolder}/src/llm_ensemble/aggregate/adapters/driving/aggregate_cli.py",
-        "--aggregation-strategy", "majority_vote_average",
-        "--io-cfg", "db_to_db",
-        "-i", "ensemble-1-google-gemma-3-4b-it",
-        "-i", "ensemble-2-ministral-3b-2515",
-        "-i", "ensemble-3-phi-4-multimodal-instruct",
-        "-i", "ensemble-4-meta-llama-3.2-3b-instruct-start",
-        "-i", "ensemble-5-ui-tars-1.5-7b-start",
-        "--run-name", "5-ensemble-size-analysis-majority_vote_average-params_small_to_big",
-        "--notes", "Aggregating ensemble models 1 to 5 with majority voting and average tie breaking. Goal: Confusion matrix.",
-        "--official"
-      ],
-      "options": {
-        "env": {
-          "PYTHONPATH": "${workspaceFolder}/src"
-        }
-      },
-      "problemMatcher": ["$python"],
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
+        "clear": true
       }
     }
   ]

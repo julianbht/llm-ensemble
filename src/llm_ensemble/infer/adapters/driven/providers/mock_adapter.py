@@ -135,8 +135,8 @@ class MockLLMAdapter(ForInvokingLLM):
         return response_text, metrics
 
     def _simulate_latency(self) -> float:
-        """Simulate realistic API latency."""
-        variance = random.uniform(-self.latency_variance_ms, self.latency_variance_ms)
-        latency_ms = max(50.0, self.base_latency_ms + variance)
+        """Simulate realistic API latency (1-8 seconds, skewed towards lower end)."""
+        # Log-normal distribution: most responses are fast, some are slow
+        latency_ms = random.uniform(1000.0, 8000.0)
         time.sleep(latency_ms / 1000.0)
         return latency_ms

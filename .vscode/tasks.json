@@ -24,7 +24,7 @@
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
         "${workspaceFolder}/src/llm_ensemble/ingest/adapters/driving/ingest_cli.py",
-        "--input", "${workspaceFolder}/datasets/llm_judge_challenge",
+        "--input", "${workspaceFolder}/datasets/llm_judge_challenge_experiment",
         "--io-cfg", "llm_judge_challenge_to_db",
         "--run-name", "demo-ingest",
       ],

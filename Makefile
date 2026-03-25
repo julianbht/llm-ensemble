@@ -1,6 +1,6 @@
 SHELL := /usr/bin/env bash
 .PHONY: help install install-dev test test-ingest test-infer test-schema schemas clean clean-test-runs
-.PHONY: db db-down db-init db-logs db-status autocomplete update-pricing
+.PHONY: db db-down db-init db-reset db-logs db-status autocomplete update-pricing
 .PHONY: observability observability-down observability-reset observability-logs observability-status infra infra-down
 
 export PYTHONUNBUFFERED=1
@@ -16,6 +16,7 @@ help:
 	@echo "Database:"
 	@echo "  make db            - Start PostgreSQL database (docker-compose)"
 	@echo "  make db-init       - Initialize database schema (create tables, run once)"
+	@echo "  make db-reset      - Reset database (DROP all schemas and recreate)"
 	@echo "  make db-down       - Stop PostgreSQL database"
 	@echo "  make db-status     - Check database status"
 	@echo "  make db-logs       - View database logs"
@@ -113,6 +114,20 @@ db-init:
 		. venv/bin/activate && python scripts/db/init_db.py; \
 	else \
 		python3 scripts/db/init_db.py; \
+	fi
+
+db-reset:
+	@echo "WARNING: This will DELETE ALL DATA in the database!"
+	@echo "Press Ctrl+C within 5 seconds to cancel..."
+	@sleep 5
+	@echo ""
+	@echo "Resetting database..."
+	@if [ -d .venv ]; then \
+		. .venv/bin/activate && python scripts/db/reset_db.py; \
+	elif [ -d venv ]; then \
+		. venv/bin/activate && python scripts/db/reset_db.py; \
+	else \
+		python3 scripts/db/reset_db.py; \
 	fi
 
 db-logs:

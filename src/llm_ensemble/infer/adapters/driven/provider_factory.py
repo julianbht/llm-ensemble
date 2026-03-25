@@ -16,6 +16,7 @@ from llm_ensemble.infer.domain.entities.model_config import ModelConfig
 from llm_ensemble.infer.domain.entities.retry_config_schema import RetryConfig
 from llm_ensemble.infer.adapters.driven.providers.openrouter_adapter import OpenRouterAdapter
 from llm_ensemble.infer.adapters.driven.providers.ollama_adapter import OllamaAdapter
+from llm_ensemble.infer.adapters.driven.providers.mock_adapter import MockLLMAdapter
 
 
 class ProviderFactory:
@@ -53,8 +54,14 @@ class ProviderFactory:
                 model_config=model_config,
                 retry_config=retry_config,
             )
+        elif provider_name == "mock":
+            return MockLLMAdapter(
+                model_config=model_config,
+                retry_config=retry_config,
+                deterministic=False,  # Use random responses for variety
+            )
         else:
-            available = ", ".join(sorted(["openrouter", "ollama"]))
+            available = ", ".join(sorted(["openrouter", "ollama", "mock"]))
             raise ValueError(
                 f"Provider '{provider_name}' not found. "
                 f"Available: {available}"
@@ -67,7 +74,7 @@ class ProviderFactory:
         Returns:
             Sorted list of provider names
         """
-        return sorted(["openrouter", "ollama"])
+        return sorted(["openrouter", "ollama", "mock"])
 
     @staticmethod
     def has_provider(provider_name: str) -> bool:
@@ -79,4 +86,4 @@ class ProviderFactory:
         Returns:
             True if provider exists
         """
-        return provider_name in ["openrouter", "ollama"]
+        return provider_name in ["openrouter", "ollama", "mock"]

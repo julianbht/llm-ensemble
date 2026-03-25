@@ -1,0 +1,31 @@
+# Mock model configuration for offline presentations
+# This model doesn't make real API calls - perfect for demos!
+
+# Short name for run ID generation
+name_hint: mock-demo
+
+# Model identifier (not used by mock provider, but required)
+model_id: mock/demo-model
+
+# Model capabilities
+context_window: 8192
+capabilities:
+  offline: true
+  demo_mode: true
+
+# Core inference parameters (not used by mock, but shown for completeness)
+temperature: 0.7
+max_tokens: 512
+top_p: null
+frequency_penalty: null
+presence_penalty: null
+seed: null
+
+# Additional provider-specific parameters
+additional_params: {}
+
+# Pricing information (mock costs for demonstration)
+pricing:
+  prompt_cost_per_1m_tokens: 0.001
+  completion_cost_per_1m_tokens: 0.002
+  last_updated: "2026-03-25T00:00:00+00:00"

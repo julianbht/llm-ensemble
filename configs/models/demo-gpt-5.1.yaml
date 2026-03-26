@@ -1,0 +1,23 @@
+# GPT-5.1 configuration for demo presentations
+
+name_hint: gpt-5.1
+
+model_id: openai/gpt-5.1
+
+context_window: 128000
+capabilities: {}
+
+temperature: 0.01
+max_tokens: 512
+top_p: null
+frequency_penalty: null
+presence_penalty: null
+seed: null
+
+additional_params:
+  responses_file: "demo_responses_gpt.json"
+
+pricing:
+  prompt_cost_per_1m_tokens: 1.0
+  completion_cost_per_1m_tokens: 3.0
+  last_updated: "2026-03-25T00:00:00+00:00"

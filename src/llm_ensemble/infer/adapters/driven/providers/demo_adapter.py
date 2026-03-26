@@ -1,10 +1,10 @@
-"""Mock LLM adapter for offline presentations and testing.
+"""Demo LLM adapter for offline presentations and testing.
 
 Returns real LLM responses from a pre-extracted lookup file, matched by
 prompt content hash. No API calls needed.
 
-The lookup file (configs/mock_responses.json) contains prompt_hash → response
-mappings extracted from actual experiment runs in the backup database.
+The lookup file contains prompt_hash → response mappings extracted from
+actual experiment runs.
 """
 
 from __future__ import annotations
@@ -23,21 +23,15 @@ from llm_ensemble.infer.application.ports.driven.for_invoking_llm import ForInvo
 from llm_ensemble.libs.logging.structlog_logger import get_logger
 
 
-# Default path to the mock responses lookup file
-DEFAULT_RESPONSES_PATH = (
-    Path(__file__).resolve().parents[6] / "configs" / "mock_responses.json"
-)
-
-
-class MockLLMAdapter(ForInvokingLLM):
-    """Mock LLM provider that replays real responses from a lookup file.
+class DemoLLMAdapter(ForInvokingLLM):
+    """Demo LLM provider that replays real responses from a lookup file.
 
     Matches prompts by SHA256 content hash to return the exact response
     that was produced by a real LLM for that prompt.
     """
 
     VERSION = "1.0"
-    PROVIDER_NAME = "mock"
+    PROVIDER_NAME = "demo"
 
     def __init__(
         self,
@@ -52,23 +46,23 @@ class MockLLMAdapter(ForInvokingLLM):
         # Resolve responses file: check additional_params for custom path,
         # otherwise use the default
         configs_dir = Path(__file__).resolve().parents[6] / "configs"
-        custom_file = (model_config.additional_params or {}).get("mock_responses_file")
+        custom_file = (model_config.additional_params or {}).get("responses_file")
         if custom_file:
             responses_path = configs_dir / custom_file
         else:
-            responses_path = configs_dir / "mock_responses.json"
+            responses_path = configs_dir / "demo_responses.json"
 
         # Load prompt_hash → response lookup
         if not responses_path.exists():
             raise FileNotFoundError(
-                f"Mock responses file not found: {responses_path}\n"
+                f"Responses file not found: {responses_path}\n"
                 "Generate it from the backup database first."
             )
         with open(responses_path) as f:
             self._responses: dict[str, str] = json.load(f)
 
         self.logger.info(
-            "mock_adapter_loaded",
+            "demo_adapter_loaded",
             responses_count=len(self._responses),
             responses_path=str(responses_path),
         )
@@ -109,9 +103,9 @@ class MockLLMAdapter(ForInvokingLLM):
         response_text = self._responses.get(prompt_hash)
         if response_text is None:
             raise KeyError(
-                f"No mock response found for prompt hash: {prompt_hash[:16]}... "
+                f"No response found for prompt hash: {prompt_hash[:16]}... "
                 f"({len(self._responses)} responses loaded). "
-                "Ensure the mock_responses.json was generated from the same "
+                "Ensure the responses file was generated from the same "
                 "ingest data and prompt template."
             )
 
@@ -120,7 +114,7 @@ class MockLLMAdapter(ForInvokingLLM):
         completion_tokens = max(1, len(response_text) // 4)
         total_tokens = prompt_tokens + completion_tokens
 
-        # Calculate mock costs if pricing is available
+        # Calculate costs if pricing is available
         cost_estimate_usd = None
         actual_cost_usd = None
         if self.model_config.pricing:
@@ -138,7 +132,7 @@ class MockLLMAdapter(ForInvokingLLM):
             retries=0,
             cost_estimate_usd=cost_estimate_usd,
             actual_cost_usd=actual_cost_usd,
-            generation_id=f"mock-gen-{self._call_count}",
+            generation_id=f"gen-{self._call_count}",
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=total_tokens,
@@ -148,8 +142,7 @@ class MockLLMAdapter(ForInvokingLLM):
         return response_text, metrics
 
     def _simulate_latency(self) -> float:
-        """Simulate realistic API latency (1-8 seconds, skewed towards lower end)."""
-        # Log-normal distribution: most responses are fast, some are slow
-        latency_ms = random.uniform(0000.0, 1000.0)
+        """Simulate realistic API latency."""
+        latency_ms = random.uniform(1000.0, 2000.0)
         time.sleep(latency_ms / 1000.0)
         return latency_ms

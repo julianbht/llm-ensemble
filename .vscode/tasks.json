@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Demo 1: DB Reset",
+      "label": "DB Reset",
       "type": "shell",
       "command": "make",
       "args": ["db-reset"],
@@ -19,14 +19,15 @@
       }
     },
     {
-      "label": "Demo 2: Ingest",
+      "label": "Demo 1: Ingest",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
         "${workspaceFolder}/src/llm_ensemble/ingest/adapters/driving/ingest_cli.py",
         "--input", "${workspaceFolder}/datasets/llm_judge_challenge_experiment",
         "--io-cfg", "llm_judge_challenge_to_db",
-        "--run-name", "demo-ingest"
+        "--run-name", "demo-ingest",
+        "--official"
       ],
       "options": {
         "env": {
@@ -43,20 +44,21 @@
       }
     },
     {
-      "label": "Demo 3: Infer (mock GPT-5.1)",
+      "label": "Demo 2: Infer (GPT-5.1)",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
         "${workspaceFolder}/src/llm_ensemble/infer/adapters/driving/infer_cli.py",
-        "--model-cfg", "mock-demo",
-        "--provider", "mock",
+        "--model-cfg", "demo-gpt-5.1",
+        "--provider", "demo",
         "--prompt-template", "thomas-advanced-trec-v2",
         "--io-cfg", "db_to_db",
         "--input", "demo-ingest",
         "--run-name", "demo-infer-gpt",
         "--start-idx", "0",
         "--end-idx", "10",
-        "--notes", "Offline demo: GPT-5.1 mock responses"
+        "--notes", "GPT-5.1 inference on first 10 samples",
+        "--official"
       ],
       "options": {
         "env": {
@@ -73,20 +75,21 @@
       }
     },
     {
-      "label": "Demo 4: Infer (mock Gemma 3 4B)",
+      "label": "Demo 3: Infer (Gemma 3 4B)",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
         "${workspaceFolder}/src/llm_ensemble/infer/adapters/driving/infer_cli.py",
-        "--model-cfg", "mock-gemma",
-        "--provider", "mock",
+        "--model-cfg", "demo-gemma-3-4b",
+        "--provider", "demo",
         "--prompt-template", "thomas-advanced-trec-v2",
         "--io-cfg", "db_to_db",
         "--input", "demo-ingest",
         "--run-name", "demo-infer-gemma",
         "--start-idx", "0",
         "--end-idx", "10",
-        "--notes", "Offline demo: Gemma 3 4B mock responses"
+        "--notes", "Gemma 3 4B inference on first 10 samples",
+        "--official"
       ],
       "options": {
         "env": {
@@ -103,7 +106,7 @@
       }
     },
     {
-      "label": "Demo 5: Aggregate (majority vote)",
+      "label": "Demo 4: Aggregate (MVA)",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
@@ -113,7 +116,8 @@
         "-i", "demo-infer-gpt",
         "-i", "demo-infer-gemma",
         "--run-name", "demo-aggregate",
-        "--notes", "Offline demo: majority vote aggregation of GPT-5.1 and Gemma"
+        "--notes", "Majority vote aggregation of GPT-5.1 and Gemma 3 4B",
+        "--official"
       ],
       "options": {
         "env": {
@@ -130,7 +134,7 @@
       }
     },
     {
-      "label": "Demo 6: Evaluate",
+      "label": "Demo 5: Evaluate",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
@@ -138,7 +142,8 @@
         "--io-cfg", "db_aggregate_to_json",
         "--input", "demo-aggregate",
         "--run-name", "demo-evaluate",
-        "--notes", "Offline demo: evaluate aggregated results"
+        "--notes", "Evaluate aggregated results",
+        "--official"
       ],
       "options": {
         "env": {

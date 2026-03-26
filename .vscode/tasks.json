@@ -106,17 +106,20 @@
       }
     },
     {
-      "label": "Demo 4: Aggregate (MVA)",
+      "label": "Demo 4: Infer (Llama 3.2 3B)",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [
-        "${workspaceFolder}/src/llm_ensemble/aggregate/adapters/driving/aggregate_cli.py",
-        "--aggregation-strategy", "majority_vote_average",
+        "${workspaceFolder}/src/llm_ensemble/infer/adapters/driving/infer_cli.py",
+        "--model-cfg", "demo-llama-3.2-3b",
+        "--provider", "demo",
+        "--prompt-template", "thomas-advanced-trec-v2",
         "--io-cfg", "db_to_db",
-        "-i", "demo-infer-gpt",
-        "-i", "demo-infer-gemma",
-        "--run-name", "demo-aggregate",
-        "--notes", "Majority vote aggregation of GPT-5.1 and Gemma 3 4B",
+        "--input", "demo-ingest",
+        "--run-name", "demo-infer-llama",
+        "--start-idx", "0",
+        "--end-idx", "10",
+        "--notes", "Llama 3.2 3B inference on first 10 samples",
         "--official"
       ],
       "options": {
@@ -134,7 +137,36 @@
       }
     },
     {
-      "label": "Demo 5: Evaluate",
+      "label": "Demo 5: Aggregate (MVA)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python3",
+      "args": [
+        "${workspaceFolder}/src/llm_ensemble/aggregate/adapters/driving/aggregate_cli.py",
+        "--aggregation-strategy", "majority_vote_average",
+        "--io-cfg", "db_to_db",
+        "-i", "demo-infer-gpt",
+        "-i", "demo-infer-gemma",
+        "-i", "demo-infer-llama",
+        "--run-name", "demo-aggregate",
+        "--notes", "Majority vote aggregation of GPT-5.1, Gemma 3 4B, and Llama 3.2 3B",
+        "--official"
+      ],
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/src"
+        }
+      },
+      "problemMatcher": ["$python"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "clear": false
+      }
+    },
+    {
+      "label": "Demo 6: Evaluate",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/bin/python3",
       "args": [

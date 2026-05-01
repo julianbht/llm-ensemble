@@ -4,8 +4,7 @@
     {
       "label": "DB Reset",
       "type": "shell",
-      "command": "make",
-      "args": ["db-reset"],
+      "command": "make db-reset && rm -rf ${workspaceFolder}/artifacts/runs/ingest/official/demo-ingest ${workspaceFolder}/artifacts/runs/infer/official/demo-infer-gpt ${workspaceFolder}/artifacts/runs/infer/official/demo-infer-gemma ${workspaceFolder}/artifacts/runs/infer/official/demo-infer-llama ${workspaceFolder}/artifacts/runs/infer/official/demo-infer ${workspaceFolder}/artifacts/runs/aggregate/official/demo-aggregate ${workspaceFolder}/artifacts/runs/evaluate/official/demo-evaluate",
       "options": {
         "cwd": "${workspaceFolder}"
       },

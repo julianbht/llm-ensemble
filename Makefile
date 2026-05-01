@@ -118,8 +118,8 @@ db-init:
 
 db-reset:
 	@echo "WARNING: This will DELETE ALL DATA in the database!"
-	@echo "Press Ctrl+C within 5 seconds to cancel..."
-	@sleep 5
+	@echo "Press Ctrl+C within 3 seconds to cancel..."
+	@sleep 3
 	@echo ""
 	@echo "Resetting database..."
 	@if [ -d .venv ]; then \
